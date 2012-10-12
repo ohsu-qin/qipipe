@@ -1,0 +1,16 @@
+.DS_Store
+**~
+cruft
+ext
+.idea
+.loadpath
+.project
+.yardoc
+.*/
+*.gem
+*.pdf
+*.pyc
+*.tar*
+**log
+/doc/api
+/test/results
