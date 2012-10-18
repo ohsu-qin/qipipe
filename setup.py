@@ -1,5 +1,5 @@
 import glob
-from distutils.core import setup
+from distutils.core import setup, find_packages
 
 
 requires = ['pydicom']
