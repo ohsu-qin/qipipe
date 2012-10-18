@@ -2,7 +2,7 @@ import sys
 import os
 import re
 import glob
-from .tags import read_tags
+from .dicom_tags import read_tags
 
 class StagingError(Exception):
     pass
@@ -18,9 +18,7 @@ class Staging:
             self.delta_dir = None
         # The message level.
         self.include = opts.get('include') or '*'
-        self.vpat = opts.get('visit') or '*'
-        self.include = opts.get('include') or '*'
-        self.vpat = opts.get('visit') or '*'
+        self.vpat = opts.get('visit') or '[Vv]isit*'
         self.verbosity = opts.get('verbosity') or 'Warn'
      
     def link_dicom_files(self, dirs):
