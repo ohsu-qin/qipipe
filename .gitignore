@@ -3,6 +3,7 @@ build
 lib
 dist
 ext
+**.egg-info/
 .DS_Store
 .idea
 .loadpath
@@ -13,6 +14,5 @@ ext
 *.pyc
 *.tar*
 **log
-**te?mp/
 /doc/api
 /test/results
