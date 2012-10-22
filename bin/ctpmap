@@ -7,8 +7,8 @@ import sys
 import os
 import getopt
 import re
-import dicom
 
+from qipipe.helpers import dicom_tags
 
 help_message = """
 ctp_map.py options DIR...
@@ -16,7 +16,6 @@ Options:
     -p --prefix\tThe target TCIA patient id prefix
     -h --help\tPrint this help message
 """
-
 
 class Usage(Exception):
     def __init__(self, msg):
@@ -72,8 +71,7 @@ def print_ctp_map(prefix, dirs):
         for root, subdirs, files in os.walk(d):
             for f in files:
                 path = os.path.join(root, f)
-                # Read the DICOM file with defer_size=None, stop_before_pixels=True and force=False.
-                ds = dicom.read_file(path, 256, True, False)
+                ds = dicom_tags.read_tags(path)
                 pnt_ids.add(ds.PatientID)
         for pnt_id in pnt_ids:
             # Escape colon and blank in the source patient id.
