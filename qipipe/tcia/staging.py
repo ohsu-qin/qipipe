@@ -26,7 +26,12 @@ class Staging:
         """
         Creates a new Staging helper.
         
-        :param opts: see link_dicom_files
+        :param opts: the staging options:
+            target: the target directory in which to place the links (default is .)
+            delta: the delta directory in which to place only the new links (default is None)
+            include: the DICOM file include pattern (default is *)
+            visit: the visit directory pattern (default is [Vv]isit*)
+            verbosity: the verbosity level 'Warn', 'Error', 'Info' or None (default is Warn)
         """
         # The target root directory.
         self.tgt_dir = opts.get('target') or '.'
@@ -54,10 +59,6 @@ class Staging:
         new patient visit directory, e.g. ./delta/patient08/visit02 -> ./patient08/visit02.
     
         :param dirs: the source patient directories 
-        :param opts: the options:
-            target: the target directory in which to place the links
-            delta: the delta directory in which to place only the new links
-            verbosity: the verbosity level 'Warn', 'Error', 'Info' or None
         """
         # Build the staging area for each patient.  
         for d in dirs:
