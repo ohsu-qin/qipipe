@@ -27,17 +27,18 @@ def read_image_hierarchy(*files):
     :rtype: ImageHierarchy
     """
     # the hierarchy dictionary
-    hierarchy = ImageHierarchy()
+    h = ImageHierarchy()
     for f in files:
         if os.path.isfile(f):
-            _add_to_image_hierarchy(f, hierarchy)
+            _add_to_image_hierarchy(f, h)
         elif os.path.isdir(f):
             for root, dirs, files in os.walk(f):
                 for f in files:
-                    _add_to_image_hierarchy(f, hierarchy)
+                    path = os.path.join(root, f)
+                    _add_to_image_hierarchy(path, h)
         else:
             raise InvalidDicomError("Can't read file " + f)
-    return hierarchy
+    return h
 
 def _add_to_image_hierarchy(path, hierarchy):
     try:

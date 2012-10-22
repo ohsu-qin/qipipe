@@ -1,8 +1,35 @@
 from .collection_helper import is_nonstring_collection
 
+def on(root):
+    """
+    :param root: the nested dictionary to wrap
+    :return: a new DictionaryHierarchy on the given root dictionary
+    """
+    return DictionaryHierarchy(root)
+
 class DictionaryHierarchy:
     """
-    A DictionaryHierarchy wraps a nested dictionary.
+    A DictionaryHierarchy wraps a nested dictionary. The DictionaryHierarchy iterator
+    enumerates the root -> leaf paths.
+    
+    For example, the hierarchy of a nested dictionary given by:
+    
+        1 : '1'
+        2 : 
+          3 : '3'
+          4 : '4', '5'
+          6 :
+            7 : '7'
+        8 : '8'
+    
+    results in the following paths:
+    
+        1, '1'
+        2, 3, '3'
+        2, 4, '4'
+        2, 4, '5'
+        2, 6, 7, '7'
+        8, '8'
     """
     def __init__(self, root):
         """

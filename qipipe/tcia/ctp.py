@@ -3,7 +3,7 @@ TCIA CTP preparation utilities.
 """
 
 import os
-from .dicom_tags import read_tags
+from ..helpers.dicom_tags import read_tags
 
 def id_map(prefix, dirs):
     """

@@ -2,13 +2,32 @@ import sys
 import os
 import re
 import glob
-from .dicom_tags import read_tags
+from ..helpers.dicom_tags import read_tags, InvalidDicomError
 
 class StagingError(Exception):
     pass
+    
+def link_dicom_files(*args):
+    """
+    Links DICOM files in the given patient directories.
+    
+    :param args: the patient directories, optionally followed by the staging options
+    """
+    last = args[len(args) - 1]
+    if isinstance(last, dict):
+        args = args[:-1]
+        opts = last
+    else:
+        opts = {}
+    Staging(opts).link_dicom_files(*args)
 
 class Staging:
     def __init__(self, opts={}):
+        """
+        Creates a new Staging helper.
+        
+        :param opts: see link_dicom_files
+        """
         # The target root directory.
         self.tgt_dir = opts.get('target') or '.'
         # The delta directory.
@@ -16,12 +35,14 @@ class Staging:
             self.delta_dir = os.path.abspath(opts['delta'])
         else:
             self.delta_dir = None
-        # The message level.
+        # The file include pattern.
         self.include = opts.get('include') or '*'
+        # The visit directory pattern.
         self.vpat = opts.get('visit') or '[Vv]isit*'
+        # The message level.
         self.verbosity = opts.get('verbosity') or 'Warn'
      
-    def link_dicom_files(self, dirs):
+    def link_dicom_files(self, *dirs):
         """
         Creates symbolic links in to the DICOM files in the given source patient directories.
         The patient/visit subdirectories are created in the target directory. The
@@ -42,14 +63,17 @@ class Staging:
         for d in dirs:
             self._stage(d)
     
-    def _stage(self, src_pnt_dir):
+    def _stage(self, path):
         """
         Creates the patient/visit staging area in the current working directory.
         Each visit subdirectory links the DICOM files in the given source patient
         directories.
         
         See link_dicom_files.
+        
+        :param path: the source patient directory path
         """
+        src_pnt_dir = os.path.normpath(path)
         # The RE to extract the patient or visit number suffix.
         npat = re.compile('\d+$')
         # Extract the patient number from the patient directory name.
@@ -61,7 +85,7 @@ class Staging:
         tgt_pnt_dir_name = "patient%02d" % pnt_nbr
         tgt_pnt_dir = os.path.join(self.tgt_dir, tgt_pnt_dir_name)
         if not os.path.exists(tgt_pnt_dir):
-            os.mkdir(tgt_pnt_dir)
+            os.makedirs(tgt_pnt_dir)
         # Build the target visit subdirectories.
         for src_visit_dir in glob.glob(os.path.join(src_pnt_dir, self.vpat)):
             # Extract the visit number from the visit directory name.
