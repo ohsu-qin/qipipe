@@ -7,9 +7,7 @@ import sys
 import os
 import getopt
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
-
-from tcia import Staging
+from qipipe.tcia import staging
 
 help_message = """
 ln_airc.py options DIR...
@@ -64,8 +62,9 @@ def main(argv=None):
                 args[:] = [s.strip() for s in fs.readlines()]
             if option in ('-h', '--help'):
                 raise Usage(help_message)
+        args.append(sopts)
         
-        Staging(sopts).link_dicom_files(args)
+        staging.link_dicom_files(*args)
     
     except Usage, err:
         print >> sys.stderr, sys.argv[0].split('/')[-1] + ': ' + str(err.msg)
