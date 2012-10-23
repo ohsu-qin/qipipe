@@ -10,7 +10,7 @@ import getopt
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
 
-from helpers import dicom_tags
+from qipipe.helpers import dicom_tags
 
 
 help_message = """
