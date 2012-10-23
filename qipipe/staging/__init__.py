@@ -1,6 +1,6 @@
-"""TCIA submission prepartion.
+"""Image processing preparation.
 
-The tcia package defines the functions used to prepare the study for submission
-to the TCIA QIN collections.
+The staging package defines the functions used to prepare the study for import into XNAT,
+submission to the TCIA QIN collections and pipeline processing.
 """
 from . import *
