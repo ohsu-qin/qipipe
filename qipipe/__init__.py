@@ -1,4 +1,4 @@
-from helpers import *
-from tcia import *
-from xnat import *
-from registration import *
+import helpers
+import staging
+import registration
+
