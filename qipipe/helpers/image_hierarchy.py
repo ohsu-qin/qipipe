@@ -14,7 +14,7 @@ class ImageHierarchy(DictionaryHierarchy):
         """
         Adds the patient-study-series-image hierarchy entries from the given DICOM dataset.
 
-        :param ds: the DICOM dataset
+        @param ds: the DICOM dataset
         """
         # build the image hierarchy
         path = self._path(ds)
@@ -22,8 +22,8 @@ class ImageHierarchy(DictionaryHierarchy):
 
     def _path(self, ds):
         """
-        :param ds: the DICOM dataset
-        :return: the patient, study, series and image tags
-        :rtype: list
+        @param ds: the DICOM dataset
+        @return: the patient, study, series and image tags
+        @rtype: list
         """
         return [str(tag) for tag in [ds.PatientID, ds.StudyID, ds.SeriesNumber, ds.InstanceNumber]]

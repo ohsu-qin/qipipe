@@ -10,10 +10,10 @@ def id_map(prefix, dirs):
     Returns the CTP map for the DICOM files in the given directories. The map is a
     dictionary
     
-    :param prefix: the target CTP Patient ID collection prefix, e.g. `QIN-BREAST-02-`
-    :param dirs: the source patient DICOM directories
-    :return: the source => target map
-    :rtype: dict
+    @param prefix: the target CTP Patient ID collection prefix, e.g. `QIN-BREAST-02-`
+    @param dirs: the source patient DICOM directories
+    @return: the source => target map
+    @rtype: dict
     """
     id_map = dict()
     for d in dirs:

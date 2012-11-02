@@ -11,7 +11,7 @@ def link_dicom_files(*args):
     """
     Links DICOM files in the given patient directories.
     
-    :param args: the patient directories, optionally followed by the staging options
+    @param args: the patient directories, optionally followed by the staging options
     """
     last = args[len(args) - 1]
     if isinstance(last, dict):
@@ -26,7 +26,7 @@ class Staging:
         """
         Creates a new Staging helper.
         
-        :param opts: the staging options:
+        @param opts: the staging options:
             target: the target directory in which to place the links (default is .)
             delta: the delta directory in which to place only the new links (default is None)
             include: the DICOM file include pattern (default is *)
@@ -58,7 +58,7 @@ class Staging:
         If the delta option is given, then a link is created from the delta directory to each
         new patient visit directory, e.g. ./delta/patient08/visit02 -> ./patient08/visit02.
     
-        :param dirs: the source patient directories 
+        @param dirs: the source patient directories 
         """
         # Build the staging area for each patient.  
         for d in dirs:
@@ -72,7 +72,7 @@ class Staging:
         
         See link_dicom_files.
         
-        :param path: the source patient directory path
+        @param path: the source patient directory path
         """
         src_pnt_dir = os.path.normpath(path)
         # The RE to extract the patient or visit number suffix.
