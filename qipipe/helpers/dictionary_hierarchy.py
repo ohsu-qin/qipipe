@@ -2,8 +2,8 @@ from .collection_helper import is_nonstring_collection
 
 def on(root):
     """
-    :param root: the nested dictionary to wrap
-    :return: a new DictionaryHierarchy on the given root dictionary
+    @param root: the nested dictionary to wrap
+    @return: a new DictionaryHierarchy on the given root dictionary
     """
     return DictionaryHierarchy(root)
 
@@ -33,9 +33,9 @@ class DictionaryHierarchy:
     """
     def __init__(self, root):
         """
-        :param root: the nested dictionary to wrap by this hierarchy
+        @param root: the nested dictionary to wrap by this hierarchy
         :type root: dict
-        :raise: ArgumentError if the given root is not a dictionary 
+        @raise: ArgumentError if the given root is not a dictionary 
         """
         if not isinstance(root, dict):
             raise TypeError("The dictionary hierarchy root is not a dictionary: {1}" % root)
@@ -47,9 +47,9 @@ class DictionaryHierarchy:
     class Iterator:
         def __init__(self, root):
             """
-            :param base: the nested dictionary to iterate over
+            @param base: the nested dictionary to iterate over
             :type root: dict
-            :raise: ArgumentError if the given root is not a dictionary 
+            @raise: ArgumentError if the given root is not a dictionary 
             """
             self.base = root.iteritems()
             self.child = self.path = None
@@ -67,8 +67,8 @@ class DictionaryHierarchy:
               path tails given by that value's iteration.
             * Otherwise, the last member in the path is the value.
         
-            :return: the next path
-            :rtype: list 
+            @return: the next path
+            @rtype: list 
             """
             if self.child:
                 try:

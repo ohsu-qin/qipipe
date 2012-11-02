@@ -11,9 +11,9 @@ def read_tags(path):
     """
     Reads the given DICOM file tags
     
-    :param path: the file pathname
-    :return: the pydicom dicom object
-    :raise: InvalidDicomError if the file is not a DICOM file
+    @param path: the file pathname
+    @return: the pydicom dicom object
+    @raise: InvalidDicomError if the file is not a DICOM file
     """
     # Read the DICOM file with defer_size=256, stop_before_pixels=True and force=False.
     return dicom.read_file(path, 256, True, False)
@@ -22,9 +22,9 @@ def read_image_hierarchy(*files):
     """
     Returns the ImageHierarchy for the DICOM files in the given locations.
 
-    :param files: the files or directories to walk for DICOM files
-    :return: the image hierarchy
-    :rtype: ImageHierarchy
+    @param files: the files or directories to walk for DICOM files
+    @return: the image hierarchy
+    @rtype: ImageHierarchy
     """
     # the hierarchy dictionary
     h = ImageHierarchy()
