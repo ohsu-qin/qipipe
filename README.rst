@@ -25,7 +25,7 @@ The main qipipe modules include the following:
 
 * `helpers` : Common utilities
 
-* `tcia` : TCIA submission
+* `staging` : prepare the study image files
 
 * `registration` : Image registration
 

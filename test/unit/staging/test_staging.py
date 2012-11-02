@@ -1,6 +1,6 @@
 import unittest
 import os, glob, shutil
-from qipipe.tcia import staging
+from qipipe.staging import staging
 
 # The test fixture.
 FIXTURE = os.path.join(os.path.dirname(__file__), '..', '..', 'fixtures', 'staging')
