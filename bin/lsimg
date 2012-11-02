@@ -39,8 +39,8 @@ def main(argv=None):
         for option, value in opts:
             if option == '-v':
                 verbose = True
-                if option in ('-h', '--help'):
-                    raise Usage(help_message)
+            elif option in ('-h', '--help'):
+                raise Usage(help_message)
         
         # Build the hierarchy.
         hierarchy = dicom_tags.read_image_hierarchy(*args)

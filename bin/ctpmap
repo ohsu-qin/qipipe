@@ -39,10 +39,10 @@ def main(argv=None):
         for option, value in opts:
             if option == '-v':
                 verbose = True
-            if option in ('-p', '--prefix'):
-                prefix = value
-            if option in ('-h', '--help'):
+            elif option in ('-h', '--help'):
                 raise Usage(help_message)
+            elif option in ('-p', '--prefix'):
+                prefix = value
         if prefix == None:
             raise OptError('Required prefix option was not set.')
 
