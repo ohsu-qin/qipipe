@@ -126,14 +126,14 @@ class Staging:
             for src_file in glob.glob(os.path.join(src_visit_dir, self.include)):
                 if os.path.isdir(src_file):
                     if self.verbosity:
-                        print >> "Skipped directory %s." % src_file
+                        print "Skipped directory %s." % src_file
                         continue
                 # Check whether the file has a DICOM header
                 try:
                     read_tags(src_file)
                 except InvalidDicomError:
                     if self.verbosity:
-                        print >> "Skipped non-DICOM file %s." % src_file
+                        print "Skipped non-DICOM file %s." % src_file
                 else:
                     tgt_file_base = os.path.basename(src_file).replace(' ', '_')
                     # Replace blanks in the file name.
@@ -144,4 +144,4 @@ class Staging:
                     # Link the source DICOM file.
                     os.symlink(src_file, os.path.join(tgt_visit_dir, tgt_file_base))
                     if self.verbosity:
-                        print >> "Linked the image file {0} -> {1}".format(tgt_file_base, src_file)
+                        print "Linked the image file {0} -> {1}".format(tgt_file_base, src_file)
