@@ -118,7 +118,10 @@ class Staging:
                 if not os.path.exists(delta_pnt_dir):
                     os.makedirs(delta_pnt_dir)
                 delta_visit_dir = os.path.join(delta_pnt_dir, tgt_visit_dir_name)
-                os.symlink(os.path.relpath(tgt_visit_dir, delta_pnt_dir), delta_visit_dir)
+                rel_path = os.path.relpath(tgt_visit_dir, delta_pnt_dir)
+                os.symlink(rel_path, delta_visit_dir)
+                if self.verbosity:
+                    print "Linked the delta visit directory {0} -> {1}.".format(delta_visit_dir, rel_path)
             # Link each of the DICOM files in the source concatenated subdirectories.
             for src_file in glob.glob(os.path.join(src_visit_dir, self.include)):
                 if os.path.isdir(src_file):
@@ -141,4 +144,4 @@ class Staging:
                     # Link the source DICOM file.
                     os.symlink(src_file, os.path.join(tgt_visit_dir, tgt_file_base))
                     if self.verbosity:
-                        print >> "Linked image file %s -> %s" % tgt_file_base, src_file
+                        print >> "Linked the image file {0} -> {1}".format(tgt_file_base, src_file)
