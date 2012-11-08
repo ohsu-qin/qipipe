@@ -33,7 +33,7 @@ def main(argv=None):
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], 'c:i:p:rt:hf:qv', ['changeto=', 'include=', 'visit=', 'replace', 'delta=', 'help', 'file='])
+            opts, args = getopt.getopt(argv[1:], 'C:i:p:rt:hf:qv', ['changeto=', 'include=', 'visit=', 'replace', 'delta=', 'help', 'file='])
         except getopt.error, msg:
             raise Usage(msg)
         
