@@ -12,14 +12,14 @@ from qipipe.staging import staging
 help_message = """
 lndicom options DIR...
 Options:
-    -d --directory\tThe target directory
-    -i --include\tThe image file name pattern
-    -p --visit\tThe visit subdirectory pattern
-    -r --replace\tReplace the existing image files
-    -t --delta\tThe delta directory
+    -C --changeto\tChange to the given target directory
+    -i --include\tThe source image file name pattern
+    -p --visit\tThe source visit subdirectory pattern
+    -r --replace\tReplace the existing target image file links
+    -t --delta\tThe delta directory to hold new target visit directories
     -f --file\tA file containing the source patient directories
     -q\tSuppress messages
-    -v\tPrint informational messages
+    -v\tPrint verbose messages
     -h --help\tPrint this help message
 """
 
@@ -33,7 +33,7 @@ def main(argv=None):
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], 'd:i:p:rt:hf:qv', ['directory=', 'include=', 'visit=', 'replace', 'delta=', 'help', 'file='])
+            opts, args = getopt.getopt(argv[1:], 'c:i:p:rt:hf:qv', ['changeto=', 'include=', 'visit=', 'replace', 'delta=', 'help', 'file='])
         except getopt.error, msg:
             raise Usage(msg)
         
@@ -42,7 +42,7 @@ def main(argv=None):
         sopts = {}
         # option processing
         for option, value in opts:
-            if option in ('-d', '--directory'):
+            if option in ('-C', '--changeto'):
                 sopts['target'] = value
             elif option in ('-h', '--help'):
                 raise Usage(help_message)
