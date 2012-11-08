@@ -110,7 +110,7 @@ class Staging:
             else:
                 # Make the target visit directory.
                 os.mkdir(tgt_visit_dir)
-                if self.verbosity:
+                if self.verbosity == 'Info':
                     print "Created visit directory %s." % tgt_visit_dir
             # Link the delta visit directory to the target, if necessary.
             if self.delta_dir:
