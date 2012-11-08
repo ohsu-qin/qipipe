@@ -89,6 +89,8 @@ class Staging:
         tgt_pnt_dir = os.path.join(self.tgt_dir, tgt_pnt_dir_name)
         if not os.path.exists(tgt_pnt_dir):
             os.makedirs(tgt_pnt_dir)
+            if self.verbosity:
+                print "Created patient directory %s." % tgt_pnt_dir
         # Build the target visit subdirectories.
         for src_visit_dir in glob.glob(os.path.join(src_pnt_dir, self.vpat)):
             # Extract the visit number from the visit directory name.
@@ -108,6 +110,8 @@ class Staging:
             else:
                 # Make the target visit directory.
                 os.mkdir(tgt_visit_dir)
+                if self.verbosity:
+                    print "Created visit directory %s." % tgt_visit_dir
             # Link the delta visit directory to the target, if necessary.
             if self.delta_dir:
                 delta_pnt_dir = os.path.join(self.delta_dir, tgt_pnt_dir_name)
@@ -136,3 +140,5 @@ class Staging:
                         tgt_file_base = tgt_name + '.dcm'
                     # Link the source DICOM file.
                     os.symlink(src_file, os.path.join(tgt_visit_dir, tgt_file_base))
+                    if self.verbosity:
+                        print >> "Linked image file %s -> %s" % tgt_file_base, src_file
