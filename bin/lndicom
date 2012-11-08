@@ -6,6 +6,7 @@ Creates well-formed symbolic links to AIRC concatenated DICOM files.
 import sys
 import os
 import getopt
+import logging
 
 from qipipe.staging import staging
 
@@ -55,9 +56,9 @@ def main(argv=None):
             elif option in ('-t', '--delta'):
                 sopts['delta'] = value
             elif option == '-q':
-                sopts['verbosity'] = None
+                logging.basicConfig(level=logging.ERROR)       
             elif option == '-v':
-                sopts['verbosity'] = 'Info'
+                logging.basicConfig(level=logging.DEBUG)
             elif option in ('-f', '--file'):
                 farg = value
                 if farg == '-':

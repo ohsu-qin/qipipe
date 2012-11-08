@@ -2,6 +2,7 @@ import sys
 import os
 import re
 import glob
+import logging
 from ..helpers.dicom_tags import read_tags, InvalidDicomError
 
 class StagingError(Exception):
@@ -31,7 +32,6 @@ class Staging:
             delta: the delta directory in which to place only the new links (default is None)
             include: the DICOM file include pattern (default is *)
             visit: the visit directory pattern (default is [Vv]isit*)
-            verbosity: the verbosity level 'Warn', 'Error', 'Info' or None (default is Warn)
         """
         # The target root directory.
         self.tgt_dir = opts.get('target') or '.'
@@ -44,8 +44,6 @@ class Staging:
         self.include = opts.get('include') or '*'
         # The visit directory pattern.
         self.vpat = opts.get('visit') or '[Vv]isit*'
-        # The message level.
-        self.verbosity = opts.get('verbosity') or 'Warn'
         # The replace option.
         self.replace = opts.has_key('replace')
      
@@ -89,8 +87,7 @@ class Staging:
         tgt_pnt_dir = os.path.join(self.tgt_dir, tgt_pnt_dir_name)
         if not os.path.exists(tgt_pnt_dir):
             os.makedirs(tgt_pnt_dir)
-            if self.verbosity == 'Info':
-                print "Created patient directory %s." % tgt_pnt_dir
+            logging.info("Created patient directory %s." % tgt_pnt_dir)
         # Build the target visit subdirectories.
         for src_visit_dir in glob.glob(os.path.join(src_pnt_dir, self.vpat)):
             # Extract the visit number from the visit directory name.
@@ -104,14 +101,12 @@ class Staging:
             # Skip an existing visit.
             if os.path.exists(tgt_visit_dir):
                 if not self.replace:
-                    if self.verbosity:
-                        print "Skipped existing visit directory %s." % tgt_visit_dir
+                    logging.info("Skipped existing visit directory %s." % tgt_visit_dir)
                     continue
             else:
                 # Make the target visit directory.
                 os.mkdir(tgt_visit_dir)
-                if self.verbosity == 'Info':
-                    print "Created visit directory %s." % tgt_visit_dir
+                logging.info("Created visit directory %s." % tgt_visit_dir)
             # Link the delta visit directory to the target, if necessary.
             if self.delta_dir:
                 delta_pnt_dir = os.path.join(self.delta_dir, tgt_pnt_dir_name)
@@ -120,20 +115,17 @@ class Staging:
                 delta_visit_dir = os.path.join(delta_pnt_dir, tgt_visit_dir_name)
                 rel_delta_path = os.path.relpath(tgt_visit_dir, delta_pnt_dir)
                 os.symlink(rel_delta_path, delta_visit_dir)
-                if self.verbosity == 'Info':
-                    print "Linked the delta visit directory {0} -> {1}.".format(delta_visit_dir, rel_delta_path)
+                logging.info("Linked the delta visit directory {0} -> {1}.".format(delta_visit_dir, rel_delta_path))
             # Link each of the DICOM files in the source concatenated subdirectories.
             for src_file in glob.glob(os.path.join(src_visit_dir, self.include)):
                 if os.path.isdir(src_file):
-                    if self.verbosity:
-                        print "Skipped directory %s." % src_file
-                        continue
+                    logging.info("Skipped directory %s." % src_file)
+                    continue
                 # Check whether the file has a DICOM header
                 try:
                     read_tags(src_file)
                 except InvalidDicomError:
-                    if self.verbosity:
-                        print "Skipped non-DICOM file %s." % src_file
+                    logging.warn("Skipped non-DICOM file %s." % src_file)
                 else:
                     tgt_file_base = os.path.basename(src_file).replace(' ', '_')
                     # Replace blanks in the file name.
@@ -147,12 +139,12 @@ class Staging:
                         if self.replace:
                             os.remove(tgt_file)
                         else:
-                            if self.verbosity:
-                                print "Skipped existing image link %s." % tgt_file
+                            logging.info("Skipped existing image link %s." % tgt_file)
                             continue
-                    # If the source file path is relative, then make the source file path relative to the target.
-                    if src_file[0] != '/':
+                    # If the source path is relative, then make the source file path relative to the target.
+                    if path[0] != '/':
+                        s = src_file
                         src_file = os.path.relpath(tgt_file, src_file)
+                    # Create a link from the target to the source.
                     os.symlink(src_file, tgt_file)
-                    if self.verbosity == 'Info':
-                        print "Linked the image file {0} -> {1}".format(tgt_file, src_file)
+                    logging.info("Linked the image file {0} -> {1}".format(tgt_file, src_file))
