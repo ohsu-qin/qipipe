@@ -111,6 +111,10 @@ class Staging:
                 os.symlink(os.path.relpath(tgt_visit_dir, delta_pnt_dir), delta_visit_dir)
             # Link each of the DICOM files in the source concatenated subdirectories.
             for src_file in glob.glob(os.path.join(src_visit_dir, self.include)):
+                if os.path.isdir(src_file):
+                    is self.verbosity:
+                        print >> sys.stderr, "Skipped directory %s." % src_file
+                        continue
                 # Check whether the file has a DICOM header
                 try:
                     read_tags(src_file)
