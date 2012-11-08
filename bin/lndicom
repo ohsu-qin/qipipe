@@ -15,6 +15,7 @@ Options:
     -d --directory\tThe target directory
     -i --include\tThe image file name pattern
     -p --visit\tThe visit subdirectory pattern
+    -r --replace\tReplace the existing image files
     -t --delta\tThe delta directory
     -f --file\tA file containing the source patient directories
     -q\tSuppress messages
@@ -32,7 +33,7 @@ def main(argv=None):
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], 'd:i:p:t:hf:qv', ['directory=', 'include=', 'visit=', 'delta=', 'help', 'file='])
+            opts, args = getopt.getopt(argv[1:], 'd:i:p:rt:hf:qv', ['directory=', 'include=', 'visit=', 'replace', 'delta=', 'help', 'file='])
         except getopt.error, msg:
             raise Usage(msg)
         
@@ -49,6 +50,8 @@ def main(argv=None):
                 sopts['include'] = value
             elif option in ('-p', '--visit'):
                 sopts['visit'] = value
+            elif option in ('-r', '--replace'):
+                sopts['replace'] = True
             elif option in ('-t', '--delta'):
                 sopts['delta'] = value
             elif option == '-q':

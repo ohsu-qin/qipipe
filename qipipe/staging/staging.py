@@ -46,6 +46,8 @@ class Staging:
         self.vpat = opts.get('visit') or '[Vv]isit*'
         # The message level.
         self.verbosity = opts.get('verbosity') or 'Warn'
+        # The replace option.
+        self.replace = opts.has_key('replace'):
      
     def link_dicom_files(self, *dirs):
         """
@@ -99,9 +101,13 @@ class Staging:
             tgt_visit_dir = os.path.join(tgt_pnt_dir, tgt_visit_dir_name)
             # Skip an existing visit.
             if os.path.exists(tgt_visit_dir):
-                continue
-            # Make the target visit directory.
-            os.mkdir(tgt_visit_dir)
+                if not self.replace:
+                    if self.verbosity:
+                        print "Skipped existing visit directory %s." % tgt_visit_dir
+                    continue
+            else:
+                # Make the target visit directory.
+                os.mkdir(tgt_visit_dir)
             # Link the delta visit directory to the target, if necessary.
             if self.delta_dir:
                 delta_pnt_dir = os.path.join(self.delta_dir, tgt_pnt_dir_name)
@@ -113,14 +119,14 @@ class Staging:
             for src_file in glob.glob(os.path.join(src_visit_dir, self.include)):
                 if os.path.isdir(src_file):
                     if self.verbosity:
-                        print >> sys.stderr, "Skipped directory %s." % src_file
+                        print >> "Skipped directory %s." % src_file
                         continue
                 # Check whether the file has a DICOM header
                 try:
                     read_tags(src_file)
                 except InvalidDicomError:
                     if self.verbosity:
-                        print >> sys.stderr, "Skipped non-DICOM file %s." % src_file
+                        print >> "Skipped non-DICOM file %s." % src_file
                 else:
                     tgt_file_base = os.path.basename(src_file).replace(' ', '_')
                     # Replace blanks in the file name.
