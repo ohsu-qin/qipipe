@@ -47,7 +47,7 @@ class Staging:
         # The message level.
         self.verbosity = opts.get('verbosity') or 'Warn'
         # The replace option.
-        self.replace = opts.has_key('replace'):
+        self.replace = opts.has_key('replace')
      
     def link_dicom_files(self, *dirs):
         """
