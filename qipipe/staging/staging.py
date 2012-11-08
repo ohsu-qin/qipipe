@@ -150,7 +150,9 @@ class Staging:
                             if self.verbosity:
                                 print "Skipped existing image link %s." % tgt_file
                             continue
-                    rel_src_file = os.path.relpath(tgt_file, src_file)
-                    os.symlink(rel_src_file, tgt_file)
+                    # If the source file path is relative, then make the source file path relative to the target.
+                    if src_file[0] != '/':
+                        src_file = os.path.relpath(tgt_file, src_file)
+                    os.symlink(src_file, tgt_file)
                     if self.verbosity == 'Info':
-                        print "Linked the image file {0} -> {1}".format(tgt_file, rel_src_file)
+                        print "Linked the image file {0} -> {1}".format(tgt_file, src_file)
