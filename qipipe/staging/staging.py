@@ -89,7 +89,7 @@ class Staging:
         tgt_pnt_dir = os.path.join(self.tgt_dir, tgt_pnt_dir_name)
         if not os.path.exists(tgt_pnt_dir):
             os.makedirs(tgt_pnt_dir)
-            if self.verbosity:
+            if self.verbosity == 'Info':
                 print "Created patient directory %s." % tgt_pnt_dir
         # Build the target visit subdirectories.
         for src_visit_dir in glob.glob(os.path.join(src_pnt_dir, self.vpat)):
@@ -120,7 +120,7 @@ class Staging:
                 delta_visit_dir = os.path.join(delta_pnt_dir, tgt_visit_dir_name)
                 rel_path = os.path.relpath(tgt_visit_dir, delta_pnt_dir)
                 os.symlink(rel_path, delta_visit_dir)
-                if self.verbosity:
+                if self.verbosity == 'Info':
                     print "Linked the delta visit directory {0} -> {1}.".format(delta_visit_dir, rel_path)
             # Link each of the DICOM files in the source concatenated subdirectories.
             for src_file in glob.glob(os.path.join(src_visit_dir, self.include)):
@@ -142,6 +142,14 @@ class Staging:
                     if tgt_ext != '.dcm':
                         tgt_file_base = tgt_name + '.dcm'
                     # Link the source DICOM file.
-                    os.symlink(src_file, os.path.join(tgt_visit_dir, tgt_file_base))
-                    if self.verbosity:
+                    tgt_file = os.path.join(tgt_visit_dir, tgt_file_base)
+                    if os.path.exists(tgt_file):
+                        if self.replace:
+                            os.remove(tgt_file)
+                        else:
+                            if self.verbosity:
+                                print "Skipped existing image link %s." % tgt_file
+                            continue
+                    os.symlink(src_file, tgt_file)
+                    if self.verbosity == 'Info':
                         print "Linked the image file {0} -> {1}".format(tgt_file_base, src_file)
