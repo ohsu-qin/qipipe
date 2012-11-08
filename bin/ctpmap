@@ -11,7 +11,7 @@ import re
 from qipipe.helpers import dicom_tags
 
 help_message = """
-ctp_map.py options DIR...
+ctpmap options DIR...
 Options:
     -p --prefix\tThe target TCIA patient id prefix
     -h --help\tPrint this help message

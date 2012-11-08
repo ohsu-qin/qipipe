@@ -14,7 +14,7 @@ from qipipe.helpers import dicom_tags
 
 
 help_message = """
-lsimg.py options FILE...
+lsimg options FILE...
 Options:
     -v\tPrint informational messages
     -h --help\tPrint this help message
