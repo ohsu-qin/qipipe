@@ -84,7 +84,7 @@ class Staging:
         pnt_nbr = int(pnt_match.group(0))
         # The patient directory which will hold the visits.
         tgt_pnt_dir_name = "patient%02d" % pnt_nbr
-        tgt_pnt_dir = os.path.join(self.tgt_dir, tgt_pnt_dir_name)
+        tgt_pnt_dir = os.path.normpath(os.path.join(self.tgt_dir, tgt_pnt_dir_name))
         if not os.path.exists(tgt_pnt_dir):
             os.makedirs(tgt_pnt_dir)
             logging.info("Created patient directory %s." % tgt_pnt_dir)
@@ -113,9 +113,12 @@ class Staging:
                 if not os.path.exists(delta_pnt_dir):
                     os.makedirs(delta_pnt_dir)
                 delta_visit_dir = os.path.join(delta_pnt_dir, tgt_visit_dir_name)
-                rel_delta_path = os.path.relpath(tgt_visit_dir, delta_pnt_dir)
-                os.symlink(rel_delta_path, delta_visit_dir)
-                logging.info("Linked the delta visit directory {0} -> {1}.".format(delta_visit_dir, rel_delta_path))
+                if os.path.exists(delta_visit_dir):
+                    os.remove(delta_visit_dir)
+                # The delta link is relative to the target location.
+                delta_rel_path = os.path.relpath(tgt_visit_dir, delta_pnt_dir)
+                os.symlink(delta_rel_path, delta_visit_dir)
+                logging.info("Linked the delta visit directory {0} -> {1}.".format(delta_visit_dir, delta_rel_path))
             # Link each of the DICOM files in the source concatenated subdirectories.
             for src_file in glob.glob(os.path.join(src_visit_dir, self.include)):
                 if os.path.isdir(src_file):
@@ -141,10 +144,6 @@ class Staging:
                         else:
                             logging.info("Skipped existing image link %s." % tgt_file)
                             continue
-                    # If the source path is relative, then make the source file path relative to the target.
-                    if path[0] != '/':
-                        s = src_file
-                        src_file = os.path.relpath(tgt_file, src_file)
                     # Create a link from the target to the source.
                     os.symlink(src_file, tgt_file)
                     logging.info("Linked the image file {0} -> {1}".format(tgt_file, src_file))
