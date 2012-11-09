@@ -74,7 +74,7 @@ class Staging:
         
         @param path: the source patient directory path
         """
-        src_pnt_dir = os.path.normpath(path)
+        src_pnt_dir = os.path.abspath(path)
         # The RE to extract the patient or visit number suffix.
         npat = re.compile('\d+$')
         # Extract the patient number from the patient directory name.
@@ -84,7 +84,7 @@ class Staging:
         pnt_nbr = int(pnt_match.group(0))
         # The patient directory which will hold the visits.
         tgt_pnt_dir_name = "patient%02d" % pnt_nbr
-        tgt_pnt_dir = os.path.normpath(os.path.join(self.tgt_dir, tgt_pnt_dir_name))
+        tgt_pnt_dir = os.path.abspath(os.path.join(self.tgt_dir, tgt_pnt_dir_name))
         if not os.path.exists(tgt_pnt_dir):
             os.makedirs(tgt_pnt_dir)
             logging.info("Created patient directory %s." % tgt_pnt_dir)
