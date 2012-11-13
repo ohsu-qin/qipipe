@@ -8,7 +8,7 @@ import os
 import getopt
 import re
 
-from qipipe.helpers import dicom_tags
+from qipipe.helpers import dicom_helper
 
 help_message = """
 ctpmap options DIR...
@@ -71,7 +71,7 @@ def print_ctp_map(prefix, dirs):
         for root, subdirs, files in os.walk(d):
             for f in files:
                 path = os.path.join(root, f)
-                ds = dicom_tags.read_tags(path)
+                ds = dicom_helper.read_dicom_header(path)
                 pnt_ids.add(ds.PatientID)
         for pnt_id in pnt_ids:
             # Escape colon and blank in the source patient id.

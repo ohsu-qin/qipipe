@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Prints each patient-visit-series-acquisition-image path in a DICOM image hierarchy.
+Prints each patient-study-series-image path in a DICOM image hierarchy.
 The format of each path is a line of tab-delimited fields.
 """
 
@@ -10,7 +10,7 @@ import getopt
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
 
-from qipipe.helpers import dicom_tags
+from qipipe.helpers import dicom_helper
 
 
 help_message = """
@@ -37,16 +37,21 @@ def main(argv=None):
         
         # option processing
         for option, value in opts:
+            if option in ('-s', '--summary'):
+                summary = True
             if option == '-v':
                 verbose = True
             elif option in ('-h', '--help'):
                 raise Usage(help_message)
         
-        # Build the hierarchy.
-        hierarchy = dicom_tags.read_image_hierarchy(*args)
-        # Print each patient-visit-series-acquisition-image field.
-        for path in hierarchy:
-            print "\t".join([str(item) for item in path])
+        if summary:
+            # Build the hierarchy.
+            hierarchy = dicom_helper.read_image_hierarchy(*args)
+            # Print each patient-visit-series-acquisition-image field.
+            for path in hierarchy:
+                print "\t".join([str(item) for item in path])
+        else:
+            
         
     except Usage, err:
         print >> sys.stderr, sys.argv[0].split('/')[-1] + ': ' + str(err.msg)
