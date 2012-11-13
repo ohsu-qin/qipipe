@@ -3,7 +3,7 @@ import os
 import re
 import glob
 import logging
-from ..helpers.dicom_tags import read_tags, InvalidDicomError
+from ..helpers.dicom_helper import isdicom
 
 class StagingError(Exception):
     pass
@@ -22,7 +22,7 @@ def link_dicom_files(*args):
         opts = {}
     Staging(opts).link_dicom_files(*args)
 
-class Staging:
+class Staging(object):
     def __init__(self, opts={}):
         """
         Creates a new Staging helper.
@@ -124,12 +124,8 @@ class Staging:
                 if os.path.isdir(src_file):
                     logging.info("Skipped directory %s." % src_file)
                     continue
-                # Check whether the file has a DICOM header
-                try:
-                    read_tags(src_file)
-                except InvalidDicomError:
-                    logging.warn("Skipped non-DICOM file %s." % src_file)
-                else:
+                # Check whether the file has a DICOM header.
+                if isdicom(src_file):
                     tgt_file_base = os.path.basename(src_file).replace(' ', '_')
                     # Replace blanks in the file name.
                     tgt_name, tgt_ext = os.path.splitext(tgt_file_base)
@@ -147,3 +143,5 @@ class Staging:
                     # Create a link from the target to the source.
                     os.symlink(src_file, tgt_file)
                     logging.info("Linked the image file {0} -> {1}".format(tgt_file, src_file))
+                else:
+                    logging.info("Skipped non-DICOM file %s." % src_file)

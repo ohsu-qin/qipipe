@@ -3,7 +3,7 @@ TCIA CTP preparation utilities.
 """
 
 import os
-from ..helpers.dicom_tags import read_tags
+from ..helpers import read_dicom_tags
 
 def id_map(prefix, dirs):
     """
@@ -22,16 +22,11 @@ def id_map(prefix, dirs):
         if not pnt_match:
             continue
         pnt_nbr = int(pnt_match.group(0))
-        for root, subdirs, files in os.walk(d):
-            for f in files:
-                # Read the Patient ID tag
-                path = os.path.join(root, f)
-                ds = read_tags(path)
-                pnt_id = ds.PatientID
-                # Escape colon, equal and space.
-                pnt_id = "\\".join(pnt_id.split(' '))
-                pnt_id = "\\".join(pnt_id.split(':'))
-                pnt_id = "\\".join(pnt_id.split('='))
-                # The escaped source id maps to the TCIA target id. 
-                id_map[pnt_id] = prefix + str(pnt_nbr)
+        for pnt_id in read_dicom_tags(['Patient ID'], d):
+            # Escape colon, equal and space.
+            pnt_id = "\\".join(pnt_id.split(' '))
+            pnt_id = "\\".join(pnt_id.split(':'))
+            pnt_id = "\\".join(pnt_id.split('='))
+            # The escaped source id maps to the TCIA target id. 
+            id_map[pnt_id] = prefix + str(pnt_nbr)
     return id_map
