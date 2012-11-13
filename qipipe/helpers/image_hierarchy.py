@@ -1,5 +1,6 @@
 from collections import defaultdict
 from .dictionary_hierarchy import DictionaryHierarchy
+from .dicom_tag_reader import DicomTagReader
 
 class ImageHierarchy(DictionaryHierarchy):
     """
@@ -8,7 +9,8 @@ class ImageHierarchy(DictionaryHierarchy):
     def __init__(self):
         # the patient: series: image nested dictionary
         self.tree = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-        DictionaryHierarchy.__init__(self, self.tree)
+        super(ImageHierarchy, self).__init__(self.tree)
+        self._tag_reader = DicomTagReader('PatientID', 'StudyID', 'SeriesNumber', 'InstanceNumber')
     
     def add(self, ds):
         """
@@ -17,13 +19,5 @@ class ImageHierarchy(DictionaryHierarchy):
         @param ds: the DICOM dataset
         """
         # build the image hierarchy
-        path = self._path(ds)
+        path = self._tag_reader.read(ds)
         self.tree[path[0]][path[1]][path[2]].append(path[3])
-
-    def _path(self, ds):
-        """
-        @param ds: the DICOM dataset
-        @return: the patient, study, series and image tags
-        @rtype: list
-        """
-        return [str(tag) for tag in [ds.PatientID, ds.StudyID, ds.SeriesNumber, ds.InstanceNumber]]
