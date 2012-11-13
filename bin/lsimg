@@ -7,50 +7,52 @@ The format of each path is a line of tab-delimited fields.
 import sys
 import os
 import getopt
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
-
 from qipipe.helpers import dicom_helper
-
 
 help_message = """
 lsimg options FILE...
 Options:
+    -t --tags\tThe comma-separated tags to print (default PatientID, StudyID, SeriesNumber and InstanceNumber)
+    -v\tPrint informational messages
     -v\tPrint informational messages
     -h --help\tPrint this help message
 """
 
 
 class Usage(Exception):
+    
     def __init__(self, msg):
         self.msg = msg
+
 
 def main(argv=None):
     if argv is None:
         argv = sys.argv
-    summary = False
+    tags = None
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], 'hv', ['help'])
+            opts, args = getopt.getopt(argv[1:], 't:hv', ['tags=', 'help'])
         except getopt.error, msg:
             raise Usage(msg)
         
         # option processing
-        for option, value in opts:
-            if option in ('-s', '--summary'):
-                summary = True
-            if option == '-v':
+        for opt, val in opts:
+            if opt in ('-t', '--tags'):
+                tags = val.split(',')
+            if opt == '-v':
                 verbose = True
-            elif option in ('-h', '--help'):
+            elif opt in ('-h', '--help'):
                 raise Usage(help_message)
         
-        if summary:
+        if tags:
+            for values in dicom_helper.read_dicom_tags(tags, *args):
+                print "\t".join(values)
+        else:
             # Build the hierarchy.
             hierarchy = dicom_helper.read_image_hierarchy(*args)
             # Print each patient-visit-series-acquisition-image field.
             for path in hierarchy:
-                print "\t".join([str(item) for item in path])
-        else:
+                print "\t".join(path)
             
         
     except Usage, err:
