@@ -7,7 +7,7 @@ def on(root):
     """
     return DictionaryHierarchy(root)
 
-class DictionaryHierarchy:
+class DictionaryHierarchy(object):
     """
     A DictionaryHierarchy wraps a nested dictionary. The DictionaryHierarchy iterator
     enumerates the root -> leaf paths.
@@ -44,7 +44,7 @@ class DictionaryHierarchy:
     def __iter__(self):
         return self.Iterator(self.root)
     
-    class Iterator:
+    class Iterator(object):
         def __init__(self, root):
             """
             @param base: the nested dictionary to iterate over
