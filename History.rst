@@ -1,9 +1,9 @@
 This history lists major release themes. See the GitHub commits (https://github.com/jinx/core)
 for change details.
 
-1.1.3 / 2012-11-08
+1.1.3 / 2012-11-13
 ------------------
-* Support breast images.
+* Add dicom_helper methods.
 
 1.1.2 / 2012-11-08
 ------------------
