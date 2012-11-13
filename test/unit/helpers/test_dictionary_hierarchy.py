@@ -1,12 +1,15 @@
-import unittest
+from nose.tools import *
 from collections import OrderedDict
+
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from qipipe.helpers import dictionary_hierarchy as hierarchy
 
-class TestHierarchy(unittest.TestCase):
+class TestHierarchy:
     """DictionaryHierarchy unit tests."""
     
     def test_flat(self):
-         self.assertEqual([[1, '1']], list(hierarchy.on({1: '1'})))
+         assert_equal([[1, '1']], list(hierarchy.on({1: '1'})))
         
     def test_nested(self):
         """
@@ -20,7 +23,7 @@ class TestHierarchy(unittest.TestCase):
             7 : '7'
         8 : '8'
         
-        results in the follwing paths:
+        results in the following paths:
         
         1, '1'
         2, 3, '3'
@@ -30,7 +33,8 @@ class TestHierarchy(unittest.TestCase):
         8, '8'
         """
         d = OrderedDict([[1, '1'], [2, OrderedDict([ [3, '3'], [4, ['4', '5']], [6, {7: '7'}] ])], [8, ['8']] ])
-        self.assertEqual([[1, '1'], [2, 3, '3'], [2, 4, '4'], [2, 4, '5'], [2, 6, 7, '7'], [8, '8']], list(hierarchy.on(d)))
+        assert_equal([[1, '1'], [2, 3, '3'], [2, 4, '4'], [2, 4, '5'], [2, 6, 7, '7'], [8, '8']], list(hierarchy.on(d)))
 
 if __name__ == "__main__":
-    unittest.main()
+    import nose
+    nose.main(defaultTest=__name__)

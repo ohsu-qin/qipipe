@@ -1,5 +1,8 @@
-import unittest
+from nose.tools import *
 import os, glob, shutil
+
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from qipipe.staging import staging
 
 # The test parent directory.
@@ -13,7 +16,7 @@ TARGET = os.path.join(RESULTS, 'data')
 # The test result delta.
 DELTA = os.path.join(RESULTS, 'delta')
 
-class TestStaging(unittest.TestCase):
+class TestStaging:
     """TCIA staging unit tests."""
     
     def test_link_dicom_files(self):
@@ -26,8 +29,8 @@ class TestStaging(unittest.TestCase):
         for root, dirs, files in os.walk(TARGET):
             for f in files:
                 tgt_file = os.path.join(root, f)
-                self.assertTrue(os.path.islink(tgt_file), "Missing source -> target target link: %s" % tgt_file)
-                self.assertTrue(os.path.exists(tgt_file), "Broken source -> target link: %s" % tgt_file)
+                assert_true(os.path.islink(tgt_file), "Missing source -> target target link: %s" % tgt_file)
+                assert_true(os.path.exists(tgt_file), "Broken source -> target link: %s" % tgt_file)
         # Test incremental delta.
         tgt = os.path.join(TARGET, 'patient01', 'visit02')
         # Clean the partial result.
@@ -39,15 +42,17 @@ class TestStaging(unittest.TestCase):
         # Rerun to capture the delta.
         staging.link_dicom_files(*args)
         delta = os.path.join(DELTA, 'patient01', 'visit02')
-        self.assertTrue(os.path.islink(delta), "Missing delta -> target link: %s" % delta)
-        self.assertTrue(os.path.exists(delta), "Broken delta -> target link: %s" % delta)
+        assert_true(os.path.islink(delta), "Missing delta -> target link: %s" % delta)
+        assert_true(os.path.exists(delta), "Broken delta -> target link: %s" % delta)
         real_tgt = os.path.realpath(tgt)
         real_delta = os.path.realpath(delta)
-        self.assertEqual(real_tgt, real_delta, "Delta does not reference the target:  %s" % delta)
+        assert_equal(real_tgt, real_delta, "Delta does not reference the target:  %s" % delta)
         non_delta = os.path.join(DELTA, 'patient01', 'visit01')
-        self.assertFalse(os.path.exists(non_delta), "Incorrectly added a target -> delta link in %s" % non_delta)
+        assert_false(os.path.exists(non_delta), "Incorrectly added a target -> delta link in %s" % non_delta)
         # Cleanup.
         shutil.rmtree(RESULTS, True)
 
+
 if __name__ == "__main__":
-    unittest.main()
+    import nose
+    nose.main(defaultTest=__name__)
