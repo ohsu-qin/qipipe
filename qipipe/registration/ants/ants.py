@@ -62,6 +62,7 @@ class ANTS(object):
         Links the given files in the source directory to the destination. 
         """
         logging.info("Linking the %(source)s source images to the output %(destination)s..." % {'source': source, 'destination': destination})
+        source = os.path.abspath(source)
         for f in files:
             dest = os.path.join(destination, f)
             if not os.path.exists(dest):
