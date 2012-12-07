@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub commits (https://github.com/jinx/core)
 for change details.
 
+1.2.1 / 2012-12-06
+------------------
+* Add registration module.
+
 1.1.3 / 2012-11-13
 ------------------
 * Add dicom_helper methods.
