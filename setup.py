@@ -5,7 +5,7 @@ __version__ = open('version.txt').read()
 
 __doc__ = 'qipipe processes the OHSU QIN study images. See the README file for more information.'
 
-requires = ['pydicom']
+requires = ['pydicom', 'envoy']
 
 setup(
     name = 'qipipe',
