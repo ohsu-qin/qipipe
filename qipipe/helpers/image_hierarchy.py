@@ -10,7 +10,7 @@ class ImageHierarchy(DictionaryHierarchy):
         # the patient: series: image nested dictionary
         self.tree = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         super(ImageHierarchy, self).__init__(self.tree)
-        self._tag_reader = DicomTagReader('PatientID', 'StudyID', 'SeriesNumber', 'InstanceNumber')
+        self._tag_reader = DicomTagReader('PatientID', 'Study Instance UID', 'Series Instance UID', 'InstanceNumber')
     
     def add(self, ds):
         """
