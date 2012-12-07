@@ -14,18 +14,20 @@ class ANTS(object):
     """ANTS wraps the ANTS filters.
     """
 
-    def __init__(self, output, metric=None, reference=None):
+    def __init__(self, output=None, metric=None, reference=None):
         """Initializes this ANTS instance.
 
-        :param output: the output directory (default the input directory)
-        :param metric: the similarity metric (default cross-correlation)
+        :param output: the output directory (default is the input directory)
+        :param metric: the similarity metric (default is cross-correlation)
         :param reference: the fixed reference image (default is generated)
         """
         if not metric:
             metric = CC()
         self.metric = metric
-        self.output = os.path.abspath(output)
-        self.reference = os.path.abspath(reference)
+        if output:
+            self.output = output
+        if reference:
+            self.reference = os.path.abspath(reference)
     
     def register(self, path):
         """Registers the images in the given directory using a symmetric diffeomorphic deformation.
@@ -33,14 +35,18 @@ class ANTS(object):
         :param path: the directory containing the images to register
         """
         files = os.listdir(path)
-        if not os.path.exists(self.output):
-            os.makedirs(self.output)
-        # Link to the source images, if necessary.
-        if not os.path.samefile(path, self.output):
-            self._link_files(path, self.output, files)
-        logging.info("Registering the images in %s..." % self.output)
+        if self.output:
+            output = self.output
+            if not os.path.exists(output):
+                os.makedirs(output)
+            # Link to the source images, if necessary.
+            if not os.path.samefile(path, output):
+                self._link_files(path, output, files)
+        else:
+            output = path
+        logging.info("Registering the images in %s..." % output)
         cwd = os.getcwd()
-        os.chdir(self.output)
+        os.chdir(output)
         try:
             if not self.reference:
                 self.reference = create_template(self.metric, files)
@@ -48,7 +54,7 @@ class ANTS(object):
                 WarpTransform(moving, self.reference, self.metric).apply()
         finally:
             os.chdir(cwd)
-        logging.info("Registered the images in %s." % self.output)
+        logging.info("Registered the images in %s." % output)
 
     def _link_files(self, source, destination, files):
         """
