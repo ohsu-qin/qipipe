@@ -21,6 +21,7 @@ class ANTS(object):
         :param metric: the similarity metric (default is cross-correlation)
         :param reference: the fixed reference image (default is generated)
         """
+        self.output = self.reference = None
         if not metric:
             metric = CC()
         self.metric = metric
