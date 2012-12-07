@@ -69,7 +69,7 @@ class DicomHeaderIterator(FileIterator):
             try:
                 yield read_dicom_header(f)
             except InvalidDicomError:
-                logging.info("Skipping non-DICOM file %s" + f)
+                logging.info("Skipping non-DICOM file %s" % f)
 
 
 class DicomTagFilterIterator(DicomHeaderIterator):
