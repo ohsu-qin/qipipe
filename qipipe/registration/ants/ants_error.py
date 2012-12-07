@@ -1,0 +1,2 @@
+class ANTSError(Exception):
+    pass
