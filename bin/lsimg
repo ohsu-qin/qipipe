@@ -12,9 +12,9 @@ from qipipe.helpers import dicom_helper
 help_message = """
 lsimg options FILE...
 Options:
-    -t --tags\tThe comma-separated tags to print (default PatientID, StudyID, SeriesNumber and InstanceNumber)
-    -v\tPrint informational messages
-    -v\tPrint informational messages
+    -t --tags\tThe comma-separated tags to print (default Patient ID, Study Instance UID, Series Instance UID and Instance Number)
+    -v\t\tPrint informational messages
+    -v\t\tPrint informational messages
     -h --help\tPrint this help message
 """
 
@@ -42,7 +42,8 @@ def main(argv=None):
             if opt == '-v':
                 verbose = True
             elif opt in ('-h', '--help'):
-                raise Usage(help_message)
+                print help_message
+                return 0
         
         if tags:
             for values in dicom_helper.read_dicom_tags(tags, *args):

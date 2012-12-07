@@ -18,8 +18,8 @@ Options:
     -r --replace\tReplace the existing target image file links
     -t --delta\tThe delta directory to hold new target visit directories
     -f --file\tA file containing the source patient directories
-    -q\tSuppress messages
-    -v\tPrint verbose messages
+    -q, --quiet\tSuppress messages
+    -v, --verbose\tPrint verbose messages
     -h --help\tPrint this help message
 """
 
@@ -35,11 +35,11 @@ def main(argv=None):
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], 'C:i:p:rt:hf:qv', ['changeto=', 'include=', 'visit=', 'replace', 'delta=', 'help', 'file='])
+            opts, args = getopt.getopt(argv[1:], 'C:i:p:rt:hf:qv', ['changeto=', 'include=', 'visit=', 'replace', 'delta=', 'help', 'file=', 'quiet' , 'verbose'])
         except getopt.error, msg:
             raise Usage(msg)
 
-        target = delta = verbosity = None
+        target = delta = None
         # the staging options
         sopts = {}
         # option processing
@@ -47,7 +47,8 @@ def main(argv=None):
             if option in ('-C', '--changeto'):
                 sopts['target'] = value
             elif option in ('-h', '--help'):
-                raise Usage(help_message)
+                print help_message
+                return 0
             elif option in ('-i', '--include'):
                 sopts['include'] = value
             elif option in ('-p', '--visit'):
@@ -56,9 +57,9 @@ def main(argv=None):
                 sopts['replace'] = True
             elif option in ('-t', '--delta'):
                 sopts['delta'] = value
-            elif option == '-q':
+            elif option in ('-q', '--quiet'):
                 logging.basicConfig(level=logging.ERROR)
-            elif option == '-v':
+            elif option in ('-v', '--verbose'):
                 logging.basicConfig(level=logging.DEBUG)
             elif option in ('-f', '--file'):
                 farg = value

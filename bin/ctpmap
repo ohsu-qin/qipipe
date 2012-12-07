@@ -7,6 +7,7 @@ import sys
 import os
 import getopt
 import re
+import logging
 from qipipe.helpers import dicom_helper
 
 help_message = """
@@ -34,19 +35,20 @@ def main(argv=None):
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], 'hp:v', ['help', 'prefix='])
+            opts, args = getopt.getopt(argv[1:], 'hp:v', ['help', 'prefix=', 'verbose'])
         except getopt.error, msg:
             raise Usage(msg)
         
         # option processing
         prefix = None
         for option, value in opts:
-            if option == '-v':
-                verbose = True
-            elif option in ('-h', '--help'):
-                raise Usage(help_message)
+            if option in ('-h', '--help'):
+                print help_message
+                return 0
             elif option in ('-p', '--prefix'):
                 prefix = value
+            elif option in ('-v', '--verbose'):
+                logging.basicConfig(level=logging.DEBUG)
         if prefix == None:
             raise OptError('Required prefix option was not set.')
 
