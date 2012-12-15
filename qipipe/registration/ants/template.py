@@ -27,5 +27,9 @@ def create_template(metric, files):
         logging.error("Build registration template failed with error code %d" % r.status_code)
         logging.error(r.std_err)
         raise ANTSError("Build registration template unsuccessful; see the log for details")
+    if not os.path.exists(tmpl):
+        logging.error("Build registration template was not created.")
+        raise ANTSError("Build registration template unsuccessful; see the log for details")
+        
     logging.info("Built the registration template %s." % tmpl)
     return tmpl
