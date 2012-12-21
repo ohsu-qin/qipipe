@@ -76,12 +76,14 @@ class ANTS(object):
             if not os.path.exists(self.output):
                 os.makedirs(self.output)
             if not os.path.samefile(self.output, work):
+                logging.info("Copying the registered images from %(source)s to %(destination)s..." % {'source': work, 'destination': self.output})
                 for fn in registered.values():
                     wf = os.path.join(work, fn)
                     of = os.path.join(self.output, fn)
                     if os.path.exists(of):
                         os.remove(of)
                     shutil.copyfile(wf, of)
+                logging.info("Copied the registered images to %s." % self.output)
         return registered
 
     def _link_files(self, source, destination, files):
