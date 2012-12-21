@@ -3,6 +3,19 @@ import logging
 import envoy
 from .ants_error import ANTSError
 
+def warp(moving, fixed, metric):
+    """
+    Warps to the given moving image to fit the fixed image. The result is a new image
+    named by the moving image name without extension followed by 'Registered.nii.gz',
+    e.g. 'image0004Registered.nii.gz'.
+    
+    :param moving: the file name of the image to transform
+    :param fixed: the file name of the reference image
+    :parm metric: the similarity metric
+    :return: the name of the new image file
+    """
+    return WarpTransform(moving, fixed, metric).apply()
+
 class WarpTransform:
     """An ANTS WarpTransform applies a deformation field and affine transform to an image."""
     
