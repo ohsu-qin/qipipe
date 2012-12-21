@@ -12,19 +12,24 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 # The test fixture.
 FIXTURE = os.path.join(ROOT, 'fixtures', 'registration', 'breast', 'patient03', 'visit01')
 # The test results.
-RESULT = os.path.join(ROOT, 'results', 'registration', 'ants', 'patient03', 'visit01')
+RESULT = os.path.join(ROOT, 'results', 'registration', 'ants')
+WORK = os.path.join(RESULT, 'work')
+OUTPUT = os.path.join(RESULT, 'registered')
 
 class TestANTS:
     """ANTS registration unit tests."""
     
     def test_registration(self):
         shutil.rmtree(RESULT, True)
-        ants.register(FIXTURE, RESULT)
+        rdict = ants.register(FIXTURE, output=OUTPUT, work=WORK)
         # Verify that each input is registered.
-        results = set(os.listdir(RESULT))
-        for f in os.listdir(FIXTURE):
-            registered = f.replace('.nii', 'Registered.nii')
-            assert_true(registered in results, "Missing registration result: %s" % f)
+        rout = set(os.listdir(OUTPUT))
+        print rout
+        for fn in os.listdir(FIXTURE):
+            f = os.path.join(FIXTURE, fn)
+            rfn = fn.replace('.dcm', 'Registered.nii.gz')
+            assert_equal(rfn, rdict[fn], "Missing registration mapping: %s" % rfn)
+            assert_true(rfn in rout, "Missing registration file: %s" % rfn)
 
 
 if __name__ == "__main__":
