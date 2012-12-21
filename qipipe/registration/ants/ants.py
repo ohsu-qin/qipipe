@@ -28,14 +28,15 @@ def create_dce_template(files, metric=None):
     Generates a fixed reference template for registering the given image files.
     
     If there more than 10 but less than 100 input files, then the reference
-    image is generated from at most 20 input files starting at the fifth input file
+    image is generated from at most 50 input files starting at the fifth input file
     in sort order.
     
     If there are at least 100 input files, then the reference image is generated from
-    20 input files consisting of a uniform subset starting at the tenth input file and
-    ending at or before the 100th input file in sort order.
-    For example, if there are 245 images, then the reference template averages the 20
-    files with zero-based indexes 9, 13, ..., 98.
+    50 input files consisting of a uniformally-sampled subset starting at the tenth
+    input file and separated by no more than five input files in sort order.
+    For example, if there are 225 images named image0001.dcm to image0225.dcm, then
+    the reference template averages the files image0010.dcm, image0014.dcm, ...,
+    image0206.dcm, image0210.dcm.
     
     Otherwise, if there are 10 or fewer input files, then the reference image
     is generated from all of the given input files.
@@ -47,10 +48,11 @@ def create_dce_template(files, metric=None):
     # If there are many input files, then build the template with a subset.
     if len(files) >= 100:
         tfiles = []
-        for i in range(0, 18):
-            tfiles.append(files[9 + i * 5])
+        step = min(5, (len(files) - 20) / 50)
+        for i in range(0, 49):
+            tfiles.append(files[9 + i * step])
     elif len(files) > 10:
-        tfiles = files[4:min(20, len(files))]
+        tfiles = files[4:min(54, len(files))]
     else:
         tfiles = files
     return create_template(tfiles, metric=metric)
