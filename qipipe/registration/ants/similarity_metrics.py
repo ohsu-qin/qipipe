@@ -5,19 +5,29 @@ class SimilarityMetric(object):
         self.name = name
         self.opts = opts
 
-    def format(self, fixed, moving):
+    def format(self, fixed, moving, weight=1):
         """
         Formats the ANTS similiarity metric argument.
 
         :param reference: the fixed reference file
         :param moving: the moving file to register
+        :param weight: the weight to assign this metric (default 1)
         :rtype: str
         """
-        opt_arg = ', '.join([str(opt) for opt in self.opts])
+        opt_arg = ', '.join([str(opt) for opt in [weight].extend(self.opts)])
         return SimilarityMetric._FMT.format(name=self.name, fixed=fixed, moving=moving, opts=opt_arg)
 
     def __str__():
         return self.name
+
+
+class PR(SimilarityMetric):
+    """
+    The probability mapping metric.
+    """
+
+    def __init__(self):
+        super(PR, self).__init__('PR')
 
 
 class CC(SimilarityMetric):
@@ -26,7 +36,7 @@ class CC(SimilarityMetric):
     """
 
     def __init__(self, radius=4):
-        super(CC, self).__init__('CC', 1, radius)
+        super(CC, self).__init__('CC', radius)
 
 
 class MI(SimilarityMetric):
@@ -35,7 +45,7 @@ class MI(SimilarityMetric):
     """
 
     def __init__(self, bins=32):
-        super(MI, self).__init__('MI', 1, bins)
+        super(MI, self).__init__('MI', bins)
 
 
 class MSQ(SimilarityMetric):
@@ -44,7 +54,7 @@ class MSQ(SimilarityMetric):
     """
 
     def __init__(self):
-        super(MSQ, self).__init__('MSQ', 1, 0)
+        super(MSQ, self).__init__('MSQ', 0)
 
 
 class JTB(SimilarityMetric):
@@ -53,4 +63,4 @@ class JTB(SimilarityMetric):
     """
 
     def __init__(self, radius=32):
-        super(JTB, self).__init__('JTB', 1, radius)
+        super(JTB, self).__init__('JTB', radius)
