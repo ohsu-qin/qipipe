@@ -21,7 +21,7 @@ def create_template(metric, files):
         return tmpl
     cmd = CMD.format(metric=metric.name, output=PREFIX, files=' '.join(files))
     logging.info("Building the %s registration template with the following command:" % tmpl)
-    logging.info(cmd)
+    logging.info(cmd[:80])
     r = envoy.run(cmd)
     if r.status_code:
         logging.error("Build registration template failed with error code %d" % r.status_code)
