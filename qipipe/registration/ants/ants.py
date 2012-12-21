@@ -104,7 +104,7 @@ class ANTS(object):
         os.chdir(work)
         try:
             if not self.reference:
-                self.reference = create_dce_template(self.metric, files)
+                self.reference = create_dce_template(files, self.metric)
             for moving in files:
                 registered[moving] = warp(moving, self.reference, self.metric)
         finally:
