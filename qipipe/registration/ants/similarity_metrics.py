@@ -16,7 +16,7 @@ class SimilarityMetric(object):
         """
         opts = [weight]
         opts.extend(self.opts)
-        opt_arg = ', '.join(opts)
+        opt_arg = ', '.join([str(opt) for opt in opts])
         return SimilarityMetric._FMT.format(name=self.name, fixed=fixed, moving=moving, opts=opt_arg)
 
     def __str__(self):
