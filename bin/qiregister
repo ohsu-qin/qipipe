@@ -55,7 +55,7 @@ def main(argv=None):
             raise Usage('Too many arguments')
 
         src = args[0]
-        ants.register(src, output=output, work-work reference=reference)
+        ants.register(src, output=output, work=work, reference=reference)
 
     except Usage, err:
         print >> sys.stderr, sys.argv[0].split('/')[-1] + ': ' + str(err.msg)
