@@ -85,7 +85,8 @@ class ANTS(object):
         :param path: the directory containing the images to register
         :return: the source => registered file name dictionary
         """
-        files = os.listdir(path).sort()
+        files = os.listdir(path)
+        files.sort()
         if self.work:
             work = self.work
         elif self.output:
