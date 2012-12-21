@@ -14,7 +14,9 @@ class SimilarityMetric(object):
         :param weight: the weight to assign this metric (default 1)
         :rtype: str
         """
-        opt_arg = ', '.join([weight] + self.opts)
+        opts = [weight]
+        opts.extend(self.opts)
+        opt_arg = ', '.join(opts)
         return SimilarityMetric._FMT.format(name=self.name, fixed=fixed, moving=moving, opts=opt_arg)
 
     def __str__(self):
