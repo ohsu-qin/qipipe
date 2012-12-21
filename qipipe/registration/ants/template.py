@@ -28,7 +28,7 @@ def create_template(files, dimension=2, cores=4, metric=PR()):
     opts = "-d %(dim)s -j %(cores)s -m %(metric)s" % {'dim': dimension, 'cores': cores, 'metric': metric}
     cmd = CMD.format(output=PREFIX, opts=opts, files=' '.join(files))
     logging.info("Building the %s registration template with the following command:" % tmpl)
-    logging.info(cmd[:80])
+    logging.info(cmd)
     
     # Run the command.
     r = envoy.run(cmd)
