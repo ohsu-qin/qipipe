@@ -53,7 +53,7 @@ def create_dce_template(files, metric=None):
         tfiles = files[4:min(20, len(files))]
     else:
         tfiles = files
-    return create_template(self.metric, tfiles)
+    return create_template(tfiles, metric)
     
     
 class ANTS(object):
