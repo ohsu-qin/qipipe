@@ -1,17 +1,18 @@
 import os
 import logging
 import envoy
+from .similarity_metrics import *
 from .ants_error import ANTSError
 
-def warp(moving, fixed, metric):
+def warp(moving, fixed, metric=None):
     """
-    Warps to the given moving image to fit the fixed image. The result is a new image
+    Warps the given moving image to fit the fixed image. The result is a new image
     named by the moving image name without extension followed by 'Registered.nii.gz',
     e.g. 'image0004Registered.nii.gz'.
     
     :param moving: the file name of the image to transform
     :param fixed: the file name of the reference image
-    :parm metric: the similarity metric
+    :parm metric: the similarity metric (default cross-correlation)
     :return: the name of the new image file
     """
     return WarpTransform(moving, fixed, metric).apply()
@@ -19,23 +20,26 @@ def warp(moving, fixed, metric):
 class WarpTransform:
     """An ANTS WarpTransform applies a deformation field and affine transform to an image."""
     
-    def __init__(self, moving, fixed, metric):
+    def __init__(self, moving, fixed, metric=None, iterations=[100,100,10]):
         """
         :param moving: the file name of the image to transform
         :param fixed: the file name of the reference image
-        :parm metric: the similarity metric
+        :param metric: the similarity metric (default cross-correlation)
+        :param iterations: the number of iterations in each resolution
         :return: the new transform
         :rtype: WarpTransform
         """
-        MAP = "ANTS 2 -m {metric} -i 100x100x10 -r Gauss[0,3] -t SyN[0.25] -o {output}"
+        MAP = "ANTS 2 -m {metric} -i {iterations} -r Gauss[3,0] -t SyN[0.25] -o {output}"
         FIELD = "{output}Warp.nii.gz"
         AFFINE = "{output}Affine.txt"
 
         self.moving = moving
         self.fixed = fixed
+        if not metric:
+            metric = CC()
         mstr = metric.format(fixed=fixed, moving=moving)
         name = os.path.splitext(moving)[0]
-        cmd = MAP.format(metric=mstr, output=name)
+        cmd = MAP.format(metric=mstr, output=name, iterations='x'.join(iterations))
         logging.info("Building the %(moving)s -> %(fixed)s warp transform with the following command:" % {'moving': moving, 'fixed': fixed})
         logging.info(cmd)
         r = envoy.run(cmd)
