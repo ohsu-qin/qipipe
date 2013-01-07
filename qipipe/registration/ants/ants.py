@@ -67,11 +67,9 @@ class ANTS(object):
 
         :param output: the output directory (default is the input directory)
         :param work: the working directory for intermediate results (default is the output directory)
-        :param metric: the similarity metric (default is cross-correlation)
+        :param metric: the similarity metric
         :param reference: the fixed reference image (default is generated)
         """
-        if not metric:
-            metric = CC()
         self.metric = metric
         self.output = output
         self.work = work

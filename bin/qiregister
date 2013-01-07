@@ -7,12 +7,13 @@ import sys
 import os
 import getopt
 import logging
-from qipipe.registration import *
+from qipipe.registration import ants
 
 help_message = """
 qiregister options DIRECTORY
 Options:
     -h --help\tPrint this help message
+    -m --metric\tThe similarity metric name - CC (default), MI or PR
     -o --output\tThe output location (default is the input directory)
     -w --work\tThe optional working directory location
     -R --reference\tThe fixed reference image (default is generated)
@@ -31,16 +32,18 @@ def main(argv=None):
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], 'h:o:w:R:v', ['help', 'output', 'reference', 'work', 'verbose'])
+            opts, args = getopt.getopt(argv[1:], 'h:m:o:w:R:v', ['help', 'metric', 'output', 'reference', 'work', 'verbose'])
         except getopt.error, msg:
             raise Usage(msg)
 
         # option processing
-        output = work = reference = None
+        metric = output = reference = work = None
         for option, value in opts:
             if option in ('-h', '--help'):
                 print help_message
                 return 0
+            elif option in ('-m' '--metric'):
+                metric = getattr(ants.similarity_metrics, value)()
             elif option in ('-o' '--output'):
                 output = value
             elif option in ('-w' '--work'):
@@ -55,7 +58,7 @@ def main(argv=None):
             raise Usage('Too many arguments')
 
         src = args[0]
-        ants.register(src, output=output, work=work, reference=reference)
+        ants.register(src, output=output, work=work, reference=reference, metric=metric)
 
     except Usage, err:
         print >> sys.stderr, sys.argv[0].split('/')[-1] + ': ' + str(err.msg)

@@ -36,7 +36,7 @@ def read_dicom_header(path):
 
 def read_dicom_tags(tags, *files):
     """
-    @param tags: the tags to read
+    @param tags: the tags to read (None => all tags)
     @param files: the files to read
     @return: an iterator over the tag value lists
     """
@@ -82,10 +82,19 @@ class DicomTagFilterIterator(DicomHeaderIterator):
         @param tags: the tags to read
         @ param files: the files to read
         """
-        super(DicomTagFilterIterator, self).__init__(*files) 
-        self._tag_reader = DicomTagReader(*tags)
+        super(DicomTagFilterIterator, self).__init__(*files)
+        self._tags = tags:
+            self._tag_reader = DicomTagReader(*tags)
+        else:
     
     def next(self):
         for ds in super(DicomTagFilterIterator, self).next():
-            yield self._tag_reader.read(ds)
+            if self._tags:
+                tags = self._tags
+            else:
+                # Skip tags with a bracketed name.
+                tags = [de.name for de in ds if de.name[0] != '[']
+                tags.sort()
+            rdr = DicomTagReader(*tags)    
+            yield rdr.read(ds)
 
