@@ -1,17 +1,26 @@
 class SimilarityMetric(object):
+    """ANTS similiarity metric."""
+    
+    
     _FMT = "{name}[{fixed}, {moving}, {opts}]"
 
     def __init__(self, name, *opts):
+        """
+        Initializes this metric.
+        
+        :param name: the metric name
+        :param opts: the metric options
+        :rtype: str
+        """
         self.name = name
         self.opts = opts
 
-    def format(self, fixed, moving, weight=1):
+    def format(self, fixed, moving):
         """
         Formats the ANTS similiarity metric argument.
 
         :param reference: the fixed reference file
         :param moving: the moving file to register
-        :param weight: the weight to assign this metric (default 1)
         :rtype: str
         """
         opts = [weight]
@@ -30,6 +39,16 @@ class PR(SimilarityMetric):
 
     def __init__(self):
         super(PR, self).__init__('PR')
+
+
+class PSE(SimilarityMetric):
+    """
+    The point set expectation metric.
+    """
+
+    def __init__(self, sampling=0.1, sigma=10, k=10):
+        # The 0 argument sets the boundary points only flag to false.
+        super(PSE, self).__init__('PSE', sampling, sigma, 0, k)
 
 
 class CC(SimilarityMetric):
