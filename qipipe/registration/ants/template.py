@@ -4,7 +4,7 @@ import envoy
 from .similarity_metrics import *
 from .ants_error import ANTSError
 
-def create_template(files, dimension=2, cores=4, metric=PR()):
+def create_template(files, dimension=2, cores=4, metric=None):
     """
     Builds a template from the given image files.
     
@@ -25,6 +25,8 @@ def create_template(files, dimension=2, cores=4, metric=PR()):
         return tmpl
     
     # Build the command line.
+    if not metric:
+        metric = PR()
     opts = "-d %(dim)s -j %(cores)s -m %(metric)s" % {'dim': dimension, 'cores': cores, 'metric': metric}
     cmd = CMD.format(output=PREFIX, opts=opts, files=' '.join(files))
     logging.info("Building the %s registration template with the following command:" % tmpl)
