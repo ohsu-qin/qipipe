@@ -7,14 +7,14 @@ The format of each path is a line of tab-delimited fields.
 import sys
 import os
 import getopt
-from qipipe.helpers import dicom_helper
+from collections import defaultdict
+from qipipe.helpers.dicom_helper import ImageHierarchy, read_dicom_header, select_dicom_tags
 
 help_message = """
 lsimg options FILE...
 Options:
     -s --summary\tPrint only the Patient ID, Study Instance UID, Series Instance UID and Instance Number tags
     -t --tags\tThe comma-separated tags to print (default is all non-pixel tags)
-    -n --header\tPrint a header line consisting of the DICOM tag names
     -v\t\tPrint informational messages
     -h --help\tPrint this help message
 """
@@ -29,37 +29,55 @@ class Usage(Exception):
 def main(argv=None):
     if argv is None:
         argv = sys.argv
-    summary = False
-    tags = None
+    tags = []
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], 'nst:hv', ['tags=', 'help', 'verbose'])
+            opts, args = getopt.getopt(argv[1:], 'st:hv', ['summary', 'tags=', 'help', 'verbose'])
         except getopt.error, msg:
             raise Usage(msg)
         
         # option processing
         for opt, val in opts:
             if opt in ('-s', '--summary'):
-                summary = True
+                if tags:
+                    raise Usage('The tags option cannot be used with the summary option.')
+                # The summary tags include the image hierarchy path.
+                tags = ImageHierarchy.TAGS
             elif opt in ('-t', '--tags'):
+                if tags:
+                    raise Usage('The tags option cannot be used with the summary option.')
                 tags = val.split(',')
-            elif opt in ('-n', '--names'):
-                header = True
             elif opt == '-v':
                 verbose = True
             elif opt in ('-h', '--help'):
                 print help_message
                 return 0
         
-        if tags:
-            for values in dicom_helper.read_dicom_tags(tags, *args):
-                print "\t".join(values)
-        elif summary:
-            # Build the hierarchy.
-            hierarchy = dicom_helper.read_image_hierarchy(*args)
-            # Print each patient-visit-series-acquisition-image field.
-            for path in hierarchy:
-                print "\t".join(path)
+        
+        # Read all of the headers.
+        dicts = {f: select_dicom_tags(read_dicom_header(f), *tags) for f in args}
+        # The default tags include the non-bracketed tags defined in any of the files.
+        if not tags:
+            valid = set()
+            invalid = set()
+            for d in dicts.itervalues():
+                for t in d.iterkeys():
+                    # Exclude the tag if it can have a multi-line value.
+                    if "\n" in str(d[t]):
+                        invalid.add(t)
+                    else:
+                        valid.add(t)
+            tags = list(valid - invalid)
+            tags.sort()
+        # Print the header.
+        print "\t".join(tags)
+        # Print the tags in each DICOM file.
+        for f in args:
+            # Augment the tag dictionary with a default empty string value for a missing tag.
+            d = dicts[f]
+            dd = defaultdict(str)
+            dd.update(dicts[f])
+            print "\t".join([str(dd[t]) for t in tags])
             
         
     except Usage, err:

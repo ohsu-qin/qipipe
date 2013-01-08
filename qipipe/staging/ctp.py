@@ -3,7 +3,7 @@ TCIA CTP preparation utilities.
 """
 
 import os
-from ..helpers import read_dicom_tags
+from ..helpers.dicom_helper import iter_dicom_headers
 
 def id_map(prefix, dirs):
     """
@@ -22,7 +22,7 @@ def id_map(prefix, dirs):
         if not pnt_match:
             continue
         pnt_nbr = int(pnt_match.group(0))
-        for pnt_id in read_dicom_tags(['Patient ID'], d):
+        for pnt_id in iter_dicom_headers(['Patient ID'], d):
             # Escape colon, equal and space.
             pnt_id = "\\".join(pnt_id.split(' '))
             pnt_id = "\\".join(pnt_id.split(':'))
