@@ -1,2 +1,2 @@
-from .collection_helper import *
-from .dicom_helper import *
+import collection_helper
+import dicom_helper
