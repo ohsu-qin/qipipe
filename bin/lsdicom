@@ -14,6 +14,7 @@ help_message = """
 lsimg options FILE...
 Options:
     -s --summary\tPrint only the Patient ID, Study Instance UID, Series Instance UID and Instance Number tags
+    -n --no-header\t Omit the tag name header line
     -t --tags\tThe comma-separated tags to print (default is all non-pixel, non-bracketed tags whose value does not include a line break)
     -v\t\tPrint informational messages
     -h --help\tPrint this help message
@@ -30,9 +31,10 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
     tags = []
+    header = True
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], 'st:hv', ['summary', 'tags=', 'help', 'verbose'])
+            opts, args = getopt.getopt(argv[1:], 'nst:hv', ['no-header', 'summary', 'tags=', 'help', 'verbose'])
         except getopt.error, msg:
             raise Usage(msg)
         
@@ -47,6 +49,8 @@ def main(argv=None):
                 if tags:
                     raise Usage('The tags option cannot be used with the summary option.')
                 tags = val.split(',')
+            elif opt in ('-n' '--no-header'):
+                header = False
             elif opt == '-v':
                 verbose = True
             elif opt in ('-h', '--help'):
@@ -69,13 +73,18 @@ def main(argv=None):
             tags.sort()
         
         # Print the header.
-        print "\t".join(tags)
+        if header:
+            print "\t".join(tags)
         # Print the tags in each DICOM file.
         for ds in iter_dicom_headers(*args):
-            # Augment the tag dictionary with a default empty string value for a missing tag.
-            dd = defaultdict(str)
-            dd.update(select_dicom_tags(ds, *tags))
-            print "\t".join([str(dd[t]) for t in tags])
+            tdict = select_dicom_tags(ds, *tags)
+            # If there is at least one non-empty value, then print the tab-separated values.
+            if any(v for v in tdict.itervalues()):
+                # Augment the tag dictionary with a default empty string value for a missing tag.
+                dd = defaultdict(str)
+                dd.update(tdict)
+                values = [str(dd[t]) for t in tags]
+                print "\t".join(values)
             
         
     except Usage, err:
