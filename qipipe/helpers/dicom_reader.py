@@ -15,6 +15,7 @@ def read_dicom_header(path):
     """
     
     # Read the DICOM file with defer_size=256, stop_before_pixels=True and force=False.
+    logging.debug("Reading DICOM header in file %s..." % path)
     return dicom.read_file(path, 256, True, False)
 
 def isdicom(path):
@@ -27,6 +28,7 @@ def isdicom(path):
     try:
         read_dicom_header(path)
     except InvalidDicomError:
+        logging.debug("%s is not a DICOM file." % path)
         return False
     return True
 
@@ -74,3 +76,4 @@ class DicomHeaderIterator(FileIterator):
                 yield read_dicom_header(f)
             except InvalidDicomError:
                 logging.info("Skipping non-DICOM file %s" % f)
+            
