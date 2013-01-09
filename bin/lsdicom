@@ -7,7 +7,9 @@ The format of each path is a line of tab-delimited fields.
 import sys
 import os
 import getopt
+import logging
 from collections import defaultdict
+from qipipe.helpers.collection_helper import to_series
 from qipipe.helpers.dicom_helper import ImageHierarchy, iter_dicom_headers, select_dicom_tags
 
 help_message = """
@@ -32,9 +34,10 @@ def main(argv=None):
         argv = sys.argv
     tags = []
     header = True
+    output = sys.stdout
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], 'nst:hv', ['no-header', 'summary', 'tags=', 'help', 'verbose'])
+            opts, args = getopt.getopt(argv[1:], 'no:st:hv', ['no-header', 'output', 'summary', 'tags=', 'help', 'verbose'])
         except getopt.error, msg:
             raise Usage(msg)
         
@@ -51,8 +54,10 @@ def main(argv=None):
                 tags = val.split(',')
             elif opt in ('-n' '--no-header'):
                 header = False
+            elif opt in ('-o' '--output'):
+                output = open(val, 'w')
             elif opt == '-v':
-                verbose = True
+                logging.basicConfig(level=logging.DEBUG)
             elif opt in ('-h', '--help'):
                 print help_message
                 return 0
@@ -61,6 +66,7 @@ def main(argv=None):
         if not tags:
             valid = set()
             invalid = set()
+            logging.debug("Collecting the DICOM tags from %s..." % to_series(args))
             for ds in iter_dicom_headers(*args):
                 tdict = select_dicom_tags(ds)
                 for t,v in tdict.iteritems():
@@ -73,8 +79,9 @@ def main(argv=None):
             tags.sort()
         
         # Print the header.
+        logging.debug("Printing the DICOM tag values...")
         if header:
-            print "\t".join(tags)
+            print >> output, "\t".join(tags)
         # Print the tags in each DICOM file.
         for ds in iter_dicom_headers(*args):
             tdict = select_dicom_tags(ds, *tags)
@@ -84,7 +91,7 @@ def main(argv=None):
                 dd = defaultdict(str)
                 dd.update(tdict)
                 values = [str(dd[t]) for t in tags]
-                print "\t".join(values)
+                print >> output, "\t".join(values)
             
         
     except Usage, err:
