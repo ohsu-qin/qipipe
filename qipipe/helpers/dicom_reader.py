@@ -1,3 +1,4 @@
+import logging
 import operator
 import dicom
 from dicom.filereader import InvalidDicomError
