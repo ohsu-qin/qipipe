@@ -8,8 +8,8 @@ def read_dicom_header(path):
     """
     Reads the DICOM header of the given file.
     
-    :param path: the file pathname
-    :return: the pydicom dicom object
+    @param path: the file pathname
+    @return: the pydicom dicom object
     :raise: InvalidDicomError if the file is not a DICOM file
     :raise: IOError if the file cannot be read
     """
@@ -20,8 +20,8 @@ def read_dicom_header(path):
 
 def isdicom(path):
     """
-    :param path: the file path
-    :return: whether the file is a DICOM file
+    @param path: the file path
+    @return: whether the file is a DICOM file
     :raise: IOError if the file cannot be read
     """
     
@@ -34,9 +34,9 @@ def isdicom(path):
 
 def select_dicom_tags(ds, *tags):
     """
-    :param ds: the pydicom dicom object
-    :param tags: the names of tags to read (default all unbracketed tags)
-    :return: the tag name => value dictionary
+    @param ds: the pydicom dicom object
+    @param tags: the names of tags to read (default all unbracketed tags)
+    @return: the tag name => value dictionary
     """
     
     if not tags:
@@ -54,7 +54,7 @@ def iter_dicom_headers(*paths):
     """
     Iterates over the DICOM headers for DICOM files at the given locations.
     
-    :param paths: the DICOM files or directories containing DICOM files
+    @param paths: the DICOM files or directories containing DICOM files
     """
     
     return DicomHeaderIterator(*paths)
