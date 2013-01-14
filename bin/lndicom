@@ -7,7 +7,7 @@ import sys
 import os
 import getopt
 import logging
-from qipipe.staging import staging
+from qipipe.staging import link_dicom_files
 
 help_message = """
 lndicom options DIR...
@@ -40,23 +40,23 @@ def main(argv=None):
             raise Usage(msg)
 
         target = delta = None
-        # the staging options
-        sopts = {}
+        # the link options
+        lopts = {}
         # option processing
         for option, value in opts:
             if option in ('-C', '--changeto'):
-                sopts['target'] = value
+                lopts['target'] = value
             elif option in ('-h', '--help'):
                 print help_message
                 return 0
             elif option in ('-i', '--include'):
-                sopts['include'] = value
+                lopts['include'] = value
             elif option in ('-p', '--visit'):
-                sopts['visit'] = value
+                lopts['visit'] = value
             elif option in ('-r', '--replace'):
-                sopts['replace'] = True
+                lopts['replace'] = True
             elif option in ('-t', '--delta'):
-                sopts['delta'] = value
+                lopts['delta'] = value
             elif option in ('-q', '--quiet'):
                 logging.basicConfig(level=logging.ERROR)
             elif option in ('-v', '--verbose'):
@@ -68,7 +68,7 @@ def main(argv=None):
                 else:
                     fs = open(farg)
                 args[:] = [s.strip() for s in fs.readlines()]
-        args.append(sopts)
+        args.append(lopts)
 
         staging.link_dicom_files(*args)
 
