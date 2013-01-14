@@ -8,12 +8,13 @@ import os
 import getopt
 import re
 import logging
-from qipipe.helpers import dicom_helper
+from qipipe.staging.ctp import create_ctp_id_map
 
 help_message = """
 ctpmap options DIR...
 Options:
-    -p --prefix\tThe target TCIA patient id prefix
+    -c --collection NAME\tThe required target TCIA collection name, e.g. QIN-BREAST-02
+    -o --output FILE\tThe output file name (default stdout)
     -h --help\tPrint this help message
 """
 
@@ -35,24 +36,28 @@ def main(argv=None):
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], 'hp:v', ['help', 'prefix=', 'verbose'])
+            opts, args = getopt.getopt(argv[1:], 'hc:o:v', ['help', 'collection', 'output', 'verbose'])
         except getopt.error, msg:
             raise Usage(msg)
         
         # option processing
-        prefix = None
-        for option, value in opts:
-            if option in ('-h', '--help'):
+        collection = None
+        output = sys.stdout
+        for opt, val in opts:
+            if opt in ('-c', '--collection'):
+                collection = val
+            elif opt in ('-o', '--output'):
+                output = open(val, 'w')
+            elif opt in ('-v', '--verbose'):
+                logging.basicConfig(level=logging.DEBUG)
+            elif opt in ('-h', '--help'):
                 print help_message
                 return 0
-            elif option in ('-p', '--prefix'):
-                prefix = value
-            elif option in ('-v', '--verbose'):
-                logging.basicConfig(level=logging.DEBUG)
-        if prefix == None:
-            raise OptError('Required prefix option was not set.')
-
-        print_ctp_map(prefix, args)
+        if collection == None:
+            raise OptError('Required collection option was not set.')
+        
+        # Print the id map.
+        _print_ctp_id_map(collection, *args)
     
     except Usage, err:
         print >> sys.stderr, sys.argv[0].split('/')[-1] + ': ' + str(err.msg)
@@ -60,29 +65,16 @@ def main(argv=None):
     
     return 0
     
-def print_ctp_map(prefix, dirs):
-    """Prints the CTP map for the DICOM files in the given directories"""
-    # The ID lookup entry format.
-    fmt = "ptid/%(patient id)s=" + prefix + "%(patient number)04d"
-    # The RE to extract the patient number suffix.
-    pat = re.compile('\d+$')
-    for d in dirs:
-        # The patient number is extracted from the directory name.
-        pnt_match = pat.search(os.path.basename(d))
-        if not pnt_match:
-            continue
-        pnt_nbr = int(pnt_match.group(0))
-        # The patient ids for this patient.
-        pnt_ids = set()
-        for root, subdirs, files in os.walk(d):
-            for f in files:
-                path = os.path.join(root, f)
-                ds = dicom_helper.read_dicom_header(path)
-                pnt_ids.add(ds.PatientID)
-        for pnt_id in pnt_ids:
-            # Escape colon and blank in the source patient id.
-            esc_pnt_id = pnt_id.replace(':', '\:').replace(' ', '\ ')
-            print >> sys.stdout, fmt % {'patient id': esc_pnt_id, 'patient number': pnt_nbr}
+def _print_ctp_id_map(collection, output, *dirs):
+    """Prints the CTP map for the DICOM files in the given directories."""
+    
+    # The CTP ID map file line format.
+    fmt = "ptid/%(dicom id)s=" + collection + "%(ctp id)s"
+    # The id map.
+    id_map = create_ctp_id_map(collection, *args)
+    # Print the ID map file.
+    for dcm_id, ctp_id in id_map.iteritems():
+        print >> output, fmt % {'dicom id': dcm_id, 'ctp id': ctp_id}
 
 if __name__ == '__main__':
     sys.exit(main())
