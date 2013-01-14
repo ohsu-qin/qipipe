@@ -14,9 +14,8 @@ def read_dicom_header(path):
     :raise: IOError if the file cannot be read
     """
     
-    # Read the DICOM file with defer_size=256, stop_before_pixels=True and force=False.
-    logging.debug("Reading DICOM header in file %s..." % path)
-    return dicom.read_file(path, 256, True, False)
+    logging.debug("Reading the DICOM header in file %s..." % path)
+    return dicom.read_file(path, *DicomHeaderIterator.OPTS)
 
 def isdicom(path):
     """
@@ -50,6 +49,15 @@ def select_dicom_tags(ds, *tags):
             pass
     return tdict
 
+def iter_dicom(*paths):
+    """
+    Iterates over the DICOM data sets for DICOM files at the given locations.
+    
+    @param paths: the DICOM files or directories containing DICOM files
+    """
+    
+    return DicomIterator(*paths)
+
 def iter_dicom_headers(*paths):
     """
     Iterates over the DICOM headers for DICOM files at the given locations.
@@ -59,21 +67,34 @@ def iter_dicom_headers(*paths):
     
     return DicomHeaderIterator(*paths)
 
-class DicomHeaderIterator(FileIterator):
+class DicomIterator(FileIterator):
     """
-    DicomHeaderIterator is a utility class for reading the pydicom non-pixel data sets from DICOM files.
+    DicomIterator is a utility class for reading the pydicom data sets from DICOM files.
     """
     
     def __init__(self, *paths):
-        super(DicomHeaderIterator, self).__init__(*paths)
+        super(DicomIterator, self).__init__(*paths)
+        self.args = []
     
     def next(self):
         """
-        Iterates over each DICOM header.
+        Iterates over each DICOM data set.
         """
-        for f in super(DicomHeaderIterator, self).next():
+        for f in super(DicomIterator, self).next():
             try:
-                yield read_dicom_header(f)
+                yield dicom.read_file(f, *self.args)
             except InvalidDicomError:
                 logging.info("Skipping non-DICOM file %s" % f)
+
+class DicomHeaderIterator(DicomIterator):
+    """
+    DicomHeaderIterator is a utility class for reading the pydicom non-pixel data sets from DICOM files.
+    """
+
+    # Read the DICOM file with defer_size=256, stop_before_pixels=True and force=False.
+    OPTS = [256, True, False]
+    
+    def __init__(self, *paths):
+        super(DicomHeaderIterator, self).__init__(*paths)
+        self.args = DicomHeaderIterator.OPTS
             
