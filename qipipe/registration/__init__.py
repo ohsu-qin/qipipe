@@ -1,1 +1,1 @@
-import ants
+from . import ants
