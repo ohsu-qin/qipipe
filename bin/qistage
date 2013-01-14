@@ -1,0 +1,58 @@
+#!/usr/bin/env python
+"""
+Stages DICOM files for submission to TCIA and XNAT.
+"""
+
+import sys
+import os
+import getopt
+import logging
+from qipipe.helpers.dicom_helper import edit_dicom_tags
+
+help_message = """
+qistage options DIR...
+Options:
+    -q, --quiet\tSuppress messages
+    -v, --verbose\tPrint verbose messages
+    -h --help\tPrint this help message
+"""
+
+
+class Usage(Exception):
+
+    def __init__(self, msg):
+        self.msg = msg
+
+
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
+    try:
+        try:
+            opts, args = getopt.getopt(argv[1:], 'hqv', ['help', 'quiet' , 'verbose'])
+        except getopt.error, msg:
+            raise Usage(msg)
+
+        # option processing
+        for option, value in opts:
+            elif option in ('-h', '--help'):
+                print help_message
+                return 0
+            elif option in ('-q', '--quiet'):
+                logging.basicConfig(level=logging.ERROR)
+            elif option in ('-v', '--verbose'):
+                logging.basicConfig(level=logging.DEBUG)
+
+        # The DICOM file link options.
+        lopts = {''}
+        args.append()
+        staging.link_dicom_files(*args)
+
+    except Usage, err:
+        print >> sys.stderr, sys.argv[0].split('/')[-1] + ': ' + str(err.msg)
+        return 2
+
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main())
