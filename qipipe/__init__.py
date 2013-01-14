@@ -1,4 +1,1 @@
-import helpers
-import staging
-import registration
-
+from . import helpers, staging, registration
