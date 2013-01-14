@@ -3,30 +3,63 @@ TCIA CTP preparation utilities.
 """
 
 import os
+import re
+import logging
 from ..helpers.dicom_helper import iter_dicom_headers
 
-def id_map(prefix, dirs):
+def create_ctp_id_map(collection, *paths):
     """
     Returns the CTP map for the DICOM files in the given directories. The map is a
-    dictionary
+    dictionary augmented with a {format} method that prints the CTP map properties.
     
-    @param prefix: the target CTP Patient ID collection prefix, e.g. `QIN-BREAST-02-`
-    @param dirs: the source patient DICOM directories
+    @param collection: the target CTP Patient ID collection name, e.g. C{QIN-BREAST-02}
+    @param paths: the source patient DICOM directories
     @return: the source => target map
-    @rtype: dict
+    @rtype: CTPIdMap
     """
-    id_map = dict()
-    for d in dirs:
-        # The patient number is extracted from the directory name.
-        pnt_match = pat.search(os.path.basename(d))
-        if not pnt_match:
-            continue
-        pnt_nbr = int(pnt_match.group(0))
-        for pnt_id in iter_dicom_headers(['Patient ID'], d):
-            # Escape colon, equal and space.
-            pnt_id = "\\".join(pnt_id.split(' '))
-            pnt_id = "\\".join(pnt_id.split(':'))
-            pnt_id = "\\".join(pnt_id.split('='))
-            # The escaped source id maps to the TCIA target id. 
-            id_map[pnt_id] = prefix + str(pnt_nbr)
-    return id_map
+    return CTPIdMap(collection, *paths)
+
+class CTPIdMap(dict):
+    # The ID lookup entry format.
+    _FMT = "ptid/%(dicom id)s=%(ctp id)"
+
+    def __init__(self, collection, *paths):
+        """
+        Builds the {DICOM: CTP} map for the DICOM files in the given directories.
+        
+        @param collection: the target CTP Patient ID collection name, e.g. C{QIN-BREAST-02}
+        @param paths: the source patient DICOM directories
+        """
+
+        ctp_fmt = collection + "-%04d"
+        # The RE to extract the patient number suffix.
+        pat = re.compile('\d+$')
+        for d in paths:
+            # The patient number is extracted from the directory name.
+            pnt_match = pat.search(os.path.basename(d))
+            if not pnt_match:
+                logging.warn("Directory name is not recognized as a patient: %s" % d)
+                continue
+            pnt_nbr = int(pnt_match.group(0))
+            ctp_id = ctp_fmt % pnt_nbr
+            logging.info("Inferred the CTP patient id %(ctp id)s from the directory name %(dir)s." % {'ctp id': ctp_id, 'dir': d})
+            for ds in iter_dicom_headers(d):
+                pnt_id = ds.PatientID
+                # Escape colon, equal and space.
+                pnt_id = "\\".join(pnt_id.split(' '))
+                pnt_id = "\\".join(pnt_id.split(':'))
+                pnt_id = "\\".join(pnt_id.split('='))
+                # The escaped source id maps to the TCIA target id. 
+                self[pnt_id] = ctp_id
+        
+    def format(self):
+        """Prints the CTP map for the DICOM files in the given directories"""
+        lines = [_format_item(self, dicom_id, ctp_id) for dicom_id, ctp_id in self.iteritems()]
+        lines.sort
+        return lines
+    
+    def _format_item(self, pnt_id):
+        """Prints the CTP map for the DICOM files in the given directories"""
+        # Escape colon and blank in the source patient id.
+        esc_id = re.sub(r'([: =])', r'\\\1', dicom_id)
+        return _FMT % {'dicom id': esc_id, 'ctp id': ctp_id}
