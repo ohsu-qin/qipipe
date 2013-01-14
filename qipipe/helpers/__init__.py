@@ -1,2 +1,2 @@
-import collection_helper
-import dicom_helper
+from . import collection_helper
+from . import dicom_helper
