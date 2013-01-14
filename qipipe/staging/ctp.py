@@ -2,6 +2,7 @@
 TCIA CTP preparation utilities.
 """
 
+import sys
 import os
 import re
 import logging
@@ -15,17 +16,17 @@ def create_ctp_id_map(collection, *paths):
     @param collection: the target CTP Patient ID collection name, e.g. C{QIN-BREAST-02}
     @param paths: the source patient DICOM directories
     @return: the source => target map
-    @rtype: CTPIdMap
+    @rtype: CTPPatientIdMap
     """
-    return CTPIdMap(collection, *paths)
+    return CTPPatientIdMap(collection, *paths)
 
-class CTPIdMap(dict):
+class CTPPatientIdMap(dict):
     # The ID lookup entry format.
     _FMT = "ptid/%(dicom id)s=%(ctp id)"
 
     def __init__(self, collection, *paths):
         """
-        Builds the {DICOM: CTP} map for the DICOM files in the given directories.
+        Builds the {DICOM: CTP} patient id map for the DICOM files in the given directories.
         
         @param collection: the target CTP Patient ID collection name, e.g. C{QIN-BREAST-02}
         @param paths: the source patient DICOM directories
@@ -52,14 +53,15 @@ class CTPIdMap(dict):
                 # The escaped source id maps to the TCIA target id. 
                 self[pnt_id] = ctp_id
         
-    def format(self):
-        """Prints the CTP map for the DICOM files in the given directories"""
-        lines = [_format_item(self, dicom_id, ctp_id) for dicom_id, ctp_id in self.iteritems()]
+    def write(self, dest=sys.stdout):
+        """
+        Writes this id map in the standard CTP format.
+        
+        @param dest: the IO stream on which to write this map (default stdout)
+        """
+        lines = [_format(self, dicom_id, ctp_id) for dicom_id, ctp_id in self.iteritems()]
         lines.sort
-        return lines
-    
-    def _format_item(self, pnt_id):
-        """Prints the CTP map for the DICOM files in the given directories"""
-        # Escape colon and blank in the source patient id.
-        esc_id = re.sub(r'([: =])', r'\\\1', dicom_id)
-        return _FMT % {'dicom id': esc_id, 'ctp id': ctp_id}
+        for dicom_id in sorted(self.iterkeys()):
+            # Escape colon and blank in the source patient id.
+            esc_id = re.sub(r'([: =])', r'\\\1', dicom_id)
+            print >> dest, CTPPatientIdMap._FMT % {'dicom id': esc_id, 'ctp id': self[ctp_id]}

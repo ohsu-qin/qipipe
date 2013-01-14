@@ -57,7 +57,7 @@ def main(argv=None):
             raise OptError('Required collection option was not set.')
         
         # Print the id map.
-        _print_ctp_id_map(collection, *args)
+        create_ctp_id_map(collection, *args).write(output)
     
     except Usage, err:
         print >> sys.stderr, sys.argv[0].split('/')[-1] + ': ' + str(err.msg)
