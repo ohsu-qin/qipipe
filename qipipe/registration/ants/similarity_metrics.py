@@ -10,16 +10,15 @@ class SimilarityMetric(object):
         
         @param name: the metric name
         @param opts: the metric options
-        @rtype: str
         """
         self.name = name
         self.opts = opts
-
+    
     def format(self, fixed, moving):
         """
         Formats the ANTS similiarity metric argument.
 
-        @param reference: the fixed reference file
+        @param fixed: the fixed reference file
         @param moving: the moving file to register
         @rtype: str
         """
@@ -27,7 +26,7 @@ class SimilarityMetric(object):
         opts.extend(self.opts)
         opt_arg = ', '.join([str(opt) for opt in opts])
         return SimilarityMetric._FMT.format(name=self.name, fixed=fixed, moving=moving, opts=opt_arg)
-
+    
     def __str__(self):
         return self.name
 
