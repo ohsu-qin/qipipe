@@ -1,0 +1,2 @@
+class StagingError(Exception):
+    pass
