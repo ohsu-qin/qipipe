@@ -17,9 +17,6 @@ def fix_dicom_headers(dest, *dirs):
     @param dirs: the input patient directories
     """
     
-    sarcoma_location_config_file = os.path.join(os.path.dirname(__file__), '..', '..', 'conf', 'sarcoma.cfg'
-    ConfigParser()
-    
     for d in dirs:
         logger.debug("Fixing the DICOM headers in %s..." % d)
         parent = os.path.normpath(os.path.dirname(d))
@@ -34,7 +31,7 @@ def fix_dicom_headers(dest, *dirs):
         if histology == 'Breast':
             tnv['BodyPartExamined'] = 'BREAST'
         elif histology == 'Sarcoma':
-            tnv['BodyPartExamined'] = sarcoma_location(pt_id)
+            tnv['BodyPartExamined'] = sarcoma_location(pnt_id)
         # Set the tags in every image file.
         edit_dicom_headers(d, dest, tnv)
         logger.debug("Fixed the DICOM headers in %s." % d)
