@@ -24,14 +24,14 @@ def fix_dicom_headers(dest, *dirs):
         if not histology in ['Breast', 'Sarcoma']:
             raise StagingError('The parent directory name is not breast or sarcoma: ' + d)
         # Extract the patient number from the patient directory name.
-        pnt_nbr = extract_trailing_integer_from_path(d)
-        pnt_id = "%(histology)s%(pt)02d" % {'hist': histology, 'pt': pnt_nbr}
+        pt_nbr = extract_trailing_integer_from_path(d)
+        pt_id = "%(histology)s%(pt)02d" % {'hist': histology, 'pt': pt_nbr}
         # The tag name => value dictionary.
-        tnv = {'PatientID': pnt_id}
+        tnv = {'PatientID': pt_id}
         if histology == 'Breast':
             tnv['BodyPartExamined'] = 'BREAST'
         elif histology == 'Sarcoma':
-            tnv['BodyPartExamined'] = sarcoma_location(pnt_id)
+            tnv['BodyPartExamined'] = sarcoma_location(pt_id)
         # Set the tags in every image file.
         edit_dicom_headers(d, dest, tnv)
         logger.debug("Fixed the DICOM headers in %s." % d)

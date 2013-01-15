@@ -21,9 +21,9 @@ class TestLinkDicom:
     
     def test_link_dicom_files(self):
         shutil.rmtree(RESULTS, True)
-        src_pnt_dirs = glob.glob(FIXTURE + '/*')
+        src_pt_dirs = glob.glob(FIXTURE + '/*')
         opts = {'target': TARGET, 'include': '*concat*/*'}
-        args = src_pnt_dirs + [opts]
+        args = src_pt_dirs + [opts]
         staging.link_dicom_files(*args)
         # Verify that there are no broken links.
         for root, dirs, files in os.walk(TARGET):

@@ -74,22 +74,22 @@ class DICOMFileLinker(object):
         
         @param path: the source patient directory path
         """
-        src_pnt_dir = os.path.abspath(path)
+        src_pt_dir = os.path.abspath(path)
         # The RE to extract the patient or visit number suffix.
         npat = re.compile('\d+$')
         # Extract the patient number from the patient directory name.
-        pnt_match = npat.search(os.path.basename(src_pnt_dir))
-        if not pnt_match:
-            raise StagingError('The source patient directory does not end in a number: ' + src_pnt_dir)
-        pnt_nbr = int(pnt_match.group(0))
+        pt_match = npat.search(os.path.basename(src_pt_dir))
+        if not pt_match:
+            raise StagingError('The source patient directory does not end in a number: ' + src_pt_dir)
+        pt_nbr = int(pt_match.group(0))
         # The patient directory which will hold the visits.
-        tgt_pnt_dir_name = "patient%02d" % pnt_nbr
-        tgt_pnt_dir = os.path.abspath(os.path.join(self.tgt_dir, tgt_pnt_dir_name))
-        if not os.path.exists(tgt_pnt_dir):
-            os.makedirs(tgt_pnt_dir)
-            logging.info("Created patient directory %s." % tgt_pnt_dir)
+        tgt_pt_dir_name = "patient%02d" % pt_nbr
+        tgt_pt_dir = os.path.abspath(os.path.join(self.tgt_dir, tgt_pt_dir_name))
+        if not os.path.exists(tgt_pt_dir):
+            os.makedirs(tgt_pt_dir)
+            logging.info("Created patient directory %s." % tgt_pt_dir)
         # Build the target visit subdirectories.
-        for src_visit_dir in glob.glob(os.path.join(src_pnt_dir, self.vpat)):
+        for src_visit_dir in glob.glob(os.path.join(src_pt_dir, self.vpat)):
             # Extract the visit number from the visit directory name.
             visit_match = npat.search(os.path.basename(src_visit_dir))
             if not visit_match:
@@ -97,7 +97,7 @@ class DICOMFileLinker(object):
             visit_nbr = int(visit_match.group(0))
             # The visit directory which holds the links to the source files.
             tgt_visit_dir_name = "visit%02d" % visit_nbr
-            tgt_visit_dir = os.path.join(tgt_pnt_dir, tgt_visit_dir_name)
+            tgt_visit_dir = os.path.join(tgt_pt_dir, tgt_visit_dir_name)
             # Skip an existing visit.
             if os.path.exists(tgt_visit_dir):
                 if not self.replace:
@@ -109,14 +109,14 @@ class DICOMFileLinker(object):
                 logging.info("Created visit directory %s." % tgt_visit_dir)
             # Link the delta visit directory to the target, if necessary.
             if self.delta_dir:
-                delta_pnt_dir = os.path.join(self.delta_dir, tgt_pnt_dir_name)
-                if not os.path.exists(delta_pnt_dir):
-                    os.makedirs(delta_pnt_dir)
-                delta_visit_dir = os.path.join(delta_pnt_dir, tgt_visit_dir_name)
+                delta_pt_dir = os.path.join(self.delta_dir, tgt_pt_dir_name)
+                if not os.path.exists(delta_pt_dir):
+                    os.makedirs(delta_pt_dir)
+                delta_visit_dir = os.path.join(delta_pt_dir, tgt_visit_dir_name)
                 if os.path.exists(delta_visit_dir):
                     os.remove(delta_visit_dir)
                 # The delta link is relative to the target location.
-                delta_rel_path = os.path.relpath(tgt_visit_dir, delta_pnt_dir)
+                delta_rel_path = os.path.relpath(tgt_visit_dir, delta_pt_dir)
                 os.symlink(delta_rel_path, delta_visit_dir)
                 logging.info("Linked the delta visit directory {0} -> {1}.".format(delta_visit_dir, delta_rel_path))
             # Link each of the DICOM files in the source concatenated subdirectories.

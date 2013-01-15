@@ -37,21 +37,21 @@ class CTPPatientIdMap(dict):
         pat = re.compile('\d+$')
         for d in paths:
             # The patient number is extracted from the directory name.
-            pnt_match = pat.search(os.path.basename(d))
-            if not pnt_match:
+            pt_match = pat.search(os.path.basename(d))
+            if not pt_match:
                 logging.warn("Directory name is not recognized as a patient: %s" % d)
                 continue
-            pnt_nbr = int(pnt_match.group(0))
-            ctp_id = ctp_fmt % pnt_nbr
+            pt_nbr = int(pt_match.group(0))
+            ctp_id = ctp_fmt % pt_nbr
             logging.info("Inferred the CTP patient id %(ctp id)s from the directory name %(dir)s." % {'ctp id': ctp_id, 'dir': d})
             for ds in iter_dicom_headers(d):
-                pnt_id = ds.PatientID
+                pt_id = ds.PatientID
                 # Escape colon, equal and space.
-                pnt_id = "\\".join(pnt_id.split(' '))
-                pnt_id = "\\".join(pnt_id.split(':'))
-                pnt_id = "\\".join(pnt_id.split('='))
+                pt_id = "\\".join(pt_id.split(' '))
+                pt_id = "\\".join(pt_id.split(':'))
+                pt_id = "\\".join(pt_id.split('='))
                 # The escaped source id maps to the TCIA target id. 
-                self[pnt_id] = ctp_id
+                self[pt_id] = ctp_id
         
     def write(self, dest=sys.stdout):
         """
