@@ -25,7 +25,6 @@ class TestEditDicom:
         # The tag => value map.
         tv = {dd.tag_for_name(name): value for name, value in tnv.iteritems()}
         shutil.rmtree(RESULT, True)
-        src_dirs = glob.glob(FIXTURE + '/*')
         edit_dicom_headers(FIXTURE, RESULT, tnv)
         for ds in iter_dicom(RESULT):
             for t, v in tv.iteritems():
