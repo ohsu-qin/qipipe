@@ -3,14 +3,14 @@ import os, glob, shutil
 
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-from qipipe import staging
+from qipipe.staging import link_dicom_files
 
 # The test parent directory.
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 # The test fixture.
-FIXTURE = os.path.join(ROOT, 'fixtures', 'staging')
+FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'link_dicom')
 # The test results.
-RESULTS = os.path.join(ROOT, 'results', 'staging')
+RESULTS = os.path.join(ROOT, 'results', 'staging', 'link_dicom')
 # The test result target.
 TARGET = os.path.join(RESULTS, 'data')
 # The test result delta.
