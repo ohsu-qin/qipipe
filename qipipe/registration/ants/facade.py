@@ -1,7 +1,7 @@
 import os
 import shutil
 import logging
-from .ants.similarity_metrics import *
+from .similarity_metrics import *
 from .template import create_template
 from .warp_transform import warp
 
