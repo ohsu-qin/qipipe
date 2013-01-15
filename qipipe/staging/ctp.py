@@ -22,7 +22,7 @@ def create_ctp_id_map(collection, *paths):
 
 class CTPPatientIdMap(dict):
     # The ID lookup entry format.
-    _FMT = "ptid/%(dicom id)s=%(ctp id)"
+    _FMT = "ptid/%(dicom id)s=%(ctp id)s"
 
     def __init__(self, collection, *paths):
         """
@@ -59,9 +59,7 @@ class CTPPatientIdMap(dict):
         
         @param dest: the IO stream on which to write this map (default stdout)
         """
-        lines = [_format(self, dicom_id, ctp_id) for dicom_id, ctp_id in self.iteritems()]
-        lines.sort
-        for dicom_id in sorted(self.iterkeys()):
+        for dcm_id in sorted(self.iterkeys()):
             # Escape colon and blank in the source patient id.
-            esc_id = re.sub(r'([: =])', r'\\\1', dicom_id)
-            print >> dest, CTPPatientIdMap._FMT % {'dicom id': esc_id, 'ctp id': self[ctp_id]}
+            esc_id = re.sub(r'([: =])', r'\\\1', dcm_id)
+            print >> dest, CTPPatientIdMap._FMT % {'dicom id': esc_id, 'ctp id': self[dcm_id]}
