@@ -9,20 +9,19 @@ from qipipe.helpers.dicom_helper import iter_dicom
 # The test parent directory.
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 # The test fixture.
-FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'fix_dicom', 'sarcoma')
+FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'fix_dicom', 'sarcoma', 'patient03')
 # The test results.
-RESULTS = os.path.join(ROOT, 'results', 'staging', 'fix_dicom', 'sarcoma')
+RESULTS = os.path.join(ROOT, 'results', 'staging', 'fix_dicom', 'sarcoma', 'patient03')
 
 class TestFixDicom:
     """Fix DICOM header unit tests."""
     
     def test_fix_dicom_headers(self):
         shutil.rmtree(RESULTS, True)
-        srcs = glob.glob(FIXTURE + '/*')
-        fix_dicom_headers(RESULTS, *srcs)
+        fix_dicom_headers(FIXTURE, RESULTS)
         # Verify the result.
         for ds in iter_dicom(RESULTS):
-            assert_true('THIGH', ds.BodyPartExamined, "Incorrect Body Part: %s" % ds.BodyPartExamined)
+            assert_equal('CHEST', ds.BodyPartExamined, "Incorrect Body Part: %s" % ds.BodyPartExamined)
             assert_equal('Sarcoma03', ds.PatientID, "Incorrect Patient ID: %s" % ds.PatientID)
         # Cleanup.
         shutil.rmtree(RESULTS, True)
