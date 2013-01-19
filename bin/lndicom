@@ -7,7 +7,7 @@ import sys
 import os
 import getopt
 import logging
-from qipipe.staging import link_dicom_files
+from qipipe.staging import group_dicom_files
 
 help_message = """
 lndicom options DIR...
@@ -70,7 +70,7 @@ def main(argv=None):
                 args[:] = [s.strip() for s in fs.readlines()]
         args.append(lopts)
 
-        staging.link_dicom_files(*args)
+        staging.group_dicom_files(*args)
 
     except Usage, err:
         print >> sys.stderr, sys.argv[0].split('/')[-1] + ': ' + str(err.msg)
