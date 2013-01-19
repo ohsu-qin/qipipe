@@ -10,9 +10,9 @@ from dicom import datadict as dd
 # The test parent directory.
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 # The test fixture.
-FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'edit_dicom')
+FIXTURE = os.path.join(ROOT, 'fixtures', 'helpers', 'edit_dicom')
 # The test results.
-RESULT = os.path.join(ROOT, 'results', 'staging', 'edit_dicom')
+RESULT = os.path.join(ROOT, 'results', 'helpers', 'edit_dicom')
 
 class TestEditDicom:
     """DICOM edit unit tests."""
