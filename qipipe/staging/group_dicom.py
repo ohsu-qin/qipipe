@@ -6,7 +6,7 @@ import logging
 from qipipe.helpers.dicom_helper import isdicom
 from .staging_error import StagingError
     
-def link_dicom_files(*args):
+def group_dicom_files(*args):
     """
     Links DICOM files in the given patient directories.
     
@@ -18,9 +18,9 @@ def link_dicom_files(*args):
         opts = last
     else:
         opts = {}
-    DICOMFileLinker(opts).link_dicom_files(*args)
+    DICOMFileGrouper(opts).group_dicom_files(*args)
 
-class DICOMFileLinker(object):
+class DICOMFileGrouper(object):
     def __init__(self, opts={}):
         """
         Creates a new Staging helper.
@@ -45,7 +45,7 @@ class DICOMFileLinker(object):
         # The replace option.
         self.replace = opts.has_key('replace')
      
-    def link_dicom_files(self, *dirs):
+    def group_dicom_files(self, *dirs):
         """
         Creates symbolic links in to the DICOM files in the given source patient directories.
         The patient/visit subdirectories are created in the target directory. The
@@ -70,7 +70,7 @@ class DICOMFileLinker(object):
         Each visit subdirectory links the DICOM files in the given source patient
         directories.
         
-        See link_dicom_files.
+        See group_dicom_files.
         
         @param path: the source patient directory path
         """

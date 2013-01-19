@@ -25,7 +25,7 @@ class ImageHierarchy(DictionaryHierarchy):
     def __init__(self):
         # the patient: series: image nested dictionary
         self.tree = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-        super(ImageHierarchy, self).__init__(self.tree)
+        group_dicom_files(ImageHierarchy, self).__init__(self.tree)
     
     def add(self, ds):
         """

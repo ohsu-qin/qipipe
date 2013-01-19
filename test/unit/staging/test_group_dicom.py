@@ -3,7 +3,7 @@ import os, glob, shutil
 
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-from qipipe.staging import link_dicom_files
+from qipipe.staging import group_dicom_files
 
 # The test parent directory.
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -16,15 +16,15 @@ TARGET = os.path.join(RESULTS, 'data')
 # The test result delta.
 DELTA = os.path.join(RESULTS, 'delta')
 
-class TestLinkDicom:
-    """TCIA dicom link unit tests."""
+class TestGroupDicom:
+    """group_dicom unit tests."""
     
-    def test_link_dicom_files(self):
+    def test_group_dicom_files(self):
         shutil.rmtree(RESULTS, True)
         src_pt_dirs = glob.glob(FIXTURE + '/*')
         opts = {'target': TARGET, 'include': '*concat*/*'}
         args = src_pt_dirs + [opts]
-        staging.link_dicom_files(*args)
+        staging.group_dicom_files(*args)
         # Verify that there are no broken links.
         for root, dirs, files in os.walk(TARGET):
             for f in files:
@@ -40,7 +40,7 @@ class TestLinkDicom:
         # Add the delta argument.
         opts['delta'] = DELTA
         # Rerun to capture the delta.
-        staging.link_dicom_files(*args)
+        staging.group_dicom_files(*args)
         delta = os.path.join(DELTA, 'patient01', 'visit02')
         assert_true(os.path.islink(delta), "Missing delta -> target link: %s" % delta)
         assert_true(os.path.exists(delta), "Broken delta -> target link: %s" % delta)

@@ -1,5 +1,5 @@
 import os
-import de
+import re
 from .staging_error import StagingError
 
 _NPAT = re.compile('\d+$')
