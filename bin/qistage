@@ -12,6 +12,7 @@ from qipipe.helpers.dicom_helper import edit_dicom_tags
 help_message = """
 qistage options DIR...
 Options:
+    -o --output DIR\tThe required output directory
     -q, --quiet\tSuppress messages
     -v, --verbose\tPrint verbose messages
     -h --help\tPrint this help message
@@ -29,24 +30,26 @@ def main(argv=None):
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], 'hqv', ['help', 'quiet', 'verbose'])
+            opts, args = getopt.getopt(argv[1:], 'ho:qv', ['help', 'output', 'quiet', 'verbose'])
         except getopt.error, msg:
             raise Usage(msg)
 
         # option processing
-        for option, value in opts:
-            elif option in ('-h', '--help'):
+        for opt, val in opts:
+            if opt in ('-o', '--output'):
+                output = open(val, 'w')
+            elif opt in ('-q', '--quiet'):
+                logging.basicConfig(level=logging.ERROR)
+            elif opt in ('-v', '--verbose'):
+                logging.basicConfig(level=logging.DEBUG)
+            elif opt in ('-h', '--help'):
                 print help_message
                 return 0
-            elif option in ('-q', '--quiet'):
-                logging.basicConfig(level=logging.ERROR)
-            elif option in ('-v', '--verbose'):
-                logging.basicConfig(level=logging.DEBUG)
 
         # The DICOM file link options.
         lopts = {''}
         args.append()
-        staging.link_dicom_files(*args)
+        staging.group_dicom_files(*args)
 
     except Usage, err:
         print >> sys.stderr, sys.argv[0].split('/')[-1] + ': ' + str(err.msg)
