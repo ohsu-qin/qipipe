@@ -37,7 +37,7 @@ class PR(SimilarityMetric):
     """
 
     def __init__(self):
-        group_dicom_files(PR, self).__init__('PR')
+        super(PR, self).__init__('PR')
 
 
 class PSE(SimilarityMetric):
@@ -47,7 +47,7 @@ class PSE(SimilarityMetric):
 
     def __init__(self, sampling=0.1, sigma=10, k=10):
         # The 0 argument sets the boundary points only flag to false.
-        group_dicom_files(PSE, self).__init__('PSE', sampling, sigma, 0, k)
+        super(PSE, self).__init__('PSE', sampling, sigma, 0, k)
 
 
 class CC(SimilarityMetric):
@@ -56,7 +56,7 @@ class CC(SimilarityMetric):
     """
 
     def __init__(self, radius=4):
-        group_dicom_files(CC, self).__init__('CC', radius)
+        super(CC, self).__init__('CC', radius)
 
 
 class MI(SimilarityMetric):
@@ -65,7 +65,7 @@ class MI(SimilarityMetric):
     """
 
     def __init__(self, bins=32):
-        group_dicom_files(MI, self).__init__('MI', bins)
+        super(MI, self).__init__('MI', bins)
 
 
 class MSQ(SimilarityMetric):
@@ -74,7 +74,7 @@ class MSQ(SimilarityMetric):
     """
 
     def __init__(self):
-        group_dicom_files(MSQ, self).__init__('MSQ', 0)
+        super(MSQ, self).__init__('MSQ', 0)
 
 
 class JTB(SimilarityMetric):
@@ -83,4 +83,4 @@ class JTB(SimilarityMetric):
     """
 
     def __init__(self, radius=32):
-        group_dicom_files(JTB, self).__init__('JTB', radius)
+        super(JTB, self).__init__('JTB', radius)
