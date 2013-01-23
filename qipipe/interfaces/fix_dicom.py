@@ -9,7 +9,7 @@ class FixDicomInputSpec(BaseInterfaceInputSpec):
 
 
 class FixDicomOutputSpec(TraitedSpec):
-    out_path = Directory(exists=True, desc="The output patient directory")
+    dest = Directory(exists=True, desc="The target output patient directory")
 
 
 class FixDicom(BaseInterface):
@@ -22,5 +22,5 @@ class FixDicom(BaseInterface):
 
     def _list_outputs(self):
         outputs = self._outputs().get()
-        outputs['out_path'] = self.inputs.dest
+        outputs['dest'] = self.inputs.dest
         return outputs
