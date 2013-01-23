@@ -73,14 +73,14 @@ class DicomIterator(FileIterator):
     """
     
     def __init__(self, *paths):
-        group_dicom_files(DicomIterator, self).__init__(*paths)
+        super(DicomIterator, self).__init__(*paths)
         self.args = []
     
     def next(self):
         """
         Iterates over each DICOM data set.
         """
-        for f in group_dicom_files(DicomIterator, self).next():
+        for f in super(DicomIterator, self).next():
             try:
                 yield dicom.read_file(f, *self.args)
             except InvalidDicomError:
@@ -95,6 +95,6 @@ class DicomHeaderIterator(DicomIterator):
     OPTS = [256, True, False]
     
     def __init__(self, *paths):
-        group_dicom_files(DicomHeaderIterator, self).__init__(*paths)
+        super(DicomHeaderIterator, self).__init__(*paths)
         self.args = DicomHeaderIterator.OPTS
             

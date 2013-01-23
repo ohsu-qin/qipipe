@@ -46,8 +46,8 @@ def main(argv=None):
                 print help_message
                 return 0
 
-        # The DICOM file link options.
-        lopts = {''}
+        # The DICOM file group options.
+        gopts = {''}
         args.append()
         staging.group_dicom_files(*args)
 

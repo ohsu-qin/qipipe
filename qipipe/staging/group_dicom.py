@@ -3,7 +3,7 @@ import os
 import re
 import glob
 import logging
-from qipipe.helpers.dicom_helper import isdicom
+from qipipe.helpers.dicom_helper import read_dicom_header, InvalidDicomError
 from .staging_error import StagingError
     
 def group_dicom_files(*args):
@@ -47,11 +47,13 @@ class DICOMFileGrouper(object):
      
     def group_dicom_files(self, *dirs):
         """
-        Creates symbolic links in to the DICOM files in the given source patient directories.
-        The patient/visit subdirectories are created in the target directory. The
-        patient directory name is patientI{<nn>}, where I{<nn>} is the two-digit patient name, e.g.
-        C{patient08}. The visit directory name is visitI{<nn>}, where I{<nn>} is the two-digit patient
-        visit number, e.g. C{visit02}.
+        Creates symbolic links to the DICOM files in the given source patient directories.
+        The patient/visit/series subdirectories are created in the target directory. The
+        patient directory name is C{patient}I{<nn>}, where I{<nn>} is the two-digit patient
+        name, e.g. C{patient08}. The visit directory name is C{visit}I{<nn>}, where I{<nn>}
+        is the two-digit patient visit number, e.g. C{visit02}. The series directory name
+        is C{series}I{<nnn>}, where I{<nnn>} is the three-digit series number, e.g. C{series001}.
+        
     
         If the delta option is given, then a link is created from the delta directory to each
         new patient visit directory, e.g.::
@@ -62,9 +64,9 @@ class DICOMFileGrouper(object):
         """
         # Build the staging area for each patient.  
         for d in dirs:
-            self._stage(d)
+            self._group(d)
     
-    def _stage(self, path):
+    def _group(self, path):
         """
         Creates the patient/visit staging area in the current working directory.
         Each visit subdirectory links the DICOM files in the given source patient
@@ -124,16 +126,22 @@ class DICOMFileGrouper(object):
                 if os.path.isdir(src_file):
                     logging.info("Skipped directory %s." % src_file)
                     continue
-                # Check whether the file has a DICOM header.
-                if isdicom(src_file):
+                # If the file has a DICOM header, then get the series number.
+                # Otherwise, skip the file.
+                series = self._series_number(src_file)
+                if series:
                     tgt_file_base = os.path.basename(src_file).replace(' ', '_')
                     # Replace blanks in the file name.
                     tgt_name, tgt_ext = os.path.splitext(tgt_file_base)
                     # The file extension should be .dcm .
                     if tgt_ext != '.dcm':
                         tgt_file_base = tgt_name + '.dcm'
+                    # Make the series directory, if necessary.
+                    tgt_series_dir = os.path.join(tgt_visit_dir, "series%03d" % series)
+                    if not os.path.exists(tgt_series_dir):
+                        os.mkdir(tgt_series_dir)
                     # Link the source DICOM file.
-                    tgt_file = os.path.join(tgt_visit_dir, tgt_file_base)
+                    tgt_file = os.path.join(tgt_series_dir, tgt_file_base)
                     if os.path.islink(tgt_file):
                         if self.replace:
                             os.remove(tgt_file)
@@ -145,3 +153,10 @@ class DICOMFileGrouper(object):
                     logging.info("Linked the image file {0} -> {1}".format(tgt_file, src_file))
                 else:
                     logging.info("Skipped non-DICOM file %s." % src_file)
+    
+    def _series_number(self, path):
+        try:
+            return read_dicom_header(path).SeriesNumber
+        except InvalidDicomError:
+            return None
+        

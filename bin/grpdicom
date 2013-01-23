@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Creates well-formed symbolic links to AIRC concatenated DICOM files.
+Groups DICOM files into directories by series.
 """
 
 import sys
@@ -10,7 +10,7 @@ import logging
 from qipipe.staging import group_dicom_files
 
 help_message = """
-lndicom options DIR...
+grpdicom options DIR...
 Options:
     -C --changeto\tChange to the given target directory
     -i --include\tThe source image file name pattern
@@ -40,23 +40,23 @@ def main(argv=None):
             raise Usage(msg)
 
         target = delta = None
-        # the link options
-        lopts = {}
+        # the group options
+        gopts = {}
         # option processing
         for option, value in opts:
             if option in ('-C', '--changeto'):
-                lopts['target'] = value
+                gopts['target'] = value
             elif option in ('-h', '--help'):
                 print help_message
                 return 0
             elif option in ('-i', '--include'):
-                lopts['include'] = value
+                gopts['include'] = value
             elif option in ('-p', '--visit'):
-                lopts['visit'] = value
+                gopts['visit'] = value
             elif option in ('-r', '--replace'):
-                lopts['replace'] = True
+                gopts['replace'] = True
             elif option in ('-t', '--delta'):
-                lopts['delta'] = value
+                gopts['delta'] = value
             elif option in ('-q', '--quiet'):
                 logging.basicConfig(level=logging.ERROR)
             elif option in ('-v', '--verbose'):
@@ -68,7 +68,7 @@ def main(argv=None):
                 else:
                     fs = open(farg)
                 args[:] = [s.strip() for s in fs.readlines()]
-        args.append(lopts)
+        args.append(gopts)
 
         staging.group_dicom_files(*args)
 
