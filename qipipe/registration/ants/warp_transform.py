@@ -1,5 +1,5 @@
 import os
-import logging
+from qipipe.helpers.logging import logger
 import envoy
 from .similarity_metrics import *
 from .ants_error import ANTSError
@@ -40,17 +40,17 @@ class WarpTransform:
         mstr = metric.format(fixed=fixed, moving=moving)
         name = os.path.splitext(moving)[0]
         cmd = MAP.format(metric=mstr, output=name, iterations='x'.join(iterations))
-        logging.info("Building the %(moving)s -> %(fixed)s warp transform with the following command:" % {'moving': moving, 'fixed': fixed})
-        logging.info(cmd)
+        logger.info("Building the %(moving)s -> %(fixed)s warp transform with the following command:" % {'moving': moving, 'fixed': fixed})
+        logger.info(cmd)
         r = envoy.run(cmd)
         if r.status_code:
-            logging.error("Build transform failed with error code %d" % r.status_code)
-            logging.error(r.std_err)
+            logger.error("Build transform failed with error code %d" % r.status_code)
+            logger.error(r.std_err)
             raise ANTSError("Build transform unsuccessful; see the log for details")
         self.field = FIELD.format(output=name)
         self.affine = AFFINE.format(output=name)
-        logging.info("The %(moving)s -> %(fixed)s deformation field is %(field)s" % {'moving': moving, 'fixed': fixed, 'field': self.field})
-        logging.info("The %(moving)s -> %(fixed)s affine transform is %(affine)s" % {'moving': moving, 'fixed': fixed, 'affine': self.affine})
+        logger.info("The %(moving)s -> %(fixed)s deformation field is %(field)s" % {'moving': moving, 'fixed': fixed, 'field': self.field})
+        logger.info("The %(moving)s -> %(fixed)s affine transform is %(affine)s" % {'moving': moving, 'fixed': fixed, 'affine': self.affine})
     
     def apply(self):
         """
@@ -65,12 +65,12 @@ class WarpTransform:
         
         target = TARGET.format(output=os.path.splitext(self.moving)[0])
         cmd = REG.format(fixed=self.fixed, moving=self.moving, target=target, field=self.field, affine=self.affine)
-        logging.info("Applying the %(moving)s -> %(fixed)s warp transform with the following command:" % {'moving': self.moving, 'fixed': self.fixed})
-        logging.info(cmd)
+        logger.info("Applying the %(moving)s -> %(fixed)s warp transform with the following command:" % {'moving': self.moving, 'fixed': self.fixed})
+        logger.info(cmd)
         r = envoy.run(cmd)
         if r.status_code:
-            logging.error("Apply warp transform failed with error code %d" % r.status_code)
-            logging.error(r.std_err)
+            logger.error("Apply warp transform failed with error code %d" % r.status_code)
+            logger.error(r.std_err)
             raise ANTSError("Apply warp transform unsuccessful; see the log for details")
-        logging.info("Applied the %(moving)s -> %(fixed)s warp transform with result %(target)s" % {'moving': self.moving, 'fixed': self.fixed, 'target': target})
+        logger.info("Applied the %(moving)s -> %(fixed)s warp transform with result %(target)s" % {'moving': self.moving, 'fixed': self.fixed, 'target': target})
         return target

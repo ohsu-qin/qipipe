@@ -1,5 +1,5 @@
 import os
-import logging
+from qipipe.helpers.logging import logger
 import envoy
 from .similarity_metrics import *
 from .ants_error import ANTSError
@@ -21,7 +21,7 @@ def create_template(files, dimension=2, cores=4, metric=None):
     # The template file name.
     tmpl = PREFIX + SUFFIX
     if os.path.exists(tmpl):
-        logging.info("Registration template already exists: %s" % tmpl)
+        logger.info("Registration template already exists: %s" % tmpl)
         return tmpl
     
     # Build the command line.
@@ -29,18 +29,18 @@ def create_template(files, dimension=2, cores=4, metric=None):
         metric = PR()
     opts = "-d %(dim)s -j %(cores)s -m %(metric)s" % {'dim': dimension, 'cores': cores, 'metric': metric}
     cmd = CMD.format(output=PREFIX, opts=opts, files=' '.join(files))
-    logging.info("Building the %s registration template with the following command:" % tmpl)
-    logging.info(cmd)
+    logger.info("Building the %s registration template with the following command:" % tmpl)
+    logger.info(cmd)
     
     # Run the command.
     r = envoy.run(cmd)
     if r.status_code:
-        logging.error("Build registration template failed with error code %d" % r.status_code)
-        logging.error(r.std_err)
+        logger.error("Build registration template failed with error code %d" % r.status_code)
+        logger.error(r.std_err)
         raise ANTSError("Build registration template unsuccessful; see the log for details")
     if not os.path.exists(tmpl):
-        logging.error("Build registration template was not created.")
+        logger.error("Build registration template was not created.")
         raise ANTSError("Build registration template unsuccessful; see the log for details")
         
-    logging.info("Built the registration template %s." % tmpl)
+    logger.info("Built the registration template %s." % tmpl)
     return tmpl

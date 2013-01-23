@@ -6,7 +6,7 @@ Groups DICOM files into directories by series.
 import sys
 import os
 import getopt
-import logging
+from qipipe.helpers.logging import logger
 from qipipe.staging import group_dicom_files
 
 help_message = """
@@ -58,9 +58,9 @@ def main(argv=None):
             elif option in ('-t', '--delta'):
                 gopts['delta'] = value
             elif option in ('-q', '--quiet'):
-                logging.basicConfig(level=logging.ERROR)
+                logger.setLevel('ERROR')
             elif option in ('-v', '--verbose'):
-                logging.basicConfig(level=logging.DEBUG)
+                logger.setLevel('DEBUG')
             elif option in ('-f', '--file'):
                 farg = value
                 if farg == '-':

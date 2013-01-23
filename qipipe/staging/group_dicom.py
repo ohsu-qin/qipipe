@@ -2,7 +2,7 @@ import sys
 import os
 import re
 import glob
-import logging
+from qipipe.helpers.logging import logger
 from qipipe.helpers.dicom_helper import read_dicom_header, InvalidDicomError
 from .staging_error import StagingError
     
@@ -89,7 +89,7 @@ class DICOMFileGrouper(object):
         tgt_pt_dir = os.path.abspath(os.path.join(self.tgt_dir, tgt_pt_dir_name))
         if not os.path.exists(tgt_pt_dir):
             os.makedirs(tgt_pt_dir)
-            logging.info("Created patient directory %s." % tgt_pt_dir)
+            logger.info("Created patient directory %s." % tgt_pt_dir)
         # Build the target visit subdirectories.
         for src_visit_dir in glob.glob(os.path.join(src_pt_dir, self.vpat)):
             # Extract the visit number from the visit directory name.
@@ -103,12 +103,12 @@ class DICOMFileGrouper(object):
             # Skip an existing visit.
             if os.path.exists(tgt_visit_dir):
                 if not self.replace:
-                    logging.info("Skipped existing visit directory %s." % tgt_visit_dir)
+                    logger.info("Skipped existing visit directory %s." % tgt_visit_dir)
                     continue
             else:
                 # Make the target visit directory.
                 os.mkdir(tgt_visit_dir)
-                logging.info("Created visit directory %s." % tgt_visit_dir)
+                logger.info("Created visit directory %s." % tgt_visit_dir)
             # Link the delta visit directory to the target, if necessary.
             if self.delta_dir:
                 delta_pt_dir = os.path.join(self.delta_dir, tgt_pt_dir_name)
@@ -120,11 +120,11 @@ class DICOMFileGrouper(object):
                 # The delta link is relative to the target location.
                 delta_rel_path = os.path.relpath(tgt_visit_dir, delta_pt_dir)
                 os.symlink(delta_rel_path, delta_visit_dir)
-                logging.info("Linked the delta visit directory {0} -> {1}.".format(delta_visit_dir, delta_rel_path))
+                logger.info("Linked the delta visit directory {0} -> {1}.".format(delta_visit_dir, delta_rel_path))
             # Link each of the DICOM files in the source concatenated subdirectories.
             for src_file in glob.glob(os.path.join(src_visit_dir, self.include)):
                 if os.path.isdir(src_file):
-                    logging.info("Skipped directory %s." % src_file)
+                    logger.info("Skipped directory %s." % src_file)
                     continue
                 # If the file has a DICOM header, then get the series number.
                 # Otherwise, skip the file.
@@ -146,13 +146,13 @@ class DICOMFileGrouper(object):
                         if self.replace:
                             os.remove(tgt_file)
                         else:
-                            logging.info("Skipped existing image link %s." % tgt_file)
+                            logger.info("Skipped existing image link %s." % tgt_file)
                             continue
                     # Create a link from the target to the source.
                     os.symlink(src_file, tgt_file)
-                    logging.info("Linked the image file {0} -> {1}".format(tgt_file, src_file))
+                    logger.info("Linked the image file {0} -> {1}".format(tgt_file, src_file))
                 else:
-                    logging.info("Skipped non-DICOM file %s." % src_file)
+                    logger.info("Skipped non-DICOM file %s." % src_file)
     
     def _series_number(self, path):
         try:

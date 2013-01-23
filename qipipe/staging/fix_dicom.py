@@ -1,5 +1,5 @@
 import os
-import logging
+from qipipe.helpers.logging import logger
 import re
 from qipipe.helpers.dicom_helper import edit_dicom_headers
 from .staging_error import StagingError
@@ -23,7 +23,7 @@ def fix_dicom_headers(source, dest, collection=None):
         collection = os.path.basename(parent).lower().capitalize()
     if not collection in ['Breast', 'Sarcoma']:
         raise StagingError('Unrecognized collection: ' + collection)
-    logging.debug("Fixing the DICOM headers in %s..." % source)
+    logger.debug("Fixing the DICOM headers in %s..." % source)
     # Extract the patient number from the patient directory name.
     pt_nbr = extract_trailing_integer_from_path(source)
     pt_id = "%(collection)s%(pt)02d" % {'collection': collection, 'pt': pt_nbr}
@@ -35,4 +35,4 @@ def fix_dicom_headers(source, dest, collection=None):
         tnv['BodyPartExamined'] = sarcoma_location(pt_id)
     # Set the tags in every image file.
     edit_dicom_headers(source, dest, tnv)
-    logging.debug("Fixed the DICOM headers in %s." % source)
+    logger.debug("Fixed the DICOM headers in %s." % source)

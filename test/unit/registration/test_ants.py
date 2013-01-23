@@ -3,7 +3,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 
 import shutil
-import logging
+from qipipe.helpers.logging import logger
 from nose.tools import *
 from qipipe.registration import ants
 

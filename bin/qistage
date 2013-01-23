@@ -6,7 +6,7 @@ Stages DICOM files for submission to TCIA and XNAT.
 import sys
 import os
 import getopt
-import logging
+from qipipe.helpers.logging import logger
 from qipipe.helpers.dicom_helper import edit_dicom_tags
 
 help_message = """
@@ -39,9 +39,9 @@ def main(argv=None):
             if opt in ('-o', '--output'):
                 output = open(val, 'w')
             elif opt in ('-q', '--quiet'):
-                logging.basicConfig(level=logging.ERROR)
+                logger.setLevel('ERROR')
             elif opt in ('-v', '--verbose'):
-                logging.basicConfig(level=logging.DEBUG)
+                logger.setLevel('DEBUG')
             elif opt in ('-h', '--help'):
                 print help_message
                 return 0

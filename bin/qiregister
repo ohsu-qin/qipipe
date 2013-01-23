@@ -6,7 +6,7 @@ OHSU QIN U01 data ANTS symmetric normalization motion correction registration.
 import sys
 import os
 import getopt
-import logging
+from qipipe.helpers.logging import logger
 from qipipe.registration import ants
 
 help_message = """
@@ -51,7 +51,7 @@ def main(argv=None):
             elif option in ('-R' '--reference'):
                 reference = value
             elif option in ('-v' '--verbose'):
-                logging.basicConfig(level=logging.DEBUG)
+                logger.setLevel('DEBUG')
         if not args:
             raise Usage('Missing the images to register')
         if not len(args) == 1:

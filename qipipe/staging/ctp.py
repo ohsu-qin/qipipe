@@ -5,7 +5,7 @@ TCIA CTP preparation utilities.
 import sys
 import os
 import re
-import logging
+from qipipe.helpers.logging import logger
 from ..helpers.dicom_helper import iter_dicom_headers
 
 def create_ctp_id_map(collection, *paths):
@@ -39,11 +39,11 @@ class CTPPatientIdMap(dict):
             # The patient number is extracted from the directory name.
             pt_match = pat.search(os.path.basename(d))
             if not pt_match:
-                logging.warn("Directory name is not recognized as a patient: %s" % d)
+                logger.warn("Directory name is not recognized as a patient: %s" % d)
                 continue
             pt_nbr = int(pt_match.group(0))
             ctp_id = ctp_fmt % pt_nbr
-            logging.info("Inferred the CTP patient id %(ctp id)s from the directory name %(dir)s." % {'ctp id': ctp_id, 'dir': d})
+            logger.info("Inferred the CTP patient id %(ctp id)s from the directory name %(dir)s." % {'ctp id': ctp_id, 'dir': d})
             for ds in iter_dicom_headers(d):
                 pt_id = ds.PatientID
                 # Escape colon, equal and space.

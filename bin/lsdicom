@@ -7,7 +7,7 @@ The format of each path is a line of tab-delimited fields.
 import sys
 import os
 import getopt
-import logging
+from qipipe.helpers.logging import logger
 from collections import defaultdict
 from qipipe.helpers.collection_helper import to_series
 from qipipe.helpers.dicom_helper import ImageHierarchy, iter_dicom_headers, select_dicom_tags
@@ -57,7 +57,7 @@ def main(argv=None):
             elif opt in ('-o' '--output'):
                 output = open(val, 'w')
             elif opt == '-v':
-                logging.basicConfig(level=logging.DEBUG)
+                logger.setLevel('DEBUG')
             elif opt in ('-h', '--help'):
                 print help_message
                 return 0
@@ -66,7 +66,7 @@ def main(argv=None):
         if not tags:
             valid = set()
             invalid = set()
-            logging.debug("Collecting the DICOM tags from %s..." % to_series(args))
+            logger.debug("Collecting the DICOM tags from %s..." % to_series(args))
             for ds in iter_dicom_headers(*args):
                 tdict = select_dicom_tags(ds)
                 for t,v in tdict.iteritems():
@@ -79,7 +79,7 @@ def main(argv=None):
             tags.sort()
         
         # Print the header.
-        logging.debug("Printing the DICOM tag values...")
+        logger.debug("Printing the DICOM tag values...")
         if header:
             print >> output, "\t".join(tags)
         # Print the tags in each DICOM file.

@@ -7,7 +7,7 @@ import sys
 import os
 import getopt
 import re
-import logging
+from qipipe.helpers.logging import logger
 from qipipe.staging.ctp import create_ctp_id_map
 
 help_message = """
@@ -49,7 +49,7 @@ def main(argv=None):
             elif opt in ('-o', '--output'):
                 output = open(val, 'w')
             elif opt in ('-v', '--verbose'):
-                logging.basicConfig(level=logging.DEBUG)
+                logger.setLevel('DEBUG')
             elif opt in ('-h', '--help'):
                 print help_message
                 return 0

@@ -2,7 +2,7 @@ import sys
 import os
 import re
 import glob
-import logging
+from qipipe.helpers.logging import logger
 from dicom import datadict as dd
 from .dicom_helper import iter_dicom
 
@@ -19,7 +19,7 @@ def edit_dicom_headers(source, dest, tag_values):
     tv = {dd.tag_for_name(t.replace(' ', '')): v for t, v in tag_values.iteritems()}
     # The {tag: VR} dictionary.
     tvr = {t: dd.get_entry(t)[0] for t in tv.iterkeys()}
-    logging.info("Editing the %(source)s DICOM files with the following tag values: %(tv)s..." % {'source' : source, 'tv': tag_values})
+    logger.info("Editing the %(source)s DICOM files with the following tag values: %(tv)s..." % {'source' : source, 'tv': tag_values})
     for ds in iter_dicom(source):
         for  t, v in tv.iteritems():
             try:
@@ -33,5 +33,5 @@ def edit_dicom_headers(source, dest, tag_values):
         if not os.path.exists(d):
             os.makedirs(d)
         ds.save_as(fname)
-        logging.debug("Saved the edited DICOM file %(src)s as %(tgt)s." % {'src': ds.filename, 'tgt': fname})
-    logging.info("The edited %(source)s DICOM files were saved in %(dest)s." % {'source' : source, 'dest': dest})
+        logger.debug("Saved the edited DICOM file %(src)s as %(tgt)s." % {'src': ds.filename, 'tgt': fname})
+    logger.info("The edited %(source)s DICOM files were saved in %(dest)s." % {'source' : source, 'dest': dest})

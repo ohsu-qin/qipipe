@@ -1,4 +1,4 @@
-import logging
+from qipipe.helpers.logging import logger
 import operator
 import dicom
 from dicom.filereader import InvalidDicomError
@@ -14,7 +14,7 @@ def read_dicom_header(path):
     :raise: IOError if the file cannot be read
     """
     
-    logging.debug("Reading the DICOM header in file %s..." % path)
+    logger.debug("Reading the DICOM header in file %s..." % path)
     return dicom.read_file(path, *DicomHeaderIterator.OPTS)
 
 def isdicom(path):
@@ -27,7 +27,7 @@ def isdicom(path):
     try:
         read_dicom_header(path)
     except InvalidDicomError:
-        logging.debug("%s is not a DICOM file." % path)
+        logger.debug("%s is not a DICOM file." % path)
         return False
     return True
 
@@ -84,7 +84,7 @@ class DicomIterator(FileIterator):
             try:
                 yield dicom.read_file(f, *self.args)
             except InvalidDicomError:
-                logging.info("Skipping non-DICOM file %s" % f)
+                logger.info("Skipping non-DICOM file %s" % f)
 
 class DicomHeaderIterator(DicomIterator):
     """

@@ -1,6 +1,6 @@
 import os
 import shutil
-import logging
+from qipipe.helpers.logging import logger
 from .similarity_metrics import *
 from .template import create_template
 from .warp_transform import warp
@@ -99,7 +99,7 @@ class ANTS(object):
             # Link the source images in the work directory, if necessary.
             self._link_files(path, work, files)
         registered = dict()
-        logging.info("Registering the images in %s..." % work)
+        logger.info("Registering the images in %s..." % work)
         cwd = os.getcwd()
         os.chdir(work)
         try:
@@ -109,26 +109,26 @@ class ANTS(object):
                 registered[moving] = warp(moving, self.reference, self.metric)
         finally:
             os.chdir(cwd)
-        logging.info("Registered the images in %s." % work)
+        logger.info("Registered the images in %s." % work)
         if self.output:
             if not os.path.exists(self.output):
                 os.makedirs(self.output)
             if not os.path.samefile(self.output, work):
-                logging.info("Copying the registered images from %(source)s to %(destination)s..." % {'source': work, 'destination': self.output})
+                logger.info("Copying the registered images from %(source)s to %(destination)s..." % {'source': work, 'destination': self.output})
                 for fn in registered.values():
                     wf = os.path.join(work, fn)
                     of = os.path.join(self.output, fn)
                     if os.path.exists(of):
                         os.remove(of)
                     shutil.copyfile(wf, of)
-                logging.info("Copied the registered images to %s." % self.output)
+                logger.info("Copied the registered images to %s." % self.output)
         return registered
 
     def _link_files(self, source, destination, files):
         """
         Links the given files in the source directory to the destination. 
         """
-        logging.info("Linking the %(source)s images to the destination %(destination)s..." % {'source': source, 'destination': destination})
+        logger.info("Linking the %(source)s images to the destination %(destination)s..." % {'source': source, 'destination': destination})
         source = os.path.abspath(source)
         for f in files:
             dest = os.path.join(destination, f)
