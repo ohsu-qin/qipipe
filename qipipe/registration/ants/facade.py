@@ -96,7 +96,7 @@ class ANTS(object):
         if not os.path.exists(work):
             os.makedirs(work)
         if not os.path.samefile(path, work):
-            # Link to the source images, if necessary.
+            # Link the source images in the work directory, if necessary.
             self._link_files(path, work, files)
         registered = dict()
         logging.info("Registering the images in %s..." % work)
