@@ -4,12 +4,13 @@ import os
 from qipipe.staging.fix_dicom import fix_dicom_headers
 
 class FixDicomInputSpec(BaseInterfaceInputSpec):
-    source = Directory(exists=True, desc='The input patient directory', mandatory=True)
-    dest = traits.String(desc='The output location', mandatory=True)
+    source = Directory(desc='The input patient directory', exists=True, mandatory=True)
+    dest = Directory(desc="The output location", exists=False, mandatory=True)
+    collection = traits.Str(desc='The image collection', mandatory=False)
 
 
 class FixDicomOutputSpec(TraitedSpec):
-    dest = Directory(exists=True, desc="The target output patient directory")
+    target = Directory(desc="The target output patient directory", exists=True)
 
 
 class FixDicom(BaseInterface):
@@ -17,10 +18,10 @@ class FixDicom(BaseInterface):
     output_spec = FixDicomOutputSpec
 
     def _run_interface(self, runtime):
-        fix_dicom_headers(self.inputs.source, self.inputs.dest)
+        self.target = fix_dicom_headers(self.inputs.source, self.inputs.dest, self.inputs.collection)
         return runtime
 
     def _list_outputs(self):
         outputs = self._outputs().get()
-        outputs['dest'] = self.inputs.dest
+        outputs['target'] = self.target
         return outputs
