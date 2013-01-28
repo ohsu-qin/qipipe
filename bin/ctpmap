@@ -17,6 +17,7 @@ ctpmap options DIR...
 Options:
     -c --collection NAME\tThe required target TCIA collection name, e.g. QIN-BREAST-02
     -o --output FILE\tThe output file name (default stdout)
+    -1\t\t\Only read the first image file to obtain the Patient ID
     -h --help\tPrint this help message
 """
 
@@ -38,28 +39,30 @@ def main(argv=None):
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], 'hc:o:v', ['help', 'collection', 'output', 'verbose'])
+            opts, args = getopt.getopt(argv[1:], '1hc:o:v', ['first-only', 'help', 'collection=', 'output=', 'verbose'])
         except getopt.error, msg:
             raise Usage(msg)
         
         # option processing
-        collection = None
         output = sys.stdout
+        collection = None
+        kwargs = {}
         for opt, val in opts:
             if opt in ('-c', '--collection'):
                 collection = val
             elif opt in ('-o', '--output'):
                 output = open(val, 'w')
+            elif opt in ('-1', '--first_only'):
+                kwargs['first_only'] = True
             elif opt in ('-v', '--verbose'):
                 logger.setLevel('DEBUG')
             elif opt in ('-h', '--help'):
-                print help_message
                 return 0
-        if collection == None:
+        if not collection:
             raise OptError('Required collection option was not set.')
         
         # Print the id map.
-        create_ctp_id_map(collection, *args).write(output)
+        create_ctp_id_map(collection, *args, **kwargs).write(output)
     
     except Usage, err:
         print >> sys.stderr, sys.argv[0].split('/')[-1] + ': ' + str(err.msg)
