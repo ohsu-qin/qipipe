@@ -15,7 +15,7 @@ config.update_config(cfg)
 
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from qipipe.pipeline import qipipe as qip
+from qipipe.pipeline import qipipeline as qip
 from qipipe.helpers.dicom_helper import iter_dicom
 
 class TestPipeline:

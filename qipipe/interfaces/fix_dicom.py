@@ -1,6 +1,5 @@
 from nipype.interfaces.base import (BaseInterface,
     BaseInterfaceInputSpec, traits, Directory, TraitedSpec)
-import os
 from qipipe.staging.fix_dicom import fix_dicom_headers
 
 class FixDicomInputSpec(BaseInterfaceInputSpec):

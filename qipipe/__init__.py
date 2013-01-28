@@ -1,1 +1,1 @@
-from . import helpers, staging, registration, pipeline
+from . import helpers, staging, registration, interfaces, pipeline
