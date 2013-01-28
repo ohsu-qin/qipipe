@@ -2,9 +2,15 @@ import sys
 import os
 import re
 import glob
-from qipipe.helpers.logging import logger
 from dicom import datadict as dd
 from .dicom_helper import iter_dicom
+
+import logging
+logger = logging.getLogger(__name__)
+
+# Turn off pydicom debugging.
+import dicom
+dicom.debug(False)
 
 def edit_dicom_headers(source, dest, tag_values):
     """

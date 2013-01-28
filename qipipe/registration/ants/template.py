@@ -1,8 +1,10 @@
 import os
-from qipipe.helpers.logging import logger
 import envoy
 from .similarity_metrics import *
 from .ants_error import ANTSError
+
+import logging
+logger = logging.getLogger(__name__)
 
 def create_template(files, dimension=2, cores=4, metric=None):
     """

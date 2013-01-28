@@ -2,11 +2,11 @@
 TCIA CTP preparation utilities.
 """
 
-import sys
-import os
-import re
-from qipipe.helpers.logging import logger
+import sys, os, re
 from ..helpers.dicom_helper import iter_dicom_headers
+
+import logging
+logger = logging.getLogger(__name__)
 
 def create_ctp_id_map(collection, *paths):
     """

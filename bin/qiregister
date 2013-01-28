@@ -6,8 +6,10 @@ OHSU QIN U01 data ANTS symmetric normalization motion correction registration.
 import sys
 import os
 import getopt
-from qipipe.helpers.logging import logger
 from qipipe.registration import ants
+
+import logging
+logger = logging.getLogger('qipipe')
 
 help_message = """
 qiregister options DIRECTORY

@@ -1,8 +1,10 @@
-from qipipe.helpers.logging import logger
 import operator
 import dicom
 from dicom.filereader import InvalidDicomError
 from .file_helper import FileIterator
+
+import logging
+logger = logging.getLogger(__name__)
 
 def read_dicom_header(path):
     """

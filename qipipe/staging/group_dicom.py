@@ -2,48 +2,45 @@ import sys
 import os
 import re
 import glob
-from qipipe.helpers.logging import logger
 from qipipe.helpers.dicom_helper import read_dicom_header, InvalidDicomError
 from .staging_error import StagingError
-    
-def group_dicom_files(*args):
+
+import logging
+logger = logging.getLogger(__name__)
+
+def group_dicom_files(*args, **kwargs):
     """
     Links DICOM files in the given patient directories.
     
     @param args: the patient directories, optionally followed by the staging options
+    @param kwargs: the DICOMFileGrouper options
+    @return: the source => target patient directory dictionary
     """
-    last = args[len(args) - 1]
-    if isinstance(last, dict):
-        args = args[:-1]
-        opts = last
-    else:
-        opts = {}
-    DICOMFileGrouper(opts).group_dicom_files(*args)
+    return DICOMFileGrouper(**kwargs).group_dicom_files(*args)
 
 class DICOMFileGrouper(object):
-    def __init__(self, opts={}):
+    def __init__(self, target=None, delta=None, include='*', visit='[Vv]isit*', replace=False):
         """
-        Creates a new Staging helper.
+        Creates a new DICOM file grouper.
         
-        @param opts: the staging options:
-            - target: the target directory in which to place the links (default is C{.})
-            - delta: the delta directory in which to place only the new links (default is C{None})
-            - include: the DICOM file include pattern (default is C{*})
-            - visit: the visit directory pattern (default is C{[Vv]isit*})
+        @param target: the target directory in which to place the grouped patient directories (default is C{.})
+        @param delta: the delta directory in which to place only the new links (default is C{None})
+        @param include: the DICOM file include pattern (default is C{*})
+        @param visit: the visit directory pattern (default is C{[Vv]isit*})
         """
         # The target root directory.
-        self.tgt_dir = opts.get('target') or '.'
+        self.tgt_dir = target or '.'
         # The delta directory.
-        if opts.get('delta'):
-            self.delta_dir = os.path.abspath(opts['delta'])
+        if delta:
+            self.delta_dir = os.path.abspath(delta)
         else:
             self.delta_dir = None
         # The file include pattern.
-        self.include = opts.get('include') or '*'
+        self.include = include
         # The visit directory pattern.
-        self.vpat = opts.get('visit') or '[Vv]isit*'
+        self.vpat = visit
         # The replace option.
-        self.replace = opts.has_key('replace')
+        self.replace = replace
      
     def group_dicom_files(self, *dirs):
         """
@@ -60,11 +57,11 @@ class DICOMFileGrouper(object):
             
             ./delta/patient08/visit02 -> ./patient08/visit02
     
-        @param dirs: the source patient directories 
+        @param dirs: the source patient directories
+        @return: the source => target patient directory dictionary
         """
-        # Build the staging area for each patient.  
-        for d in dirs:
-            self._group(d)
+        # Build the staging area for each patient. 
+        return {d: self._group(d) for d in dirs} 
     
     def _group(self, path):
         """
@@ -75,6 +72,7 @@ class DICOMFileGrouper(object):
         See group_dicom_files.
         
         @param path: the source patient directory path
+        @return: the target patient directory
         """
         src_pt_dir = os.path.abspath(path)
         # The RE to extract the patient or visit number suffix.
@@ -89,7 +87,7 @@ class DICOMFileGrouper(object):
         tgt_pt_dir = os.path.abspath(os.path.join(self.tgt_dir, tgt_pt_dir_name))
         if not os.path.exists(tgt_pt_dir):
             os.makedirs(tgt_pt_dir)
-            logger.info("Created patient directory %s." % tgt_pt_dir)
+            logger.debug("Created patient directory %s." % tgt_pt_dir)
         # Build the target visit subdirectories.
         for src_visit_dir in glob.glob(os.path.join(src_pt_dir, self.vpat)):
             # Extract the visit number from the visit directory name.
@@ -103,12 +101,12 @@ class DICOMFileGrouper(object):
             # Skip an existing visit.
             if os.path.exists(tgt_visit_dir):
                 if not self.replace:
-                    logger.info("Skipped existing visit directory %s." % tgt_visit_dir)
+                    logger.debug("Skipped existing visit directory %s." % tgt_visit_dir)
                     continue
             else:
                 # Make the target visit directory.
                 os.mkdir(tgt_visit_dir)
-                logger.info("Created visit directory %s." % tgt_visit_dir)
+                logger.debug("Created visit directory %s." % tgt_visit_dir)
             # Link the delta visit directory to the target, if necessary.
             if self.delta_dir:
                 delta_pt_dir = os.path.join(self.delta_dir, tgt_pt_dir_name)
@@ -120,7 +118,7 @@ class DICOMFileGrouper(object):
                 # The delta link is relative to the target location.
                 delta_rel_path = os.path.relpath(tgt_visit_dir, delta_pt_dir)
                 os.symlink(delta_rel_path, delta_visit_dir)
-                logger.info("Linked the delta visit directory {0} -> {1}.".format(delta_visit_dir, delta_rel_path))
+                logger.debug("Linked the delta visit directory {0} -> {1}.".format(delta_visit_dir, delta_rel_path))
             # Link each of the DICOM files in the source concatenated subdirectories.
             for src_file in glob.glob(os.path.join(src_visit_dir, self.include)):
                 if os.path.isdir(src_file):
@@ -146,13 +144,14 @@ class DICOMFileGrouper(object):
                         if self.replace:
                             os.remove(tgt_file)
                         else:
-                            logger.info("Skipped existing image link %s." % tgt_file)
+                            logger.debug("Skipped existing image link %s." % tgt_file)
                             continue
                     # Create a link from the target to the source.
                     os.symlink(src_file, tgt_file)
-                    logger.info("Linked the image file {0} -> {1}".format(tgt_file, src_file))
+                    logger.debug("Linked the image file {0} -> {1}".format(tgt_file, src_file))
                 else:
-                    logger.info("Skipped non-DICOM file %s." % src_file)
+                    logger.debug("Skipped non-DICOM file %s." % src_file)
+        return tgt_pt_dir
     
     def _series_number(self, path):
         try:

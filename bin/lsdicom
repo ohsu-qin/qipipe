@@ -7,10 +7,12 @@ The format of each path is a line of tab-delimited fields.
 import sys
 import os
 import getopt
-from qipipe.helpers.logging import logger
 from collections import defaultdict
 from qipipe.helpers.collection_helper import to_series
 from qipipe.helpers.dicom_helper import ImageHierarchy, iter_dicom_headers, select_dicom_tags
+
+import logging
+logger = logging.getLogger(__name__)
 
 help_message = """
 lsimg options FILE...
@@ -37,7 +39,7 @@ def main(argv=None):
     output = sys.stdout
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], 'no:st:hv', ['no-header', 'output', 'summary', 'tags=', 'help', 'verbose'])
+            opts, args = getopt.getopt(argv[1:], 'l:no:st:hv', ['log', 'no-header', 'output', 'summary', 'tags=', 'help', 'verbose'])
         except getopt.error, msg:
             raise Usage(msg)
         
@@ -52,6 +54,10 @@ def main(argv=None):
                 if tags:
                     raise Usage('The tags option cannot be used with the summary option.')
                 tags = val.split(',')
+            elif opt in ('-l' '--log'):
+                fh = logging.FileHandler(val)
+                fh.setLevel(logging.DEBUG)
+                logger.addHandler(fh)
             elif opt in ('-n' '--no-header'):
                 header = False
             elif opt in ('-o' '--output'):
@@ -80,6 +86,7 @@ def main(argv=None):
         
         # Print the header.
         logger.debug("Printing the DICOM tag values...")
+        logger.error("test error")
         if header:
             print >> output, "\t".join(tags)
         # Print the tags in each DICOM file.

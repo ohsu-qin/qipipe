@@ -7,8 +7,10 @@ import sys
 import os
 import getopt
 import re
-from qipipe.helpers.logging import logger
 from qipipe.staging.ctp import create_ctp_id_map
+
+import logging
+logger = logging.getLogger('qipipe')
 
 help_message = """
 ctpmap options DIR...

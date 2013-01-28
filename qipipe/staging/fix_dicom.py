@@ -1,10 +1,11 @@
-import os
-from qipipe.helpers.logging import logger
-import re
+import os, re
 from qipipe.helpers.dicom_helper import edit_dicom_headers
 from .staging_error import StagingError
 from .staging_helper import extract_trailing_integer_from_path
 from .sarcoma_config import sarcoma_location
+
+import logging
+logger = logging.getLogger(__name__)
 
 def fix_dicom_headers(source, dest, collection=None):
     """
@@ -16,6 +17,7 @@ def fix_dicom_headers(source, dest, collection=None):
     @param source: the input patient directory
     @param dest: the location in which to write the modified patient directory
     @param collection: the collection name (default is the capitalized source parent directory base name)
+    @return: the destination
     """
     
     parent = os.path.normpath(os.path.dirname(source))
@@ -36,3 +38,4 @@ def fix_dicom_headers(source, dest, collection=None):
     # Set the tags in every image file.
     edit_dicom_headers(source, dest, tnv)
     logger.debug("Fixed the DICOM headers in %s." % source)
+    return dest

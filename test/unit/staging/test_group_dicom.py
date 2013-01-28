@@ -1,9 +1,9 @@
 from nose.tools import *
-import os, glob, shutil
-
-import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+import sys, os, glob, shutil
 from qipipe.staging import group_dicom_files
+
+import logging
+logger = logging.getLogger(__name__)
 
 # The test parent directory.
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -11,6 +11,8 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'group_dicom')
 # The test results.
 RESULTS = os.path.join(ROOT, 'results', 'staging', 'group_dicom')
+# The test configuration.
+LOG = os.path.join(RESULTS, 'log', 'qipipe.log')
 # The test result target.
 TARGET = os.path.join(RESULTS, 'data')
 # The test result delta.
@@ -20,11 +22,11 @@ class TestGroupDicom:
     """group_dicom unit tests."""
     
     def test_group_dicom_files(self):
+        logger.debug('Testing group_dicom_files...')
         shutil.rmtree(RESULTS, True)
         src_pt_dirs = glob.glob(FIXTURE + '/*')
-        opts = {'target': TARGET, 'include': '*concat*/*'}
-        args = src_pt_dirs + [opts]
-        group_dicom_files(*args)
+        opts = dict(target=TARGET, include='*concat*/*')
+        group_dicom_files(*src_pt_dirs, **opts)
         # Verify that there are no broken links.
         for root, dirs, files in os.walk(TARGET):
             for f in files:
@@ -37,10 +39,8 @@ class TestGroupDicom:
         shutil.rmtree(tgt, True)
         # Clean the delta tree.
         shutil.rmtree(DELTA, True)
-        # Add the delta argument.
-        opts['delta'] = DELTA
         # Rerun to capture the delta.
-        group_dicom_files(*args)
+        group_dicom_files(*src_pt_dirs, delta=DELTA, **opts)
         delta = os.path.join(DELTA, 'patient01', 'visit02')
         assert_true(os.path.islink(delta), "Missing delta -> target link: %s" % delta)
         assert_true(os.path.exists(delta), "Broken delta -> target link: %s" % delta)
@@ -51,6 +51,7 @@ class TestGroupDicom:
         assert_false(os.path.exists(non_delta), "Incorrectly added a target -> delta link in %s" % non_delta)
         # Cleanup.
         shutil.rmtree(RESULTS, True)
+        logger.debug('group_dicom_files test completed.')
 
 
 if __name__ == "__main__":

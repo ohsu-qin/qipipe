@@ -6,8 +6,10 @@ Stages DICOM files for submission to TCIA and XNAT.
 import sys
 import os
 import getopt
-from qipipe.helpers.logging import logger
 from qipipe.helpers.dicom_helper import edit_dicom_tags
+
+import logging
+logger = logging.getLogger('qipipe')
 
 help_message = """
 qistage options DIR...

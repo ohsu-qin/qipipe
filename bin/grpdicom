@@ -6,8 +6,10 @@ Groups DICOM files into directories by series.
 import sys
 import os
 import getopt
-from qipipe.helpers.logging import logger
 from qipipe.staging import group_dicom_files
+
+import logging
+logger = logging.getLogger('qipipe')
 
 help_message = """
 grpdicom options DIR...
