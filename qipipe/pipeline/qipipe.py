@@ -1,10 +1,9 @@
 import nipype.pipeline.engine as pe
-from .interfaces.group_dicom import GroupDicom
-from .interfaces.fix_dicom import FixDicom
 from nipype.interfaces.io import DataGrabber
 from nipype.interfaces.dcmstack import DcmStack
 from nipype.interfaces.fsl.preprocess import ApplyWarp
-
+from qipipe.interfaces.group_dicom import GroupDicom
+from qipipe.interfaces.fix_dicom import FixDicom
 
 # The master pipeline.
 pipeline = pe.Workflow(name='qipipe')
@@ -40,6 +39,5 @@ pipeline.connect([
     (group, fix, [('target', 'source')]),
     (fix, p2v, [('target', 'base_directory')]),
     (p2v, p2s, [('outfiles', 'base_directory')]),
-    (p2s, stack, [('outfiles', 'dicom_files')])
-    (stack, assemble [('out_file', '@')])
-    ])
+    (p2s, stack, [('outfiles', 'dicom_files')]),
+    (stack, assemble, [('out_file', '@')])])

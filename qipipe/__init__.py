@@ -1,2 +1,1 @@
-from . import helpers, staging, registration
-from .pipeline import pipeline
+from . import helpers, staging, registration, pipeline

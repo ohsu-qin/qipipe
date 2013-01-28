@@ -15,7 +15,7 @@ config.update_config(cfg)
 
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from qipipe import pipeline
+from qipipe.pipeline import qipipe as qip
 from qipipe.helpers.dicom_helper import iter_dicom
 
 class TestPipeline:
@@ -23,12 +23,12 @@ class TestPipeline:
     
     def test_pipeline(self):
         shutil.rmtree(RESULTS, True)
-        pipeline.inputs.group.source = FIXTURE
-        pipeline.inputs.group.dest = GROUPED
-        pipeline.inputs.fix.collection = 'Sarcoma'
-        pipeline.inputs.fix.dest = WORK
-        pipeline.inputs.assemble.base_directory = STACKED
-        pipeline.run()
+        qip.inputs.group.source = FIXTURE
+        qip.inputs.group.dest = GROUPED
+        qip.inputs.fix.collection = 'Sarcoma'
+        qip.inputs.fix.dest = WORK
+        qip.inputs.assemble.base_directory = STACKED
+        qip.run()
         # Verify the result.
         for ds in iter_dicom(OUTPUT):
             assert_equal('CHEST', ds.BodyPartExamined, "Incorrect Body Part: %s" % ds.BodyPartExamined)
