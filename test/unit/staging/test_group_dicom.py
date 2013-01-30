@@ -1,5 +1,5 @@
 from nose.tools import *
-import sys, os, glob, shutil
+import sys, os, re, glob, shutil
 from qipipe.staging import group_dicom_files
 
 import logging
@@ -26,9 +26,11 @@ class TestGroupDicom:
         shutil.rmtree(RESULTS, True)
         src_pt_dirs = glob.glob(FIXTURE + '/*')
         opts = dict(target=TARGET, include='*concat*/*')
-        group_dicom_files(*src_pt_dirs, **opts)
+        grouped = group_dicom_files(*src_pt_dirs, **opts)
         # Verify that there are no broken links.
         for root, dirs, files in os.walk(TARGET):
+            if (os.path.basename(root).find('visit') == 0:
+                assert_true(root in grouped, "Target visit directory not found in the group result: %s" % root)
             for f in files:
                 tgt_file = os.path.join(root, f)
                 assert_true(os.path.islink(tgt_file), "Missing source -> target target link: %s" % tgt_file)

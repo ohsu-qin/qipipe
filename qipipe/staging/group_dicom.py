@@ -1,12 +1,10 @@
-import sys
-import os
-import re
-import glob
+import sys, os, re, glob
 from qipipe.helpers.dicom_helper import read_dicom_header, InvalidDicomError
 from .staging_error import StagingError
 
 import logging
 logger = logging.getLogger(__name__)
+
 
 def group_dicom_files(*args, **kwargs):
     """
@@ -14,11 +12,13 @@ def group_dicom_files(*args, **kwargs):
     
     @param args: the patient directories, optionally followed by the staging options
     @param kwargs: the DICOMFileGrouper options
-    @return: the source => target patient directory dictionary
+    @return: the target series directories which were added
     """
     return DICOMFileGrouper(**kwargs).group_dicom_files(*args)
 
+
 class DICOMFileGrouper(object):
+
     def __init__(self, target=None, delta=None, include='*', visit='[Vv]isit*', replace=False):
         """
         Creates a new DICOM file grouper.
@@ -50,18 +50,21 @@ class DICOMFileGrouper(object):
         name, e.g. C{patient08}. The visit directory name is C{visit}I{<nn>}, where I{<nn>}
         is the two-digit patient visit number, e.g. C{visit02}. The series directory name
         is C{series}I{<nnn>}, where I{<nnn>} is the three-digit series number, e.g. C{series001}.
-        
-    
+            
         If the delta option is given, then a link is created from the delta directory to each
         new patient visit directory, e.g.::
-            
+        
             ./delta/patient08/visit02 -> ./patient08/visit02
-    
+        
         @param dirs: the source patient directories
-        @return: the source => target patient directory dictionary
+        @return: the target series directories which were added
         """
-        # Build the staging area for each patient. 
-        return {d: self._group(d) for d in dirs} 
+        # Build the staging area for each patient.
+        series = []
+        for d in dirs:
+            grouped = self._group(d)
+            series.extend(grouped)
+        return series
     
     def _group(self, path):
         """
@@ -72,7 +75,7 @@ class DICOMFileGrouper(object):
         See group_dicom_files.
         
         @param path: the source patient directory path
-        @return: the target patient directory
+        @return: the target patient visit directories which were added
         """
         src_pt_dir = os.path.abspath(path)
         # The RE to extract the patient or visit number suffix.
@@ -88,7 +91,8 @@ class DICOMFileGrouper(object):
         if not os.path.exists(tgt_pt_dir):
             os.makedirs(tgt_pt_dir)
             logger.debug("Created patient directory %s." % tgt_pt_dir)
-        # Build the target visit subdirectories.
+        # Build the target series subdirectories.
+        series_dirs = set()
         for src_visit_dir in glob.glob(os.path.join(src_pt_dir, self.vpat)):
             # Extract the visit number from the visit directory name.
             visit_match = npat.search(os.path.basename(src_visit_dir))
@@ -138,6 +142,7 @@ class DICOMFileGrouper(object):
                     tgt_series_dir = os.path.join(tgt_visit_dir, "series%03d" % series)
                     if not os.path.exists(tgt_series_dir):
                         os.mkdir(tgt_series_dir)
+                        series_dirs.add(tgt_series_dir)
                     # Link the source DICOM file.
                     tgt_file = os.path.join(tgt_series_dir, tgt_file_base)
                     if os.path.islink(tgt_file):
@@ -151,11 +156,15 @@ class DICOMFileGrouper(object):
                     logger.debug("Linked the image file {0} -> {1}".format(tgt_file, src_file))
                 else:
                     logger.debug("Skipped non-DICOM file %s." % src_file)
-        return tgt_pt_dir
+        return series_dirs
     
     def _series_number(self, path):
+        """
+        :param path: the file path
+        :return: the series number, or None if the file is not a DICOM file
+        """
         try:
             return read_dicom_header(path).SeriesNumber
         except InvalidDicomError:
             return None
-        
+  
