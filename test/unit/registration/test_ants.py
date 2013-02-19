@@ -23,8 +23,6 @@ class TestANTS:
         shutil.rmtree(RESULT, True)
         rdict = ants.register(FIXTURE, output=OUTPUT, work=WORK)
         # Verify that each input is registered.
-        rout = set(os.listdir(OUTPUT))
-        print rout
         for fn in os.listdir(FIXTURE):
             f = os.path.join(FIXTURE, fn)
             rfn = fn.replace('.dcm', 'Registered.nii.gz')
