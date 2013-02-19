@@ -23,8 +23,6 @@ class TestDicomHelper:
         files = glob.glob(FIXTURE + '/*')
         # Read the tags.
         tags = dcm.read_dicom_tags(['Study ID', 'Series Number'], *files)
-        print ">>>>"
-        print len(list(tags))
         for t in tags:
             assert_equal(['8811', '2'], t, "Tags incorrect")
 
