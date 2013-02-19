@@ -24,8 +24,7 @@ config.update_config(cfg)
 
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-#from qipipe.pipelines.stage import stage
-from qipipe.pipelines.stage import stage
+from qipipe.pipelines import stage as qis
 from qipipe.helpers.dicom_helper import iter_dicom
 
 
@@ -36,10 +35,10 @@ class TestStage:
         shutil.rmtree(RESULTS, True)
         for d in glob.glob(os.path.join(FIXTURE, 'Subj*')):
             logger.debug("Testing stage pipeline on %s..." % d)
-            stage.inputs.collection = COLLECTION
-            stage.inputs.dest = RESULTS
-            stage.inputs.patient_dir = d
-            stage.run()
+            qis.stage.inputs.collection = COLLECTION
+            qis.stage.inputs.dest = RESULTS
+            qis.stage.inputs.patient_dir = d
+            qis.stage.run()
             self._verify_result(d)
         # Cleanup.
         shutil.rmtree(RESULTS, True)
