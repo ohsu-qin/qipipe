@@ -12,13 +12,15 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'fix_dicom', 'sarcoma', 'patient03')
 # The test results.
 RESULTS = os.path.join(ROOT, 'results', 'staging', 'fix_dicom', 'sarcoma', 'patient03')
+# The collection name.
+COLLECTION = 'Sarcoma'
 
 class TestFixDicom:
     """Fix DICOM header unit tests."""
     
     def test_fix_dicom_headers(self):
         shutil.rmtree(RESULTS, True)
-        fix_dicom_headers(FIXTURE, RESULTS)
+        fix_dicom_headers(FIXTURE, RESULTS, COLLECTION)
         # Verify the result.
         for ds in iter_dicom(RESULTS):
             assert_equal('CHEST', ds.BodyPartExamined, "Incorrect Body Part: %s" % ds.BodyPartExamined)
