@@ -1,0 +1,106 @@
+<html><head>
+<style type="text/css">
+  #page_container{width:1200px;margin:0;}
+  #toc{width:450px;float:left;}
+  #content{width:750px;float:left;}
+  pre {
+   white-space: pre-wrap;       /* css-3 */
+   white-space: -moz-pre-wrap !important;  /* Mozilla, since 1999 */
+   white-space: -pre-wrap;      /* Opera 4-6 */
+   white-space: -o-pre-wrap;    /* Opera 7 */
+   word-wrap: break-word;       /* Internet Explorer 5.5+ */
+  }
+</style>
+
+<script type="text/javascript">
+<!--
+function readfile(srcfile, outputcontrol) {
+  try {
+    netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
+  } catch (e) {
+    alert("Permission to read file was denied.");
+  }
+  var file = Components.classes["@mozilla.org/file/local;1"].createInstance(Components.interfaces.nsILocalFile);
+  file.initWithPath( srcfile );
+  if ( file.exists() == false ) {
+    alert("File does not exist");
+  }
+  var is = Components.classes["@mozilla.org/network/file-input-stream;1"].createInstance( Components.interfaces.nsIFileInputStream );
+  is.init( file,0x01, 00004, null);
+  var sis = Components.classes["@mozilla.org/scriptableinputstream;1"].createInstance( Components.interfaces.nsIScriptableInputStream );
+  sis.init( is );
+  var output = sis.read( sis.available() );
+  document.getElementById(outputcontrol).innerHTML = '<pre>'+output+'</pre>';
+}
+
+function load(name, div) {
+  readfile(name, div);
+  return false;
+}
+function loadimg(name, div) {
+  document.getElementById(div).innerHTML = '<img src="'+name+'"></img>';
+  return false;
+}
+
+var report_files = new Array(4);
+var result_files = new Array(4);
+result_files[0] = "/private/var/folders/tt/cws2x3ms2j13xwdyrmyf5shr0000gn/T/tmpJQfrFR/ctp/_series_dir_..Users..loneyf..workspace..qipipe..test..results..pipeline..stage..airc..patient02..visit01..series009/fix/result_fix.pklz";
+report_files[0] = "/private/var/folders/tt/cws2x3ms2j13xwdyrmyf5shr0000gn/T/tmpJQfrFR/ctp/_series_dir_..Users..loneyf..workspace..qipipe..test..results..pipeline..stage..airc..patient02..visit01..series009/fix/_report/report.rst";
+result_files[1] = "/private/var/folders/tt/cws2x3ms2j13xwdyrmyf5shr0000gn/T/tmp1Iw1Mb/ctp/_series_dir_..Users..loneyf..workspace..qipipe..test..results..pipeline..stage..airc..patient02..visit01..series009/compress/result_compress.pklz";
+report_files[1] = "/private/var/folders/tt/cws2x3ms2j13xwdyrmyf5shr0000gn/T/tmp1Iw1Mb/ctp/_series_dir_..Users..loneyf..workspace..qipipe..test..results..pipeline..stage..airc..patient02..visit01..series009/compress/_report/report.rst";
+result_files[2] = "/private/var/folders/tt/cws2x3ms2j13xwdyrmyf5shr0000gn/T/tmp_pxfFs/ctp/_series_dir_..Users..loneyf..workspace..qipipe..test..results..pipeline..stage..airc..patient02..visit01..series009/pvs/result_pvs.pklz";
+report_files[2] = "/private/var/folders/tt/cws2x3ms2j13xwdyrmyf5shr0000gn/T/tmp_pxfFs/ctp/_series_dir_..Users..loneyf..workspace..qipipe..test..results..pipeline..stage..airc..patient02..visit01..series009/pvs/_report/report.rst";
+result_files[3] = "/private/var/folders/tt/cws2x3ms2j13xwdyrmyf5shr0000gn/T/tmps7o4qG/ctp/_series_dir_..Users..loneyf..workspace..qipipe..test..results..pipeline..stage..airc..patient02..visit01..series009/assemble/result_assemble.pklz";
+report_files[3] = "/private/var/folders/tt/cws2x3ms2j13xwdyrmyf5shr0000gn/T/tmps7o4qG/ctp/_series_dir_..Users..loneyf..workspace..qipipe..test..results..pipeline..stage..airc..patient02..visit01..series009/assemble/_report/report.rst";
+function isnodedone(srcfile){
+  try {
+    netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
+  } catch (e) {
+    alert("Permission to read file was denied.");
+  }
+  var file = Components.classes["@mozilla.org/file/local;1"].createInstance(Components.interfaces.nsILocalFile);
+  file.initWithPath( srcfile );
+  if ( file.exists() == false ) {
+    return false;
+  }
+  return true;
+}
+
+function beginrefresh(){
+  var num_nodes = 4;
+  var nodes_done = -1;
+  for(counter=nodes_done+1;counter<num_nodes;counter++){
+    cell_id = 'td'+counter;
+    if (isnodedone(report_files[counter]) == true){
+      document.getElementById(cell_id).style.backgroundColor = "#afa";
+      if (isnodedone(result_files[counter]) == true){
+        document.getElementById(cell_id).style.backgroundColor = "#fff";
+        nodes_done += 1;
+      }
+    }
+    else{
+      document.getElementById(cell_id).style.backgroundColor = "#aaa";
+    }
+  }
+  if (nodes_done+1 < num_nodes){
+    setTimeout("beginrefresh()", 1000);
+  }
+  else{
+    alert('Workflow finished running');
+  }
+}
+
+window.onload=beginrefresh
+-->
+</script>
+</head><body><div id="page_container">
+<div id="toc">
+<pre>Works only with mozilla/firefox browsers</pre><br>
+<a href="#" onclick="load('/Users/loneyf/workspace/qipipe/test/unit/pipelines/test_stage.py','content');return false;">Script</a><br>
+<table>
+<tr><td>Name</td><td>Hierarchy</td><td>Source</td></tr>
+<tr><td id="td0"><a href="#" onclick="load('/private/var/folders/tt/cws2x3ms2j13xwdyrmyf5shr0000gn/T/tmpJQfrFR/ctp/_series_dir_..Users..loneyf..workspace..qipipe..test..results..pipeline..stage..airc..patient02..visit01..series009/fix/_report/report.rst','content');return false;">fix.a0</a></td><td>ctp</td><td></td></tr>
+<tr><td id="td1"><a href="#" onclick="load('/private/var/folders/tt/cws2x3ms2j13xwdyrmyf5shr0000gn/T/tmp1Iw1Mb/ctp/_series_dir_..Users..loneyf..workspace..qipipe..test..results..pipeline..stage..airc..patient02..visit01..series009/compress/_report/report.rst','content');return false;">compress.a0</a></td><td>ctp</td><td></td></tr>
+<tr><td id="td2"><a href="#" onclick="load('/private/var/folders/tt/cws2x3ms2j13xwdyrmyf5shr0000gn/T/tmp_pxfFs/ctp/_series_dir_..Users..loneyf..workspace..qipipe..test..results..pipeline..stage..airc..patient02..visit01..series009/pvs/_report/report.rst','content');return false;">pvs.a0</a></td><td>ctp</td><td></td></tr>
+<tr><td id="td3"><a href="#" onclick="load('/private/var/folders/tt/cws2x3ms2j13xwdyrmyf5shr0000gn/T/tmps7o4qG/ctp/_series_dir_..Users..loneyf..workspace..qipipe..test..results..pipeline..stage..airc..patient02..visit01..series009/assemble/_report/report.rst','content');return false;">assemble.a0</a></td><td>ctp</td><td></td></tr>
+</table></div><div id="content">content</div></div></body></html>
