@@ -2,18 +2,20 @@ import os
 import re
 from .staging_error import StagingError
 
-_NPAT = re.compile('\d+$')
+_NPAT = re.compile('^patient(\d+)$')
 
-def extract_trailing_integer_from_path(path):
+def extract_patient_number_from_path(path):
     """
-    Extracts the trailing number from the given file path.
+    Extracts the patient number from the given image file path.
+    The path must contain a patient directory which matches C{^patient(\d+)$}.
     
-    @param path: the path with a trailing integer
+    @param path: the path within a patient<nn> directory
     @return the patient number
-    @raise StagingError: if the path does not end in an integer
+    @raise StagingError: if patient directory was not found in the path
     """
-    match = _NPAT.search(os.path.basename(path))
-    if not match:
-        raise StagingError('The source directory does not end in a number: ' + path)
-    return int(match.group(0))
+    for d in path.split(os.path.sep):
+        match = _NPAT.match(d)
+        if match:
+            return int(match.group(1))
+    raise StagingError('A patient directory was not found in the path: ' + path)
     
