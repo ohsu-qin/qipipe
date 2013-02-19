@@ -19,17 +19,17 @@ def group_dicom_files(*args, **kwargs):
 
 class DICOMFileGrouper(object):
 
-    def __init__(self, target=None, delta=None, include='*', visit='[Vv]isit*', replace=False):
+    def __init__(self, dest=None, delta=None, include='*', visit='[Vv]isit*', replace=False):
         """
         Creates a new DICOM file grouper.
         
-        @param target: the target directory in which to place the grouped patient directories (default is C{.})
+        @param dest: the target directory in which to place the grouped patient directories (default is C{.})
         @param delta: the delta directory in which to place only the new links (default is C{None})
         @param include: the DICOM file include pattern (default is C{*})
         @param visit: the visit directory pattern (default is C{[Vv]isit*})
         """
         # The target root directory.
-        self.tgt_dir = target or '.'
+        self.dest = dest or '.'
         # The delta directory.
         if delta:
             self.delta_dir = os.path.abspath(delta)
@@ -75,7 +75,7 @@ class DICOMFileGrouper(object):
         See group_dicom_files.
         
         @param path: the source patient directory path
-        @return: the target patient visit directories which were added
+        @return: the target series directories which were added
         """
         src_pt_dir = os.path.abspath(path)
         # The RE to extract the patient or visit number suffix.
@@ -87,12 +87,12 @@ class DICOMFileGrouper(object):
         pt_nbr = int(pt_match.group(0))
         # The patient directory which will hold the visits.
         tgt_pt_dir_name = "patient%02d" % pt_nbr
-        tgt_pt_dir = os.path.abspath(os.path.join(self.tgt_dir, tgt_pt_dir_name))
+        tgt_pt_dir = os.path.abspath(os.path.join(self.dest, tgt_pt_dir_name))
         if not os.path.exists(tgt_pt_dir):
             os.makedirs(tgt_pt_dir)
             logger.debug("Created patient directory %s." % tgt_pt_dir)
         # Build the target series subdirectories.
-        series_dirs = set()
+        series_dirs = []
         for src_visit_dir in glob.glob(os.path.join(src_pt_dir, self.vpat)):
             # Extract the visit number from the visit directory name.
             visit_match = npat.search(os.path.basename(src_visit_dir))
@@ -142,7 +142,7 @@ class DICOMFileGrouper(object):
                     tgt_series_dir = os.path.join(tgt_visit_dir, "series%03d" % series)
                     if not os.path.exists(tgt_series_dir):
                         os.mkdir(tgt_series_dir)
-                        series_dirs.add(tgt_series_dir)
+                        series_dirs.append(tgt_series_dir)
                     # Link the source DICOM file.
                     tgt_file = os.path.join(tgt_series_dir, tgt_file_base)
                     if os.path.islink(tgt_file):

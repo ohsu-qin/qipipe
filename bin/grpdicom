@@ -47,7 +47,7 @@ def main(argv=None):
         # option processing
         for option, value in opts:
             if option in ('-C', '--changeto'):
-                gopts['target'] = value
+                gopts['dest'] = value
             elif option in ('-h', '--help'):
                 print help_message
                 return 0
