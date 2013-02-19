@@ -53,6 +53,7 @@ class TestStage:
             assert_equal(pt_id, ds.PatientID, "Incorrect Patient ID: %s" % ds.PatientID)
             assert_is_not_none(ds.BodyPartExamined, "Incorrect Body Part: %s" % ds.BodyPartExamined)
 
+
 if __name__ == "__main__":
     import nose
     
