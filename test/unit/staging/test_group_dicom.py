@@ -25,11 +25,11 @@ class TestGroupDicom:
         logger.debug('Testing group_dicom_files...')
         shutil.rmtree(RESULTS, True)
         src_pt_dirs = glob.glob(FIXTURE + '/*')
-        opts = dict(target=TARGET, include='*concat*/*')
+        opts = dict(dest=TARGET, include='*concat*/*')
         grouped = group_dicom_files(*src_pt_dirs, **opts)
         # Verify that there are no broken links.
         for root, dirs, files in os.walk(TARGET):
-            if (os.path.basename(root).find('visit') == 0:
+            if not dirs:
                 assert_true(root in grouped, "Target visit directory not found in the group result: %s" % root)
             for f in files:
                 tgt_file = os.path.join(root, f)
@@ -39,8 +39,6 @@ class TestGroupDicom:
         tgt = os.path.join(TARGET, 'patient01', 'visit02')
         # Clean the partial result.
         shutil.rmtree(tgt, True)
-        # Clean the delta tree.
-        shutil.rmtree(DELTA, True)
         # Rerun to capture the delta.
         group_dicom_files(*src_pt_dirs, delta=DELTA, **opts)
         delta = os.path.join(DELTA, 'patient01', 'visit02')
