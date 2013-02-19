@@ -1,12 +1,10 @@
 import os, glob
 import nipype.pipeline.engine as pe
 from nipype.interfaces.utility import IdentityInterface, Function
-from nipype.interfaces.io import DataSink
+from nipype.interfaces.io import DataFinder, DataSink
 from qipipe.staging.group_dicom import group_dicom_files
 from qipipe.interfaces import FixDicom
 from .pipeline_helper import compress as cmpfunc
-from .pipeline_helper import pvs_substitution as pvsfunc
-from .pipeline_helper import PVS_KEYS
 
 __all__ = ['run', 'stage']
 
@@ -66,22 +64,32 @@ fix = pe.Node(interface=FixDicom(dest='data'), name='fix')
 compress = pe.MapNode(cmpfunc, name='compress', iterfield=['in_file'])
 compress.inputs.dest = 'data'
 
-# The patient/visit/series substitutions factory. The pvs input is a path. The pvs
-# output is a substitutions assignment as described in the pvs_substitution helper
-# Function.
-pvs = pe.Node(pvsfunc, name='pvs')
+# Match the patient, visit and series names from the series directory.
+# The patient, visit and series outputs are singleton lists. 
+pvs = pe.Node(interface=DataFinder(max_depth=0), name='pvs')
+pvs.inputs.match_regex='.+/(?P<patients>patient\d{2})/(?P<visits>visit\d{2})/(?P<series>series\d{3})'
+
+# The patient/visit/series substitution.
+# The inputs are the patient, visit and series singleton lists matched on a series directory.
+# The output is a substitutions assignment.
+def pvs_substitution(patients, visits, series):
+    return dict(_patient=patients[0], _visit=visits[0], _series=series[0]).items()
+pvsfunc = Function(input_names=['patients', 'visits', 'series'], output_names=['substitutions'],
+    function=pvs_substitution)
+pvs_substitution = pe.Node(pvsfunc, name='pvs_substitution')
 
 # The result copier. The input field specifies the patient/visit/series hierarchy.
-# The parameterization flag prevents the DataSink from injecting an extraneous directory,
+# Unsetting the parameterization flag prevents the DataSink from injecting an extraneous directory,
 # e.g. _compress0, into the target location.
-ASSEMBLY_FLD = '.'.join(PVS_KEYS) + '.@file'
+ASSEMBLY_FLD = '_patient._visit._series.@file'
 assemble = pe.Node(interface=DataSink(infields=[ASSEMBLY_FLD], parameterization=False), name='assemble')
 
 # Build the pipeline.
 wf.connect([
-    (infosource, pvs, [('series_dir', 'path')]),
+    (infosource, pvs, [('series_dir', 'root_paths')]),
     (infosource, fix, [('collection', 'collection'), ('series_dir', 'source')]),
     (infosource, assemble, [('ctp', 'base_directory')]),
     (fix, compress, [('out_files', 'in_file')]),
-    (pvs, assemble, [('substitutions', 'substitutions')]),
+    (pvs, pvs_substitution, [('patients', 'patients'), ('visits', 'visits'), ('series', 'series')]),
+    (pvs_substitution, assemble, [('substitutions', 'substitutions')]),
     (compress, assemble, [('out_file', ASSEMBLY_FLD)])])

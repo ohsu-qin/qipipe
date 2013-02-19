@@ -7,9 +7,9 @@ logger = logging.getLogger(__name__)
 # The test parent directory.
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 # The test fixture.
-FIXTURE = os.path.join(ROOT, 'fixtures', 'pipeline', 'stage')
+FIXTURE = os.path.join(ROOT, 'fixtures', 'pipelines', 'stage')
 # The test results parent directory.
-RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'stage')
+RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'stage')
 # The test results group directory.
 AIRC = os.path.join(RESULTS, 'airc')
 # The test results assembly directory.
@@ -42,7 +42,7 @@ class TestStage:
             stage.run()
             self._verify_result(d)
         # Cleanup.
-        #shutil.rmtree(RESULTS, True)
+        shutil.rmtree(RESULTS, True)
 
     def _verify_result(self, pt_dir):
         basename = 'patient0' + pt_dir[-1]

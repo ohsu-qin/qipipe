@@ -63,31 +63,3 @@ def _flatten(in_list):
 
 flatten = Function(input_names=['in_list'], output_names=['out_list'], function=_flatten)
 """The list flattener function."""
-
-PVS_KEYS = ['_p', '_v', '_s']
-"""The patient/visit/series substitution keys."""
-
-def _pvs_substitution(path=None):
-    """
-    Builds a nipype DataSink patient/visit/series substitution list from the given
-    series directory path. The substitution list associates keys to the right-most
-    path components, e.g.:
-    
-    >>> _dir_substitution('/path/to/patient03/visit04/series002')
-    [('_p', 'patient03'), ('_v', 'visit04'), ('_s', 'series0002')]
-    
-    @param path: the file path
-    @return: the substitution list
-    """
-    import os
-    # Redefine the global to work around nipype limitation. nipype does not implement
-    # Function closures, so the full context must be defined within the function.
-    PVS_KEYS = ['_p', '_v', '_s']
-    
-    if not path:
-        return None
-    components = path.split(os.path.sep)
-    return [(PVS_KEYS[i], components[i-len(PVS_KEYS)]) for i in xrange(len(PVS_KEYS))]
-
-pvs_substitution = Function(input_names=['path'], output_names=['substitutions'], function=_pvs_substitution)
-"""The patient/visit/series substitution function."""
