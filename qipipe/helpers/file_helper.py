@@ -18,7 +18,7 @@ class FileIterator(object):
             if os.path.isfile(f):
                 yield f
             elif os.path.isdir(f):
-                for root, dirs, paths in os.walk(f):
-                    for f in paths:
-                        path = os.path.join(root, f)
+                for root, dirs, fnames in os.walk(f):
+                    for fn in fnames:
+                        path = os.path.join(root, fn)
                         yield path
