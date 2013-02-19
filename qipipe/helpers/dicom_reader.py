@@ -1,4 +1,4 @@
-import operator
+import os, gzip, operator
 import dicom
 from dicom.filereader import InvalidDicomError
 from .file_helper import FileIterator
@@ -6,18 +6,35 @@ from .file_helper import FileIterator
 import logging
 logger = logging.getLogger(__name__)
 
+def read_dicom_file(path, *args):
+    """
+    Reads the given DICOM file. If the file extension ends in C{.gz}, then the
+    content is uncompressed before reading.
+    
+    @param path: the file pathname
+    @param args: the remaining pydicom read_file arguments
+    @return: the pydicom dicom object
+    :raise: InvalidDicomError if the file is not a DICOM file
+    :raise: IOError if the file cannot be read
+    """
+    logger.debug("Reading the file %s..." % path)
+    _, ext = os.path.splitext(path)
+    if ext == '.gz':
+        in_f = gzip.open(path)
+    else:
+        in_f = open(path)
+    return dicom.read_file(in_f, *args)
+
 def read_dicom_header(path):
     """
     Reads the DICOM header of the given file.
     
     @param path: the file pathname
-    @return: the pydicom dicom object
+    @return: the pydicom dicom object without the non-pixel tags
     :raise: InvalidDicomError if the file is not a DICOM file
     :raise: IOError if the file cannot be read
     """
-    
-    logger.debug("Reading the DICOM header in file %s..." % path)
-    return dicom.read_file(path, *DicomHeaderIterator.OPTS)
+    return read_dicom_file(path, *DicomHeaderIterator.OPTS)
 
 def isdicom(path):
     """
@@ -25,7 +42,6 @@ def isdicom(path):
     @return: whether the file is a DICOM file
     :raise: IOError if the file cannot be read
     """
-    
     try:
         read_dicom_header(path)
     except InvalidDicomError:
@@ -39,7 +55,6 @@ def select_dicom_tags(ds, *tags):
     @param tags: the names of tags to read (default all unbracketed tags)
     @return: the tag name => value dictionary
     """
-    
     if not tags:
         # Skip tags with a bracketed name.
         tags = [de.name for de in ds if de.name[0] != '[']
@@ -57,7 +72,6 @@ def iter_dicom(*paths):
     
     @param paths: the DICOM files or directories containing DICOM files
     """
-    
     return DicomIterator(*paths)
 
 def iter_dicom_headers(*paths):
@@ -66,14 +80,12 @@ def iter_dicom_headers(*paths):
     
     @param paths: the DICOM files or directories containing DICOM files
     """
-    
     return DicomHeaderIterator(*paths)
 
 class DicomIterator(FileIterator):
     """
     DicomIterator is a utility class for reading the pydicom data sets from DICOM files.
     """
-    
     def __init__(self, *paths):
         super(DicomIterator, self).__init__(*paths)
         self.args = []
@@ -84,7 +96,7 @@ class DicomIterator(FileIterator):
         """
         for f in super(DicomIterator, self).next():
             try:
-                yield dicom.read_file(f, *self.args)
+                yield read_dicom_file(f, *self.args)
             except InvalidDicomError:
                 logger.info("Skipping non-DICOM file %s" % f)
 
@@ -92,7 +104,6 @@ class DicomHeaderIterator(DicomIterator):
     """
     DicomHeaderIterator is a utility class for reading the pydicom non-pixel data sets from DICOM files.
     """
-
     # Read the DICOM file with defer_size=256, stop_before_pixels=True and force=False.
     OPTS = [256, True, False]
     
