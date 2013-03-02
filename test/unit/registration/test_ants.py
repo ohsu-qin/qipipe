@@ -1,10 +1,11 @@
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-
-import shutil
-from qipipe.helpers.logging import logger
 from nose.tools import *
+import os, shutil
+
+import logging
+logger = logging.getLogger(__name__)
+
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from qipipe.registration import ants
 
 # The test parent directory.
@@ -19,8 +20,13 @@ OUTPUT = os.path.join(RESULT, 'registered')
 class TestANTS:
     """ANTS registration unit tests."""
     
-    def test_registration(self):
+    def setup(self):
         shutil.rmtree(RESULT, True)
+    
+    def teardown(self):
+        shutil.rmtree(RESULT, True)
+    
+    def test_registration(self):
         rdict = ants.register(FIXTURE, output=OUTPUT, work=WORK)
         # Verify that each input is registered.
         for fn in os.listdir(FIXTURE):
