@@ -1,4 +1,10 @@
+import nipype.pipeline.engine as pe
+from nipype.interfaces.io import DataFinder
 from nipype.interfaces.utility import Function
+
+# Match the patient, visit and series names from the input series directory.
+pvs = pe.Node(interface=DataFinder(max_depth=0, unpack_single=True), name='pvs')
+pvs.inputs.match_regex='.+/(?P<patient>patient\d{2})/(?P<visit>visit\d{2})/(?P<series>series\d{3})'
 
 def _compress(in_file, dest=None):
     """
