@@ -13,7 +13,7 @@ RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'stage')
 
 from nipype import config
 cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
-    execution=dict(crashdump_dir=RESULTS))
+    execution=dict(crashdump_dir=RESULTS, create_report=False))
 config.update_config(cfg)
 
 import sys
