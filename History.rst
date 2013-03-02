@@ -1,9 +1,9 @@
 This history lists major release themes. See the GitHub commits (https://github.com/jinx/core)
 for change details.
 
-1.2.1 / 2012-12-06
+1.2.1 / 2013-03-01
 ------------------
-* Add registration module.
+* Build xnat pipeline.
 
 1.1.3 / 2012-11-13
 ------------------
