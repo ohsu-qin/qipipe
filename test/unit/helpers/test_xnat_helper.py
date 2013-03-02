@@ -1,38 +1,41 @@
 from nose.tools import *
+import os
 from base64 import b64encode as encode
 import pyxnat
+from qipipe.helpers.xnat_helper import XNAT
 
-import logging
-logger = logging.getLogger(__name__)
+ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
+"""The test parent directory."""
 
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-import qipipe.helpers.xnat_helper as xnat
+FIXTURE = os.path.join(ROOT, 'fixtures', 'helpers', 'xnat', 'dummy.nii.gz')
+"""The test fixture parent directory."""
 
-LABEL = 'Test_' + encode('XNATHelper').replace('=', '')
+SUBJECT = 'Test_' + encode('XNATHelper').strip('=')
 """The test subject label."""
 
 class TestXNATHelper:
     """XNAT helper unit tests."""
     
     def setUp(self):
-        self.xnat = pyxnat.Interface(config=xnat.config())
-        s = self.xnat.select('/project/QIN/subject/' + LABEL)
-        if s.exists():
-            s.delete()
+        self.xf = pyxnat.Interface(config=XNAT.default_configuration())
+        self._delete_test_subject()
         
     def tearDown(self):
-        s = self.xnat.select('/project/QIN/subject/' + LABEL)
-        if s.exists():
-            s.delete()
+        self._delete_test_subject()
         
-    def test_subject_id_for_label(self):
-        result = xnat.subject_id_for_label(project='QIN', label=LABEL)
-        assert_is_none(result, "Subject id found for nonexistent label %s" % LABEL)
-        subject_id = xnat.subject_id_for_label(project='QIN', label=LABEL, create=True)
-        assert_is_not_none(subject_id, "Subject not created: %s" % LABEL)
-        result = xnat.subject_id_for_label(project='QIN', label=LABEL)
-        assert_equal(subject_id, result, "Subject not found: %s" % LABEL)
+    def test_upload(self):
+        session = SUBJECT + '_MR1'
+        XNAT(self.xf).upload('QIN', SUBJECT, session, FIXTURE, scan=1, modality='MR')
+        _, fname = os.path.split(FIXTURE)
+        f = self.xf.select('/project/QIN').subject(SUBJECT).experiment(session).scan('1').resource('NIFTI').file(fname)
+        assert_true(f.exists(), "File not uploaded: " + fname)
+    
+    def _delete_test_subject(self):
+        """Deletes the test C{QIN} L{SUBJECT}."""
+        
+        sbj = self.xf.select('/project/QIN/subject/' + SUBJECT)
+        if sbj.exists():
+            sbj.delete()
 
 if __name__ == "__main__":
     import nose
