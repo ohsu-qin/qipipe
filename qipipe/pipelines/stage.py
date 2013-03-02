@@ -4,6 +4,7 @@ from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.io import DataFinder, DataSink
 from qipipe.staging.group_dicom import group_dicom_files
 from qipipe.interfaces import FixDicom
+from .pipeline_helper import pvs
 from .pipeline_helper import compress as cmpfunc
 
 __all__ = ['run', 'stage']
@@ -64,17 +65,12 @@ fix = pe.Node(interface=FixDicom(dest='data'), name='fix')
 compress = pe.MapNode(cmpfunc, name='compress', iterfield=['in_file'])
 compress.inputs.dest = 'data'
 
-# Match the patient, visit and series names from the series directory.
-# The patient, visit and series outputs are singleton lists. 
-pvs = pe.Node(interface=DataFinder(max_depth=0), name='pvs')
-pvs.inputs.match_regex='.+/(?P<patients>patient\d{2})/(?P<visits>visit\d{2})/(?P<series>series\d{3})'
-
 # The patient/visit/series substitution.
 # The inputs are the patient, visit and series singleton lists matched on a series directory.
 # The output is a substitutions assignment.
-def pvs_substitution(patients, visits, series):
-    return dict(_patient=patients[0], _visit=visits[0], _series=series[0]).items()
-pvsfunc = Function(input_names=['patients', 'visits', 'series'], output_names=['substitutions'],
+def pvs_substitution(patient, visit, series):
+    return dict(_patient=patient, _visit=visit, _series=series).items()
+pvsfunc = Function(input_names=['patient', 'visit', 'series'], output_names=['substitutions'],
     function=pvs_substitution)
 pvs_substitution = pe.Node(pvsfunc, name='pvs_substitution')
 
@@ -90,6 +86,6 @@ wf.connect([
     (infosource, fix, [('collection', 'collection'), ('series_dir', 'source')]),
     (infosource, assemble, [('ctp', 'base_directory')]),
     (fix, compress, [('out_files', 'in_file')]),
-    (pvs, pvs_substitution, [('patients', 'patients'), ('visits', 'visits'), ('series', 'series')]),
+    (pvs, pvs_substitution, [('patient', 'patient'), ('visit', 'visit'), ('series', 'series')]),
     (pvs_substitution, assemble, [('substitutions', 'substitutions')]),
     (compress, assemble, [('out_file', ASSEMBLY_FLD)])])
