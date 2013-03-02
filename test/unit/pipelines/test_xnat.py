@@ -35,7 +35,7 @@ class TestXNAT:
         self._delete_test_subject()
         
     def tearDown(self):
-        pass #self._delete_test_subject()
+        self._delete_test_subject()
     
     def test_store_image(self):
         shutil.rmtree(RESULTS, True)
