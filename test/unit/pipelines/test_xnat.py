@@ -1,11 +1,11 @@
 from nose.tools import *
-import glob, shutil
+import os, glob, re, shutil
 import pyxnat
 
 import logging
 logger = logging.getLogger(__name__)
 
-import sys, os, re
+import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.pipelines import xnat
 from qipipe.helpers.xnat_helper import XNAT
