@@ -41,7 +41,7 @@ def create_template(files, dimension=2, cores=4, metric=None):
         logger.error(r.std_err)
         raise ANTSError("Build registration template unsuccessful; see the log for details")
     if not os.path.exists(tmpl):
-        logger.error("Build registration template was not created.")
+        logger.error("Build registration template was not created: %s." % tmpl)
         raise ANTSError("Build registration template unsuccessful; see the log for details")
         
     logger.info("Built the registration template %s." % tmpl)
