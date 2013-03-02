@@ -33,7 +33,6 @@ class TestANTS:
             f = os.path.join(FIXTURE, fn)
             rfn = fn.replace('.dcm', 'Registered.nii.gz')
             assert_equal(rfn, rdict[fn], "Missing registration mapping: %s" % rfn)
-            assert_true(rfn in rout, "Missing registration file: %s" % rfn)
 
 
 if __name__ == "__main__":

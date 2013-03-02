@@ -14,7 +14,7 @@ class SimilarityMetric(object):
         self.name = name
         self.opts = opts
     
-    def format(self, fixed, moving):
+    def format(self, fixed, moving, weight=1):
         """
         Formats the ANTS similiarity metric argument.
 

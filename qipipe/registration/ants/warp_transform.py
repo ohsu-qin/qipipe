@@ -2,6 +2,7 @@ import os
 import envoy
 from .similarity_metrics import *
 from .ants_error import ANTSError
+from .environment import ants_environ
 
 import logging
 logger = logging.getLogger(__name__)
@@ -41,10 +42,10 @@ class WarpTransform:
             metric = CC()
         mstr = metric.format(fixed=fixed, moving=moving)
         name = os.path.splitext(moving)[0]
-        cmd = MAP.format(metric=mstr, output=name, iterations='x'.join(iterations))
+        cmd = MAP.format(metric=mstr, output=name, iterations='x'.join([str(i) for i in iterations]))
         logger.info("Building the %(moving)s -> %(fixed)s warp transform with the following command:" % {'moving': moving, 'fixed': fixed})
         logger.info(cmd)
-        r = envoy.run(cmd)
+        r = envoy.run(cmd, env=ants_environ())
         if r.status_code:
             logger.error("Build transform failed with error code %d" % r.status_code)
             logger.error(r.std_err)
@@ -69,7 +70,7 @@ class WarpTransform:
         cmd = REG.format(fixed=self.fixed, moving=self.moving, target=target, field=self.field, affine=self.affine)
         logger.info("Applying the %(moving)s -> %(fixed)s warp transform with the following command:" % {'moving': self.moving, 'fixed': self.fixed})
         logger.info(cmd)
-        r = envoy.run(cmd)
+        r = envoy.run(cmd, env=ants_environ())
         if r.status_code:
             logger.error("Apply warp transform failed with error code %d" % r.status_code)
             logger.error(r.std_err)

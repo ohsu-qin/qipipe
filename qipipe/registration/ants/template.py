@@ -2,6 +2,7 @@ import os
 import envoy
 from .similarity_metrics import *
 from .ants_error import ANTSError
+from .environment import ants_environ
 
 import logging
 logger = logging.getLogger(__name__)
@@ -35,7 +36,10 @@ def create_template(files, dimension=2, cores=4, metric=None):
     logger.info(cmd)
     
     # Run the command.
-    r = envoy.run(cmd)
+    ants_path = os.getenv('ANTSPATH')
+    if not ants_path:
+        raise ANTSError("ANTSPATH environment variable is not set.")
+    r = envoy.run(cmd, env=ants_environ())
     if r.status_code:
         logger.error("Build registration template failed with error code %d" % r.status_code)
         logger.error(r.std_err)
