@@ -1,60 +1,62 @@
 from nose.tools import *
+import glob, shutil
 import pyxnat
 
 import logging
 logger = logging.getLogger(__name__)
 
-import sys, os
+import sys, os, re
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from qipipe.helpers.dicom_helper import iter_dicom
-from qipipe.pipelines.xnat import XNAT_CFG, subject_id_for_label
+from qipipe.pipelines import xnat
+from qipipe.helpers.xnat_helper import XNAT
 
-import pyxnat
-from nipype.interfaces.io import XNATSink
-import time
-
-# The test parent directory.
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
-# The test fixture.
-FIXTURE = os.path.join(ROOT, 'fixtures', 'pipeline')
-# The test results parent directory.
-RESULTS = os.path.join(ROOT, 'results', 'pipeline')
+"""The test parent directory."""
+
+FIXTURE = os.path.join(ROOT, 'fixtures', 'pipelines', 'xnat')
+"""The test fixture parent directory."""
+
+RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'xnat')
+"""The test results parent directory."""
+
+COLLECTION = 'Sarcoma'
+"""The test collection."""
+
+from nipype import config
+cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
+    execution=dict(crashdump_dir=RESULTS, create_report=False))
+config.update_config(cfg)
 
 class TestXNAT:
     """Pipeline XNAT helper unit tests."""
     
-    # def setUp(self):
-    #     self.xnat = pyxnat.Interface(config=XNAT_CFG)
-    #     s = self.xnat.select('/project/QIN/subject/' + LABEL)
-    #     if s.exists():
-    #         s.delete()
-    #     
-    # def tearDown(self):
-    #     s = self.xnat.select('/project/QIN/subject/' + LABEL)
-    #     if s.exists():
-    #         s.delete()
+    def setUp(self):
+        self.xf = pyxnat.Interface(config=XNAT.default_configuration())
+        self._delete_test_subject()
         
-    # def test_subject_id_for_label(self):
-    #     subject_id_for_label.inputs.project = 'QIN'
-    #     subject_id_for_label.inputs.label = LABEL
-    #     result = subject_id_for_label.run()
-    #     assert_is_none(result.outputs.subject_id, "Subject id found for nonexistent label %s" % LABEL)
-    #     subject_id_for_label.inputs.create = True
-    #     result = subject_id_for_label.run()
-    #     assert_is_not_none(result.outputs.subject_id, "Subject not created: %s" % LABEL)
-    #     subject_id_for_label.inputs.create = False
-    #     result = subject_id_for_label.run()
-    #     assert_is_not_none(result.outputs.subject_id, "Subject not found: %s" % LABEL)
-        
+    def tearDown(self):
+        pass #self._delete_test_subject()
+    
     def test_store_image(self):
-        xnat = XNATSink(input_names=['in_file'])
-        xnat.inputs.config = XNAT_CFG
-        xnat.inputs.project_id = 'QIN'
-        xnat.inputs.experiment_id = 'TestExperiment'
-        xnat.inputs.subject_id = LABEL
-        xnat.inputs.share = True
-        xnat.inputs.in_file = glob.glob(RESULTS + 'Subj_1/Visit_1/')[ds.filename for ds in iter_dicom(FIXTURE)][0]
-        xnat.run()
+        shutil.rmtree(RESULTS, True)
+        for d in glob.glob(FIXTURE + '/patient*/visit*/series*'):
+            logger.debug("Testing XNAT pipeline on %s..." % d)
+            xnat.store.inputs.collection = COLLECTION
+            xnat.store.inputs.series_dir = d
+            xnat.store.run()
+            sbj_nbr, sess_nbr, ser_nbr = re.search('.*/patient(\d{2})/visit(\d{2})/series(\d{3})', d).groups()
+            sbj = COLLECTION + sbj_nbr
+            sess = sbj + '_Session' + sess_nbr
+            # The scan label is an unpadded number.
+            scan = str(int(ser_nbr))
+            stack = 'series' + ser_nbr + '.nii.gz'
+            f = self.xf.select('/project/QIN').subject(sbj).experiment(sess).scan(scan).resource('NIFTI').file(stack)
+            assert_true(f.exists(), "Subject %s session %s scan %s stack %s not uploaded" % (sbj, sess, scan, stack))
+        
+    def _delete_test_subject(self):
+        sbj = self.xf.select('/project/QIN/subject/Sarcoma01')
+        if sbj.exists():
+            sbj.delete()
 
 if __name__ == "__main__":
     import nose

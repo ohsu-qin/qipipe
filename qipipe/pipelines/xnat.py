@@ -1,12 +1,11 @@
 import os, glob
 import nipype.pipeline.engine as pe
 from nipype.interfaces.utility import IdentityInterface, Function
-from nipype.interfaces.io import DataSink
+from nipype.interfaces.io import DataFinder, XNATSink
 from nipype.interfaces.dcmstack import DcmStack
+from .pipeline_helper import pvs
 from .pipeline_helper import uncompress as ucmpfunc
-from .pipeline_helper import pvs_substitution as pvsfunc
-from .pipeline_helper import PVS_KEYS
-
+from ..helpers.xnat_helper import XNAT
 __all__ = ['run', 'store']
 
 def run(collection, *series_dirs):
@@ -20,10 +19,10 @@ def run(collection, *series_dirs):
     wf.get_node('infosource').iterables = ('series_dir', series_dirs)
     wf.run()
 
-def _run(series_dir):
+def _run(collection, series_dir):
     from qipipe.pipelines.xnat import run
     
-    run(series_dir)
+    run(collection, series_dir)
 
 store = Function(input_names=['collection', 'series_dir'], output_names=[], function=_run)
 """The XNAT import pipeline Function."""
@@ -34,14 +33,13 @@ wf = pe.Workflow(name='xnat')
 # The XNAT import workflow facade node.
 infosource = pe.Node(interface=IdentityInterface(fields=['collection', 'series_dir']), name='infosource')
 
-# TODO - finder series -> dcm.gz files
-s2dcm = ...
+# The compressed image files.
+dcmgz_finder = pe.Node(DataFinder(match_regex='.+/.*\.dcm\.gz'), name='dcmgz_finder')
 
 # The DICOM file uncompressor. The uncompress input is a compressed DICOM file.
 # The uncompress output is the uncompressed file in the local run context data
-# subdirectory. Since the fix
-# output is a list of files, the fix output is multiplexed into a compress MapNode.
-# The MapNode output is a list of files.
+# subdirectory. Since both the predecessor output and successor input are file
+# lists, this uncompressor node is a MapNode.
 uncompress = pe.MapNode(ucmpfunc, name='uncompress', iterfield=['in_file'])
 uncompress.inputs.dest = 'data'
 
@@ -50,23 +48,75 @@ stack = pe.Node(interface=DcmStack(), name='stack')
 stack.inputs.embed_meta = True
 stack.inputs.out_format = "series%(SeriesNumber)03d"
 
-# The patient/visit/series substitutions factory. The pvs input is a patient directory
-# path. The pvs output is a substitutions assignment as described in the pvs_substitution
-# helper Function.
-pvs = pe.Node(pvsfunc, name='pvs')
+def stack_series_number(path):
+    """
+    Extracts the series number from the stack file name.
+    
+    @param path: the series stack file path
+    @return: the series number
+    """
+    import os, re
+    _, fname = os.path.split(path)
+    return int(re.search('series(\d{3})', fname).group(1))
 
-# The result copier. The input field specifies the patient/visit/series hierarchy.
-# The parameterization flag prevents the DataSink from injecting an extraneous directory,
-# e.g. _compress0, into the target location.
-ASSEMBLY_FLD = '.'.join(PVS_KEYS) + '.@file'
-assemble = pe.Node(interface=DataSink(infields=[ASSEMBLY_FLD], parameterization=False), name='assemble')
+ssnfunc = Function(input_names=['path'], output_names=['series'],
+    function=stack_series_number)
+
+stack_series_nbr = pe.Node(ssnfunc, name='stack_series_nbr')
+
+def patient2subject(collection, patient):
+    """
+    Makes the XNAT subject label.
+    
+    @param collection: the collection name
+    @param patient: the patient name, ending in the two-digit patient number
+    @return: the collection name concatenated with the patient number
+    """
+    return collection + patient[-2:]
+
+pt2sbjfunc = Function(input_names=['collection', 'patient'], output_names=['subject'],
+    function=patient2subject)
+
+pt2sbj = pe.Node(pt2sbjfunc, name='pt2sbj')
+
+def visit2session(subject, visit):
+    """
+    Makes the XNAT session label.
+    
+    @param subject: the subject name
+    @param visit: the visit name
+    @return: the subject and visit joined by an underscore
+    """
+    return '%s_%s' % (subject, 'Session' + visit[-2:])
+
+v2sfunc = Function(input_names=['subject', 'visit'], output_names=['session'],
+    function=visit2session)
+
+visit2session = pe.Node(v2sfunc, name='visit2session')
+
+def upload_image_file(subject, session, series, path):
+    """Stores the image file in XNAT."""
+    from qipipe.helpers.xnat_helper import XNAT
+    XNAT().upload('QIN', subject, session, path, scan=series, modality='MR')
+
+uploadfunc = Function(input_names=['subject', 'session', 'path', 'series'],
+    output_names=[],
+    function=upload_image_file)
+
+upload_series_stack = pe.Node(uploadfunc, name='upload_series_stack')
 
 # Build the pipeline.
 wf.connect([
-    (infosource, pvs, [('series_dir', 'path')]),
-    (infosource, fix, [('collection', 'collection'), ('series_dir', 'source')]),
-    (infosource, assemble, [('ctp', 'base_directory')]),
-    (fix, compress, [('out_files', 'in_file')]),
-    (fix, stack, [('out_files', 'dicom_files')]),
-    (pvs, assemble, [('substitutions', 'substitutions')]),
-    (compress, assemble, [('out_file', ASSEMBLY_FLD)])])
+    (infosource, dcmgz_finder, [('series_dir', 'root_paths')]),
+    (infosource, pt2sbj, [('collection', 'collection')]),
+    (infosource, pvs, [('series_dir', 'root_paths')]),
+    (pvs, pt2sbj, [('patient', 'patient')]),
+    (pvs, visit2session, [('visit', 'visit')]),
+    (pt2sbj, visit2session, [('subject', 'subject')]),
+    (visit2session, upload_series_stack, [('session', 'session')]),
+    (pt2sbj, upload_series_stack, [('subject', 'subject')]),
+    (dcmgz_finder, uncompress, [('out_paths', 'in_file')]),
+    (uncompress, stack, [('out_file', 'dicom_files')]),
+    (stack, stack_series_nbr, [('out_file', 'path')]),
+    (stack_series_nbr, upload_series_stack, [('series', 'series')]),
+    (stack, upload_series_stack, [('out_file', 'path')])])
