@@ -16,7 +16,7 @@ def create_ctp_id_map(collection, *paths, **opts):
     
     @parm collection: the target CTP Patient ID collection name, e.g. C{QIN-BREAST-02}
     @param paths: the source patient DICOM directories
-    @param opts: the CTPPatientIdMap options
+    @param opts: the L{CTPPatientIdMap} options
     @return: the source => target map
     @rtype: CTPPatientIdMap
     """

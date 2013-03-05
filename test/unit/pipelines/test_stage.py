@@ -51,7 +51,10 @@ class TestStage:
             pt_id = 'Sarcoma0' + pt_dir[-1]
             assert_equal(pt_id, ds.PatientID, "Incorrect Patient ID: %s" % ds.PatientID)
             assert_is_not_none(ds.BodyPartExamined, "Incorrect Body Part: %s" % ds.BodyPartExamined)
-
+        prop_files = glob.glob(os.path.join(CTP, '*.properties'))
+        assert_equal(1, len(prop_files), "Unique mapping file not found in %s" % CTP)
+        pat = 'ptid/' + pt_id
+        assert_true(any([l.startswith(pat) for l in open(prop_files[0])]))
 
 if __name__ == "__main__":
     import nose

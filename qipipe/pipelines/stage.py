@@ -3,11 +3,14 @@ import nipype.pipeline.engine as pe
 from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.io import DataFinder, DataSink
 from qipipe.staging.group_dicom import group_dicom_files
+from qipipe.staging.ctp import create_ctp_id_map
 from qipipe.interfaces import FixDicom
 from .pipeline_helper import pvs
 from .pipeline_helper import compress as cmpfunc
-
 __all__ = ['run', 'stage']
+
+CTP_ID_MAP = 'QIN-SARCOMA-OHSU.ID-LOOKUP.properties'
+"""The id map file name specified by CTP."""
 
 def run(collection, dest, *patient_dirs):
     """
@@ -16,10 +19,12 @@ def run(collection, dest, *patient_dirs):
         - airc: the patient/visit/series hierarchy linked to the AIRC source
         - ctp: the CTP import staging area
     
-    The C{airc} area contains links to the AIRC study DICOM files.
-    The staging area contains compressed DICOM files suitable for import into
-    CTP. The DICOM headers are modified to correct the C{Patient ID} and
-    C{Body Part Examined} tags.
+    The C{airc} subdirectory contains links to the AIRC study DICOM files.
+    
+    The C{ctp} subdirectory contains compressed DICOM files suitable for
+    import into CTP. The DICOM headers are modified to correct the C{Patient ID}
+    and C{Body Part Examined} tags. The CTP id map file L{CTP_ID_MAP} is
+    created is created in the C{ctp} subdirectory as well.
     
     @param collection: the CTP image collection (C{Breast} or C{Sarcoma})
     @param dest: the destination directory
@@ -27,7 +32,8 @@ def run(collection, dest, *patient_dirs):
     """
     wf.inputs.infosource.collection = collection
     dest = os.path.abspath(dest)
-    wf.inputs.infosource.ctp = os.path.join(dest, 'ctp')
+    ctp_dir = os.path.join(dest, 'ctp')
+    wf.inputs.infosource.ctp = ctp_dir
     airc = os.path.join(dest, 'airc')
     # group_dicom_files is not included as a workflow node because nipype
     # structural constraints are too unwieldly, specifically:
@@ -38,8 +44,16 @@ def run(collection, dest, *patient_dirs):
     #    this structural mismatch without resorting to obscure kludges.
     dirs = group_dicom_files(*patient_dirs, dest=airc, include='*concat*/*')
     if dirs:
+        # Iterate over each series directory.
         wf.get_node('infosource').iterables = ('series_dir', dirs)
+        # Run the pipeline.
         wf.run()
+        # The patient directories to include in the CTP id mapping file.
+        pt_dirs = glob.glob(os.path.join(ctp_dir, 'patient*'))
+        # The the CTP id mapping file output stream.
+        output = open(os.path.join(ctp_dir, CTP_ID_MAP), 'w+')
+        # Write the id map.
+        create_ctp_id_map(collection, first_only=True, *pt_dirs).write(output)
 
 def _run(collection, dest, patient_dir):
     from qipipe.pipelines.stage import run
