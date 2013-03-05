@@ -40,12 +40,6 @@ def main(argv=None):
 
         # option processing
         dest = collection = None
-        
-        
-        
-        print opts
-        
-        
         for opt, val in opts:
             if opt in ('-b', '--breast'):
                 collection = 'Breast'
