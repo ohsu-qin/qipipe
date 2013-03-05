@@ -34,7 +34,7 @@ def main(argv=None):
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], 'h:m:o:w:R:v', ['help', 'metric', 'output', 'reference', 'work', 'verbose'])
+            opts, args = getopt.getopt(argv[1:], 'h:m:o:w:R:v', ['help', 'metric=', 'output=', 'reference=', 'work=', 'verbose'])
         except getopt.error, msg:
             raise Usage(msg)
 

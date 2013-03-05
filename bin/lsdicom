@@ -39,7 +39,7 @@ def main(argv=None):
     output = sys.stdout
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], 'l:no:st:hv', ['log', 'no-header', 'output', 'summary', 'tags=', 'help', 'verbose'])
+            opts, args = getopt.getopt(argv[1:], 'l:no:st:hv', ['log=', 'no-header', 'output=', 'summary', 'tags=', 'help', 'verbose'])
         except getopt.error, msg:
             raise Usage(msg)
         

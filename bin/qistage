@@ -34,12 +34,18 @@ def main(argv=None):
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], 'bho:qsv', ['breast', 'help', 'output', 'quiet', 'sarcoma', 'verbose'])
+            opts, args = getopt.getopt(argv[1:], 'bho:qsv', ['breast', 'help', 'output=', 'quiet', 'sarcoma', 'verbose'])
         except getopt.error, msg:
             raise Usage(msg)
 
         # option processing
         dest = collection = None
+        
+        
+        
+        print opts
+        
+        
         for opt, val in opts:
             if opt in ('-b', '--breast'):
                 collection = 'Breast'
