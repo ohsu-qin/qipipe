@@ -43,7 +43,7 @@ def main(argv=None):
     try:
         # Parse the options.
         try:
-            opts, args = getopt.getopt(argv[1:], 'l:nor:st:hv', 
+            opts, args = getopt.getopt(argv[1:], 'l:no:rst:hv', 
                 ['log=', 'no-header', 'output=', 'recursive', 'summary', 'tags=', 'help', 'verbose'])
         except getopt.error, msg:
             raise Usage(msg)
