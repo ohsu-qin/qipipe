@@ -6,51 +6,54 @@ from .file_helper import FileIterator
 import logging
 logger = logging.getLogger(__name__)
 
-def read_dicom_file(path, *args):
+def read_dicom_file(fp, *args):
     """
     Reads the given DICOM file. If the file extension ends in C{.gz}, then the
     content is uncompressed before reading.
     
-    @param path: the file pathname
+    @param fp: the file pathname or stream
     @param args: the remaining pydicom read_file arguments
     @return: the pydicom dicom object
     :raise: InvalidDicomError if the file is not a DICOM file
     :raise: IOError if the file cannot be read
     """
-    logger.debug("Reading the file %s..." % path)
-    _, ext = os.path.splitext(path)
-    if ext == '.gz':
-        in_f = gzip.open(path)
-    else:
-        in_f = open(path)
-    return dicom.read_file(in_f, *args)
+    if isinstance(fp, str):
+        logger.debug("Opening the file %s..." % fp)
+        _, ext = os.path.splitext(fp)
+        if ext == '.gz':
+            fp = gzip.open(fp)
+        else:
+            fp = open(fp)
+    return dicom.read_file(fp, *args)
 
-def read_dicom_header(path):
+def read_dicom_header(fp):
     """
     Reads the DICOM header of the given file.
     
-    @param path: the file pathname
+    @param fp: the file pathname or stream
     @return: the pydicom dicom object without the non-pixel tags
     :raise: InvalidDicomError if the file is not a DICOM file
     :raise: IOError if the file cannot be read
     """
-    return read_dicom_file(path, *DicomHeaderIterator.OPTS)
+    return read_dicom_file(fp, *DicomHeaderIterator.OPTS)
 
-def isdicom(path):
+def isdicom(fp):
     """
-    @param path: the file path
+    @param fp: the file path or stream
     @return: whether the file is a DICOM file
     :raise: IOError if the file cannot be read
     """
     try:
-        read_dicom_header(path)
+        read_dicom_header(fp)
     except InvalidDicomError:
-        logger.debug("%s is not a DICOM file." % path)
+        logger.debug("%s is not a DICOM file." % fp)
         return False
     return True
 
 def select_dicom_tags(ds, *tags):
     """
+    Reads the given DICOM dataset tags.
+    
     @param ds: the pydicom dicom object
     @param tags: the names of tags to read (default all unbracketed tags)
     @return: the tag name => value dictionary
@@ -61,7 +64,10 @@ def select_dicom_tags(ds, *tags):
     tdict = {}
     for t in tags:
         try:
-            tdict[t] = operator.attrgetter(t.replace(' ', ''))(ds)
+            # The tag attribute.
+            tattr = t.replace(' ', '')
+            # Collect the tag value.
+            tdict[t] = operator.attrgetter(tattr)(ds)
         except AttributeError:
             pass
     return tdict
