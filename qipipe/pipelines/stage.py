@@ -26,6 +26,7 @@ def run(collection, dest, *patient_dirs):
     @param patient_dirs: the AIRC source patient directories to stage
     """
     wf.inputs.infosource.collection = collection
+    dest = os.path.abspath(dest)
     wf.inputs.infosource.ctp = os.path.join(dest, 'ctp')
     airc = os.path.join(dest, 'airc')
     # group_dicom_files is not included as a workflow node because nipype
