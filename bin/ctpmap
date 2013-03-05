@@ -69,17 +69,7 @@ def main(argv=None):
         return 2
     
     return 0
-    
-def _print_ctp_id_map(collection, output, *dirs):
-    """Prints the CTP map for the DICOM files in the given directories."""
-    
-    # The CTP ID map file line format.
-    fmt = "ptid/%(dicom id)s=" + collection + "%(ctp id)s"
-    # The id map.
-    id_map = create_ctp_id_map(collection, *args)
-    # Print the ID map file.
-    for dcm_id, ctp_id in id_map.iteritems():
-        print >> output, fmt % {'dicom id': dcm_id, 'ctp id': ctp_id}
+
 
 if __name__ == '__main__':
     sys.exit(main())
