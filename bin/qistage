@@ -18,9 +18,9 @@ Options:
     -s --sarcoma\tThe Sarcoma collection
     -o --output DIR\tThe destination directory
     -p --pattern PAT\tThe visit subdirectory pattern (default [vV]isit*)
-    -q, --quiet\tSuppress messages
+    -q, --quiet\t\tSuppress messages
     -v, --verbose\tPrint verbose messages
-    -h --help\tPrint this help message
+    -h --help\t\tPrint this help message
 """
 
 
