@@ -17,6 +17,7 @@ Options:
     -b --breast\tThe Breast collection
     -s --sarcoma\tThe Sarcoma collection
     -o --output DIR\tThe destination directory
+    -p --pattern PAT\tThe visit subdirectory pattern (default [vV]isit*)
     -q, --quiet\tSuppress messages
     -v, --verbose\tPrint verbose messages
     -h --help\tPrint this help message
@@ -34,12 +35,14 @@ def main(argv=None):
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], 'bho:qsv', ['breast', 'help', 'output=', 'quiet', 'sarcoma', 'verbose'])
+            opts, args = getopt.getopt(argv[1:], 'bho:p:qsv', ['breast', 'help', 'output=', 'pattern=', 'quiet', 'sarcoma', 'verbose'])
         except getopt.error, msg:
             raise Usage(msg)
 
-        # option processing
+        # Parse the options.
         dest = collection = None
+        # The additional group options.
+        gopts = {}
         for opt, val in opts:
             if opt in ('-b', '--breast'):
                 collection = 'Breast'
@@ -47,6 +50,8 @@ def main(argv=None):
                 collection = 'Sarcoma'
             elif opt in ('-o', '--output'):
                 dest = val
+            elif opt in ('-p', '--pattern'):
+                gopts['visit'] = val
             elif opt in ('-q', '--quiet'):
                 logger.setLevel('ERROR')
             elif opt in ('-v', '--verbose'):
@@ -55,13 +60,14 @@ def main(argv=None):
                 print help_message
                 return 0
 
-        # The DICOM file group options.
+        # Validate the required options.
         if not dest:
             raise Usage("Required output option is not set.")
         if not collection:
             raise Usage("Neither the breast nor the sarcoma collection option is set.")
+        
         # Run the staging workflow.
-        stage.run(collection, dest, *args)
+        stage.run(collection, dest, *args, **gopts)
 
     except Usage, err:
         print >> sys.stderr, sys.argv[0].split('/')[-1] + ': ' + str(err.msg)

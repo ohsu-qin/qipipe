@@ -12,7 +12,7 @@ __all__ = ['run', 'stage']
 CTP_ID_MAP = 'QIN-SARCOMA-OHSU.ID-LOOKUP.properties'
 """The id map file name specified by CTP."""
 
-def run(collection, dest, *patient_dirs):
+def run(collection, dest, *patient_dirs, **opts):
     """
     Stages the given AIRC patient directories for import into CTP.
     The destination directory is populated with two subdirectories as follows:
@@ -29,12 +29,16 @@ def run(collection, dest, *patient_dirs):
     @param collection: the CTP image collection (C{Breast} or C{Sarcoma})
     @param dest: the destination directory
     @param patient_dirs: the AIRC source patient directories to stage
+    @param opts: additional L{group_dicom_files} options
     """
     wf.inputs.infosource.collection = collection
     dest = os.path.abspath(dest)
     ctp_dir = os.path.join(dest, 'ctp')
     wf.inputs.infosource.ctp = ctp_dir
     airc = os.path.join(dest, 'airc')
+    # The group options.
+    gopts = dict(dest=airc, include='*concat*/*')
+    gopts.update(opts)
     # group_dicom_files is not included as a workflow node because nipype
     # structural constraints are too unwieldly, specifically:
     # 1) The group output might be empty, and nipype unconditionally executes
@@ -42,7 +46,7 @@ def run(collection, dest, *patient_dirs):
     # 2) The group input is a patient directory and the output is the list of
     #    new series, which is input to the successor nodes. nipype cannot handle
     #    this structural mismatch without resorting to obscure kludges.
-    dirs = group_dicom_files(*patient_dirs, dest=airc, include='*concat*/*')
+    dirs = group_dicom_files(*patient_dirs, **gopts)
     if dirs:
         # Iterate over each series directory.
         wf.get_node('infosource').iterables = ('series_dir', dirs)

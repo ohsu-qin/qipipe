@@ -6,15 +6,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def group_dicom_files(*args, **kwargs):
+def group_dicom_files(*args, **opts):
     """
     Links DICOM files in the given patient directories.
     
     @param args: the patient directories, optionally followed by the staging options
-    @param kwargs: the DICOMFileGrouper options
+    @param opts: the DICOMFileGrouper options
     @return: the target series directories which were added
     """
-    return DICOMFileGrouper(**kwargs).group_dicom_files(*args)
+    return DICOMFileGrouper(**opts).group_dicom_files(*args)
 
 
 class DICOMFileGrouper(object):
