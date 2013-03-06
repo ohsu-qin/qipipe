@@ -25,7 +25,7 @@ class TestGroupDicom:
         logger.debug('Testing group_dicom_files...')
         shutil.rmtree(RESULTS, True)
         src_pt_dirs = glob.glob(FIXTURE + '/*')
-        opts = dict(dest=TARGET, include='*concat*/*')
+        opts = dict(dest=TARGET, dicom_pat='*concat*/*')
         grouped = group_dicom_files(*src_pt_dirs, **opts)
         # Verify that there are no broken links.
         for root, dirs, files in os.walk(TARGET):

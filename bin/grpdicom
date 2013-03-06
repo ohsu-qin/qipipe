@@ -15,7 +15,7 @@ help_message = """
 grpdicom options DIR...
 Options:
     -C --changeto\tChange to the given target directory
-    -i --include\tThe source image file name pattern
+    -d --dicom\tThe source DICOM file name pattern
     -p --visit\tThe source visit subdirectory pattern
     -r --replace\tReplace the existing target image file links
     -t --delta\tThe delta directory to hold new target visit directories
@@ -37,7 +37,7 @@ def main(argv=None):
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], 'C:i:p:rt:hf:qv', ['changeto=', 'include=', 'visit=', 'replace', 'delta=', 'help', 'file=', 'quiet' , 'verbose'])
+            opts, args = getopt.getopt(argv[1:], 'C:i:p:rt:hf:qv', ['changeto=', 'dicom=', 'visit=', 'replace', 'delta=', 'help', 'file=', 'quiet' , 'verbose'])
         except getopt.error, msg:
             raise Usage(msg)
 
@@ -51,10 +51,10 @@ def main(argv=None):
             elif option in ('-h', '--help'):
                 print help_message
                 return 0
-            elif option in ('-i', '--include'):
-                gopts['include'] = value
+            elif option in ('-d', '--dicom'):
+                gopts['dicom_pat'] = value
             elif option in ('-p', '--visit'):
-                gopts['visit'] = value
+                gopts['visit_pat'] = value
             elif option in ('-r', '--replace'):
                 gopts['replace'] = True
             elif option in ('-t', '--delta'):

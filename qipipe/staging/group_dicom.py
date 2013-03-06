@@ -6,27 +6,27 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def group_dicom_files(*args, **opts):
+def group_dicom_files(*dirs, **opts):
     """
     Links DICOM files in the given patient directories.
     
-    @param args: the patient directories, optionally followed by the staging options
+    @param dirs: the patient directories
     @param opts: the DICOMFileGrouper options
     @return: the target series directories which were added
     """
-    return DICOMFileGrouper(**opts).group_dicom_files(*args)
+    return DICOMFileGrouper(**opts).group_dicom_files(*dirs)
 
 
 class DICOMFileGrouper(object):
 
-    def __init__(self, dest=None, delta=None, include='*', visit='[Vv]isit*', replace=False):
+    def __init__(self, dest=None, delta=None, dicom_pat='*', visit_pat='*', replace=False):
         """
         Creates a new DICOM file grouper.
         
         @param dest: the target directory in which to place the grouped patient directories (default is C{.})
         @param delta: the delta directory in which to place only the new links (default is C{None})
-        @param include: the DICOM file include pattern (default is C{*})
-        @param visit: the visit directory pattern (default is C{[Vv]isit*})
+        @param dicom_pat: the DICOM file include pattern (default is C{*})
+        @param visit_pat: the visit directory pattern (default is C{[Vv]isit*})
         """
         # The target root directory.
         self.dest = dest or '.'
@@ -36,9 +36,9 @@ class DICOMFileGrouper(object):
         else:
             self.delta_dir = None
         # The file include pattern.
-        self.include = include
+        self.dicom_pat = dicom_pat
         # The visit directory pattern.
-        self.vpat = visit
+        self.visit_pat = visit_pat
         # The replace option.
         self.replace = replace
      
@@ -93,7 +93,7 @@ class DICOMFileGrouper(object):
             logger.debug("Created patient directory %s." % tgt_pt_dir)
         # Build the target series subdirectories.
         series_dirs = []
-        for src_visit_dir in glob.glob(os.path.join(src_pt_dir, self.vpat)):
+        for src_visit_dir in glob.glob(os.path.join(src_pt_dir, self.visit_pat)):
             # Extract the visit number from the visit directory name.
             visit_match = npat.search(os.path.basename(src_visit_dir))
             if not visit_match:
@@ -124,9 +124,9 @@ class DICOMFileGrouper(object):
                 os.symlink(delta_rel_path, delta_visit_dir)
                 logger.debug("Linked the delta visit directory {0} -> {1}.".format(delta_visit_dir, delta_rel_path))
             # Link each of the DICOM files in the source concatenated subdirectories.
-            for src_file in glob.glob(os.path.join(src_visit_dir, self.include)):
+            for src_file in glob.glob(os.path.join(src_visit_dir, self.dicom_pat)):
                 if os.path.isdir(src_file):
-                    logger.info("Skipped directory %s." % src_file)
+                    logger.info("Skipped input directory %s." % src_file)
                     continue
                 # If the file has a DICOM header, then get the series number.
                 # Otherwise, skip the file.
