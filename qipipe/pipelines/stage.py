@@ -1,4 +1,4 @@
-import os, glob
+import os, glob, shutil
 import nipype.pipeline.engine as pe
 from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.io import DataFinder, DataSink
@@ -11,6 +11,8 @@ __all__ = ['run', 'stage']
 
 CTP_ID_MAP = 'QIN-SARCOMA-OHSU.ID-LOOKUP.properties'
 """The id map file name specified by CTP."""
+
+CTP_COLLECTION_DICT = dict(Breast='QIN-BREAST-02', Sarcoma='QIN-SARCOMA-01')
 
 def run(collection, dest, *patient_dirs, **opts):
     """
@@ -37,7 +39,7 @@ def run(collection, dest, *patient_dirs, **opts):
     wf.inputs.infosource.ctp = ctp_dir
     airc = os.path.join(dest, 'airc')
     # The group options.
-    gopts = dict(dest=airc, include='*concat*/*')
+    gopts = dict(dest=airc, dicom_pat='*concat*/*')
     gopts.update(opts)
     # group_dicom_files is not included as a workflow node because nipype
     # structural constraints are too unwieldly, specifically:
@@ -57,7 +59,81 @@ def run(collection, dest, *patient_dirs, **opts):
         # The the CTP id mapping file output stream.
         output = open(os.path.join(ctp_dir, CTP_ID_MAP), 'w+')
         # Write the id map.
-        create_ctp_id_map(collection, first_only=True, *pt_dirs).write(output)
+        ctp_coll = CTP_COLLECTION_DICT[collection]
+        create_ctp_id_map(ctp_coll, first_only=True, *pt_dirs).write(output)
+
+class Stage(object):
+    def __init__(collection, dest, **opts):
+        """
+        @param collection: the CTP image collection (C{Breast} or C{Sarcoma})
+        @param dest: the destination directory
+        @param opts: additional L{group_dicom_files} options
+        """
+        self.collection = collection
+        self.dest = os.path.abspath(dest)
+        self.ctp_dir = os.path.join(dest, 'ctp')
+        self.airc_dir = os.path.join(dest, 'airc')
+        # The group options.
+        self.opts = dict(dest=airc_dir, dicom_pat='*concat*/*')
+        self.opts.update(opts)
+        # The memory context.
+        self.mem = Memory(tempfile.mkdtemp())
+        
+    
+    def stage(*patient_dirs):
+        """
+        Stages the given AIRC patient directories for import into CTP.
+        The destination directory is populated with two subdirectories as follows:
+            - airc: the patient/visit/series hierarchy linked to the AIRC source
+            - ctp: the CTP import staging area
+
+        The C{airc} subdirectory contains links to the AIRC study DICOM files.
+
+        The C{ctp} subdirectory contains compressed DICOM files suitable for
+        import into CTP. The DICOM headers are modified to correct the C{Patient ID}
+        and C{Body Part Examined} tags. The CTP id map file L{CTP_ID_MAP} is
+        created is created in the C{ctp} subdirectory as well.
+
+        @param patient_dir: the AIRC source patient directories to stage
+        """
+        fix = mem.cache(FixDicom)(dest=self.ctp_dir)
+        
+        
+        wf.inputs.infosource.collection = collection
+        dest = os.path.abspath(dest)
+        ctp_dir = os.path.join(dest, 'ctp')
+        wf.inputs.infosource.ctp = ctp_dir
+        airc = os.path.join(dest, 'airc')
+        # The group options.
+        gopts = dict(dest=airc, dicom_pat='*concat*/*')
+        gopts.update(opts)
+        # group_dicom_files is not included as a workflow node because nipype
+        # structural constraints are too unwieldly, specifically:
+        # 1) The group output might be empty, and nipype unconditionally executes
+        #    all nodes, regardless of whether there are inputs.
+        # 2) The group input is a patient directory and the output is the list of
+        #    new series, which is input to the successor nodes. nipype cannot handle
+        #    this structural mismatch without resorting to obscure kludges.
+        dirs = group_dicom_files(*patient_dirs, **gopts)
+        if dirs:
+            # Iterate over each series directory.
+            wf.get_node('infosource').iterables = ('series_dir', dirs)
+            # Run the pipeline.
+            wf.run()
+            # The patient directories to include in the CTP id mapping file.
+            pt_dirs = glob.glob(os.path.join(ctp_dir, 'patient*'))
+            # The the CTP id mapping file output stream.
+            output = open(os.path.join(ctp_dir, CTP_ID_MAP), 'w+')
+            # Write the id map.
+            create_ctp_id_map(collection, first_only=True, *pt_dirs).write(output)
+    
+def _stage(series_dirs):
+mem = Memory('/tmp')
+
+
+
+mem.clear_previous_runs()
+
 
 def _run(collection, dest, patient_dir):
     from qipipe.pipelines.stage import run
