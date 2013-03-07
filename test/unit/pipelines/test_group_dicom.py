@@ -28,10 +28,12 @@ class TestGroupDicom:
         logger.debug("Testing the GroupDicom interface on %s..." % FIXTURE)
         shutil.rmtree(RESULTS, True)
         sbj_dirs = glob.glob(os.path.join(FIXTURE, '*'))
-        grp = GroupDicom(subject_dirs=sbj_dirs, visit_pat='Visit*', dicom_pat='*concat*/*' dest=RESULTS)
+        grp = GroupDicom(subject_dirs=sbj_dirs, session_pat='Visit*', dicom_pat='*concat*/*', dest=RESULTS)
         result = grp.run()
         ser_dirs = result.outputs.series_dirs
-        assert_equal([], ser_dirs, "The GroupDicom output is incorrect: " % ser_dirs)
+        ser_dirs = glob.glob(RESULTS + '/subject*/session*/series*')
+        assert_not_equal(0, len(ser_dirs), "GroupDicom did not create the output series directories in %s" % RESULTS)
+        assert_equal(ser_dirs, ser_dirs, "The GroupDicom output is incorrect: %s" % ser_dirs)
         # Cleanup.
         shutil.rmtree(RESULTS, True)
         logger.debug("GroupDicom interface test completed")
