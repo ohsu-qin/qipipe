@@ -55,7 +55,7 @@ class GroupDicomInputSpec(BaseInterfaceInputSpec):
 
 class GroupDicomOutputSpec(TraitedSpec):
     series_dirs = OutputMultiPath(Directory(exists=True),
-        desc='The input subject directories to group')
+        desc='The output series directories')
 
 
 class GroupDicom(BaseInterface):
