@@ -64,35 +64,35 @@ ssnfunc = Function(input_names=['path'], output_names=['series'],
 
 stack_series_nbr = pe.Node(ssnfunc, name='stack_series_nbr')
 
-def patient2subject(collection, patient):
+def subject2subject(collection, subject):
     """
     Makes the XNAT subject label.
     
     @param collection: the collection name
-    @param patient: the patient name, ending in the two-digit patient number
-    @return: the collection name concatenated with the patient number
+    @param subject: the subject name, ending in the two-digit subject number
+    @return: the collection name concatenated with the subject number
     """
-    return collection + patient[-2:]
+    return collection + subject[-2:]
 
-pt2sbjfunc = Function(input_names=['collection', 'patient'], output_names=['subject'],
-    function=patient2subject)
+pt2sbjfunc = Function(input_names=['collection', 'subject'], output_names=['subject'],
+    function=subject2subject)
 
 pt2sbj = pe.Node(pt2sbjfunc, name='pt2sbj')
 
-def visit2session(subject, visit):
+def session2session(subject, session):
     """
     Makes the XNAT session label.
     
     @param subject: the subject name
-    @param visit: the visit name
-    @return: the subject and visit joined by an underscore
+    @param session: the session name
+    @return: the subject and session joined by an underscore
     """
-    return '%s_%s' % (subject, 'Session' + visit[-2:])
+    return '%s_%s' % (subject, 'Session' + session[-2:])
 
-v2sfunc = Function(input_names=['subject', 'visit'], output_names=['session'],
-    function=visit2session)
+v2sfunc = Function(input_names=['subject', 'session'], output_names=['session'],
+    function=session2session)
 
-visit2session = pe.Node(v2sfunc, name='visit2session')
+session2session = pe.Node(v2sfunc, name='session2session')
 
 def upload_image_file(subject, session, series, path):
     """Stores the image file in XNAT."""
@@ -110,10 +110,10 @@ wf.connect([
     (infosource, dcmgz_finder, [('series_dir', 'root_paths')]),
     (infosource, pt2sbj, [('collection', 'collection')]),
     (infosource, pvs, [('series_dir', 'root_paths')]),
-    (pvs, pt2sbj, [('patient', 'patient')]),
-    (pvs, visit2session, [('visit', 'visit')]),
-    (pt2sbj, visit2session, [('subject', 'subject')]),
-    (visit2session, upload_series_stack, [('session', 'session')]),
+    (pvs, pt2sbj, [('subject', 'subject')]),
+    (pvs, session2session, [('session', 'session')]),
+    (pt2sbj, session2session, [('subject', 'subject')]),
+    (session2session, upload_series_stack, [('session', 'session')]),
     (pt2sbj, upload_series_stack, [('subject', 'subject')]),
     (dcmgz_finder, uncompress, [('out_paths', 'in_file')]),
     (uncompress, stack, [('out_file', 'dicom_files')]),

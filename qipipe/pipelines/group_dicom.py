@@ -23,7 +23,7 @@ For input DICOM files with directory structure:
                 C{120210 ex B17_TT49}
                 ...
 
-    GroupDicom(subject_dirs=[BreastChemo4], visit_pat='Visit*', dicom_pat='*concat*/*', dest=data).run()
+    GroupDicom(subject_dirs=[BreastChemo4], session_pat='Visit*', dicom_pat='*concat*/*', dest=data).run()
 
 results in output links with directory structure:
 
@@ -33,13 +33,6 @@ results in output links with directory structure:
                 C{series09/}
                     C{120210_ex_B17_TT49.dcm} -> C{BreastChemo4/Visit1/dce_concat/120210 ex B17_TT49}
                     ...
-
-For input DICOM files of the form C{Subj_4/S4V*/concat/*},
-
-    GroupDicom(subject_dirs=[BreastChemo4], dest=data).run()
-
-results in output links of the form:
-
 """
 
 from nipype.interfaces.base import (traits,

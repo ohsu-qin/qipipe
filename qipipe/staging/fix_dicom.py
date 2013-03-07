@@ -1,7 +1,7 @@
 import os, re
 from qipipe.helpers.dicom_helper import edit_dicom_headers
 from .staging_error import StagingError
-from .staging_helper import extract_patient_number_from_path
+from .staging_helper import extract_subject_number_from_path
 from .sarcoma_config import sarcoma_location
 
 import logging
@@ -13,13 +13,13 @@ COLLECTIONS = set(['Breast', 'Sarcoma'])
 def fix_dicom_headers(source, dest, collection):
     """
     Fix the source OHSU QIN AIRC DICOM headers as follows:
-        - Replace the C{Patient ID} value with the patient number, e.g. C{Sarcoma01}.
+        - Replace the C{Patient ID} value with the subject number, e.g. C{Sarcoma01}.
         - Add the C{Body Part Examined} tag.
     
     The supported collection names are defined in the C{COLLECTIONS} set.
     
-    @param source: the input patient directory
-    @param dest: the location in which to write the modified patient directory
+    @param source: the input subject directory
+    @param dest: the location in which to write the modified subject directory
     @param collection: the collection name
     @return: the files which were created
     @raise StagingError: if the collection is not supported
@@ -28,9 +28,9 @@ def fix_dicom_headers(source, dest, collection):
     if not collection in COLLECTIONS:
         raise StagingError('Unrecognized collection: ' + collection)
     logger.debug("Fixing the DICOM headers in %s..." % source)
-    # Extract the patient number from the patient directory name.
-    pt_nbr = extract_patient_number_from_path(source)
-    pt_id = "%(collection)s%(pt)02d" % {'collection': collection, 'pt': pt_nbr}
+    # Extract the subject number from the subject directory name.
+    pt_nbr = extract_subject_number_from_path(source)
+    pt_id = "%(collection)s%(pt_nbr)02d" % {'collection': collection, 'pt_nbr': pt_nbr}
     # The tag name => value dictionary.
     tnv = {'PatientID': pt_id}
     if collection == 'Breast':

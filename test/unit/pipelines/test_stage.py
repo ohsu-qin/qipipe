@@ -37,18 +37,18 @@ class TestStage:
             logger.debug("Testing stage pipeline on %s..." % d)
             qis.stage.inputs.collection = COLLECTION
             qis.stage.inputs.dest = RESULTS
-            qis.stage.inputs.patient_dir = d
+            qis.stage.inputs.subject_dir = d
             qis.stage.run()
             self._verify_result(d)
         # Cleanup.
         shutil.rmtree(RESULTS, True)
 
-    def _verify_result(self, pt_dir):
-        basename = 'patient0' + pt_dir[-1]
+    def _verify_result(self, sbj_dir):
+        basename = 'subject0' + sbj_dir[-1]
         ctp_dir = os.path.join(CTP, basename)
         assert_true(os.path.exists(ctp_dir), "Result not found: %s" % ctp_dir)
         for ds in iter_dicom(ctp_dir):
-            pt_id = 'Sarcoma0' + pt_dir[-1]
+            pt_id = 'Sarcoma0' + sbj_dir[-1]
             assert_equal(pt_id, ds.PatientID, "Incorrect Patient ID: %s" % ds.PatientID)
             assert_is_not_none(ds.BodyPartExamined, "Incorrect Body Part: %s" % ds.BodyPartExamined)
         prop_files = glob.glob(os.path.join(CTP, '*.properties'))

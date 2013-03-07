@@ -39,12 +39,12 @@ class TestXNAT:
     
     def test_store_image(self):
         shutil.rmtree(RESULTS, True)
-        for d in glob.glob(FIXTURE + '/patient*/visit*/series*'):
+        for d in glob.glob(FIXTURE + '/subject*/session*/series*'):
             logger.debug("Testing XNAT pipeline on %s..." % d)
             xnat.store.inputs.collection = COLLECTION
             xnat.store.inputs.series_dir = d
             xnat.store.run()
-            sbj_nbr, sess_nbr, ser_nbr = re.search('.*/patient(\d{2})/visit(\d{2})/series(\d{3})', d).groups()
+            sbj_nbr, sess_nbr, ser_nbr = re.search('.*/subject(\d{2})/session(\d{2})/series(\d{3})', d).groups()
             sbj = COLLECTION + sbj_nbr
             sess = sbj + '_Session' + sess_nbr
             # The scan label is an unpadded number.

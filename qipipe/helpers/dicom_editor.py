@@ -19,8 +19,8 @@ def edit_dicom_headers(source, dest, tag_values):
     The modified DICOM dataset is written to a file in the destination directory.
     The source path structure is preserved, e.g. if the source is
     C{/path/to/source} and the destination is
-    C{/path/to/destination}, then the edited C{/path/to/source/patient04/visit01/image0004.dcm}
-    is written to C{/path/to/destination/patient04/visit01/image0004.dcm}.
+    C{/path/to/destination}, then the edited C{/path/to/source/subject04/session01/image0004.dcm}
+    is written to C{/path/to/destination/subject04/session01/image0004.dcm}.
     
     @param source: the directory containing the input DICOM files
     @param dest: the directory in which to write the modified DICOM files

@@ -14,11 +14,11 @@ CTP_ID_MAP = 'QIN-SARCOMA-OHSU.ID-LOOKUP.properties'
 
 CTP_COLLECTION_DICT = dict(Breast='QIN-BREAST-02', Sarcoma='QIN-SARCOMA-01')
 
-def run(collection, dest, *patient_dirs, **opts):
+def run(collection, dest, *subject_dirs, **opts):
     """
-    Stages the given AIRC patient directories for import into CTP.
+    Stages the given AIRC subject directories for import into CTP.
     The destination directory is populated with two subdirectories as follows:
-        - airc: the patient/visit/series hierarchy linked to the AIRC source
+        - airc: the subject/session/series hierarchy linked to the AIRC source
         - ctp: the CTP import staging area
     
     The C{airc} subdirectory contains links to the AIRC study DICOM files.
@@ -30,7 +30,7 @@ def run(collection, dest, *patient_dirs, **opts):
     
     @param collection: the CTP image collection (C{Breast} or C{Sarcoma})
     @param dest: the destination directory
-    @param patient_dirs: the AIRC source patient directories to stage
+    @param subject_dirs: the AIRC source subject directories to stage
     @param opts: additional L{group_dicom_files} options
     """
     wf.inputs.infosource.collection = collection
@@ -45,22 +45,22 @@ def run(collection, dest, *patient_dirs, **opts):
     # structural constraints are too unwieldly, specifically:
     # 1) The group output might be empty, and nipype unconditionally executes
     #    all nodes, regardless of whether there are inputs.
-    # 2) The group input is a patient directory and the output is the list of
+    # 2) The group input is a subject directory and the output is the list of
     #    new series, which is input to the successor nodes. nipype cannot handle
     #    this structural mismatch without resorting to obscure kludges.
-    dirs = group_dicom_files(*patient_dirs, **gopts)
+    dirs = group_dicom_files(*subject_dirs, **gopts)
     if dirs:
         # Iterate over each series directory.
         wf.get_node('infosource').iterables = ('series_dir', dirs)
         # Run the pipeline.
         wf.run()
-        # The patient directories to include in the CTP id mapping file.
-        pt_dirs = glob.glob(os.path.join(ctp_dir, 'patient*'))
+        # The subject directories to include in the CTP id mapping file.
+        sbj_dirs = glob.glob(os.path.join(ctp_dir, 'subject*'))
         # The the CTP id mapping file output stream.
         output = open(os.path.join(ctp_dir, CTP_ID_MAP), 'w+')
         # Write the id map.
         ctp_coll = CTP_COLLECTION_DICT[collection]
-        create_ctp_id_map(ctp_coll, first_only=True, *pt_dirs).write(output)
+        create_ctp_id_map(ctp_coll, first_only=True, *sbj_dirs).write(output)
 
 class Stage(object):
     def __init__(collection, dest, **opts):
@@ -80,11 +80,11 @@ class Stage(object):
         self.mem = Memory(tempfile.mkdtemp())
         
     
-    def stage(*patient_dirs):
+    def stage(*subject_dirs):
         """
-        Stages the given AIRC patient directories for import into CTP.
+        Stages the given AIRC subject directories for import into CTP.
         The destination directory is populated with two subdirectories as follows:
-            - airc: the patient/visit/series hierarchy linked to the AIRC source
+            - airc: the subject/session/series hierarchy linked to the AIRC source
             - ctp: the CTP import staging area
 
         The C{airc} subdirectory contains links to the AIRC study DICOM files.
@@ -94,9 +94,13 @@ class Stage(object):
         and C{Body Part Examined} tags. The CTP id map file L{CTP_ID_MAP} is
         created is created in the C{ctp} subdirectory as well.
 
-        @param patient_dir: the AIRC source patient directories to stage
+        @param subject_dir: the AIRC source subject directories to stage
         """
         fix = mem.cache(FixDicom)(dest=self.ctp_dir)
+        
+        
+        
+        
         
         
         wf.inputs.infosource.collection = collection
@@ -111,21 +115,21 @@ class Stage(object):
         # structural constraints are too unwieldly, specifically:
         # 1) The group output might be empty, and nipype unconditionally executes
         #    all nodes, regardless of whether there are inputs.
-        # 2) The group input is a patient directory and the output is the list of
+        # 2) The group input is a subject directory and the output is the list of
         #    new series, which is input to the successor nodes. nipype cannot handle
         #    this structural mismatch without resorting to obscure kludges.
-        dirs = group_dicom_files(*patient_dirs, **gopts)
+        dirs = group_dicom_files(*subject_dirs, **gopts)
         if dirs:
             # Iterate over each series directory.
             wf.get_node('infosource').iterables = ('series_dir', dirs)
             # Run the pipeline.
             wf.run()
-            # The patient directories to include in the CTP id mapping file.
-            pt_dirs = glob.glob(os.path.join(ctp_dir, 'patient*'))
+            # The subject directories to include in the CTP id mapping file.
+            sbj_dirs = glob.glob(os.path.join(ctp_dir, 'subject*'))
             # The the CTP id mapping file output stream.
             output = open(os.path.join(ctp_dir, CTP_ID_MAP), 'w+')
             # Write the id map.
-            create_ctp_id_map(collection, first_only=True, *pt_dirs).write(output)
+            create_ctp_id_map(collection, first_only=True, *sbj_dirs).write(output)
     
 def _stage(series_dirs):
 mem = Memory('/tmp')
@@ -135,12 +139,12 @@ mem = Memory('/tmp')
 mem.clear_previous_runs()
 
 
-def _run(collection, dest, patient_dir):
+def _run(collection, dest, subject_dir):
     from qipipe.pipelines.stage import run
     
-    run(collection, dest, patient_dir)
+    run(collection, dest, subject_dir)
 
-stage = Function(input_names=['collection', 'dest', 'patient_dir'], output_names=[], function=_run)
+stage = Function(input_names=['collection', 'dest', 'subject_dir'], output_names=[], function=_run)
 """The staging pipeline Function."""
 
 # The staging pipeline prepares the AIRC image files for submission to CTP.
@@ -160,19 +164,19 @@ fix = pe.Node(interface=FixDicom(dest='data'), name='fix')
 compress = pe.MapNode(cmpfunc, name='compress', iterfield=['in_file'])
 compress.inputs.dest = 'data'
 
-# The patient/visit/series substitution.
-# The inputs are the patient, visit and series singleton lists matched on a series directory.
+# The subject/session/series substitution.
+# The inputs are the subject, session and series singleton lists matched on a series directory.
 # The output is a substitutions assignment.
-def pvs_substitution(patient, visit, series):
-    return dict(_patient=patient, _visit=visit, _series=series).items()
-pvsfunc = Function(input_names=['patient', 'visit', 'series'], output_names=['substitutions'],
+def pvs_substitution(subject, session, series):
+    return dict(_subject=subject, _session=session, _series=series).items()
+pvsfunc = Function(input_names=['subject', 'session', 'series'], output_names=['substitutions'],
     function=pvs_substitution)
 pvs_substitution = pe.Node(pvsfunc, name='pvs_substitution')
 
-# The result copier. The input field specifies the patient/visit/series hierarchy.
+# The result copier. The input field specifies the subject/session/series hierarchy.
 # Unsetting the parameterization flag prevents the DataSink from injecting an extraneous directory,
 # e.g. _compress0, into the target location.
-ASSEMBLY_FLD = '_patient._visit._series.@file'
+ASSEMBLY_FLD = '_subject._session._series.@file'
 assemble = pe.Node(interface=DataSink(infields=[ASSEMBLY_FLD], parameterization=False), name='assemble')
 
 # Build the pipeline.
@@ -181,6 +185,6 @@ wf.connect([
     (infosource, fix, [('collection', 'collection'), ('series_dir', 'source')]),
     (infosource, assemble, [('ctp', 'base_directory')]),
     (fix, compress, [('out_files', 'in_file')]),
-    (pvs, pvs_substitution, [('patient', 'patient'), ('visit', 'visit'), ('series', 'series')]),
+    (pvs, pvs_substitution, [('subject', 'subject'), ('session', 'session'), ('series', 'series')]),
     (pvs_substitution, assemble, [('substitutions', 'substitutions')]),
     (compress, assemble, [('out_file', ASSEMBLY_FLD)])])

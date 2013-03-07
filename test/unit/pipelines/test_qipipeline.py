@@ -34,7 +34,7 @@ class TestPipeline:
         qip.inputs.dest = RESULTS
         for d in glob.glob(os.path.join(FIXTURE, 'Subj*')):
             logger.debug("Testing QIN pipeline on %s..." % d)
-            qip.inputs.patient_dir = d
+            qip.inputs.subject_dir = d
             qip.run()
         # Verify the result.
         

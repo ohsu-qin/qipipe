@@ -17,7 +17,7 @@ Options:
     -b --breast\tThe Breast collection
     -s --sarcoma\tThe Sarcoma collection
     -o --output DIR\tThe destination directory
-    -p --pattern PAT\tThe visit subdirectory pattern (default [vV]isit*)
+    -p --pattern PAT\tThe session subdirectory pattern (default [vV]isit*)
     -q, --quiet\t\tSuppress messages
     -v, --verbose\tPrint verbose messages
     -h --help\t\tPrint this help message
@@ -51,7 +51,7 @@ def main(argv=None):
             elif opt in ('-o', '--output'):
                 dest = val
             elif opt in ('-p', '--pattern'):
-                gopts['visit'] = val
+                gopts['session'] = val
             elif opt in ('-q', '--quiet'):
                 logger.setLevel('ERROR')
             elif opt in ('-v', '--verbose'):

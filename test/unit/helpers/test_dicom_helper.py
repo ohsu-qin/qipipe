@@ -11,7 +11,7 @@ FIXTURES = os.path.join(os.path.dirname(__file__), '..', '..', 'fixtures')
 
 FIXTURE = os.path.join(FIXTURES, 'brain')
 
-# The patient-study-series-image hierarchy for the 20 images.
+# The subject-study-series-image hierarchy for the 20 images.
 HIERARCHY = [['123565', '8811', '2', str(i)] for i in range(1, 21)]
 
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Prints the CTP patient id mapping file for Patient ID tag values in DICOM files.
+Prints the CTP subject id mapping file for Patient ID tag values in DICOM files.
 """
 
 import sys

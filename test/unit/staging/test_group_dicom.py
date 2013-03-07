@@ -24,30 +24,30 @@ class TestGroupDicom:
     def test_group_dicom_files(self):
         logger.debug('Testing group_dicom_files...')
         shutil.rmtree(RESULTS, True)
-        src_pt_dirs = glob.glob(FIXTURE + '/*')
+        src_sbj_dirs = glob.glob(FIXTURE + '/*')
         opts = dict(dest=TARGET, dicom_pat='*concat*/*')
-        grouped = group_dicom_files(*src_pt_dirs, **opts)
+        grouped = group_dicom_files(*src_sbj_dirs, **opts)
         # Verify that there are no broken links.
         for root, dirs, files in os.walk(TARGET):
             if not dirs:
-                assert_true(root in grouped, "Target visit directory not found in the group result: %s" % root)
+                assert_true(root in grouped, "Target session directory not found in the group result: %s" % root)
             for f in files:
                 tgt_file = os.path.join(root, f)
                 assert_true(os.path.islink(tgt_file), "Missing source -> target target link: %s" % tgt_file)
                 assert_true(os.path.exists(tgt_file), "Broken source -> target link: %s" % tgt_file)
         # Test incremental delta.
-        tgt = os.path.join(TARGET, 'patient01', 'visit02')
+        tgt = os.path.join(TARGET, 'subject01', 'session02')
         # Clean the partial result.
         shutil.rmtree(tgt, True)
         # Rerun to capture the delta.
-        group_dicom_files(*src_pt_dirs, delta=DELTA, **opts)
-        delta = os.path.join(DELTA, 'patient01', 'visit02')
+        group_dicom_files(*src_sbj_dirs, delta=DELTA, **opts)
+        delta = os.path.join(DELTA, 'subject01', 'session02')
         assert_true(os.path.islink(delta), "Missing delta -> target link: %s" % delta)
         assert_true(os.path.exists(delta), "Broken delta -> target link: %s" % delta)
         real_tgt = os.path.realpath(tgt)
         real_delta = os.path.realpath(delta)
         assert_equal(real_tgt, real_delta, "Delta does not reference the target:  %s" % delta)
-        non_delta = os.path.join(DELTA, 'patient01', 'visit01')
+        non_delta = os.path.join(DELTA, 'subject01', 'session01')
         assert_false(os.path.exists(non_delta), "Incorrectly added a target -> delta link in %s" % non_delta)
         # Cleanup.
         shutil.rmtree(RESULTS, True)

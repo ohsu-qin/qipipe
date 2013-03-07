@@ -9,9 +9,9 @@ from qipipe.helpers.dicom_helper import iter_dicom
 # The test parent directory.
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 # The test fixture.
-FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'fix_dicom', 'sarcoma', 'patient03')
+FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'fix_dicom', 'sarcoma', 'subject03')
 # The test results.
-RESULTS = os.path.join(ROOT, 'results', 'staging', 'fix_dicom', 'sarcoma', 'patient03')
+RESULTS = os.path.join(ROOT, 'results', 'staging', 'fix_dicom', 'sarcoma', 'subject03')
 # The collection name.
 COLLECTION = 'Sarcoma'
 

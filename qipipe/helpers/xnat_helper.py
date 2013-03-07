@@ -71,7 +71,7 @@ class XNAT(object):
         
         Example:
     
-           upload('TCIA', 'Patient04', 'PT04_MR1', 'data/pt4/visit4/image003.nii.gz', scan=4, modality='MR')
+           upload('TCIA', 'Patient04', 'PT04_MR1', 'data/pt4/session4/image003.nii.gz', scan=4, modality='MR')
            XNATRestClient <options> -m GET -remote \
               "/data/archive/projects/TCIA/subjects/Patient04/experiments/PT04_MR1/scans/4/resources/NIFTI/files/image003.nii.gz" \
               >/tmp/image003.nii.gz

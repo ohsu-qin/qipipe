@@ -4,7 +4,7 @@ from nipype.interfaces.base import (BaseInterface,
 from qipipe.staging.fix_dicom import fix_dicom_headers
 
 class FixDicomInputSpec(BaseInterfaceInputSpec):
-    source = Directory(desc='The input patient directory', exists=True, mandatory=False)
+    source = Directory(desc='The input subject directory', exists=True, mandatory=False)
     dest = Directory(desc="The output location", exists=False, mandatory=True)
     collection = traits.Str(desc='The image collection', mandatory=True)
 

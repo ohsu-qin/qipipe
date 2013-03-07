@@ -20,16 +20,16 @@ class ImageHierarchy(DictionaryHierarchy):
     TAGS = ('PatientID', 'Study Instance UID', 'Series Instance UID', 'InstanceNumber')
     
     """
-    ImageHierarchy wraps the DICOM image patient-study-series-image hierarchy.
+    ImageHierarchy wraps the DICOM image subject-study-series-image hierarchy.
     """
     def __init__(self):
-        # the patient: series: image nested dictionary
+        # the subject: series: image nested dictionary
         self.tree = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         super(ImageHierarchy, self).__init__(self.tree)
     
     def add(self, ds):
         """
-        Adds the patient-study-series-image hierarchy entries from the given DICOM dataset.
+        Adds the subject-study-series-image hierarchy entries from the given DICOM dataset.
 
         @param ds: the DICOM dataset
         """

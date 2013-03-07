@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 __all__ = ['run', 'qipipeline']
 
-def run(collection, dest, *patient_dirs):
+def run(collection, dest, *subject_dirs):
     """
-    Runs the qipipeline on the the given AIRC patient directories as follows:
+    Runs the qipipeline on the the given AIRC subject directories as follows:
         - Stages the input for import into CTP using L{qipipe.pipelines.stage.run}.
         - Stacks each new series as a NiFTI file using DcmStack.
         - Imports each new series stack into XNAT.
@@ -24,33 +24,33 @@ def run(collection, dest, *patient_dirs):
     
     @param collection: the CTP image collection (C{Breast} or C{Sarcoma})
     @param dest: the destination directory
-    @param patient_dirs: the AIRC source patient directories to stage
+    @param subject_dirs: the AIRC source subject directories to stage
     """
     # Stage the new series images.
-    #stage.run(collection, dest, *patient_dirs)
+    #stage.run(collection, dest, *subject_dirs)
     # The stage output directory containing the new series DICOM files.
     ctp_dir = os.path.join(dest, 'ctp')
     # Run the workflow on each new series.
-    for pt_dir in glob.glob(ctp_dir + '/patient*'):
-        pt_nbr = pt_dir[-2:]
-        wf.inputs.infosource.patient = collection + pt_nbr
-        series_dirs = glob.glob(os.path.join(ctp_dir, pt_dir) + '/visit*/series*')
+    for sbj_dir in glob.glob(ctp_dir + '/subject*'):
+        pt_nbr = sbj_dir[-2:]
+        wf.inputs.infosource.subject = collection + pt_nbr
+        series_dirs = glob.glob(os.path.join(ctp_dir, sbj_dir) + '/session*/series*')
         wf.get_node('infosource').iterables = [('series_dir', series_dirs)]
         wf.run()
 
-def _run(collection, dest, patient_dir):
+def _run(collection, dest, subject_dir):
     from qipipe.pipelines.qipipeline import run
     
-    run(collection, dest, patient_dir)
+    run(collection, dest, subject_dir)
 
-qipipeline = Function(input_names=['collection', 'dest', 'patient_dir'], output_names=[], function=_run)
+qipipeline = Function(input_names=['collection', 'dest', 'subject_dir'], output_names=[], function=_run)
 """The QI pipeline Function."""
 
 # The QI pipeline.
 wf = pe.Workflow(name='qipipeline')
 
 # The qipipeline workflow facade node.
-infosource = pe.Node(interface=IdentityInterface(fields=['patient', 'series_dir']), name='infosource')
+infosource = pe.Node(interface=IdentityInterface(fields=['subject', 'series_dir']), name='infosource')
 
 # The images within the series.
 dicom = pe.Node(interface=DataGrabber(outfields=['images']), name='dicom')
@@ -66,7 +66,7 @@ stack = pe.Node(interface=DcmStack(), name='stack')
 stack.inputs.embed_meta = True
 stack.inputs.out_format = "series%(SeriesNumber)03d"
 
-# The patient id is the XNAT subject label. Convert it to the XNAT subject id.
+# The subject id is the XNAT subject label. Convert it to the XNAT subject id.
 label2id = pe.Node(subject_id_for_label, name = 'label2id')
 label2id.inputs.project = 'QIN'
 
@@ -83,6 +83,6 @@ xnat.inputs.share = True
 wf.connect([(infosource, dicom, [('series_dir', 'base_directory')]),
     (dicom, uncompress, [('images', 'in_file')]),
     (uncompress, stack, [('out_file', 'dicom_files')]),
-    (infosource, label2id, [('patient', 'label')]),
+    (infosource, label2id, [('subject', 'label')]),
     (label2id, xnat, [('subject_id', 'subject_id')]),
     (stack, xnat, [('out_file', 'series_stack')])])

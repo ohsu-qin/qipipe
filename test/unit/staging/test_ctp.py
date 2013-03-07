@@ -8,7 +8,7 @@ from qipipe.staging import create_ctp_id_map
 # The test parent directory.
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 # The test fixture.
-FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'edit_dicom', 'breast', 'patient03')
+FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'edit_dicom', 'breast', 'subject03')
 
 class TestCTP:
     """CTP unit tests."""

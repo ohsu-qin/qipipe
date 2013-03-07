@@ -8,9 +8,9 @@ logger = logging.getLogger(__name__)
 
 def group_dicom_files(*dirs, **opts):
     """
-    Links DICOM files in the given patient directories.
+    Links DICOM files in the given subject directories.
     
-    @param dirs: the patient directories
+    @param dirs: the subject directories
     @param opts: the DICOMFileGrouper options
     @return: the target series directories which were added
     """
@@ -19,14 +19,14 @@ def group_dicom_files(*dirs, **opts):
 
 class DICOMFileGrouper(object):
 
-    def __init__(self, dest=None, delta=None, dicom_pat='*', visit_pat='*', replace=False):
+    def __init__(self, dest=None, delta=None, dicom_pat='*', session_pat='*', replace=False):
         """
         Creates a new DICOM file grouper.
         
-        @param dest: the target directory in which to place the grouped patient directories (default is C{.})
+        @param dest: the target directory in which to place the grouped subject directories (default is C{.})
         @param delta: the delta directory in which to place only the new links (default is C{None})
         @param dicom_pat: the DICOM file include pattern (default is C{*})
-        @param visit_pat: the visit directory pattern (default is C{[Vv]isit*})
+        @param session_pat: the session directory pattern (default is C{[Vv]isit*})
         """
         # The target root directory.
         self.dest = dest or '.'
@@ -37,29 +37,29 @@ class DICOMFileGrouper(object):
             self.delta_dir = None
         # The file include pattern.
         self.dicom_pat = dicom_pat
-        # The visit directory pattern.
-        self.visit_pat = visit_pat
+        # The session directory pattern.
+        self.session_pat = session_pat
         # The replace option.
         self.replace = replace
      
     def group_dicom_files(self, *dirs):
         """
-        Creates symbolic links to the DICOM files in the given source patient directories.
-        The patient/visit/series subdirectories are created in the target directory. The
-        patient directory name is C{patient}I{<nn>}, where I{<nn>} is the two-digit patient
-        name, e.g. C{patient08}. The visit directory name is C{visit}I{<nn>}, where I{<nn>}
-        is the two-digit patient visit number, e.g. C{visit02}. The series directory name
+        Creates symbolic links to the DICOM files in the given source subject directories.
+        The subject/session/series subdirectories are created in the target directory. The
+        subject directory name is C{subject}I{<nn>}, where I{<nn>} is the two-digit subject
+        name, e.g. C{subject08}. The session directory name is C{session}I{<nn>}, where I{<nn>}
+        is the two-digit subject session number, e.g. C{session02}. The series directory name
         is C{series}I{<nnn>}, where I{<nnn>} is the three-digit series number, e.g. C{series001}.
             
         If the delta option is given, then a link is created from the delta directory to each
-        new patient visit directory, e.g.::
+        new subject session directory, e.g.::
         
-            ./delta/patient08/visit02 -> ./patient08/visit02
+            ./delta/subject08/session02 -> ./subject08/session02
         
-        @param dirs: the source patient directories
+        @param dirs: the source subject directories
         @return: the target series directories which were added
         """
-        # Build the staging area for each patient.
+        # Build the staging area for each subject.
         series = []
         for d in dirs:
             grouped = self._group(d)
@@ -68,63 +68,63 @@ class DICOMFileGrouper(object):
     
     def _group(self, path):
         """
-        Creates the patient/visit staging area in the current working directory.
-        Each visit subdirectory links the DICOM files in the given source patient
+        Creates the subject/session staging area in the current working directory.
+        Each session subdirectory links the DICOM files in the given source subject
         directories.
         
         See group_dicom_files.
         
-        @param path: the source patient directory path
+        @param path: the source subject directory path
         @return: the target series directories which were added
         """
-        src_pt_dir = os.path.abspath(path)
-        # The RE to extract the patient or visit number suffix.
+        src_sbj_dir = os.path.abspath(path)
+        # The RE to extract the subject or session number suffix.
         npat = re.compile('\d+$')
-        # Extract the patient number from the patient directory name.
-        pt_match = npat.search(os.path.basename(src_pt_dir))
-        if not pt_match:
-            raise StagingError('The source patient directory does not end in a number: ' + src_pt_dir)
-        pt_nbr = int(pt_match.group(0))
-        # The patient directory which will hold the visits.
-        tgt_pt_dir_name = "patient%02d" % pt_nbr
-        tgt_pt_dir = os.path.abspath(os.path.join(self.dest, tgt_pt_dir_name))
-        if not os.path.exists(tgt_pt_dir):
-            os.makedirs(tgt_pt_dir)
-            logger.debug("Created patient directory %s." % tgt_pt_dir)
+        # Extract the subject number from the subject directory name.
+        sbj_match = npat.search(os.path.basename(src_sbj_dir))
+        if not sbj_match:
+            raise StagingError('The source subject directory does not end in a number: ' + src_sbj_dir)
+        sbj_nbr = int(sbj_match.group(0))
+        # The subject directory which will hold the sessions.
+        tgt_sbj_dir_name = "subject%02d" % sbj_nbr
+        tgt_sbj_dir = os.path.abspath(os.path.join(self.dest, tgt_sbj_dir_name))
+        if not os.path.exists(tgt_sbj_dir):
+            os.makedirs(tgt_sbj_dir)
+            logger.debug("Created subject directory %s." % tgt_sbj_dir)
         # Build the target series subdirectories.
         series_dirs = []
-        for src_visit_dir in glob.glob(os.path.join(src_pt_dir, self.visit_pat)):
-            # Extract the visit number from the visit directory name.
-            visit_match = npat.search(os.path.basename(src_visit_dir))
-            if not visit_match:
-                raise StagingError('The source visit directory does not end in a number: ' + src_visit_dir)
-            visit_nbr = int(visit_match.group(0))
-            # The visit directory which holds the links to the source files.
-            tgt_visit_dir_name = "visit%02d" % visit_nbr
-            tgt_visit_dir = os.path.join(tgt_pt_dir, tgt_visit_dir_name)
-            # Skip an existing visit.
-            if os.path.exists(tgt_visit_dir):
+        for src_sess_dir in glob.glob(os.path.join(src_sbj_dir, self.session_pat)):
+            # Extract the session number from the session directory name.
+            sess_match = npat.search(os.path.basename(src_sess_dir))
+            if not sess_match:
+                raise StagingError('The source session directory does not end in a number: ' + src_sess_dir)
+            sess_nbr = int(sess_match.group(0))
+            # The session directory which holds the links to the source files.
+            tgt_sess_dir_name = "session%02d" % sess_nbr
+            tgt_sess_dir = os.path.join(tgt_sbj_dir, tgt_sess_dir_name)
+            # Skip an existing session.
+            if os.path.exists(tgt_sess_dir):
                 if not self.replace:
-                    logger.debug("Skipped existing visit directory %s." % tgt_visit_dir)
+                    logger.debug("Skipped existing session directory %s." % tgt_sess_dir)
                     continue
             else:
-                # Make the target visit directory.
-                os.mkdir(tgt_visit_dir)
-                logger.debug("Created visit directory %s." % tgt_visit_dir)
-            # Link the delta visit directory to the target, if necessary.
+                # Make the target session directory.
+                os.mkdir(tgt_sess_dir)
+                logger.debug("Created session directory %s." % tgt_sess_dir)
+            # Link the delta session directory to the target, if necessary.
             if self.delta_dir:
-                delta_pt_dir = os.path.join(self.delta_dir, tgt_pt_dir_name)
-                if not os.path.exists(delta_pt_dir):
-                    os.makedirs(delta_pt_dir)
-                delta_visit_dir = os.path.join(delta_pt_dir, tgt_visit_dir_name)
-                if os.path.exists(delta_visit_dir):
-                    os.remove(delta_visit_dir)
+                delta_sbj_dir = os.path.join(self.delta_dir, tgt_sbj_dir_name)
+                if not os.path.exists(delta_sbj_dir):
+                    os.makedirs(delta_sbj_dir)
+                delta_sess_dir = os.path.join(delta_sbj_dir, tgt_sess_dir_name)
+                if os.path.exists(delta_sess_dir):
+                    os.remove(delta_sess_dir)
                 # The delta link is relative to the target location.
-                delta_rel_path = os.path.relpath(tgt_visit_dir, delta_pt_dir)
-                os.symlink(delta_rel_path, delta_visit_dir)
-                logger.debug("Linked the delta visit directory {0} -> {1}.".format(delta_visit_dir, delta_rel_path))
+                delta_rel_path = os.path.relpath(tgt_sess_dir, delta_sbj_dir)
+                os.symlink(delta_rel_path, delta_sess_dir)
+                logger.debug("Linked the delta session directory {0} -> {1}.".format(delta_sess_dir, delta_rel_path))
             # Link each of the DICOM files in the source concatenated subdirectories.
-            for src_file in glob.glob(os.path.join(src_visit_dir, self.dicom_pat)):
+            for src_file in glob.glob(os.path.join(src_sess_dir, self.dicom_pat)):
                 if os.path.isdir(src_file):
                     logger.info("Skipped input directory %s." % src_file)
                     continue
@@ -139,7 +139,7 @@ class DICOMFileGrouper(object):
                     if tgt_ext != '.dcm':
                         tgt_file_base = tgt_name + '.dcm'
                     # Make the series directory, if necessary.
-                    tgt_series_dir = os.path.join(tgt_visit_dir, "series%03d" % series)
+                    tgt_series_dir = os.path.join(tgt_sess_dir, "series%03d" % series)
                     if not os.path.exists(tgt_series_dir):
                         os.mkdir(tgt_series_dir)
                         series_dirs.append(tgt_series_dir)
