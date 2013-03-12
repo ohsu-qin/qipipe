@@ -22,28 +22,36 @@ cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_fi
     execution=dict(crashdump_dir=RESULTS, create_report=False))
 config.update_config(cfg)
 
+from nipype.caching import Memory
+
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from qipipe.pipelines import stage as qis
+from qipipe.interfaces import StageCTP
 from qipipe.helpers.dicom_helper import iter_dicom
 
 
-class TestStage:
-    """Pipeline unit tests."""
+class TestStageCTP:
+    """Stage CTP pipeline unit tests."""
     
     def test_stage(self):
         shutil.rmtree(RESULTS, True)
-        for d in glob.glob(os.path.join(FIXTURE, 'Subj*')):
-            logger.debug("Testing stage pipeline on %s..." % d)
-            qis.stage.inputs.collection = COLLECTION
-            qis.stage.inputs.dest = RESULTS
-            qis.stage.inputs.subject_dir = d
-            qis.stage.run()
-            self._verify_result(d)
+        os.makedirs(RESULTS)
+        logger.debug("Testing stage pipeline on %s..." % FIXTURE)
+        subj_dirs = glob.glob(FIXTURE + '/Subj*')
+        mem = Memory(RESULTS)
+        staged = mem.cache(StageCTP)(collection=COLLECTION, RESULTS, *subj_dirs)
+        self._verify_result(staged.outputs.series_dirs)
         # Cleanup.
         shutil.rmtree(RESULTS, True)
 
-    def _verify_result(self, sbj_dir):
+    def _verify_result(self, staged):
+        in_files = glob.glob(FIXTURE + '/Subj*/Visit*/*/*')
+        assert_equal(len(in_files), len(staged),
+            "Staged file count incorrect - expected %d, found %d" % (len(in_files), len(staged)))
+        for d in glob.glob(FIXTURE + '/Subj*'):
+            _verify_subject_result(self, sbj_dir)
+
+    def _verify_subject_result(self, sbj_dir):
         basename = 'subject0' + sbj_dir[-1]
         ctp_dir = os.path.join(CTP, basename)
         assert_true(os.path.exists(ctp_dir), "Result not found: %s" % ctp_dir)

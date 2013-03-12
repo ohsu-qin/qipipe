@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from qipipe.pipelines import xnat
+from qipipe.interfaces import XNATUpload
 from qipipe.helpers.xnat_helper import XNAT
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -40,12 +40,11 @@ class TestXNAT:
     def test_store_image(self):
         shutil.rmtree(RESULTS, True)
         for d in glob.glob(FIXTURE + '/subject*/session*/series*'):
-            logger.debug("Testing XNAT pipeline on %s..." % d)
+            logger.debug("Testing XNATUpload on %s..." % d)
             xnat.store.inputs.collection = COLLECTION
             xnat.store.inputs.series_dir = d
             xnat.store.run()
-            sbj_nbr, sess_nbr, ser_nbr = re.search('.*/subject(\d{2})/session(\d{2})/series(\d{3})', d).groups()
-            sbj = COLLECTION + sbj_nbr
+            sbj, sess_nbr, ser_nbr = re.search('.*/(Sarcoma\d{2})/session(\d{2})/series(\d{3})', d).groups()
             sess = sbj + '_Session' + sess_nbr
             # The scan label is an unpadded number.
             scan = str(int(ser_nbr))

@@ -3,11 +3,14 @@ TCIA CTP preparation utilities.
 """
 
 import sys, os, re
+from .ctp_config import ctp_study
 from .staging_error import StagingError 
 from ..helpers.dicom_helper import iter_dicom_headers
 
 import logging
 logger = logging.getLogger(__name__)
+
+_CFG_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'conf', 'ctp.cfg')
 
 def create_ctp_id_map(collection, *paths, **opts):
     """
@@ -34,12 +37,13 @@ class CTPPatientIdMap(dict):
         The following options are supported:
             - first_only: flag indicating whether to only read the first image Patient ID tag (default False)
     
-        @param collection: the target CTP Patient ID collection name, e.g. C{QIN-BREAST-02}
+        @param collection: the target collection, e.g. C{Breast}
         @param paths: the source subject DICOM directories
         @param opts: the keyword options
         """
-
-        ctp_fmt = collection + "-%04d"
+        
+        # The CTP patient id template.
+        ctp_fmt = ctp_study(collection) + "-%04d"
         # The RE to extract the subject number suffix.
         pat = re.compile('\d+$')
         first_only = opts.has_key('first_only') and opts['first_only']
