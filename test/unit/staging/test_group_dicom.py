@@ -8,9 +8,9 @@ logger = logging.getLogger(__name__)
 # The test parent directory.
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 # The test fixture.
-FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'group_dicom')
+FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'group_dicom', 'breast')
 # The test results.
-RESULTS = os.path.join(ROOT, 'results', 'staging', 'group_dicom')
+RESULTS = os.path.join(ROOT, 'results', 'staging', 'group_dicom', 'breast')
 # The test configuration.
 LOG = os.path.join(RESULTS, 'log', 'qipipe.log')
 # The test result target.
@@ -26,7 +26,7 @@ class TestGroupDicom:
         shutil.rmtree(RESULTS, True)
         src_sbj_dirs = glob.glob(FIXTURE + '/*')
         opts = dict(dest=TARGET, dicom_pat='*concat*/*')
-        grouped = group_dicom_files(*src_sbj_dirs, **opts)
+        grouped = group_dicom_files('Breast', *src_sbj_dirs, **opts)
         # Verify that there are no broken links.
         for root, dirs, files in os.walk(TARGET):
             if not dirs:
@@ -36,12 +36,12 @@ class TestGroupDicom:
                 assert_true(os.path.islink(tgt_file), "Missing source -> target target link: %s" % tgt_file)
                 assert_true(os.path.exists(tgt_file), "Broken source -> target link: %s" % tgt_file)
         # Test incremental delta.
-        tgt = os.path.join(TARGET, 'subject01', 'session02')
+        tgt = os.path.join(TARGET, 'Breast01', 'session02')
         # Clean the partial result.
         shutil.rmtree(tgt, True)
         # Rerun to capture the delta.
-        group_dicom_files(*src_sbj_dirs, delta=DELTA, **opts)
-        delta = os.path.join(DELTA, 'subject01', 'session02')
+        group_dicom_files('Breast', *src_sbj_dirs, delta=DELTA, **opts)
+        delta = os.path.join(DELTA, 'Breast01', 'session02')
         assert_true(os.path.islink(delta), "Missing delta -> target link: %s" % delta)
         assert_true(os.path.exists(delta), "Broken delta -> target link: %s" % delta)
         real_tgt = os.path.realpath(tgt)

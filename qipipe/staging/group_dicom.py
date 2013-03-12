@@ -6,20 +6,52 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def group_dicom_files(*dirs, **opts):
+def group_dicom_files(collection, *dirs, **opts):
     """
-    Links DICOM files in the given subject directories.
+    Groups AIRC input DICOM files by series.
+    The AIRC directory structure is required to be in the form:
+
+        I{subject}/I{session}/I{dicom}
+
+    where I{subject}, I{session}, I{dicom} are the respective path glob
+    patterns, as described in L{group_dicom_files}. The output is the
+    grouped series directories in the form:
+
+        I{collection}NN/C{session}NN/C{series}NNN
+
+    where the series directory consists of links to the AIRC input
+    DICOM files.
+
+    Examples:
+
+    For input DICOM files with directory structure:
+
+        C{BreastChemo4/}
+            CVisit1/}
+                C{dce_concat/}
+                    C{120210 ex B17_TT49}
+                    ...
+
+        GroupDicom(subject_dirs=[BreastChemo4], session_pat='Visit*', dicom_pat='*concat*/*', dest=data).run()
+
+    results in output links with directory structure:
+
+        C{Breast04/}
+            C{session01/}
+                C{series09/}
+                    C{120210_ex_B17_TT49.dcm} -> C{BreastChemo4/Visit1/dce_concat/120210 ex B17_TT49}
+                    ...
     
     @param dirs: the subject directories
     @param opts: the DICOMFileGrouper options
     @return: the target series directories which were added
     """
-    return DICOMFileGrouper(**opts).group_dicom_files(*dirs)
+    return DICOMFileGrouper(collection, **opts).group_dicom_files(*dirs)
 
 
 class DICOMFileGrouper(object):
 
-    def __init__(self, dest=None, delta=None, dicom_pat='*', session_pat='*', replace=False):
+    def __init__(self, collection, dest=None, delta=None, dicom_pat='*', session_pat='*', replace=False):
         """
         Creates a new DICOM file grouper.
         
@@ -28,8 +60,10 @@ class DICOMFileGrouper(object):
         @param dicom_pat: the DICOM file include pattern (default is C{*})
         @param session_pat: the session directory pattern (default is C{[Vv]isit*})
         """
+        # The study collection.
+        self.collection = collection
         # The target root directory.
-        self.dest = dest or '.'
+        self.dest = dest or os.getcwd()
         # The delta directory.
         if delta:
             self.delta_dir = os.path.abspath(delta)
@@ -86,7 +120,7 @@ class DICOMFileGrouper(object):
             raise StagingError('The source subject directory does not end in a number: ' + src_sbj_dir)
         sbj_nbr = int(sbj_match.group(0))
         # The subject directory which will hold the sessions.
-        tgt_sbj_dir_name = "subject%02d" % sbj_nbr
+        tgt_sbj_dir_name = "%s%02d" % (self.collection, sbj_nbr)
         tgt_sbj_dir = os.path.abspath(os.path.join(self.dest, tgt_sbj_dir_name))
         if not os.path.exists(tgt_sbj_dir):
             os.makedirs(tgt_sbj_dir)
