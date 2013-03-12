@@ -1,7 +1,7 @@
 This history lists major release themes. See the GitHub commits (https://github.com/jinx/core)
 for change details.
 
-1.2.1 / 2013-03-01
+1.2.1 / 2013-03-12
 ------------------
 * Build xnat pipeline.
 
