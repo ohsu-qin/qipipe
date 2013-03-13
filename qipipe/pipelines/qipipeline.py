@@ -45,12 +45,11 @@ def run(collection, dest, *subject_dirs, **opts):
     airc_dir = os.path.join(dest, 'airc')
     ctp_dir = os.path.join(dest, 'ctp')
 
-    # Group the AIRC input into session directories.
-    grouped = mem.cache(GroupDicom)(ollection=collection, dest=airc_dir, subject_dirs=subject_dirs)
+    # Group the AIRC input into series directories.
+    grp_result = mem.cache(GroupDicom)(ollection=collection, dest=airc_dir, subject_dirs=subject_dirs)
     
     # Stage the new series images.
-    series_dirs = grouped.outputs['series_dirs']
-    staged = mem.cache(StageCTP)(series_dirs=grouped.outputs['series_dirs'])
+    staged = mem.cache(StageCTP)(series_dirs=grp_result.outputs['series_dirs'])
     
     # The XNAT uploader.
     xnat = mem.Cache(XNATUpload)
@@ -59,7 +58,7 @@ def run(collection, dest, *subject_dirs, **opts):
     stacker = mem.Cache(DcmStack)
     for d in staged:
         # The subject, session and series directory components.
-        sbj, sess, ser = match_session_hierarchy(d)
+        sbj, sess, ser = match_series_hierarchy(d)
         # Stack the staged files.
         stacked = stacker(embed_meta=True, out_format="series%(SeriesNumber)03d", dicom_files=d)
         # Store the stacked series in XNAT.
