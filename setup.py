@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 __version__ = open('version.txt').read()
 
-__doc__ = 'qipipe processes the OHSU QIN study images. See the README file for more information.'
+__doc__ = 'qipipe processes the OHSU QIN images. See the README file for more information.'
 
 requires = ['pydicom', 'envoy']
 
