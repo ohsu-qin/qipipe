@@ -1,19 +1,20 @@
 import re
+from .staging_error import StagingError
 
-__all__ = ['for_collection']
+__all__ = ['with_name']
 
 EXTENT = {}
-"""A collection => study dictionary for all supported AIRC studies."""
+"""A name => collection dictionary for all supported AIRC collections."""
 
-def for_collection(collection):
+def with_name(name):
     """
-    @param collection: the OHSU QIN collection name
-    @return: the corresponding AIRC study
+    @param name: the OHSU QIN collection name
+    @return: the corresponding AIRC collection
     """
     return EXTENT[collection]
 
 
-class AIRCStudy(object):
+class AIRCCollection(object):
     """The AIRC Study characteristics."""
 
     def __init__(self, collection, subject_pattern, session_pattern):
@@ -32,7 +33,10 @@ class AIRCStudy(object):
         @param path: the directory path
         @return: the subject number
         """
-        return int(re.search(self.subject_pattern, path).group(1))
+        match = re.search(self.subject_pattern, path)
+        if not match:
+            raise StagingError("The directory path %s does not match the subject pattern %s" % (path, self.subject_pattern))
+        return int(match.group(1))
     
     def path2session_number(self, path):
         """
@@ -40,8 +44,7 @@ class AIRCStudy(object):
         @return: the session number
         """
         return int(re.search(self.session_pattern, path).group(1))
-        
 
-BREAST = AIRCStudy('Breast', 'BreastChemo(\d+)', 'Visit(\d+)')
+BREAST = AIRCCollection('Breast', 'BreastChemo(\d+)', 'Visit(\d+)')
 
-SARCOMA = AIRCStudy('Sarcoma', 'Subj_(\d+)', '(?:Visit|S\d+V)(\d+)')
+SARCOMA = AIRCCollection('Sarcoma', 'Subj_(\d+)', '(?:Visit|S\d+V)(\d+)')
