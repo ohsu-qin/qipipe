@@ -4,8 +4,10 @@ from nipype.interfaces.base import (BaseInterface,
 from qipipe.staging.fix_dicom import fix_dicom_headers
 
 class FixDicomInputSpec(BaseInterfaceInputSpec):
-    source = Directory(desc='The input subject directory', exists=True, mandatory=False)
+    series_dir = Directory(desc='The input series directory', exists=True, mandatory=False)
+    
     dest = Directory(desc="The output location", exists=False, mandatory=True)
+    
     collection = traits.Str(desc='The image collection', mandatory=True)
 
 
@@ -18,7 +20,7 @@ class FixDicom(BaseInterface):
     output_spec = FixDicomOutputSpec
     
     def _run_interface(self, runtime):
-        files = fix_dicom_headers(self.inputs.source, self.inputs.dest, self.inputs.collection)
+        files = fix_dicom_headers(self.inputs.series_dir, self.inputs.dest, self.inputs.collection)
         self._out_files = [os.path.abspath(f) for f in files]
         return runtime
 
