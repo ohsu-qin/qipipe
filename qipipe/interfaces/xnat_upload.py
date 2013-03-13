@@ -5,11 +5,9 @@ from ..helpers.xnat_helper import XNAT
 
 def _xnat():
     """The XNAT connection, created on demand."""
-    try:
-        return _xnat.connection
-    except AttributeError:
-        _xnat.__setattr__('connection', XNAT())
-        return _xnat.connection
+    if not hasattr(_xnat, 'connection'):
+        _xnat.connection = XNAT()
+    return _xnat.connection
 
 
 class XNATUploadInputSpec(BaseInterfaceInputSpec):
