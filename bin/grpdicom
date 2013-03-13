@@ -15,14 +15,14 @@ help_message = """
 grpdicom options DIR...
 Options:
     -C --changeto\tChange to the given target directory
-    -d --dicom\tThe source DICOM file name pattern
+    -d --dicom\t\tThe source DICOM file name pattern
     -p --session\tThe source session subdirectory pattern
     -r --replace\tReplace the existing target image file links
-    -t --delta\tThe delta directory to hold new target session directories
-    -f --file\tA file containing the source subject directories
-    -q, --quiet\tSuppress messages
+    -t --delta\t\tThe delta directory to hold new target session directories
+    -f --file\t\tA file containing the source subject directories
+    -q, --quiet\t\tSuppress messages
     -v, --verbose\tPrint verbose messages
-    -h --help\tPrint this help message
+    -h --help\t\tPrint this help message
 """
 
 
@@ -72,7 +72,7 @@ def main(argv=None):
                 args[:] = [s.strip() for s in fs.readlines()]
         args.append(gopts)
 
-        staging.group_dicom_files(*args)
+        group_dicom_files(*args)
 
     except Usage, err:
         print >> sys.stderr, sys.argv[0].split('/')[-1] + ': ' + str(err.msg)
