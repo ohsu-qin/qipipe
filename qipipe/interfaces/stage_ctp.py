@@ -65,7 +65,7 @@ class StageCTP(BaseInterface):
             sbj, sess, ser = match_series_hierarchy(d)
             staged.append(os.path.join(dest, sbj, sess, ser))
             # Pick one file for each subject to map.
-            if not sbj_files.has_key(sbj):
+            if sbj not in sbj_files:
                 sbj_files[sbj] = fix_result.outputs.out_files[0]
         
         # Map the subject ids.

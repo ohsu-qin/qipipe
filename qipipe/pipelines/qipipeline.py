@@ -34,7 +34,7 @@ def run(collection, dest, *subject_dirs, **opts):
     @param opts: the pipeline options
     """
     # Create a memory context.
-    if opts.has_key('cache_dir'):
+    if 'cache_dir' in opts:
         cache_dir = opts['cache_dir']
     else:
         cache_dir = '.'

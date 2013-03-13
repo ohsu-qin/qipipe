@@ -40,7 +40,7 @@ class CTPPatientIdMap(dict):
         for ds in iter_dicom_headers(*dicom_files):
             dcm_id = ds.PatientID
             # The escaped source id maps to the TCIA target id. 
-            if not self.has_key(dcm_id):
+            if dcm_id not in self:
                 self[dcm_id] = ctp_id
                 tmpl = "Mapped the DCM patient id %s to the CTP subject id %s."
                 logger.debug(tmpl % (dcm_id, subject_id))
