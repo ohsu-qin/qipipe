@@ -5,4 +5,4 @@ submission to the TCIA QIN collections and pipeline processing.
 """
 from .group_dicom import group_dicom_files
 from .fix_dicom import fix_dicom_headers
-from .stage_ctp import stage_ctp
+from .map_ctp import CTPPatientIdMap
