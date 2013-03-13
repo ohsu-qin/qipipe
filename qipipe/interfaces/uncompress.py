@@ -18,7 +18,7 @@ class Uncompress(BaseInterface):
     output_spec = UncompressOutputSpec
 
     def _run_interface(self, runtime):
-        self.out_file = _uncompress(self.inputs.in_file)
+        self.out_file = self._uncompress(self.inputs.in_file)
         return runtime
 
     def _list_outputs(self):
@@ -26,7 +26,7 @@ class Uncompress(BaseInterface):
         outputs['out_file'] = self.out_file
         return outputs
 
-    def _uncompress(in_file, dest=None):
+    def _uncompress(self, in_file, dest=None):
         """
         Uncompresses the given file.
     
