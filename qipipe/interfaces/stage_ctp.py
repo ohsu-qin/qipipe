@@ -2,18 +2,19 @@
 Stages DICOM series directories for import into CTP.
 """
 
+import os
 from nipype.caching import Memory
 from nipype.interfaces.base import (traits,
     BaseInterfaceInputSpec, TraitedSpec, BaseInterface,
     InputMultiPath, OutputMultiPath, Directory)
-from . import GroupDicom, FixDicom, Copy
-from ..staging.staging_helpers import match_session_hierarchy
+from . import FixDicom, MapCTP, XNATUpload
+from ..staging.staging_helpers import match_series_hierarchy
 
 class StageCTPInputSpec(BaseInterfaceInputSpec):
     collection = traits.Str(desc='The image collection', mandatory=True)
 
-    subject_dirs = InputMultiPath(Directory(exists=True), mandatory=True,
-        desc='The input subject directories to stage')
+    series_dirs = InputMultiPath(Directory(exists=True), mandatory=True,
+        desc='The input series directories to stage')
     
     dest = Directory(desc='The output directory (default working directory)')
 
@@ -30,7 +31,7 @@ class StageCTP(BaseInterface):
 
     def _run_interface(self, runtime):
         opts = dict(dest=self.inputs.dest)
-        self.series_dirs = _stage(*self.inputs.subject_dirs)
+        self.series_dirs = self._stage(*self.inputs.series_dirs)
         return runtime
 
     def _list_outputs(self):
@@ -38,12 +39,11 @@ class StageCTP(BaseInterface):
         outputs['series_dirs'] = self.series_dirs
         return outputs
 
-
-    def _stage(self, dest, *subject_dirs):
+    def _stage(self, dest, *series_dirs):
         """
         Stages the given directories for import into CTP.
 
-        @param subject_dirs: the AIRC source subject directories to stage
+        @param series_dirs: the AIRC source subject directories to stage
         @return: the staged series directories
         """
         # Create a new memory context.
@@ -52,17 +52,27 @@ class StageCTP(BaseInterface):
         dest = self.inputs.dest or os.getcwd()
         # The FixDicom nipype node factory.
         fixer = mem.cache(FixDicom)
-        # The Move nipype node factory.
-        mover = mem.cache(Move)
-        for d in self.input.subject_dirs:
-            fixed = fixer(source=d, dest=dest, collection=self.inputs.collection)
-            for f in fixed.outputs.out_files:
-                # The subject, session and series directory components.
-                sbj, sess, ser = match_session_hierarchy(f)
-                # The copy target directory.
-                tgt = os.path.join(self.ctp_dir, sbj, sess, ser)
-                # Move the file to the target series directory.
-                mover(in_file=f, dest=tgt)
-                # Add the move target series directory to the staged set.
-                staged.add(tgt)
+        # The XNAT uploader.
+        xnat = mem.Cache(XNATUpload)
+        # The staged series directories.
+        staged = []
+        # The subject => DICOM file dictionary.
+        sbj_files = {}
+        for d in self.inputs.series_dirs:
+            # Fix the input DICOM files.
+            fix_result = fixer(series_dir=d, collection=self.inputs.collection)
+            # Add the fixed result to the return value.
+            sbj, sess, ser = match_series_hierarchy(d)
+            staged.append(os.path.join(dest, sbj, sess, ser))
+            # Pick one file for each subject to map.
+            if not sbj_files.has_key(sbj):
+                sbj_files[sbj] = fix_result.outputs.out_files[0]
+        
+        # Map the subject ids.
+        sbj_dirs = [match_series_hierarchy(d)[0] for d in staged]
+        map_result = mem.cache(MapCTP)(collection=self.inputs.collection, subject_files=sbj_files)
+        # Copy the id map to the destination.
+        mem.cache(Copy)(in_file=map_result.outputs.out_file, dest=dest)
+        
         return staged
+        
