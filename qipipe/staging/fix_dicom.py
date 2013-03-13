@@ -1,46 +1,41 @@
 import os, re
 from ..helpers.dicom_helper import edit_dicom_headers
-from . import airc_study
-from .staging_error import StagingError
+from .staging_helpers import match_series_hierarchy
 from .sarcoma_config import sarcoma_location
+from .staging_error import StagingError
 
 import logging
 logger = logging.getLogger(__name__)
 
-def fix_dicom_headers(source, dest, collection):
+def fix_dicom_headers(series_dir, dest, collection):
     """
-    Fix the source OHSU QIN AIRC DICOM headers as follows:
+    Fix the input OHSU QIN AIRC DICOM headers as follows:
         - Replace the C{Patient ID} value with the subject number, e.g. C{Sarcoma01}.
         - Add the C{Body Part Examined} tag.
 
     The supported collection names are defined in the C{COLLECTIONS} set.
     
-    @param source: the input subject directory
+    @param series_dir: the input series directory
     @param dest: the location in which to write the modified subject directory
     @param collection: the collection name
     @return: the files which were created
     @raise StagingError: if the collection is not supported
     """    
-    parent = os.path.normpath(os.path.dirname(source))
-    try:
-        study = airc_study.for_collection(collection)
-    except KeyError:
-        raise StagingError('Unrecognized collection: ' + collection)
-    logger.debug("Fixing the DICOM headers in %s..." % source)
-    
-    # Extract the subject number from the subject directory name.
-    pt_nbr = study.path2subject_number(source)
-    pt_id = "%(collection)s%(pt_nbr)02d" % {'collection': collection, 'pt_nbr': pt_nbr}
+    logger.debug("Fixing the DICOM headers in %s..." % series_dir)
+
+    # Infer the subject id from the directory name.
+    sbj_id, _, _ = match_series_hierarchy(series_dir)
     
     # The tag name => value dictionary.
-    tnv = {'PatientID': pt_id}
-    if collection == 'Breast':
-        tnv['BodyPartExamined'] = 'BREAST'
-    elif collection == 'Sarcoma':
-        tnv['BodyPartExamined'] = sarcoma_location(pt_id)
+    tnv = {'PatientID': sbj_id}
+    if collection == 'Sarcoma':
+        tnv['BodyPartExamined'] = sarcoma_location(sbj_id)
+    else:
+        tnv['BodyPartExamined'] = collection.upper()
     
-    # Set the tags in every image file.
-    files = edit_dicom_headers(source, dest, tnv)
-    logger.debug("Fixed the DICOM headers in %s." % source)
+    # Set the tags in every image file.    
+    files = edit_dicom_headers(series_dir, dest, tnv)
+
+    logger.debug("Fixed the DICOM headers in %s." % series_dir)
     
     return files

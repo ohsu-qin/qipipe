@@ -25,7 +25,7 @@ The main qipipe modules include the following:
 
 * `helpers` : Common utilities
 
-* `staging` : prepare the study image files
+* `staging` : prepare the image files
 
 * `registration` : Image registration
 
@@ -52,7 +52,7 @@ Usage
 -----
 The OHSU QIN Sharepoint
 [TCIA Upload Procedure](https://bridge.ohsu.edu/research/knight/projects/qin/_layouts/WordViewer.aspx?id=/research/knight/projects/qin/Shared%20Documents/TCIA%20upload%20procedure.docx&Source=https%3A%2F%2Fbridge%2Eohsu%2Eedu%2Fresearch%2Fknight%2Fprojects%2Fqin%2FSitePages%2FHome%2Easpx&DefaultItemOpen=1&DefaultItemOpen=1)
-document describes how to import new QIN study images into TCIA.
+document describes how to import new QIN images into TCIA.
 
 Copyright
 ---------
