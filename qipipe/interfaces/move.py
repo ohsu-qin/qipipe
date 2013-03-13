@@ -20,7 +20,7 @@ class Move(BaseInterface):
     output_spec = MoveOutputSpec
 
     def _run_interface(self, runtime):
-        self.out_file = _move(self.inputs.in_file)
+        self.out_file = self._move(self.inputs.in_file, self.inputs.dest)
         return runtime
 
     def _list_outputs(self):
@@ -28,7 +28,7 @@ class Move(BaseInterface):
         outputs['out_file'] = self.out_file
         return outputs
 
-    def _move(in_file, dest):
+    def _move(self, in_file, dest):
         """
         Moves the given file.
     
