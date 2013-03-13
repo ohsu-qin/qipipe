@@ -20,7 +20,7 @@ class Copy(BaseInterface):
     output_spec = CopyOutputSpec
 
     def _run_interface(self, runtime):
-        self.out_file = _copy(self.inputs.in_file)
+        self.out_file = self._copy(self.inputs.in_file, self.inputs.dest)
         return runtime
 
     def _list_outputs(self):
@@ -28,7 +28,7 @@ class Copy(BaseInterface):
         outputs['out_file'] = self.out_file
         return outputs
 
-    def _copy(in_file, dest):
+    def _copy(self, in_file, dest):
         """
         Copys the given file.
     

@@ -18,7 +18,7 @@ class Compress(BaseInterface):
     output_spec = CompressOutputSpec
 
     def _run_interface(self, runtime):
-        self.out_file = _compress(self.inputs.in_file)
+        self.out_file = self._compress(self.inputs.in_file)
         return runtime
 
     def _list_outputs(self):
@@ -26,7 +26,7 @@ class Compress(BaseInterface):
         outputs['out_file'] = self.out_file
         return outputs
 
-    def _compress(in_file, dest=None):
+    def _compress(self, in_file, dest=None):
         """
         Compresses the given file.
     
