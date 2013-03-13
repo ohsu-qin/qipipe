@@ -7,9 +7,9 @@ logger = logging.getLogger(__name__)
 # The test parent directory.
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 # The test fixture.
-FIXTURE = os.path.join(ROOT, 'fixtures', 'pipelines', 'stage')
+FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'fix_dicom', 'sarcoma')
 # The test results parent directory.
-RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'stage')
+RESULTS = os.path.join(ROOT, 'results', 'staging', 'fix_dicom', 'sarcoma')
 # The test results group directory.
 AIRC = os.path.join(RESULTS, 'airc')
 # The test results assembly directory.
@@ -37,9 +37,10 @@ class TestStageCTP:
         shutil.rmtree(RESULTS, True)
         os.makedirs(RESULTS)
         logger.debug("Testing stage pipeline on %s..." % FIXTURE)
-        subj_dirs = glob.glob(FIXTURE + '/Subj*')
+        ser_dirs = glob.glob(FIXTURE + '/' + COLLECTION + '*/session*/series*')
         mem = Memory(RESULTS)
-        staged = mem.cache(StageCTP)(collection=COLLECTION, RESULTS, *subj_dirs)
+        stager = mem.cache(StageCTP)
+        staged = stager(collection=COLLECTION, dest=RESULTS, series_dirs=ser_dirs)
         self._verify_result(staged.outputs.series_dirs)
         # Cleanup.
         shutil.rmtree(RESULTS, True)
@@ -56,12 +57,12 @@ class TestStageCTP:
         ctp_dir = os.path.join(CTP, basename)
         assert_true(os.path.exists(ctp_dir), "Result not found: %s" % ctp_dir)
         for ds in iter_dicom(ctp_dir):
-            pt_id = 'Sarcoma0' + sbj_dir[-1]
-            assert_equal(pt_id, ds.PatientID, "Incorrect Patient ID: %s" % ds.PatientID)
+            sbj_id = 'Sarcoma0' + sbj_dir[-1]
+            assert_equal(sbj_id, ds.PatientID, "Incorrect Patient ID: %s" % ds.PatientID)
             assert_is_not_none(ds.BodyPartExamined, "Incorrect Body Part: %s" % ds.BodyPartExamined)
         prop_files = glob.glob(os.path.join(CTP, '*.properties'))
         assert_equal(1, len(prop_files), "Unique mapping file not found in %s" % CTP)
-        pat = 'ptid/' + pt_id
+        pat = 'ptid/' + sbj_id
         assert_true(any([l.startswith(pat) for l in open(prop_files[0])]))
 
 if __name__ == "__main__":

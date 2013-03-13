@@ -4,8 +4,8 @@ from ConfigParser import ConfigParser as Config
 
 _CFG_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'conf', 'sarcoma.cfg')
 
-def sarcoma_location(pt_id):
-    return sarcoma_config().get('Tumor Location', pt_id)
+def sarcoma_location(sbj_id):
+    return sarcoma_config().get('Tumor Location', sbj_id)
 
 def sarcoma_config():
     if not hasattr(sarcoma_config, 'instance'):
