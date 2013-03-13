@@ -65,7 +65,7 @@ def select_dicom_tags(ds, *tags):
     for t in tags:
         try:
             # The tag attribute.
-            tattr = t.replace(' ', '')
+            tattr = re.sub('\W', '')
             # Collect the tag value.
             tdict[t] = operator.attrgetter(tattr)(ds)
         except AttributeError:
