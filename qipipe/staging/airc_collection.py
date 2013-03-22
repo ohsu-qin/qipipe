@@ -6,26 +6,28 @@ __all__ = ['with_name']
 EXTENT = {}
 """A name => collection dictionary for all supported AIRC collections."""
 
-def with_name(name):
+def collection_with_name(name):
     """
     @param name: the OHSU QIN collection name
     @return: the corresponding AIRC collection
     """
-    return EXTENT[collection]
+    return EXTENT[name]
 
 
 class AIRCCollection(object):
     """The AIRC Study characteristics."""
 
-    def __init__(self, collection, subject_pattern, session_pattern):
+    def __init__(self, collection, subject_pattern, session_pattern, dicom_pattern):
         """
         @param collection: the collection name
-        @param subject_pattern: the subject directory name match pattern
-        @param session_pattern: the session directory name match pattern
+        @param subject_pattern: the subject directory name match regular expression pattern
+        @param session_pattern: the session directory name match regular expression pattern
+        @param dicom_pattern: the DICOM directory name match glob pattern
         """
         self.collection = collection
         self.subject_pattern = subject_pattern
         self.session_pattern = session_pattern
+        self.dicom_pattern = dicom_pattern
         EXTENT[collection] = self
     
     def path2subject_number(self, path):
@@ -45,6 +47,6 @@ class AIRCCollection(object):
         """
         return int(re.search(self.session_pattern, path).group(1))
 
-BREAST = AIRCCollection('Breast', 'BreastChemo(\d+)', 'Visit(\d+)')
+BREAST = AIRCCollection('Breast', 'BreastChemo(\d+)', 'Visit(\d+)', '*concat*/*')
 
-SARCOMA = AIRCCollection('Sarcoma', 'Subj_(\d+)', '(?:Visit|S\d+V)(\d+)')
+SARCOMA = AIRCCollection('Sarcoma', 'Subj_(\d+)', '(?:Visit_|S\d+V)(\d+)', '*concat*/*')

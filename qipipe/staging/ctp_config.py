@@ -3,12 +3,12 @@ from ConfigParser import ConfigParser as Config
 
 _CFG_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'conf', 'ctp.cfg')
 
-def ctp_study(collection):
+def ctp_collection_for(name):
     """
-    @param collection: the image collection
-    @return: the CTP study name
+    @param name: the QIN collection name
+    @return: the CTP collection name
     """
-    return ctp_config().get('Study', collection)
+    return ctp_config().get('CTP', name)
 
 def ctp_config():
     if not hasattr(ctp_config, 'instance'):
