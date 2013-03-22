@@ -1,12 +1,13 @@
 import os, gzip
 from nipype.interfaces.base import (traits,
     BaseInterfaceInputSpec, TraitedSpec, BaseInterface,
-    File)
+    File, Directory)
 
 class UncompressInputSpec(BaseInterfaceInputSpec):
     in_file = File(exists=True, mandatory=True,
         desc='The file to uncompress')
 
+    dest = Directory(desc='The optional directory to write the uncompressed file (default current directory)')
 
 class UncompressOutputSpec(TraitedSpec):
     out_file = File(exists=True, desc='The uncompressed file')
@@ -18,7 +19,7 @@ class Uncompress(BaseInterface):
     output_spec = UncompressOutputSpec
 
     def _run_interface(self, runtime):
-        self.out_file = self._uncompress(self.inputs.in_file)
+        self.out_file = self._uncompress(self.inputs.in_file, dest=self.inputs.dest)
         return runtime
 
     def _list_outputs(self):
