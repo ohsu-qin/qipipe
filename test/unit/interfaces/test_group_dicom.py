@@ -24,16 +24,16 @@ from qipipe.interfaces import GroupDicom
 class TestGroupDicom:
     """GroupDicom interface unit tests."""
     
-    def test_group_dicom(self):
+    def test_link_dicom(self):
         logger.debug("Testing the GroupDicom interface on %s..." % FIXTURE)
         shutil.rmtree(RESULTS, True)
         sbj_dirs = glob.glob(FIXTURE + '/*')
-        grouper = GroupDicom(collection='Breast', subject_dirs=sbj_dirs, session_pat='Visit*', dicom_pat='*concat*/*', dest=RESULTS)
-        result = grouper.run()
-        ser_dirs = result.outputs.series_dirs
-        ser_dirs = glob.glob(RESULTS + '/Breast*/session*/series*')
-        assert_not_equal(0, len(ser_dirs), "GroupDicom did not create the output series directories in %s" % RESULTS)
-        assert_equal(ser_dirs, result.outputs.series_dirs, "The GroupDicom output is incorrect: %s" % ser_dirs)
+        for d in sbj_dirs:
+            grouper = GroupDicom(collection='Breast', subject_dir=d, session_pat='Visit*', dicom_pat='*concat*/*', dest=RESULTS)
+            result = grouper.run()
+            ser_dirs = result.outputs.series_dirs
+            assert_not_equal(0, len(ser_dirs), "GroupDicom did not create the output series directories in %s" % RESULTS)
+            assert_equal(ser_dirs, result.outputs.series_dirs, "The GroupDicom output is incorrect: %s" % ser_dirs)
         # Cleanup.
         shutil.rmtree(RESULTS, True)
         logger.debug("GroupDicom interface test completed")
