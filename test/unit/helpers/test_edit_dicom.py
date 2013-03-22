@@ -21,11 +21,11 @@ class TestEditDicom:
         # Clear the result before starting.
         shutil.rmtree(RESULT, True)
         # The tag name => value map.
-        tnv = {'PatientID': 'Test Patient', 'BodyPartExamined': 'BREAST', 'PixelData': ''}
+        tnv = dict(PatientID='Test Patient', BodyPartExamined='BREAST', PixelData='')
         # The tag => value map.
         tv = {dd.tag_for_name(name): value for name, value in tnv.iteritems()}
         shutil.rmtree(RESULT, True)
-        files = set(edit_dicom_headers(FIXTURE, RESULT, tnv))
+        files = set(edit_dicom_headers(FIXTURE, RESULT, **tnv))
         for ds in iter_dicom(RESULT):
             assert_true(ds.filename in files)
             for t, v in tv.iteritems():
