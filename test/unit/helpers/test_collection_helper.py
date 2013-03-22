@@ -10,9 +10,9 @@ from qipipe.helpers.collection_helper import *
 class TestCollectionHelper:
     """dicom_helper unit tests."""
 
-    def test_is_nonstring_collection(self):
-        assert_true(is_nonstring_collection(['a', 'b']), "List is not recognized as a non-string collection")
-        assert_false(is_nonstring_collection('a'), "String is incorrectly recognized as a non-string collection")
+    def test_is_nonstring_iterable(self):
+        assert_true(is_nonstring_iterable(['a', 'b']), "List is not recognized as a non-string collection")
+        assert_false(is_nonstring_iterable('a'), "String is incorrectly recognized as a non-string collection")
 
     def test_to_series(self):
         assert_equal('1, 2 and 3', to_series([1, 2, 3]), "Series formatter incorrect")

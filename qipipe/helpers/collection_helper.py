@@ -1,6 +1,6 @@
 from collections import Iterable
 
-def is_nonstring_collection(obj):
+def is_nonstring_iterable(obj):
     """
     @param obj: the object to check
     @return: whether the given object is a non-string iterable object

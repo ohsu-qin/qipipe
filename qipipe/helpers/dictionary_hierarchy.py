@@ -1,4 +1,4 @@
-from .collection_helper import is_nonstring_collection
+from .collection_helper import is_nonstring_iterable
 
 def on(root):
     """
@@ -85,7 +85,7 @@ class DictionaryHierarchy(object):
             self.path = [key]
             # If the next value is a non-string collection, then iterate to the child.
             # Otherwise, append the value to the path.
-            if is_nonstring_collection(value):
+            if is_nonstring_iterable(value):
                 # Wrap a dictionary value as a child hierarchy.
                 if isinstance(value, dict):
                     self.child = iter(DictionaryHierarchy(value))
