@@ -1,15 +1,15 @@
 import os
-from nipype.interfaces.base import (BaseInterface,
-    BaseInterfaceInputSpec, traits, File, Directory, TraitedSpec)
+from nipype.interfaces.base import (BaseInterface, BaseInterfaceInputSpec, traits,
+    InputMultiPath, File, Directory, TraitedSpec)
 from qipipe.staging.fix_dicom import fix_dicom_headers
 
 class FixDicomInputSpec(BaseInterfaceInputSpec):
-    series_dir = Directory(desc='The input series directory', exists=True, mandatory=False)
-    
-    dest = Directory(desc="The output location", exists=False, mandatory=True)
-    
     collection = traits.Str(desc='The image collection', mandatory=True)
 
+    subject = traits.Str(desc='The subject name', mandatory=True)
+
+    in_files = InputMultiPath(File(exists=True), desc='The input DICOM files', mandatory=True)
+    
 
 class FixDicomOutputSpec(TraitedSpec):
     out_files = traits.List(desc="The modified output files", trait=File, exists=True)
@@ -20,8 +20,7 @@ class FixDicom(BaseInterface):
     output_spec = FixDicomOutputSpec
     
     def _run_interface(self, runtime):
-        files = fix_dicom_headers(self.inputs.series_dir, self.inputs.dest, self.inputs.collection)
-        self._out_files = [os.path.abspath(f) for f in files]
+        self._out_files = fix_dicom_headers(self.inputs.collection, self.inputs.subject, *self.inputs.in_files)
         return runtime
 
     def _list_outputs(self):
