@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub commits (https://github.com/jinx/core)
 for change details.
 
+1.2.2 / 2013-03-22
+------------------
+* Import new visits that are not in XNAT.
+
 1.2.1 / 2013-03-12
 ------------------
 * Build xnat pipeline.
