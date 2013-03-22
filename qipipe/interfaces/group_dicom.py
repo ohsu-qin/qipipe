@@ -1,25 +1,18 @@
 from nipype.interfaces.base import (traits,
     BaseInterfaceInputSpec, TraitedSpec, BaseInterface,
-    InputMultiPath, OutputMultiPath, Directory)
-from qipipe.staging.group_dicom import group_dicom_files
+    InputMultiPath, OutputMultiPath, Directory, File)
+from qipipe.staging.staging_helper import group_dicom_files_by_series
 
 
 class GroupDicomInputSpec(BaseInterfaceInputSpec):
-    collection = traits.Str(mandatory=True, desc='The collection name')
-    
-    subject_dirs = InputMultiPath(Directory(exists=True), mandatory=True,
-        desc='The input subject directories to group')
-    
-    dest = Directory(exists=False, desc='The output directory')
-    
-    dicom_pat = traits.Str(desc='The DICOM file glob pattern')
-    
-    session_pat = traits.Str(desc='The session subdirectory glob pattern')
+    in_files = InputMultiPath(traits.Either(File(exists=True), Directory(exists=True)),
+        mandatory=True, desc='The DICOM files to group')
 
 
 class GroupDicomOutputSpec(TraitedSpec):
-    series_dirs = OutputMultiPath(Directory(exists=True),
-        desc='The output series directories')
+    series = traits.Str(desc='The series numbers')
+    
+    out_files = OutputMultiPath(File(exists=True), desc='The series DICOM files')
 
 
 class GroupDicom(BaseInterface):
@@ -28,16 +21,12 @@ class GroupDicom(BaseInterface):
     output_spec = GroupDicomOutputSpec
 
     def _run_interface(self, runtime):
-        opts = dict(dest=self.inputs.dest)
-        if self.inputs.dicom_pat:
-            opts['dicom_pat'] = self.inputs.dicom_pat
-        if self.inputs.session_pat:
-            opts['session_pat'] = self.inputs.session_pat
-        self.series_dirs = group_dicom_files(self.inputs.collection, *self.inputs.subject_dirs, **opts)
+        self.grp_dict = group_dicom_files_by_series(self.inputs.in_files)
         return runtime
 
     def _list_outputs(self):
         outputs = self._outputs().get()
-        outputs['series_dirs'] = self.series_dirs
+        outputs['series'] = self.grp_dict.keys()
+        outputs['out_files'] = self.grp_dict.values()
         return outputs
      
