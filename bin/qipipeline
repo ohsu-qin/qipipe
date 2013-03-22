@@ -1,0 +1,79 @@
+#!/usr/bin/env python
+"""
+Runs the QIN pipeline.
+"""
+
+import sys
+import os
+import getopt
+import logging
+# Defer importing the application until the logging level has been set.
+
+help_message = """
+qipipeline options DIR...
+Options:
+    -b --breast\t\tThe Breast collection
+    -s --sarcoma\tThe Sarcoma collection
+    -o --output DIR\tThe optional destination directory (default current directory)
+    -w --work DIR\tThe optional work directory (default a new temp directory)
+    -q, --quiet\t\tSuppress messages
+    -v, --verbose\tPrint verbose messages
+    -h --help\t\tPrint this help message
+"""
+
+
+class Usage(Exception):
+
+    def __init__(self, msg):
+        self.msg = msg
+
+
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
+    try:
+        try:
+            opts, args = getopt.getopt(argv[1:], 'bho:p:qsvw:', ['breast', 'help', 'include=', 'output=', 'quiet', 'sarcoma', 'verbose', 'work='])
+        except getopt.error, msg:
+            raise Usage(msg)
+
+        # The required parameters.
+        dest = collection = None
+        # The additional workflow options.
+        wfopts = {}
+        # Parse the options.
+        for opt, val in opts:
+            if opt in ('-b', '--breast'):
+                collection = 'Breast'
+            elif opt in ('-o', '--output'):
+                wfopts['dest'] = val
+            elif opt in ('-s', '--sarcoma'):
+                collection = 'Sarcoma'
+            elif opt in ('-w', '--work'):
+                wfopts['work'] = val
+            elif opt in ('-q', '--quiet'):
+                logging.basicConfig(level=logging.ERROR)
+            elif opt in ('-v', '--verbose'):
+                logging.basicConfig(level=logging.DEBUG)
+            elif opt in ('-h', '--help'):
+                print help_message
+                return 0
+
+        # Validate the required parameters.
+        if not collection:
+            raise Usage("Neither the breast nor the sarcoma collection option is set.")
+        
+        # Import the application now, after logging has been set.
+        from qipipe.pipelines import qipipeline as qip
+        
+        # Run the QIN workflow.
+        qip.run(collection, *args, **wfopts)
+    except Usage, err:
+        print >> sys.stderr, sys.argv[0].split('/')[-1] + ': ' + str(err.msg)
+        return 2
+
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
