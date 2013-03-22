@@ -1,4 +1,4 @@
-import os, gzip, operator
+import os, re, gzip, operator
 import dicom
 from dicom.filereader import InvalidDicomError
 from .file_helper import FileIterator
@@ -65,35 +65,35 @@ def select_dicom_tags(ds, *tags):
     for t in tags:
         try:
             # The tag attribute.
-            tattr = re.sub('\W', '')
+            tattr = re.sub('\W', '', t)
             # Collect the tag value.
             tdict[t] = operator.attrgetter(tattr)(ds)
         except AttributeError:
             pass
     return tdict
 
-def iter_dicom(*paths):
+def iter_dicom(*dicom_files):
     """
     Iterates over the DICOM data sets for DICOM files at the given locations.
     
-    @param paths: the DICOM files or directories containing DICOM files
+    @param dicom_files: the DICOM files or directories containing DICOM files
     """
-    return DicomIterator(*paths)
+    return DicomIterator(*dicom_files)
 
-def iter_dicom_headers(*paths):
+def iter_dicom_headers(*dicom_files):
     """
     Iterates over the DICOM headers for DICOM files at the given locations.
     
-    @param paths: the DICOM files or directories containing DICOM files
+    @param dicom_files: the DICOM files or directories containing DICOM files
     """
-    return DicomHeaderIterator(*paths)
+    return DicomHeaderIterator(*dicom_files)
 
 class DicomIterator(FileIterator):
     """
     DicomIterator is a utility class for reading the pydicom data sets from DICOM files.
     """
-    def __init__(self, *paths):
-        super(DicomIterator, self).__init__(*paths)
+    def __init__(self, *dicom_files):
+        super(DicomIterator, self).__init__(*dicom_files)
         self.args = []
     
     def next(self):
@@ -113,7 +113,7 @@ class DicomHeaderIterator(DicomIterator):
     # Read the DICOM file with defer_size=256, stop_before_pixels=True and force=False.
     OPTS = [256, True, False]
     
-    def __init__(self, *paths):
-        super(DicomHeaderIterator, self).__init__(*paths)
+    def __init__(self, *dicom_files):
+        super(DicomHeaderIterator, self).__init__(*dicom_files)
         self.args = DicomHeaderIterator.OPTS
             
