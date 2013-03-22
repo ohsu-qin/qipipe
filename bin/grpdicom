@@ -6,7 +6,7 @@ Groups DICOM files into directories by series.
 import sys
 import os
 import getopt
-from qipipe.staging import group_dicom_files
+from qipipe.staging import link_dicom_files
 
 import logging
 logger = logging.getLogger('qipipe')
@@ -72,7 +72,7 @@ def main(argv=None):
                 args[:] = [s.strip() for s in fs.readlines()]
         args.append(gopts)
 
-        group_dicom_files(*args)
+        link_dicom_files(*args)
 
     except Usage, err:
         print >> sys.stderr, sys.argv[0].split('/')[-1] + ': ' + str(err.msg)
