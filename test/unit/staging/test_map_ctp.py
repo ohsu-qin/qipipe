@@ -16,7 +16,7 @@ class TestMapCTP:
     def test_id_map(self):
         expected = {'111710': 'QIN-SARCOMA-01-0003'}
         id_map = CTPPatientIdMap()
-        id_map.map_dicom_files('Sarcoma03', FIXTURE)
+        id_map.map_subjects('Sarcoma03', FIXTURE)
         assert_equal(expected, id_map, "CTP id map incorrect: %s" % id_map)
 
 
