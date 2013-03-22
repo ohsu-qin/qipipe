@@ -12,43 +12,40 @@ logger = logging.getLogger(__name__)
 import dicom
 dicom.debug(False)
 
-def edit_dicom_headers(source, dest, tag_values):
+def edit_dicom_headers(dest, *dicom_files, **tag_values):
     """
-    Sets the tags of the DICOM files in the given input directory.
+    Sets the tags of the given DICOM files.
     
-    The modified DICOM dataset is written to a file in the destination directory.
-    The source path structure is preserved, e.g. if the source is
-    C{data/Breast04} and the destination is
-    C{fixed}, then the edited C{data/Breast04/session01/image0004.dcm}
-    is written to C{fixed/Breast04/session01/image0004.dcm}.
-    
-    @param source: the directory containing the input DICOM files
     @param dest: the directory in which to write the modified DICOM files
-    @param tag_values: the DICOM header {name: value} tag values to set
+    @param dicom_files: the files or directories containing the input DICOM files
+    @param tag_values: the DICOM header (I{name}, I{value}) tag values to set
     @return: the files which were created
     """
     
+    dest = os.path.abspath(dest)
+    if not os.path.exists(dest):
+        os.makedirs(dest)
     # The {tag: value} dictionary.
     tv = {dd.tag_for_name(t.replace(' ', '')): v for t, v in tag_values.iteritems()}
     # The {tag: VR} dictionary.
     tvr = {t: dd.get_entry(t)[0] for t in tv.iterkeys()}
-    logger.info("Editing the %(source)s DICOM files with the following tag values: %(tv)s..." % {'source' : source, 'tv': tag_values})
     files = []
-    for ds in iter_dicom(source):
+    
+    logger.info("Editing the DICOM files with the following tag values: %s..." % tag_values)
+    # Open the DICOM store on each DICOM file (skipping non-DICOM files),
+    # set the tag values and save to a new file in the destination directory.
+    for ds in iter_dicom(*dicom_files):
         for  t, v in tv.iteritems():
-            try:
+            if t in ds:
                 ds[t].value = v
-            except KeyError:
+            else:
                 ds.add_new(t, tvr[t], v)
         # Write the modified dataset to the output file.
-        src_parent, dname = os.path.split(source)
-        rel_path = ds.filename[(len(src_parent) + 1):]
-        fname = os.path.join(dest, rel_path)
-        d = os.path.dirname(fname)
-        if not os.path.exists(d):
-            os.makedirs(d)
-        ds.save_as(fname)
-        files.append(fname)
-        logger.debug("Saved the edited DICOM file %(src)s as %(tgt)s." % {'src': ds.filename, 'tgt': fname})
-    logger.info("The edited %(source)s DICOM files were saved in %(dest)s." % {'source' : source, 'dest': dest})
+        _, fname = os.path.split(ds.filename)
+        out_file = os.path.join(dest, fname)
+        ds.save_as(out_file)
+        files.append(out_file)
+        logger.debug("Saved the edited DICOM file as %s." % out_file)
+    logger.info("The edited DICOM files were saved in %s." % dest)
+    
     return files
