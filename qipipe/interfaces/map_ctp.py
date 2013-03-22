@@ -1,22 +1,20 @@
 """
-Stages DICOM series directories for import into CTP.
+Maps the OHSU DICOM Patient IDs to the CTP Patient IDs.
 """
 
 import os
-from nipype.interfaces.base import (traits,
-    BaseInterfaceInputSpec, TraitedSpec, BaseInterface,
-    InputMultiPath, OutputMultiPath, File, Directory)
-from ..staging import CTPPatientIdMap
+from nipype.interfaces.base import (traits, BaseInterfaceInputSpec,
+    TraitedSpec, BaseInterface, File, Directory)
+from ..staging.map_ctp import property_filename, CTPPatientIdMap
 
 
 class MapCTPInputSpec(BaseInterfaceInputSpec):
     collection = traits.Str(mandatory=True, desc='The collection name')
     
-    subject_files = traits.Dict(
-        traits.Str(desc='The canonical OHSU subject id'),
-        InputMultiPath(File(exists=True), desc='The DICOM files to map'),
-        mandatory=True,
-        desc="The subject id => DICOM files dictionary")
+    patient_ids = traits.List(traits.Str(), mandatory=True,
+        desc='The DICOM Patient IDs to map')
+
+    dest = Directory(desc='The optional directory to write the map file (default current directory)')
 
 
 class MapCTPOutputSpec(TraitedSpec):
@@ -24,8 +22,6 @@ class MapCTPOutputSpec(TraitedSpec):
 
 
 class MapCTP(BaseInterface):
-    PROP_TMPL = 'QIN-%s-OHSU.ID-LOOKUP.properties'
-    """The template for the study id map file name specified by CTP."""
 
     input_spec = MapCTPInputSpec
     
@@ -34,10 +30,15 @@ class MapCTP(BaseInterface):
     def _run_interface(self, runtime):
         # Make the CTP id map.
         ctp_map = CTPPatientIdMap()
-        for sbj_id, dicom_files in self.inputs.subject_files.iteritems():
-            ctp_map.map_dicom_files(sbj_id, *dicom_files)
-        # Write the id map.
-        self.out_file = self._property_file(self.inputs.collection)
+        ctp_map.add_subjects(self.inputs.collection, *self.inputs.patient_ids)
+        # Write the id map property file.
+        if self.inputs.dest:
+            dest = self.inputs.dest
+            if not os.path.exists(dest):
+                os.makedirs(dest)
+        else:
+            dest = os.getcwd()
+        self.out_file = os.path.join(dest, property_filename(self.inputs.collection))
         output = open(self.out_file, 'w')
         ctp_map.write(output)
         output.close()
@@ -47,13 +48,3 @@ class MapCTP(BaseInterface):
         outputs = self._outputs().get()
         outputs['out_file'] = os.path.abspath(self.out_file)
         return outputs
-    
-    def _property_file(self, collection):
-        """
-        Returns the CTP id map property file name for the given collection.
-        The Sarcoma collection is capitalized in the file name, Breast is not.
-        """
-        if collection == 'Sarcoma':
-            return MapCTP.PROP_TMPL % collection.upper()
-        else:
-            return MapCTP.PROP_TMPL % collection
