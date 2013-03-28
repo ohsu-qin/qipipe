@@ -17,7 +17,7 @@ def read_image_hierarchy(*files):
     return h
 
 class ImageHierarchy(DictionaryHierarchy):
-    TAGS = ('PatientID', 'Study Instance UID', 'Series Instance UID', 'InstanceNumber')
+    TAGS = ('Patient ID', 'Study Instance UID', 'Series Instance UID', 'Instance Number')
     
     """
     ImageHierarchy wraps the DICOM image subject-study-series-image hierarchy.
@@ -34,5 +34,6 @@ class ImageHierarchy(DictionaryHierarchy):
         @param ds: the DICOM dataset
         """
         # build the image hierarchy
-        path = select_dicom_tags(ds, *TAGS)
+        tdict = select_dicom_tags(ds, *ImageHierarchy.TAGS)
+        path = [tdict[t] for t in ImageHierarchy.TAGS]
         self.tree[path[0]][path[1]][path[2]].append(path[3])
