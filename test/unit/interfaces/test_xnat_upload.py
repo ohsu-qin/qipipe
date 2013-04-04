@@ -13,10 +13,10 @@ from qipipe.helpers.xnat_helper import XNAT
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
 
-FIXTURE = os.path.join(ROOT, 'fixtures', 'pipelines', 'xnat')
+FIXTURE = os.path.join(ROOT, 'fixtures', 'interfaces', 'xnat')
 """The test fixture parent directory."""
 
-RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'xnat')
+RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'xnat')
 """The test results parent directory."""
 
 COLLECTION = 'Sarcoma'
