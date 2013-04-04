@@ -4,6 +4,7 @@ from .fix_dicom import FixDicom
 from .group_dicom import GroupDicom
 from .map_ctp import MapCTP
 from .move import Move
+from .glue import Glue
 from .stage_ctp import StageCTP
 from .uncompress import Uncompress
 from .xnat_upload import XNATUpload
