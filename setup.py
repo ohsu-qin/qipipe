@@ -5,7 +5,7 @@ __version__ = open('version.txt').read()
 
 __doc__ = 'qipipe processes the OHSU QIN images. See the README file for more information.'
 
-requires = ['pydicom', 'envoy']
+requires = ['pydicom', 'envoy', 'dcmstack', 'nose', 'numpy', 'traits']
 
 setup(
     name = 'qipipe',
@@ -13,13 +13,14 @@ setup(
     author = 'Fred Loney',
     author_email = 'loneyf@ohsu.edu',
     packages = find_packages(),
+    data_files=[('config', glob.glob('conf/*.cfg'))]
     scripts = glob.glob('bin/*'),
     url = 'http://quip1.ohsu.edu/git/qipipe',
     license = 'Proprietary',
     description = __doc__.split('.', 1)[0],
     long_description = __doc__,
     classifiers = [
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Topic :: Scientific/Engineering :: Bio-Informatics",
         "Environment :: Console",
         "Intended Audience :: Science/Research",
