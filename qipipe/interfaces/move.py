@@ -11,7 +11,7 @@ class MoveInputSpec(BaseInterfaceInputSpec):
 
 
 class MoveOutputSpec(TraitedSpec):
-    out_file = File(exists=True, desc='The moved file or directory')
+    out_file = traits.Either(File, Directory, exists=True, desc='The moved file or directory')
 
 
 class Move(BaseInterface):
