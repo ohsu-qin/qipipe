@@ -1,27 +1,28 @@
+import os, sys, re, glob, shutil
 from nose.tools import *
-import os, re, glob, shutil
+import pyxnat
+import tempfile
 
 import logging
 logger = logging.getLogger(__name__)
 
-# The test parent directory.
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
-# The test fixture.
+"""The test parent directory."""
+
 FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'group_dicom')
-# The test results parent directory.
+"""The test fixture directory."""
+
 RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'qipipeline')
+"""The test results directory."""
 
 from nipype import config
 cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
     execution=dict(crashdump_dir=RESULTS, create_report=False))
 config.update_config(cfg)
 
-import sys
-import pyxnat
-import tempfile
-
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.pipelines import qipipeline as qip
+from qipipe.pipelines import QIPipeline
 from qipipe.helpers.dicom_helper import iter_dicom
 from qipipe.helpers.xnat_helper import XNAT
 from qipipe.staging import airc_collection as airc
@@ -70,8 +71,10 @@ class TestPipeline:
         dest = os.path.join(RESULTS, collection.lower())
         work_dir = tempfile.mkdtemp()
         logger.debug("Executing the QIN pipeline in %s..." % work_dir)
-        # Run the pipeline.
-        sessions = qip.run(collection, dest=dest, base_dir=work_dir, *sbj_dirs)
+        # Run the staging and stack pipeline.
+        
+        sessions = qip.run(collection, dest=dest, base_dir=work_dir,
+            components = [QIPipeline.STAGING, QIPipeline.STACK], *sbj_dirs)
 
         # Verify the result.
         for sess_nm in sessions:
