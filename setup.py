@@ -13,7 +13,7 @@ setup(
     author = 'Fred Loney',
     author_email = 'loneyf@ohsu.edu',
     packages = find_packages(),
-    data_files=[('config', glob.glob('conf/*.cfg'))]
+    data_files=[('config', glob.glob('conf/*.cfg'))],
     scripts = glob.glob('bin/*'),
     url = 'http://quip1.ohsu.edu/git/qipipe',
     license = 'Proprietary',
