@@ -11,7 +11,7 @@ from qipipe.registration import ants
 # The test parent directory.
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 # The test fixture.
-FIXTURE = os.path.join(ROOT, 'fixtures', 'registration', 'breast', 'subject03', 'session01')
+FIXTURE = os.path.join(ROOT, 'fixtures', 'registration', 'breast', 'Breast03', 'Session01')
 # The test results.
 RESULT = os.path.join(ROOT, 'results', 'registration', 'ants')
 WORK = os.path.join(RESULT, 'work')
