@@ -5,7 +5,7 @@ Prints tab-delimited DICOM tag values.
 
 import sys
 import os
-import getopt
+import argparse
 from collections import defaultdict
 import dicom
 from qipipe.helpers.collection_helper import to_series
@@ -15,108 +15,67 @@ from qipipe.helpers.dicom_helper import ImageHierarchy, iter_dicom_headers, sele
 import logging
 logger = logging.getLogger(__name__)
 
-help_message = """
-lsdicom options FILE ...
-Options:
-    -n --no-header\tOmit the tag name header line
-    -s --summary\tPrint only the Patient ID, Study Instance UID, Series Instance UID and Instance Number tags
-    -r --recursive\tFlag indicating whether to include all DICOM files contained in the given file arguments
-    -t --tags LIST\tThe comma-separated tags to print (default is all non-pixel, non-bracketed tags whose value does not include a line break)
-    -v --verbose\tPrint informational messages
-    -h --help\t\tPrint this help message
-"""
-
-
-class Usage(Exception):
-    
-    def __init__(self, msg):
-        self.msg = msg
-
-
 def main(argv=None):
-    if argv is None:
-        argv = sys.argv
-    tags = []
-    recurse = False
-    header = True
-    output = sys.stdout
-    try:
-        # Parse the options.
-        try:
-            opts, args = getopt.getopt(argv[1:], 'l:no:rst:hv', 
-                ['log=', 'no-header', 'output=', 'recursive', 'summary', 'tags=', 'help', 'verbose'])
-        except getopt.error, msg:
-            raise Usage(msg)
-        
-        # Process the options.
-        for opt, val in opts:
-            if opt in ('-s', '--summary'):
-                if tags:
-                    raise Usage('The tags option cannot be used with the summary option.')
-                # The summary tags include the image hierarchy path.
-                tags = ImageHierarchy.TAGS
-            elif opt in ('-t', '--tags'):
-                if tags:
-                    raise Usage('The tags option cannot be used with the summary option.')
-                tags = val.split(',')
-            elif opt in ('-l' '--log'):
-                fh = logging.FileHandler(val)
-                fh.setLevel(logging.DEBUG)
-                logger.addHandler(fh)
-            elif opt in ('-n' '--no-header'):
-                header = False
-            elif opt in ('-o' '--output'):
-                output = open(val, 'w')
-            elif opt in ('-r' '--recursive'):
-                recurse = True
-            elif opt == '-v':
-                logger.setLevel('DEBUG')
-            elif opt in ('-h', '--help'):
-                print help_message
-                return 0
+    # Parse the options.
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-n", "--no-header", help="omit the tag name header line", dest='header', action="store_false")
+    tag_grp = parser.add_mutually_exclusive_group()
+    tag_grp.add_argument("-s", "--summary", help="print only the Patient ID, Study Instance UID, Series Instance UID and Instance Number tags",
+        action="store_true")
+    tag_grp.add_argument("-t", "--tags",
+        help="the comma-separated tags to print (default is all non-pixel, non-bracketed tags whose value does not include a line break)")
+    verbosity_grp = parser.add_mutually_exclusive_group()
+    verbosity_grp.add_argument("-q", "--quiet", help="don't print messages", dest='log_level', action="store_const", const=logging.ERROR)
+    verbosity_grp.add_argument("-v", "--verbose", help="print verbose messages", dest='log_level', action="store_const", const=logging.DEBUG)
+    parser.add_argument("-o", "--output", help="print the values to the given file")
+    parser.add_argument("files", help="the DICOM files or directories to list (default stdin)", metavar="FILE", nargs='+')
+    args = parser.parse_args()
     
-    except Usage, err:
-        print >> sys.stderr, sys.argv[0].split('/')[-1] + ': ' + str(err.msg)
-        return 2
+    # Configure the logger.
+    if args.log_level:
+        logging.getLogger().setLevel(args.log_level)
     
-    # If recursive, then traverse each path argument for all DICOM datasets.
-    if recurse:
-        fps = iter_dicom_headers(*args)
+    # The summary tag list is set here rather than in the argument, since the constant is imported
+    # after parsing the commmand line arguments.
+    if args.summary:
+        tags = ImageHierarchy.TAGS
     else:
-        fps = args
+        tags = args.tags
     
     # Print the tag value lines.
-    _print_tag_values(fps, tags, output=output, header=header)
+    _print_tag_values(tags, output=args.output, header=args.header, *args.files)
     
     return 0
         
-def _print_tag_values(fps, tags, output=sys.stdout, header=True):
+def _print_tag_values(tags, *files, **opts):
     """
     Prints the tab-delimited tag value lines.
     
-    @param fps: the DICOM file paths, streams or datasets
     @param tags: the tags to print (default all tags)
-    @param output: the destination (default stdout)
-    @param header: flag indicating whether to print a header line (default True)
+    @param files: the DICOM files
+    @param opts: the print options
+    @keyword output: the destination (default stdout)
+    @keyword header: flag indicating whether to print a header line (default True)
     """
     
     # The default tags include any tag defined in at least one file.
-    # This preparatory step requires reading each DICOM file to
-    # collect the tags before rereading the file to print the tag
-    # values.
+    # This preparatory step requires reading each DICOM file to collect
+    # the tags before rereading the file to print the tag values.
     if not tags:
-        tags = _collect_default_tags(fps)
+        tags = _collect_default_tags(*files)
+    
+    # The print output.
+    output = opts.get('output') or sys.stdout
     
     # Print the header, if necessary.
-    if header:
+    if opts['header']:
         print >> output, "\t".join(tags)
-        header = False
     
     # Print the tags in each DICOM file.
     logger.debug("Printing the DICOM tag values...")
-    for fp in fps:
+    for ds in iter_dicom_headers(*files):
         # The DICOM tag value dictionary.
-        tdict = _read_tags(fp, *tags)
+        tdict = _read_tags(ds, *tags)
         # If there is at least one tag with a valid value, then print the value line.
         if tags:
             # Augment the tag dictionary with a default empty string value for a missing tag.
@@ -127,33 +86,33 @@ def _print_tag_values(fps, tags, output=sys.stdout, header=True):
             # Print the tab-delimited tag value line.
             print >> output, "\t".join(values)
 
-def _collect_default_tags(fps):
+def _collect_default_tags(*files):
     """
     Collects the tags which occur in at least one of the given files.
     
     @param fps: the DICOM file paths, streams or datasets
     @return: the tags with a valid value
     """
-    tags = set()
-    for fp in fps:
-        tdict = _read_tags(fp)
-        tags.update(tdict.iterkeys())
-    return list(tags).sort()
+    tag_set = set()
+    for ds in iter_dicom_headers(*files):
+        tdict = _read_tags(ds)
+        tag_set.update(tdict.iterkeys())
     
-def _read_tags(fp, *tags):
+    # Sort the tags
+    tags = list(tag_set)
+    tags.sort()
+    
+    return tags
+    
+def _read_tags(ds, *tags):
     """
     Reads the DICOM tags in the given file
     Filters the given tag dictionary to exclude empty or multi-line tag values.
     
-    @param fp: the DICOM file path, stream or dataset
+    @param ds: the pydicom dataset
     @param tags: the DICOM tags to read (default all tags)
     @return: the filtered tag dictionary
     """
-    # The DICOM dataset.
-    if isinstance(fp, dicom.dataset.FileDataset):
-        ds = fp
-    else:
-        ds = read_dicom_header(fp)
     tdict = select_dicom_tags(ds, *tags)
     return {t: v for t, v in tdict.iteritems() if v and "\n" not in str(v)}
 
