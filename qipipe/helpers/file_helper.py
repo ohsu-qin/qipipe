@@ -27,7 +27,9 @@ class FileIterator(object):
               generated item 
         """
         for spec in self._filespecs:
-            if isinstance(spec, str):
+            if isinstance(spec, file):
+                yield spec
+            elif isinstance(spec, str):
                 if os.path.isfile(spec):
                     yield spec
                 elif os.path.isdir(spec):
