@@ -30,9 +30,8 @@ def run(collection, *subject_dirs, **opts):
     
     The supported AIRC collections are defined L{qipipe.staging.airc_collection}.
 
-    The options include the following:
-        - C{components}: the L{QIPipeline.COMPONENTS} to run (default all)
-        - the L{QIPipeline.run} options
+    The options include the components to run, as well as any additional
+    L{QIPipeline.run} options.
     
     The destination directory is populated with the CTP import staging files.
     
@@ -40,6 +39,7 @@ def run(collection, *subject_dirs, **opts):
     @param dest: the destination directory
     @param subject_dirs: the AIRC source subject directories to stage
     @param opts: additional workflow options
+    @keyword components: the L{QIPipeline.COMPONENTS} to run (default all)
     """
 
     components = opts.pop('components', [])
@@ -81,14 +81,12 @@ class QIPipeline(object):
     def run(self, *subject_dirs, **opts):
         """
         Runs the qipipeline workflow on the the given AIRC subject directories.
-
-        The options include the following:
-            - C{dest}: the destination directory (default current working directory)
-            - C{work}: the pipeline execution work area
         
         @param dest: the CTP staging location
         @param subject_dirs: the AIRC source subject directories to stage
         @param opts: additional workflow options
+        @keyword dest: the destination directory (default current working directory)
+        @keyword work: the pipeline execution work area (default a new temp directory)
         @return: the new XNAT session labels
         """
 

@@ -75,6 +75,11 @@ class XNAT(object):
         @param session: the session (XNAT experiment) label
         @param in_files: the input files to upload
         @param opts: the session child container, file format and scan modality options
+        @keyword scan: the scan number
+        @keyword reconstruction: the reconstruction label
+        @keyword analysis: the analysis label
+        @keyword modality: the session modality
+        @keyword format: the image format
         @return: the new XNAT file names
         @raise XNATError: if the project does not exist
         @raise XNATError: if the session child resource container type option is missing
@@ -85,12 +90,14 @@ class XNAT(object):
         prj = self.interface.select.project(project)
         if not prj.exists():
             raise XNATError("XNAT upload project not found: %s" % project)
+        
         # The keyword arguments.
         modality = opts.pop('modality', None)
         format = opts.pop('format', None)
         if not opts:
             raise XNATError("XNAT upload is missing the session child container")
         container_type, container_label = opts.items()[0]
+        
         # The XNAT experiment.
         exp = prj.subject(subject).experiment(session)
         # If the experiment must be created, then the experiment create parameters

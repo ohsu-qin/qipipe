@@ -20,13 +20,10 @@ def fix_dicom_headers(collection, subject, *dicom_files, **opts):
 
     The supported collection names are defined in the C{COLLECTIONS} set.
     
-    The supported options include the following:
-        - C{dest}: the location in which to write the modified files
-          (default current directory)
-    
     @param collection: the collection name
     @param subject: the input subject name
     @param opts: the keyword options
+    @keyword dest: the location in which to write the modified files (default current directory)
     @return: the files which were created
     @raise StagingError: if the collection is not supported
     """    
