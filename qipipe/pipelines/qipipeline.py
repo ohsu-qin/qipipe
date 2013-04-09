@@ -1,13 +1,10 @@
 """The qipipeline L{run} function is the OHSU QIN pipeline facade."""
 
-import os, glob
-import tempfile
+import os
 import nipype.pipeline.engine as pe
-from nipype.interfaces.utility import IdentityInterface, Function
-from nipype.interfaces.dcmstack import DcmStack
-from ..interfaces import FixDicom, Compress, GroupDicom, MapCTP, Glue, XNATUpload
-from ..staging.staging_helper import SUBJECT_FMT,iter_new_visits, group_dicom_files_by_series
-from numpy import array
+from ..interfaces import Glue
+from . import staging
+from . import stack
 
 import logging
 logger = logging.getLogger(__name__)
@@ -66,7 +63,7 @@ class QIPipeline(object):
     
     def __init__(self, collection, *components):
         """
-        @param collection: the AIRC image collection
+        @param collection: the  AIRC image collection name
         @param components: the pipeline connection L{QIPipeline.COMPONENTS} (default all)
         """
         self.collection = collection
@@ -90,41 +87,22 @@ class QIPipeline(object):
         @return: the new XNAT session labels
         """
 
-        # Collect the new AIRC visits.
-        new_visits = list(iter_new_visits(self.collection, *subject_dirs))
-        if not new_visits:
-            return []
-        
-        # The XNAT subjects with new visits.
-        subjects = []
-        # The new XNAT sessions.
-        sessions = []
-        # The (subject, session, series, dicom files) inputs.
-        ser_specs = []
-        for sbj, sess, dcm_file_iter in new_visits:
-            subjects.append(sbj)
-            sessions.append(sess)
-            # Group the session DICOM input files by series.
-            ser_dcm_dict = group_dicom_files_by_series(dcm_file_iter)
-            # Collect the (subject, session, series, dicom_files) tuples.
-            for ser, dcm in ser_dcm_dict.iteritems():
-                logger.debug("The QIN workflow will iterate over subject %s session %s series %s." % (sbj, sess, ser))
-                ser_specs.append((sbj, sess, ser, dcm))
+        # Collect the new AIRC visit series specifications. Each series spec is a
+        # (subject, session, series, dicom files) tuple.
+        ser_specs = staging.new_series_specs(self.collection, *subject_dirs)
 
         # The work option is the workflow base directory.
         if 'work' in opts:
             opts['base_dir'] = opts.pop('work')
         
-        # Make the workflow.
-        wf = self._create_workflow(ser_specs, **opts)
-        
         # The staging location.
         dest = os.path.abspath(opts.pop('dest', os.getcwd()))
         
-        # Set the top-level workflow inputs.
-        wf.inputs.input_spec.collection = self.collection
+        # Make the workflow.
+        wf = self._create_workflow(*ser_specs, **opts)
+        
+        # Set the top-level workflow input destination.
         wf.inputs.input_spec.dest = dest
-        wf.inputs.input_spec.subjects = subjects
         
         # Diagram the workflow graph.
         grf = os.path.join(wf.base_dir, 'qipipeline.dot')
@@ -135,12 +113,16 @@ class QIPipeline(object):
         wf.run()
         
         # Return all new sessions.
+        sessions = {sess for _, sess, _, _ in ser_specs}
         return sessions
-        
-    def _create_workflow(self, series_specs, **opts):
+    
+    def _create_workflow(self, *series_specs, **opts):
         """
-        @param series_spec_inputs: the (subject, session, series, dicom files) inputs
-        @param opts: additional workflow options
+        Builds the workflow for the given series. The workflow is built as part of
+        the L{run} method.
+        
+        @param series_specs: the (subject, session, series, dicom files) inputs
+        @param opts: nipype workflow options
         @return: the OHSU QIN workflow
         """
         
@@ -155,15 +137,17 @@ class QIPipeline(object):
         series_spec = self._create_series_spec_node(series_specs)
         
         # The staging connections.
-        wf.connect(self._create_staging(series_spec))
+        wf.connect(staging.create_staging_connections(self.collection, series_spec))
+        
+        # Set the top-level workflow input collection and subjects.
+        wf.inputs.input_spec.collection = self.collection
+        subjects = list({sbj for sbj, _, _, _ in series_specs})
+        wf.inputs.input_spec.subjects = subjects
 
         # Pipe the fix_dicom staging node to the stack input.
         if QIPipeline.STACK in self.components:
             fix_dicom = wf.get_node('fix_dicom')
-            fix2stack = pe.Node(IdentityInterface(fields=['dicom_files']), name='fix2stack')
-            wf.connect([(fix_dicom, fix2stack, [('out_files', 'dicom_files')])])
-            # The stack connections.
-            wf.connect(self._create_stack(series_spec, fix2stack))
+            wf.connect(stack.create_stack_connections(series_spec, fix_dicom, 'out_files'))
         
         # Register the stack files.
         if QIPipeline.REGISTRATION in self.components:
@@ -178,7 +162,7 @@ class QIPipeline(object):
     def _create_series_spec_node(self, series_specs):
         """
         Builds the series spec node. The node input is a (subject, session, series, dicom_files)
-        tuple. The node output is the disaggregated subject, session, series and dicom_files.
+        tuple. The node output is the disaggregated subject, session, series and dicom_files fields.
         This node iterates over each input series spec tuple.
         
         @param series_specs: the (subject, session, series, dicom files) inputs
@@ -188,73 +172,3 @@ class QIPipeline(object):
         node = pe.Node(glue, name='series_spec')
         node.iterables = ('series_spec', series_specs)
         return node
-        
-    def _create_staging(self, series_spec):
-        """
-        Creates the staging connections.
-        
-        @param series_spec: the series hierarchy node
-        @return: the staging workflow connections
-        """
-        
-        # The workflow input.
-        input_spec = pe.Node(IdentityInterface(fields=['collection', 'dest', 'subjects']),
-            name='input_spec')
-                
-        # Map each QIN Patient ID to a CTP Patient ID.
-        map_ctp = pe.Node(MapCTP(), name='map_ctp')
-        
-        # The CTP staging directory factory.
-        ctp_dir_func = Function(input_names=['dest', 'subject', 'session', 'series'],
-            output_names=['out_dir'], function=_ctp_series_directory)
-        ctp_dir = pe.Node(ctp_dir_func, name='ctp_dir')
-        
-        # Fix the AIRC DICOM tags.
-        fix_dicom = pe.Node(FixDicom(), name='fix_dicom')
-        fix_dicom.inputs.collection = self.collection
-        
-        # Compress the fixed files.
-        compress = pe.MapNode(Compress(), iterfield='in_file', name='compress')
-        
-        # Store the DICOM files in XNAT.
-        store_dicom = pe.Node(XNATUpload(project='QIN', format='DICOM'), name='store_dicom')
-        
-        # Return the connections.
-        return [
-            (input_spec, map_ctp, [('collection', 'collection'), ('subjects', 'patient_ids'), ('dest', 'dest')]),
-            (input_spec, fix_dicom, [('collection', 'collection')]),
-            (input_spec, ctp_dir, [('dest', 'dest')]),
-            (series_spec, ctp_dir, [('subject', 'subject'), ('session', 'session'), ('series', 'series')]),
-            (series_spec, fix_dicom, [('subject', 'subject'), ('dicom_files', 'in_files')]),
-            (series_spec, store_dicom, [('subject', 'subject'), ('session', 'session'), ('series', 'scan')]),
-            (ctp_dir, compress, [('out_dir', 'dest')]),
-            (fix_dicom, compress, [('out_files', 'in_file')]),
-            (compress, store_dicom, [('out_file', 'in_files')])]
-    
-    def _create_stack(self, series_spec, dcm_files_node):
-        """
-        Creates the series stack connections.
-        
-        @param series_spec: the series specification node
-        @param dcm_files_node: the series input files node
-        @return: the stack workflow connections
-        """
-        
-        # Stack the series.
-        stack = pe.Node(DcmStack(embed_meta=True, out_format="series%(SeriesNumber)03d"),
-            name='stack')
-        
-        # Store the series stack in XNAT.
-        store_stack=pe.Node(XNATUpload(project='QIN'), name='store_stack')
-        
-        return [
-            (series_spec, store_stack, [('subject', 'subject'), ('session', 'session'), ('series', 'scan')]),
-            (dcm_files_node, stack, [('dicom_files', 'dicom_files')]),
-            (stack, store_stack, [('out_file', 'in_files')])]
-
-def _ctp_series_directory(dest, subject, session, series):
-    """
-    @return: the dest/subject/session/series directory path
-    """
-    import os
-    return os.path.join(dest, subject, session, str(series))
