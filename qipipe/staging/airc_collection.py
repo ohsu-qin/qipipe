@@ -47,6 +47,9 @@ class AIRCCollection(object):
         """
         return int(re.search(self.session_pattern, path).group(1))
 
-BREAST = AIRCCollection('Breast', 'BreastChemo(\d+)', 'Visit(\d+)', '*concat*/*')
+class AIRCCollection:
+    BREAST = AIRCCollection('Breast', 'BreastChemo(\d+)', 'Visit(\d+)', '*concat*/*')
+    """The Breast collection."""
 
-SARCOMA = AIRCCollection('Sarcoma', 'Subj_(\d+)', '(?:Visit_|S\d+V)(\d+)', '*concat*/*')
+    SARCOMA = AIRCCollection('Sarcoma', 'Subj_(\d+)', '(?:Visit_|S\d+V)(\d+)', '*concat*/*')
+    """The Sarcoma collection."""
