@@ -19,13 +19,7 @@ def new_series_specs(collection, *subject_dirs):
     
     # Collect the new AIRC visits.
     new_visits = list(iter_new_visits(collection, *subject_dirs))
-    if not new_visits:
-        return []
     
-    # The XNAT subjects with new visits.
-    subjects = []
-    # The new XNAT sessions.
-    sessions = []
     # The (subject, session, series, dicom files) inputs.
     ser_specs = []
     for sbj, sess, dcm_file_iter in new_visits:
