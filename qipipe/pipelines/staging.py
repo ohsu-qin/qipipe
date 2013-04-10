@@ -23,8 +23,6 @@ def new_series_specs(collection, *subject_dirs):
     # The (subject, session, series, dicom files) inputs.
     ser_specs = []
     for sbj, sess, dcm_file_iter in new_visits:
-        subjects.append(sbj)
-        sessions.append(sess)
         # Group the session DICOM input files by series.
         ser_dcm_dict = group_dicom_files_by_series(dcm_file_iter)
         # Collect the (subject, session, series, dicom_files) tuples.
