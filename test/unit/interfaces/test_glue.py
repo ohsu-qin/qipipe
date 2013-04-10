@@ -52,20 +52,20 @@ class TestGlue:
     def test_translate_transform(self):
         glue = Glue(input_names=['point', 'x', 'y'],
             output_names=['moved'],
-            transform=_translate, point=[1,1], x=2, y=3)
+            function=_translate, point=[1,1], x=2, y=3)
         result = glue.run()
         assert_equals([3, 4], result.outputs.moved, "Output of the translate incorrect: %s" % result.outputs.moved)
     
     def test_ambiguous_result(self):
         glue = Glue(input_names=['point', 'x', 'y'],
             output_names=['bing', 'bang', 'boom'],
-            transform=_translate, point=[1,1], x=2, y=3)
+            function=_translate, point=[1,1], x=2, y=3)
         assert_raises(GlueError, glue.run)
     
     def test_parse_name_transform(self):
         glue = Glue(input_names=['name'],
             output_names=['title', 'first', 'last'],
-            transform=_parse_name)
+            function=_parse_name)
         glue.inputs.name = 'Samuel T. Brainsample'
         result = glue.run()
         assert_equals('Samuel', result.outputs.first, "Output first name incorrect: %s" % result.outputs.first)

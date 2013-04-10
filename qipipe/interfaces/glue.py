@@ -7,7 +7,14 @@ class GlueError(Exception):
     
 class Glue(IOBase):
     """
-    The Glue Interface converts input fields to output fields.
+    The Glue Interface converts input fields to output fields as follows:
+        - If a transformer function is defined, then that function is called with arguments
+          set to the corresponding input fields
+        - Otherwise, if there are the same number of input field names as output field names,
+          then each output field is set to the input field with the same index.
+        - Otherwise, if there is one list input field, then the output fields are set to the
+          the input field list items.
+        - Otherwise, a L{GlueError} is raised.
     
     Examples:
         >>> glue = Glue(input_names=['foo'], output_names=['bar'], foo='foobar')
@@ -27,7 +34,7 @@ class Glue(IOBase):
         ...     if words:
         ...         result['middle'] = ' '.join(words)
         ...     return result
-        >>> glue = Glue(input_names=['name'], output_names=['first', 'last'], transform=parse_name)
+        >>> glue = Glue(input_names=['name'], output_names=['first', 'last'], function=parse_name)
         >>> glue.inputs.name='Samuel T. Brainsample'
         >>> result = glue.run()
         >>> result.outputs.first
@@ -41,11 +48,11 @@ class Glue(IOBase):
     
     output_spec = DynamicTraitedSpec
 
-    def __init__(self, input_names=None, output_names=None, transform=None, mandatory_inputs=True, **kwargs):
+    def __init__(self, input_names=None, output_names=None, function=None, mandatory_inputs=True, **kwargs):
         """
         @param input_names: the input field names
         @param output_names: the output field names
-        @param transform: the function which sets the outputs from the inputs
+        @param function: the function which sets the outputs from the inputs
         @param mandatory_inputs: a flag indicating whether every input field is required
         @param kwargs: the input field name => value bindings
         """
@@ -61,12 +68,12 @@ class Glue(IOBase):
         # The input trait type is Any, unless the transform is a list -> items disaggreate call. 
         trait_type = traits.Any
         # The input -> output transform.
-        if transform:
-            self._transform = transform
+        if function:
+            self._function = function
         elif len(input_names) == len(output_names):
-            self._transform = _map_by_index
+            self._function = _map_by_index
         elif len(input_names) == 1:
-            self._transform = _disaggregate
+            self._function = _disaggregate
             trait_type = traits.List
         else:
             raise GlueError('The Glue Interface must have the same number of input fields as output fields')
@@ -94,10 +101,10 @@ class Glue(IOBase):
         # The transform keyword arguments.
         kwargs = {key: getattr(self.inputs, key) for key in self.input_names}
         # Special built-in transforms take this Glue as an argument.
-        if self._transform in [_map_by_index,_disaggregate]:
+        if self._function in [_map_by_index,_disaggregate]:
             kwargs['interface'] = self
         # Transform the inputs to the outputs.
-        xfm_result = self._transform(**kwargs)
+        xfm_result = self._function(**kwargs)
         if isinstance(xfm_result, dict):
             self._result = xfm_result
         elif len(self.output_names) == 1:
