@@ -1,7 +1,7 @@
 import os, re
 from qipipe.staging import airc_collection as airc
 from qipipe.staging.staging_helper import SUBJECT_FMT
-from qipipe.helpers.xnat_helper import XNAT
+from qipipe.helpers import xnat_helper
 
 import logging
 logger = logging.getLogger(__name__)
@@ -13,7 +13,7 @@ def get_xnat_subjects(collection, source):
     @return: the XNAT subject => directory dictionary
     """
     
-    xnat = XNAT().interface
+    xnat = xnat_helper.facade()
     airc_coll = airc.collection_with_name(collection)
     sbj_dir_dict = {}
     for d in os.listdir(source):
@@ -23,12 +23,13 @@ def get_xnat_subjects(collection, source):
             sbj_nm = SUBJECT_FMT % (collection, int(match.group(1)))
             logger.debug("Checking whether the test subject %s exists in XNAT..." % sbj_nm)
             # Delete the XNAT subject, if necessary.
-            sbj = xnat.select('/project/QIN/subject/' + sbj_nm)
+            sbj = xnat.interface.select('/project/QIN/subject/' + sbj_nm)
             if sbj.exists():
                 sbj.delete(delete_files=True)
                 logger.debug("Deleted the QIN pipeline test subject from XNAT: %s" % sbj_nm)
             sbj_dir_dict[sbj] = os.path.join(source, d)
             logger.debug("Discovered QIN pipeline test subject subdirectory: %s" % d)
+    
     return sbj_dir_dict
 
 def clear_xnat_subjects(subjects):
