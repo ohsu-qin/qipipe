@@ -1,7 +1,7 @@
 """Pipeline utility functions."""
 
 import os, re, glob
-from ..helpers.xnat_helper import XNAT
+from ..helpers import xnat_helper
 from ..helpers.dicom_helper import iter_dicom_headers
 from .staging_error import StagingError
 from . import airc_collection as airc
@@ -31,7 +31,7 @@ def iter_new_visits(collection, *subject_dirs):
     """
     
     # The XNAT facade.
-    xnat = XNAT()
+    xnat = xnat_helper.facade()
     # The AIRC collection with the given name.
     airc_coll = airc.collection_with_name(collection)
     # The visit subdirectory match pattern.
@@ -56,7 +56,7 @@ def iter_new_visits(collection, *subject_dirs):
                 # The XNAT session label.
                 sess = SESSION_FMT % (sbj, sess_nbr)
                 # If the session is not yet in XNAT, then yield the session and its files.
-                if xnat.session_exists('QIN', sbj, sess):
+                if xnat.get_session('QIN', sbj, sess).exists():
                     logger.debug("Skipping session %s since it has already been loaded to XNAT." % sess)
                 else:
                     # The DICOM file match pattern.
