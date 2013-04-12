@@ -1,6 +1,5 @@
 import os, sys, re
 from nose.tools import *
-import pyxnat
 from nipype.interfaces.base import Undefined
 
 import logging
@@ -30,6 +29,13 @@ class TestGlue:
         result = glue.run()
         assert_equals('foobar', result.outputs.bar, "Output field bar incorrect: %s" % result.outputs.bar)
     
+    def test_aggregate(self):
+        glue = Glue(input_names=['foo', 'bar'], output_names=['baz'])
+        glue.inputs.foo = 'foo'
+        glue.inputs.bar = 'bar'
+        result = glue.run()
+        assert_equals(['foo', 'bar'], result.outputs.baz, "Output field baz incorrect: %s" % result.outputs.baz)
+    
     def test_disaggregate(self):
         glue = Glue(input_names=['foo'], output_names=['bar', 'baz'])
         glue.inputs.foo = ['foobar', 'foobaz']
@@ -38,7 +44,7 @@ class TestGlue:
         assert_equals('foobaz', result.outputs.baz, "Output field baz incorrect: %s" % result.outputs.baz)
     
     def test_mismatched_fields(self):
-        assert_raises(GlueError, Glue, ['foo', 'bar'], ['baz'])
+        assert_raises(GlueError, Glue, ['foo', 'bar', 'baz'], ['oof', 'rab'])
     
     def test_missing_field(self):
         glue = Glue(input_names=['foo'], output_names=['bar'])
