@@ -1,6 +1,5 @@
 import os, sys, shutil
 from nose.tools import *
-import pyxnat
 
 import logging
 logger = logging.getLogger(__name__)

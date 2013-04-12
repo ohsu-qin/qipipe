@@ -10,10 +10,10 @@ from qipipe.helpers.dicom_helper import iter_dicom
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 # The test fixture.
-FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'fix_dicom', 'sarcoma', 'Sarcoma03')
+FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'sarcoma', 'Subj_1')
 
 # The test results.
-RESULTS = os.path.join(ROOT, 'results', 'staging', 'fix_dicom', 'sarcoma', 'Sarcoma03')
+RESULTS = os.path.join(ROOT, 'results', 'staging', 'fix_dicom')
 
 # The collection name.
 COLLECTION = 'Sarcoma'

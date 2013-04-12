@@ -1,8 +1,7 @@
 from nose.tools import *
 import os
 from base64 import b64encode as encode
-import pyxnat
-from qipipe.helpers.xnat_helper import XNAT
+from qipipe.helpers import xnat_helper
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
@@ -17,7 +16,7 @@ class TestXNATHelper:
     """XNAT helper unit tests."""
     
     def setUp(self):
-        self.xf = pyxnat.Interface(config=XNAT.default_configuration())
+        self.xnat = xnat_helper.facade()
         self._delete_test_subject()
         
     def tearDown(self):
@@ -25,15 +24,15 @@ class TestXNATHelper:
         
     def test_upload(self):
         session = SUBJECT + '_MR1'
-        XNAT(self.xf).upload('QIN', SUBJECT, session, FIXTURE, scan=1, modality='MR')
+        self.xnat.upload('QIN', SUBJECT, session, FIXTURE, scan=1, modality='MR')
         _, fname = os.path.split(FIXTURE)
-        f = self.xf.select('/project/QIN').subject(SUBJECT).experiment(session).scan('1').resource('NIFTI').file(fname)
+        f = self.xnat.interface.select('/project/QIN').subject(SUBJECT).experiment(session).scan('1').resource('NIFTI').file(fname)
         assert_true(f.exists(), "File not uploaded: " + fname)
     
     def _delete_test_subject(self):
         """Deletes the test C{QIN} L{SUBJECT}."""
         
-        sbj = self.xf.select('/project/QIN/subject/' + SUBJECT)
+        sbj = self.xnat.interface.select('/project/QIN/subject/' + SUBJECT)
         if sbj.exists():
             sbj.delete()
 

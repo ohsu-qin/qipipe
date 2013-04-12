@@ -8,9 +8,9 @@ logger = logging.getLogger(__name__)
 # The test parent directory.
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 # The test fixture.
-FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'group_dicom', 'breast')
+FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'breast')
 # The test results.
-RESULTS = os.path.join(ROOT, 'results', 'staging', 'group_dicom', 'breast')
+RESULTS = os.path.join(ROOT, 'results', 'staging', 'breast')
 # The test result target.
 TARGET = os.path.join(RESULTS, 'data')
 # The test result delta.

@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 # The test parent directory.
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 # The test fixture.
-FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'group_dicom', 'sarcoma', 'Subj_1')
+FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'sarcoma', 'Subj_1')
 
 class TestStagingHelper:
     """staging_helper unit tests."""

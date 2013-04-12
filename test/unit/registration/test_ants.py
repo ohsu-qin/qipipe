@@ -1,5 +1,5 @@
 from nose.tools import *
-import os, shutil
+import os, glob, shutil
 
 import logging
 logger = logging.getLogger(__name__)
@@ -8,14 +8,20 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from qipipe.registration import ants
 
-# The test parent directory.
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
-# The test fixture.
+"""The test parent directory."""
+
 FIXTURE = os.path.join(ROOT, 'fixtures', 'registration', 'breast', 'Breast03', 'Session01')
-# The test results.
+"""The test fixture."""
+
 RESULT = os.path.join(ROOT, 'results', 'registration', 'ants')
+"""The test results."""
+
 WORK = os.path.join(RESULT, 'work')
+"""The work directory."""
+
 OUTPUT = os.path.join(RESULT, 'registered')
+"""The registered output images directory."""
 
 class TestANTS:
     """ANTS registration unit tests."""
@@ -27,12 +33,14 @@ class TestANTS:
         shutil.rmtree(RESULT, True)
     
     def test_registration(self):
-        rdict = ants.register(FIXTURE, output=OUTPUT, work=WORK)
+        images = []
+        for root, _, _ in os.walk(FIXTURE):
+            images.extend(glob.glob(root + '/*.nii.gz'))
+        rdict = ants.register(output=OUTPUT, work=WORK, *images)
         # Verify that each input is registered.
-        for fn in os.listdir(FIXTURE):
-            f = os.path.join(FIXTURE, fn)
-            rfn = fn.replace('.dcm', 'Registered.nii.gz')
-            assert_equal(rfn, rdict[fn], "Missing registration mapping: %s" % rfn)
+        for f in images:
+            registered = f.replace('.nii.gz', 'Registered.nii.gz')
+            assert_equal(registered, rdict[f], "Missing registration mapping: %s" % registered)
 
 
 if __name__ == "__main__":

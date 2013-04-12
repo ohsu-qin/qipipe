@@ -1,6 +1,5 @@
 from nose.tools import *
 import os, glob, re, shutil
-import pyxnat
 
 import logging
 logger = logging.getLogger(__name__)
@@ -8,7 +7,7 @@ logger = logging.getLogger(__name__)
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.interfaces import XNATUpload
-from qipipe.helpers.xnat_helper import XNAT
+from qipipe.helpers import xnat_helper
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
@@ -31,7 +30,7 @@ class TestXNAT:
     """Pipeline XNAT helper unit tests."""
     
     def setUp(self):
-        self.xf = pyxnat.Interface(config=XNAT.default_configuration())
+        self.xnat = xnat_helper.facade()
         self._delete_test_subject()
         
     def tearDown(self):
@@ -49,11 +48,11 @@ class TestXNAT:
             # The scan label is an unpadded number.
             scan = str(int(ser_nbr))
             stack = 'series' + ser_nbr + '.nii.gz'
-            f = self.xf.select('/project/QIN').subject(sbj).experiment(sess).scan(scan).resource('NIFTI').file(stack)
+            f = self.xnat.interface.select('/project/QIN').subject(sbj).experiment(sess).scan(scan).resource('NIFTI').file(stack)
             assert_true(f.exists(), "Subject %s session %s scan %s stack %s not uploaded" % (sbj, sess, scan, stack))
         
     def _delete_test_subject(self):
-        sbj = self.xf.select('/project/QIN/subject/Sarcoma01')
+        sbj = self.xnat.interface.select('/project/QIN/subject/Sarcoma01')
         if sbj.exists():
             sbj.delete()
 

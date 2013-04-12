@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
 
-FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'group_dicom')
+FIXTURE = os.path.join(ROOT, 'fixtures', 'staging')
 """The test fixture directory."""
 
 RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'qipipeline')
@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.pipelines import qipipeline as qip
 from qipipe.pipelines import QIPipeline
 from qipipe.helpers.dicom_helper import iter_dicom
-from qipipe.helpers.xnat_helper import XNAT
+from qipipe.helpers import xnat_helper
 from qipipe.staging import airc_collection as airc
 from test.unit.pipelines.pipelines_helper import get_xnat_subjects, clear_xnat_subjects
 
@@ -32,7 +32,7 @@ class TestPipeline:
     
     def setUp(self):
         shutil.rmtree(RESULTS, True)
-        self.xnat = XNAT().interface
+        self.xnat = xnat_helper.facade()
     
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
@@ -72,11 +72,11 @@ class TestPipeline:
         
         # Verify the result.
         for sess_nm in sessions:
-            sess = self.xnat.select('/project/QIN/experiment/' + sess_nm)
+            sess = self.xnat.interface.select('/project/QIN/experiment/' + sess_nm)
             assert_true(sess.exists(), "Session not created in XNAT: %s" % sess_nm)
             sbj_id = sess.attrs.get('subject_ID')
             assert_is_not_none(sbj_id, "Session does not have a subject: %s" % sess_nm)
-            scans = self.xnat.select('/project/QIN/subject/' + sbj_id + '/experiment/' + sess_nm + '/scans').get()
+            scans = self.xnat.interface.select('/project/QIN/subject/' + sbj_id + '/experiment/' + sess_nm + '/scans').get()
             assert_not_equal(0, len(scans), "Session does not scans: %s" % sess_nm)
         
         # Cleanup.
