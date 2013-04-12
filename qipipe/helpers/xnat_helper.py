@@ -8,6 +8,14 @@ logger = logging.getLogger(__name__)
 class XNATError(Exception):
     pass
 
+def facade():
+    """
+    @return the XNAT facade, created on demand
+    """
+    if not hasattr(facade, 'instance'):
+        facade.instance = XNAT()
+    return facade.instance
+
 class XNAT(object):
     """XNAT is a pyxnat facade convenience class."""
     
@@ -26,6 +34,17 @@ class XNAT(object):
                 config = default_configuration()   
             self.interface = pyxnat.Interface(config=config)
     
+    def get_session(self, project, subject, session):
+        """
+        @param project: the XNAT project id
+        @param subject: the XNAT subject label
+        @param session: the session (XNAT experiment) label
+        @return: the corresponding XNAT session (which may not exist)
+        """
+        # The query path.
+        qpath = XNAT.SESSION_QUERY_FMT % (project, subject, session)
+        return self.interface.select(qpath)
+    
     def session_exists(self, project, subject, session):
         """
         @param project: the XNAT project id
@@ -33,9 +52,7 @@ class XNAT(object):
         @param session: the session (XNAT experiment) label
         @return: whether the session exists in XNAT
         """
-        # Make the query path
-        qpath = XNAT.SESSION_QUERY_FMT % (project, subject, session)
-        return self.interface.select(qpath).exists()
+        return self.get_session (project, subject, session).exists()
     
     def upload(self, project, subject, session, *in_files, **opts):
         """
