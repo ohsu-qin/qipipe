@@ -11,7 +11,7 @@ from ..staging.map_ctp import property_filename, CTPPatientIdMap
 class MapCTPInputSpec(BaseInterfaceInputSpec):
     collection = traits.Str(mandatory=True, desc='The collection name')
     
-    patient_ids = traits.List(traits.Str(), mandatory=True,
+    patient_ids = traits.CList(traits.Str(), mandatory=True,
         desc='The DICOM Patient IDs to map')
 
     dest = Directory(desc='The optional directory to write the map file (default current directory)')
