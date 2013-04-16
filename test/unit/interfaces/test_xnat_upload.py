@@ -43,7 +43,7 @@ class TestXNAT:
             xnat.store.inputs.collection = COLLECTION
             xnat.store.inputs.series_dir = d
             xnat.store.run()
-            sbj, sess_nbr, ser_nbr = re.search('.*/(Sarcoma\d{2})/session(\d{2})/series(\d{3})', d).groups()
+            sbj, sess_nbr, ser_nbr = re.search('.*/(Sarcoma\d{3})/session(\d{2})/series(\d{3})', d).groups()
             sess = sbj + '_Session' + sess_nbr
             # The scan label is an unpadded number.
             scan = str(int(ser_nbr))
@@ -52,7 +52,7 @@ class TestXNAT:
             assert_true(f.exists(), "Subject %s session %s scan %s stack %s not uploaded" % (sbj, sess, scan, stack))
         
     def _delete_test_subject(self):
-        sbj = self.xnat.interface.select('/project/QIN/subject/Sarcoma01')
+        sbj = self.xnat.interface.select('/project/QIN/subject/Sarcoma001')
         if sbj.exists():
             sbj.delete()
 
