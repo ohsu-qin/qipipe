@@ -82,10 +82,12 @@ class XNAT(object):
         
         Example:
     
-           upload('TCIA', 'Sarcoma03', 'Sarcoma03_Session01', 'data/pt4/p4v3/image003.nii.gz', scan=4, modality='MR')
-           XNATRestClient <options> -m GET -remote \
-              "/data/archive/projects/QIN/subjects/Sarcoma03/experiments/Sarcoma03_Session01/scans/4/resources/NIFTI/files/image003.nii.gz" \
-              >/tmp/mr_image003.nii.gz
+        >>> from qipipe.helpers import xnat_helper
+        >>> xnat = xnat_helper.facade()
+        >>> xnat.upload('QIN', 'Sarcoma003', 'Sarcoma003_Session01', 'data/pt4/p4v3/image003.nii.gz', scan=4, modality='MR')
+        >>> XNATRestClient <options> -m GET -remote \
+        >>>   "/data/archive/projects/QIN/subjects/Sarcoma003/experiments/Sarcoma003_Session01/scans/4/resources/NIFTI/files/image003.nii.gz" \
+        >>>   >/tmp/mr_image003.nii.gz
 
         @param project: the XNAT project id
         @param subject: the XNAT subject label
