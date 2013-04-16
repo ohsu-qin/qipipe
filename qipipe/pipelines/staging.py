@@ -57,12 +57,8 @@ def _create_workflow(collection, *session_specs, **opts):
         msg = msg + ' with options %s...' % opts
     logger.debug("%s...", msg)
 
-    # The staging location.
-    dest = os.path.abspath(opts.pop('dest', os.getcwd()))
-
     # The workflow.
     wf = pe.Workflow(name='staging', **opts)
-    
     
     # The subjects with new sessions.
     subjects = {sbj for sbj, _, _ in session_specs}
@@ -74,6 +70,9 @@ def _create_workflow(collection, *session_specs, **opts):
     glue = Glue(input_names=['series_spec'], output_names=['subject', 'session', 'series', 'dicom_files'])
     series_spec = pe.Node(glue, name='series_spec')
     series_spec.iterables = ('series_spec', series_specs)
+
+    # The staging location.
+    dest = os.path.abspath(opts.pop('dest', os.getcwd()))
 
     # The workflow input.
     input_spec = pe.Node(IdentityInterface(fields=['collection', 'dest', 'subjects']),
