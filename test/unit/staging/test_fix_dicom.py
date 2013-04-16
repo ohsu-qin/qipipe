@@ -3,7 +3,7 @@ import os, glob, shutil
 
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-from qipipe.staging import fix_dicom_headers
+from qipipe.staging.fix_dicom import fix_dicom_headers
 from qipipe.helpers.dicom_helper import iter_dicom
 
 # The test parent directory.
@@ -19,7 +19,7 @@ RESULTS = os.path.join(ROOT, 'results', 'staging', 'fix_dicom')
 COLLECTION = 'Sarcoma'
 
 # The new subject.
-SUBJECT = 'Sarcoma03'
+SUBJECT = 'Sarcoma003'
 
 class TestFixDicom:
     """Fix DICOM header unit tests."""

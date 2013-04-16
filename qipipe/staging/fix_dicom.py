@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 def fix_dicom_headers(collection, subject, *dicom_files, **opts):
     """
     Fix the given input OHSU QIN AIRC DICOM files as follows:
-        - Replace the C{Patient ID} value with the subject number, e.g. C{Sarcoma01}
+        - Replace the C{Patient ID} value with the subject number, e.g. C{Sarcoma001}
         - Add the C{Body Part Examined} tag
         - Standardize the file name
         
