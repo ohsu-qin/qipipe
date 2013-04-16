@@ -1,15 +1,13 @@
 """The qipipeline L{run} function is the OHSU QIN pipeline facade."""
 
 import os
+from .pipeline_error import PipelineError
 from . import staging
 from . import registration
 from . import pk_mapping
 
 import logging
 logger = logging.getLogger(__name__)
-
-class PipelineError(Exception):
-    pass
 
 def run(collection, *subject_dirs, **opts):
     """
