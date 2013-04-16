@@ -11,9 +11,11 @@ from qipipe.staging.map_ctp import CTPPatientIdMap
 COLLECTION = 'Sarcoma'
 """The test collection."""
 
-SUBJECTS = ["Sarcoma%02d" %  i for i in range(8, 12)]
+SUBJECTS = ["Sarcoma%03d" %  i for i in range(8, 12)]
+"""The test subjects."""
 
-PAT = "ptid/(Sarcoma\d{2})\s*=\s*QIN-\w+-\d{2}-(\d{4})"
+PAT = "ptid/(Sarcoma\d{3})\s*=\s*QIN-\w+-\d{2}-(\d{4})"
+"""The CTP map pattern specified by the QIN TCIA curator."""
 
 class TestMapCTP:
     """Map CTP unit tests."""

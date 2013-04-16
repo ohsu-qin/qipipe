@@ -6,11 +6,12 @@ logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.interfaces import MapCTP
+from test.unit.staging.test_map_ctp import (COLLECTION, SUBJECTS, PAT)
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
 
-RESULTS = os.path.join(ROOT, 'results', 'staging', 'map_ctp')
+RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'map_ctp')
 """The test results directory."""
 
 from nipype import config
@@ -18,12 +19,6 @@ cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_fi
     execution=dict(crashdump_dir=RESULTS, create_report=False))
 config.update_config(cfg)
 
-COLLECTION = 'Sarcoma'
-"""The test collection."""
-
-SUBJECTS = ["Sarcoma%02d" %  i for i in range(8, 12)]
-
-PAT = "ptid/(Sarcoma\d{2})\s*=\s*QIN-\w+-\d{2}-(\d{4})"
 
 class TestMapCTP:
     """Map CTP unit tests."""
