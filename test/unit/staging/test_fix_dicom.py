@@ -21,6 +21,7 @@ COLLECTION = 'Sarcoma'
 # The new subject.
 SUBJECT = 'Sarcoma003'
 
+
 class TestFixDicom:
     """Fix DICOM header unit tests."""
     
