@@ -1,7 +1,9 @@
 from nose.tools import *
-import os
-from base64 import b64encode as encode
+import sys, os, shutil
 from qipipe.helpers import xnat_helper
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+from test.helpers.xnat_test_helper import generate_subject_label, delete_subjects
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
@@ -9,32 +11,39 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 FIXTURE = os.path.join(ROOT, 'fixtures', 'helpers', 'xnat', 'dummy.nii.gz')
 """The test fixture parent directory."""
 
-SUBJECT = 'Test_' + encode('XNATHelper').strip('=')
+RESULTS = os.path.join(ROOT, 'results', 'helpers', 'xnat')
+"""The test results directory."""
+
+SUBJECT = generate_subject_label(__name__)
 """The test subject label."""
 
-class TestXNATHelper:
-    """XNAT helper unit tests."""
+
+class TestXNATHelper(object):
+    """The XNAT helper unit tests."""
     
     def setUp(self):
         self.xnat = xnat_helper.facade()
-        self._delete_test_subject()
+        shutil.rmtree(RESULTS, True)
+        delete_subjects(SUBJECT)
         
     def tearDown(self):
-        self._delete_test_subject()
+        shutil.rmtree(RESULTS, True)
+        delete_subjects(SUBJECT)
         
-    def test_upload(self):
+    def test_upload_and_download(self):
         session = SUBJECT + '_MR1'
-        self.xnat.upload('QIN', SUBJECT, session, FIXTURE, scan=1, modality='MR')
+        self.xnat.upload('QIN', SUBJECT, session, FIXTURE, scan=1, modality='MR', format='NIFTI')
         _, fname = os.path.split(FIXTURE)
-        f = self.xnat.interface.select('/project/QIN').subject(SUBJECT).experiment(session).scan('1').resource('NIFTI').file(fname)
-        assert_true(f.exists(), "File not uploaded: " + fname)
-    
-    def _delete_test_subject(self):
-        """Deletes the test C{QIN} L{SUBJECT}."""
+        sbj = self.xnat.interface.select('/project/QIN').subject(SUBJECT)
+        f = sbj.experiment(session).scan('1').resource('NIFTI').file(fname)
+        assert_true(f.exists(), "File not uploaded: %s" % fname)
         
-        sbj = self.xnat.interface.select('/project/QIN/subject/' + SUBJECT)
-        if sbj.exists():
-            sbj.delete()
+        # Download the uploaded file.
+        files = list(self.xnat.download('QIN', sbj.label(), session, dest=RESULTS, scan=1, format='NIFTI'))
+        assert_not_equal(0, len(files), "No files were downloaded")
+        assert_equal(1, len(files), "Too many files were downloaded: %s" % files)
+        f = files[0]
+        assert_true(os.path.exists(f), "File not downloaded: %s" % f)
 
 if __name__ == "__main__":
     import nose

@@ -7,3 +7,4 @@ from .move import Move
 from .glue import Glue
 from .uncompress import Uncompress
 from .xnat_upload import XNATUpload
+from .xnat_download import XNATDownload

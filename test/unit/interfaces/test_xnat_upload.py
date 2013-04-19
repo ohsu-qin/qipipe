@@ -1,60 +1,50 @@
 from nose.tools import *
-import os, glob, re, shutil
+import sys, os, glob, re, shutil
 
 import logging
 logger = logging.getLogger(__name__)
 
-import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.interfaces import XNATUpload
 from qipipe.helpers import xnat_helper
+from test.unit.helpers.test_xnat_helper import FIXTURE, RESULTS
+from test.helpers.xnat_test_helper import generate_subject_label, delete_subjects
 
-ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
-"""The test parent directory."""
-
-FIXTURE = os.path.join(ROOT, 'fixtures', 'interfaces', 'xnat')
-"""The test fixture parent directory."""
-
-RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'xnat')
-"""The test results parent directory."""
-
-COLLECTION = 'Sarcoma'
-"""The test collection."""
+SUBJECT = generate_subject_label(__name__)
+"""The test subject label."""
 
 from nipype import config
 cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
     execution=dict(crashdump_dir=RESULTS, create_report=False))
 config.update_config(cfg)
 
-class TestXNAT:
-    """Pipeline XNAT helper unit tests."""
+
+class TestXNATUpload:
+    """The XNAT upload interface unit tests."""
     
     def setUp(self):
         self.xnat = xnat_helper.facade()
-        self._delete_test_subject()
+        delete_subjects(SUBJECT)
         
     def tearDown(self):
-        self._delete_test_subject()
-    
-    def test_store_image(self):
+        delete_subjects(SUBJECT)
         shutil.rmtree(RESULTS, True)
-        for d in glob.glob(FIXTURE + '/subject*/session*/series*'):
-            logger.debug("Testing XNATUpload on %s..." % d)
-            xnat.store.inputs.collection = COLLECTION
-            xnat.store.inputs.series_dir = d
-            xnat.store.run()
-            sbj, sess_nbr, ser_nbr = re.search('.*/(Sarcoma\d{3})/session(\d{2})/series(\d{3})', d).groups()
-            sess = sbj + '_Session' + sess_nbr
-            # The scan label is an unpadded number.
-            scan = str(int(ser_nbr))
-            stack = 'series' + ser_nbr + '.nii.gz'
-            f = self.xnat.interface.select('/project/QIN').subject(sbj).experiment(sess).scan(scan).resource('NIFTI').file(stack)
-            assert_true(f.exists(), "Subject %s session %s scan %s stack %s not uploaded" % (sbj, sess, scan, stack))
+    
+    def test_upload(self):
+        logger.debug("Testing the XNATUpload interface on %s..." % SUBJECT)
+        # The XNAT experiment label.
+        sess = "%s_%s" % (SUBJECT, 'MR1')
+        # Upload the file.
+        upload = XNATUpload(project='QIN', subject=SUBJECT, session=sess, scan=1, in_files=FIXTURE)
+        result = upload.run()
         
-    def _delete_test_subject(self):
-        sbj = self.xnat.interface.select('/project/QIN/subject/Sarcoma001')
-        if sbj.exists():
-            sbj.delete()
+        # Verify the result
+        sbj = self.xnat.interface.select('/project/QIN').subject(SUBJECT)
+        assert_true(sbj.exists(), "Upload did not create the subject: %s" % SUBJECT)
+        _, fname = os.path.split(FIXTURE)
+        file_obj = sbj.experiment(sess).scan('1').resource('NIFTI').file(fname)
+        assert_true(file_obj.exists(), "Upload did not upload the %s file: %s" % (SUBJECT, fname))
+
 
 if __name__ == "__main__":
     import nose
