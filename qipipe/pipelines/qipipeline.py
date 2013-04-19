@@ -1,10 +1,10 @@
 """The qipipeline L{run} function is the OHSU QIN pipeline facade."""
 
-import os
+import os, tempfile
 from .pipeline_error import PipelineError
 from . import staging
-from . import registration
-from . import pk_mapping
+from . import registration as reg
+from . import pk_mapping as pk
 
 import logging
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ def run(collection, *subject_dirs, **opts):
     """
 
     workflows = opts.pop('workflows', [])
-    qip = QIPipeline(collection, *workflows)
+    qip = QIPipeline(collection)
     return qip.run(*subject_dirs, **opts)
     
 class QIPipeline(object):
@@ -62,9 +62,14 @@ class QIPipeline(object):
         """
         
         # The work option is the pipeline parent directory.
-        work_dir = opts.pop('work', tempfile.mkdtemp())
+        work_dir = opts.pop('work', None) or tempfile.mkdtemp()
         
+        # Stage the input AIRC files.
         stg_dir = os.path.join(work_dir, 'stage')
-        sessions = staging.run(base_dir=stg_dir, *subject_dirs, **opts)
+        sessions = staging.run(self.collection, base_dir=stg_dir, *subject_dirs, **opts)
+        
+        # Register the images.
+        reg_dir = os.path.join(work_dir, 'register')
+        reg.run(base_dir=reg_dir, *sessions, **opts)
         
         return sessions

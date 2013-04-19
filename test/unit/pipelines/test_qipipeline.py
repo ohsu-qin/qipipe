@@ -1,23 +1,8 @@
 import os, sys, shutil
 from nose.tools import *
-import tempfile
 
 import logging
 logger = logging.getLogger(__name__)
-
-ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
-"""The test parent directory."""
-
-FIXTURE = os.path.join(ROOT, 'fixtures', 'staging')
-"""The test fixture directory."""
-
-RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'qipipeline')
-"""The test results directory."""
-
-from nipype import config
-cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
-    execution=dict(crashdump_dir=RESULTS, create_report=False))
-config.update_config(cfg)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.pipelines import qipipeline as qip
@@ -25,14 +10,30 @@ from qipipe.pipelines import QIPipeline
 from qipipe.helpers.dicom_helper import iter_dicom
 from qipipe.helpers import xnat_helper
 from qipipe.staging import airc_collection as airc
-from test.unit.pipelines.pipelines_helper import get_xnat_subjects, clear_xnat_subjects
+from test.helpers.xnat_test_helper import get_xnat_subjects, clear_xnat_subjects
+
+ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
+"""The test parent directory."""
+
+FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
+"""The test fixture directory."""
+
+RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'qipipeline')
+"""The test results directory."""
+
+COLLECTION = "Breast"
+"""The QIN test collection."""
+
+from nipype import config
+cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
+    execution=dict(crashdump_dir=RESULTS, create_report=False))
+config.update_config(cfg)
 
 class TestPipeline:
     """Pipeline unit tests."""
     
     def setUp(self):
         shutil.rmtree(RESULTS, True)
-        self.xnat = xnat_helper.facade()
     
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
@@ -53,36 +54,31 @@ class TestPipeline:
         image files are correctly uploaded. These features should be
         verified manually.
         """
+        
+        fixture = os.path.join(FIXTURES, collection.lower())
+        logger.debug("Testing the registration pipeline on %s..." % fixture)
 
-        airc_coll = airc.collection_with_name(collection)
-        src = os.path.join(FIXTURE, collection.lower())
-        logger.debug("Testing the QIN pipeline on %s..." % src)
+        # The staging destination and work area.
+        dest = os.path.join(RESULTS, 'data')
+        work = os.path.join(RESULTS, 'work')
 
         # The test subject => directory dictionary.
-        sbj_dir_dict = get_xnat_subjects(collection, src)
+        sbj_dir_dict = get_xnat_subjects(collection, fixture)
         # Delete any existing test subjects.
-        clear_xnat_subjects(sbj_dir_dict.iterkeys())
+        clear_xnat_subjects(*sbj_dir_dict.keys())
 
-        # Run the pipeline.
-        dest = os.path.join(RESULTS, collection.lower())
-        work_dir = tempfile.mkdtemp()
-        logger.debug("Executing the QIN pipeline in %s..." % work_dir)
-        sessions = qip.run(collection, dest=dest, base_dir=work_dir,
-            components = [QIPipeline.STAGING, QIPipeline.STACK], *sbj_dir_dict.itervalues())
-        
+        # Run the workflow.
+        logger.debug("Executing the staging workflow...")
+        sessions = qip.run(collection, dest=dest, work=work, *sbj_dir_dict.itervalues())
+
         # Verify the result.
-        for sess_nm in sessions:
-            sess = self.xnat.interface.select('/project/QIN/experiment/' + sess_nm)
-            assert_true(sess.exists(), "Session not created in XNAT: %s" % sess_nm)
-            sbj_id = sess.attrs.get('subject_ID')
-            assert_is_not_none(sbj_id, "Session does not have a subject: %s" % sess_nm)
-            scans = self.xnat.interface.select('/project/QIN/subject/' + sbj_id + '/experiment/' + sess_nm + '/scans').get()
-            assert_not_equal(0, len(scans), "Session does not scans: %s" % sess_nm)
+        for sbj in sbj_dir_dict.iterkeys():
+            assert_true(sbj.exists(), "The subject was not created in XNAT: %s" % sbj.label())
+        for sess in sessions:
+            assert_true(sess.exists(), "The session not created in XNAT: %s" % sess)
         
-        # Cleanup.
-        clear_xnat_subjects(sbj_dir_dict.iterkeys())
-        shutil.rmtree(work_dir, True)
-
+        # Delete the test subjects.
+        clear_xnat_subjects(sbj_dir_dict.keys())
 
 if __name__ == "__main__":
     import nose

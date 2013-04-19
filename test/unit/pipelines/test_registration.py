@@ -1,9 +1,14 @@
-import sys, os, shutil
+import sys, os, re, glob, shutil
 from nose.tools import *
 import nipype.pipeline.engine as pe
 
 import logging
 logger = logging.getLogger(__name__)
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+from qipipe.pipelines import registration as reg
+from qipipe.helpers import xnat_helper
+from test.helpers.xnat_test_helper import generate_subject_label, delete_subjects
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
@@ -14,63 +19,62 @@ FIXTURE = os.path.join(ROOT, 'fixtures', 'registration', 'breast')
 RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'registration')
 """The test results directory."""
 
+SUBJECT = generate_subject_label(__name__)
+"""The test subject label."""
+
+SESSION = "%s_%s" % (SUBJECT, 'Session01')
+
 from nipype import config
 cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
     execution=dict(crashdump_dir=RESULTS, create_report=False))
 config.update_config(cfg)
-from nipype.interfaces.utility import IdentityInterface
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from qipipe.pipelines import registration as reg
-from test.unit.pipelines.pipelines_helper import get_xnat_subjects, clear_xnat_subjects
 
 class TestRegistrationPipeline:
     """Registration pipeline unit tests."""
     
     def setUp(self):
+        self.xnat = xnat_helper.facade()
+        delete_subjects(SUBJECT)
         shutil.rmtree(RESULTS, True)
-        # The registration-only workflow.
-        self.wf = self._create_workflow()
-        # The XNAT interface.
-        self.xnat = XNAT().interface
+        # The XNAT test session.
+        self._session = self.xnat.interface.select('/project/QIN').subject(SUBJECT).experiment(SESSION)
+        # The test file objects.
+        self._file_names = set()
+        for f in glob.glob(FIXTURE + '/Breast*/Session*/series*.nii.gz'):
+            _, fname = os.path.split(f)
+            self._file_names.add(fname)
+            scan = str(int(re.match('series(\d{3}).nii.gz', fname).group(1)))
+            file_obj = self._session.scan(scan).resource('NIFTI').file(fname)
+            # Upload the file.
+            file_obj.insert(f, experiments='xnat:MRSessionData', format='NIFTI')
+        logger.debug("Uploaded the test %s files %s." % (SESSION, list(self._file_names)))
     
     def tearDown(self):
+        #delete_subjects(SUBJECT)
         shutil.rmtree(RESULTS, True)
 
     def test_registration(self):
         """
-        Run the registration pipeline and verify that the registered images are created
+        Run the registration workflow and verify that the registered images are created
         in XNAT.
         """
         
-        logger.debug("Testing the registration pipeline on %s..." % FIXTURE)
+        logger.debug("Testing the registration workflow on %s..." % SUBJECT)
 
-        # The test subject => directory dictionary.
-        sbj_dir_dict = get_xnat_subjects(collection, src)
-        # Delete any existing test subjects.
-        clear_xnat_subjects(sbj_dir_dict.iterkeys())
+        # The staging work area.
+        work = os.path.join(RESULTS, 'work')
 
-        # Run the pipeline.
-        logger.debug("Executing the registration pipeline...")
-        self.wf.run()
+        # Run the workflow.
+        recons = reg.run(self._session, base_dir=work)
 
         # Verify the result.
-        for sbj in sbj_dir_dict.iterkeys():
-            assert_true(sbj.exists(), "Subject not created in XNAT: %s" % sbj_id)
-        
-        # Cleanup.
-        for sbj in subjects:
-            sbj.delete(delete_files=True)
-    
-    def _create_workflow(self):
-        work_dir = os.path.join(RESULTS, 'work')
-        os.makedirs(work_dir)
-        wf = pe.Workflow(name='registration', base_dir=work_dir)
-        # The workflow input.
-        input_spec = pe.Node(IdentityInterface(fields=['in_files']), name='input_spec')
-        wf.connect(reg.create_registration_connections(input_spec, 'in_files'))
-        return wf
-
+        assert_equals(1, len(recons), "Resampled XNAT file count incorrect: %s" % recons)
+        recon = recons[0]
+        rsc = recon.out_resource('NIFTI')
+        assert_true(rsc.exists(), "Resource not created for %s" % recon.label())
+        recon_files = list(rsc.files())
+        assert_equals(2, len(recon_files), "Resampled XNAT file count incorrect: %s" % recon_files)
+ 
 
 if __name__ == "__main__":
     import nose

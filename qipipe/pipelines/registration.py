@@ -1,110 +1,115 @@
+import os
 import nipype.pipeline.engine as pe
 from nipype.interfaces.utility import Function
 from nipype.interfaces.ants.registration import Registration
-from nipype.interfaces.ants import WarpImageMultiTransform
-from ..interfaces import XNATUpload
+from nipype.interfaces.ants import AverageImages, WarpImageMultiTransform
+from ..interfaces import Glue, XNATDownload, XNATUpload
 
-def run(*subject_dirs, **opts):
+import logging
+logger = logging.getLogger(__name__)
+
+def run(*sessions, **opts):
     """
     Builds and runs the registration workflow.
     
-    @param subject_dirs: the AIRC source subject directories to stage
+    @param sessions: the XNAT sessions to register
     @param opts: the workflow options
-    @return: the new XNAT scans
+    @return: the resampled image files
     """
+    
     # Make the registration workflow.
-    wf = _create_workflow(*subject_dirs, **opts)
+    wf = _create_workflow(*sessions, **opts)
     
     # If debug is set, then diagram the registration workflow graph.
     if logger.level <= logging.DEBUG:
-        grf = os.path.join(wf.base_dir, 'registration.dot')
+        if wf.base_dir:
+            grf = os.path.join(wf.base_dir, 'staging.dot')
+        else:
+            grf = 'staging.dot'
         wf.write_graph(dotfilename=grf)
         logger.debug("The registration workflow graph is depicted at %s.png." % grf)
     
     # Run the registration workflow.
     wf.run()
     
-    # Return the new XNAT sessions.
-    xnat = XNAT()
-    sess_specs = zip(wf.outputs.subject, stage.outputs.session)
-    return [xnat.get_session('QIN', *spec) for spec in sess_specs]
+    # Return the new XNAT reconstructions.
+    return [sess.reconstruction('reg_1') for sess in sessions]
 
-def _create_workflow(input_node, **opts):
+def _create_workflow(*sessions, **opts):
     """
-    Creates the series stack connections.
-    
-    @param input_node: the input image files source node
-    @param input_field: the input image files field name
+    @param sessions: the input XNAT sessions
+    @param opts: the pyxnat workflow creation options
     @return: the registration workflow
     """
     
     msg = 'Creating the registration workflow'
     if opts:
-        msg = msg + ' with options %s...' % opts
+        msg = msg + ' with options %s' % opts
     logger.debug("%s...", msg)
     wf = pe.Workflow(name='registration', **opts)
     
-    # The registration connections.
-    wf.connect(registration.create_registration_connections(self.collection, series_spec))
+    # The (session, subject) label inputs.
+    series_spec = pe.Node(Glue(input_names=['hierarchy'], output_names=['session', 'subject']),
+        name='series_spec')
+    # Iterate over each session.
+    sess_sbj_dict = {sess.label(): sess.parent().label() for sess in sessions}
+    series_spec.iterables = ('hierarchy', sess_sbj_dict.items())
     
-    # Set the top-level workflow input collection and subjects.
-    wf.inputs.input_spec.collection = self.collection
-    wf.inputs.input_spec.subjects = subjects
+    # Download the scan NIFTI files.
+    download = pe.Node(XNATDownload(project='QIN', container_type='scan', format='NIFTI'),
+        name='download')
     
     # Make the ANTS template.
-    tmpl_xf = create_template_interface()
-    template = pe.Node(tmpl_xf, name='template')
+    avg_xf = _create_average_interface()
+    average = pe.Node(avg_xf, name='average')
     
-    # Make the ANTS warp and affine transformations.
-    reg_xf = create_transformations_interface()
-    transforms = pe.Node(reg_xf, name='transforms')
-    
-    # Build the transformation series.
-    xfmsif = Glue(input_fields=['warp', 'affine'], output_fields=['transforms'])
-    xfm_series = pe.Node(xfmsif)
+    # Register the images to create the warp and affine transformations.
+    reg_xf = _create_registration_interface()
+    registration = pe.MapNode(reg_xf, iterfield='moving_image', name='registration')
     
     # Resample the input images.
-    resample = pe.Node(WarpImageMultiTransform(), name='resample')
-    resample.inputs.input_image = 'structural.nii'
-    resample.inputs.reference_image = 'ants_deformed.nii.gz'
-    resample.inputs.transformation_series = ['ants_Warp.nii.gz','ants_Affine.txt']    
+    resample = pe.MapNode(WarpImageMultiTransform(), iterfield=['input_image', 'transformation_series'], name='resample')
     
-    # Store the registration result in XNAT.
-    store_reg = pe.Node(XNATUpload(project='QIN'), name='store_registration')
-
-    # TODO - finish template, remove moving, rest, first
-    # The moving images.
-    moving = pe.Node(Function(input_names=['in_files'], output_names=['moving_images'], function=rest), name='moving')
-
+    # Upload the resampled images to XNAT.
+    upload = pe.Node(XNATUpload(project='QIN', reconstruction='reg_1', format='NIFTI'),
+        name='upload')
+    
     wf.connect([
-        (input_node, template, [(input_field, 'in_files')]),
-        # (input_node, registration, [(input_field, 'moving_image')]),
-        (input_node, moving, [(input_field, 'in_files')]),
-        (moving, transforms, [('moving_images', 'moving_image')]),
-        (template, transforms, [('template', 'fixed_image')]),
-        (transforms, xfm_series, [('transforms', 'transform_series')]),
-        (xfm_series, resample, [('transforms', 'transform_series')]),
-        (registration, store_reg, [('out_file', 'in_files')])])
+        (series_spec, download, [('subject', 'subject'), ('session', 'session')]),
+        (download, average, [('out_files', 'images')]),
+        (download, registration, [('out_files', 'moving_image')]),
+        (download, resample, [('out_files', 'input_image')]),
+        (average, registration, [('output_average_image', 'fixed_image')]),
+        (average, resample, [('output_average_image', 'reference_image')]),
+        (registration, resample, [('composite_transform', 'transformation_series')]),
+        (series_spec, upload, [('subject', 'subject'), ('session', 'session')]),
+        (resample, upload, [('output_image', 'in_files')])])
     
     return wf
-
-def _first(iterable):
-    for item in iterable:
+ 
+def _first(in_files):
+    for item in in_files:
         return item
-
-def _create_template_interface():
+    
+def _create_average_interface():
     """
-    @return: the ANTS template generation interface with default parameter settings
+    @return: the ANTS average generation interface with default parameter settings
     """
-    return Function(input_names=['in_files'], output_names=['template'], function=_first)
-
-def _rest(iterable):
-    return list(iterable)[1:]
+    
+    avg = AverageImages()
+    avg.inputs.dimension = 3
+    avg.inputs.normalize = True
+    
+    return avg
 
 def _create_registration_interface():
     """
     @return: a new ANTS Registration interface with the preferred parameter settings
     """
+    
+    
+    return Glue(input_names=['moving_image', 'fixed_image'], output_names=['composite_transform'])
+    
     
     reg = Registration()
     reg.inputs.dimension = 2
