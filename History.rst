@@ -1,7 +1,7 @@
 This history lists major release themes. See the GitHub commits (http://quip1:6060/qipipe)
 for change details.
 
-1.2.3 / 2013-04-12
+1.2.3 / 2013-04-19
 ------------------
 * Build registration pipeline.
 
