@@ -9,7 +9,7 @@ from . import airc_collection as airc
 import logging
 logger = logging.getLogger(__name__)
 
-SUBJECT_FMT = '%s%02d'
+SUBJECT_FMT = '%s%03d'
 """The QIN subject name format with arguments (collection, subject number)."""
 
 SESSION_FMT = '%s_Session%02d'
@@ -19,8 +19,8 @@ def iter_new_visits(collection, *subject_dirs):
     """
     Iterates over the visits in the given subject directories which are not in XNAT.
     Each iteration item is a (subject, session, dicom_file_iterator) tuple, formed as follows:
-        - The subject is the XNAT subject label formatted by L{SUBJECT_FMT}
-        - The session is the XNAT session label formatted by L{SESSION_FMT}
+        - The subject is the XNAT subject ID formatted by L{SUBJECT_FMT}
+        - The session is the XNAT experiment label formatted by L{SESSION_FMT}
         _ The DICOM files iterator iterates over the files which match the
           L{qipipe.staging.airc_collection} DICOM file include pattern
     
@@ -42,7 +42,6 @@ def iter_new_visits(collection, *subject_dirs):
         # Make the XNAT subject label.
         sbj_nbr = airc_coll.path2subject_number(d)
         sbj = SUBJECT_FMT % (collection, sbj_nbr)
-
         # The subject subdirectories which match the visit pattern.
         vmatches = [v for v in os.listdir(d) if re.match(vpat, v)]
         # Generate the new (subject, session, DICOM files) items in each visit.
