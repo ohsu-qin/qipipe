@@ -31,40 +31,36 @@ class TestStagingWorkflow:
     
     def setUp(self):
         shutil.rmtree(RESULTS, True)
+        # The test subject => directory dictionary.
+        self._sbj_dir_dict = get_xnat_subjects(COLLECTION, FIXTURE)
+        # Delete any existing test subjects.
+        clear_xnat_subjects(*self._sbj_dir_dict.keys())
     
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
+        clear_xnat_subjects(*self._sbj_dir_dict.keys())
 
     def test_staging(self):
         """
-        Run the registration pipeline and verify that the registered images are created
+        Run the staging pipeline and verify that the registered images are created
         in XNAT.
         """
         
         logger.debug("Testing the registration pipeline on %s..." % FIXTURE)
 
-        # The test subject => directory dictionary.
-        sbj_dir_dict = get_xnat_subjects(COLLECTION, FIXTURE)
-        # Delete any existing test subjects.
-        clear_xnat_subjects(sbj_dir_dict.iterkeys())
-        
         # The staging destination and work area.
         dest = os.path.join(RESULTS, 'data')
         work = os.path.join(RESULTS, 'work')
 
         # Run the workflow.
-        logger.debug("Executing the registration workflow...")
-        sessions = staging.run(COLLECTION, dest=dest, base_dir=work, *sbj_dir_dict.itervalues())
+        logger.debug("Executing the staging workflow...")
+        sessions = staging.run(COLLECTION, dest=dest, base_dir=work, *self._sbj_dir_dict.itervalues())
 
         # Verify the result.
-        for sbj in sbj_dir_dict.iterkeys():
-            assert_true(sbj.exists(), "Subject not created in XNAT: %s" % sbj.label())
+        for sbj in self._sbj_dir_dict.iterkeys():
+            assert_true(sbj.exists(), "The subject was not created in XNAT: %s" % sbj.label())
         for sess in sessions:
-            assert_true(sess.exists(), "Session not created in XNAT: %s" % sess)
-        
-        # Cleanup.
-        for sbj in sbj_dir_dict.iterkeys():
-            sbj.delete(delete_files=True)
+            assert_true(sess.exists(), "The session not created in XNAT: %s" % sess)
 
 
 if __name__ == "__main__":
