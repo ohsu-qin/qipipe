@@ -32,7 +32,10 @@ def run(collection, *subject_dirs, **opts):
     
     # If debug is set, then diagram the staging workflow graph.
     if logger.level <= logging.DEBUG:
-        grf = os.path.join(wf.base_dir, 'staging.dot')
+        if wf.base_dir:
+            grf = os.path.join(wf.base_dir, 'staging.dot')
+        else:
+            grf = 'staging.dot'
         wf.write_graph(dotfilename=grf)
         logger.debug("The staging workflow graph is depicted at %s.png." % grf)
     
@@ -94,7 +97,7 @@ def _create_workflow(collection, *session_specs, **opts):
     fix_dicom = pe.Node(FixDicom(collection=collection), name='fix_dicom')
 
     # Compress the fixed DICOM files.
-    compress_fixed = pe.MapNode(Compress(), iterfield='in_file', name='compress_fixed')
+    compress = pe.MapNode(Compress(), iterfield='in_file', name='compress')
 
     # Store the fixed DICOM files in XNAT.
     store_dicom = pe.Node(XNATUpload(project='QIN', format='DICOM'), name='store_dicom')
@@ -102,9 +105,6 @@ def _create_workflow(collection, *session_specs, **opts):
     # Stack the series.
     stack = pe.Node(DcmStack(embed_meta=True, out_format="series%(SeriesNumber)03d"),
         name='stack')
-
-    # Compress the stack files.
-    compress_stack = pe.Node(Compress(), name='compress_stack')
     
     # Store the stack files in XNAT.
     store_stack = pe.Node(XNATUpload(project='QIN', format='NIFTI'), name='store_stack')
@@ -116,12 +116,11 @@ def _create_workflow(collection, *session_specs, **opts):
         (series_spec, fix_dicom, [('subject', 'subject'), ('dicom_files', 'in_files')]),
         (series_spec, store_dicom, [('subject', 'subject'), ('session', 'session'), ('series', 'scan')]),
         (series_spec, store_stack, [('subject', 'subject'), ('session', 'session'), ('series', 'scan')]),
-        (ctp_dir, compress_fixed, [('out_dir', 'dest')]),
-        (fix_dicom, compress_fixed, [('out_files', 'in_file')]),
+        (ctp_dir, compress, [('out_dir', 'dest')]),
+        (fix_dicom, compress, [('out_files', 'in_file')]),
         (fix_dicom, stack, [('out_files', 'dicom_files')]),
-        (compress_fixed, store_dicom, [('out_file', 'in_files')]),
-        (stack, compress_stack, [('out_file', 'in_file')]),
-        (compress_stack, store_stack, [('out_file', 'in_files')])])
+        (compress, store_dicom, [('out_file', 'in_files')]),
+        (stack, store_stack, [('out_file', 'in_files')])])
     
     return wf
 
