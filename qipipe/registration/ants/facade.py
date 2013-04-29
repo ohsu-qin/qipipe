@@ -3,6 +3,7 @@ import shutil
 from .similarity_metrics import *
 from .template import create_template
 from .warp_transform import warp
+from .ants_error import ANTSError
 
 import logging
 logger = logging.getLogger(__name__)
@@ -149,13 +150,23 @@ class ANTS(object):
         @param source: the file to link
         @param dest: the destination directory
         @param fname: the destination file name (default source file name)
+        @raise ANTSError: if there is an existing non-link destination file
         """
+
         source = os.path.abspath(source)
-        dest_file = os.path.join(dest, f)
-        logger.info("Linking the source file %s to %s..." % (source, dest))
+        _, fname = os.path.split(source)
+        dest_file = os.path.join(dest, fname)
+        src_file = os.path.join(source, fname)
         if os.path.exists(dest_file):
-            os.remove(dest_file)
-        src = os.path.join(source, f)
-        os.symlink(src, dest_file)
+            if os.path.islink(dest_file):
+                if os.path.samefile(src_file, dest_file):
+                    return
+                else:
+                    logger.info("Removing the existing link from %s to %s..." % (src_file, dest_file))
+                    os.remove(dest_file)
+            else:
+                raise ANTSError("Non-link destination file exists: %s" % dest_file)
+        logger.info("Linking the source file %s to %s..." % (source, dest))
+        os.symlink(src_file, dest_file)
         
     
