@@ -338,7 +338,13 @@ class XNAT(object):
             if container_type == 'scan':
                 return experiment.scan(name)
             elif container_type == 'reconstruction':
-                return experiment.reconstruction(name)
+                # The recon id is qualified by the experiment label.
+                prefix = experiment.label()
+                if name.startswith(prefix):
+                   recon_id = name
+                else:
+                    recon_id = '_'.join(prefix, name)
+                return experiment.reconstruction(recon_id)
             elif container_type == 'assessor':
                 return experiment.assessor(name)
         elif container_type == 'scan':
