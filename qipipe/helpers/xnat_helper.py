@@ -146,7 +146,7 @@ class XNAT(object):
         @return: the downloaded file path
         """
         
-        fname = file_obj.name()
+        fname = file_obj.label()
         if not fname:
             raise XNATError("XNAT file object does not have a name: %s" % file_obj)
         tgt = os.path.join(dest, fname)
@@ -254,7 +254,7 @@ class XNAT(object):
         if not rsc.exists():
             logger.debug("Creating the XNAT %s %s %s resource..." % (session, ctr_name, format))
             rsc.create()
-            logger.debug("Created the XNAT %s %s resource with name %s and id %s." % (session, ctr_name, rsc.name(), rsc.id()))
+            logger.debug("Created the XNAT %s %s resource with name %s and id %s." % (session, ctr_name, rsc.label(), rsc.id()))
         
         # Upload each file.
         logger.debug("Uploading the %s files to XNAT..." % session)
@@ -274,7 +274,7 @@ class XNAT(object):
         
         # The image format.
         if not opts.has_key('format'):
-            raise XNATError("XNAT upload is missing the image format for session: %s" % experiment.name())
+            raise XNATError("XNAT upload is missing the image format for session: %s" % experiment.label())
         format = opts['format']
 
         # The resource parent type and name.
@@ -431,11 +431,11 @@ class XNAT(object):
         # Check for an existing file.
         if file_obj.exists():
             raise XNATError("The XNAT file object %s already exists in the %s resource %s" %
-                (fname, rsc_ctr.name(), resource.name()))
+                (fname, rsc_ctr.label(), resource.label()))
         
         # Upload the file.
         logger.debug("Inserting the XNAT file %s into the %s resource %s..." %
-            (fname, rsc_ctr.name(), resource))
+            (fname, rsc_ctr.label(), resource))
         file_obj.insert(in_file, **opts)
         logger.debug("Uploaded the XNAT file %s." % fname)
     

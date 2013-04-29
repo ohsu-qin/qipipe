@@ -61,7 +61,7 @@ class TestStagingWorkflow:
         with xnat_helper.connection() as xnat:
             for sbj_lbl in self._sbj_dir_dict.iterkeys():
                 sbj = xnat.get_subject('QIN', sbj_lbl)
-                assert_true(sbj.exists(), "The subject was not created in XNAT: %s" % sbj.name())
+                assert_true(sbj.exists(), "The subject was not created in XNAT: %s" % sbj.label())
             for sbj_lbl, sess_lbl in session_specs:
                 sess = xnat.get_session('QIN', sbj_lbl, sess_lbl)
                 assert_true(sess.exists(), "The session not created in XNAT: %s" % sess)
