@@ -7,7 +7,8 @@ logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.pipelines import staging
-from test.unit.pipelines.pipelines_helper import get_xnat_subjects, clear_xnat_subjects
+from qipipe.helpers import xnat_helper
+from test.helpers.xnat_test_helper import get_xnat_subjects, clear_xnat_subjects
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
@@ -54,13 +55,16 @@ class TestStagingWorkflow:
 
         # Run the workflow.
         logger.debug("Executing the staging workflow...")
-        sessions = staging.run(COLLECTION, dest=dest, base_dir=work, *self._sbj_dir_dict.itervalues())
+        session_specs = staging.run(COLLECTION, dest=dest, base_dir=work, *self._sbj_dir_dict.itervalues())
 
         # Verify the result.
-        for sbj in self._sbj_dir_dict.iterkeys():
-            assert_true(sbj.exists(), "The subject was not created in XNAT: %s" % sbj.label())
-        for sess in sessions:
-            assert_true(sess.exists(), "The session not created in XNAT: %s" % sess)
+        with xnat_helper.connection() as xnat:
+            for sbj_lbl in self._sbj_dir_dict.iterkeys():
+                sbj = xnat.get_subject('QIN', sbj_lbl)
+                assert_true(sbj.exists(), "The subject was not created in XNAT: %s" % sbj.label())
+            for sbj_lbl, sess_lbl in session_specs:
+                sess = xnat.get_session('QIN', sbj_lbl, sess_lbl)
+                assert_true(sess.exists(), "The session not created in XNAT: %s" % sess)
 
 
 if __name__ == "__main__":
