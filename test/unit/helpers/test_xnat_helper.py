@@ -22,7 +22,6 @@ class TestXNATHelper(object):
     """The XNAT helper unit tests."""
     
     def setUp(self):
-        self.xnat = xnat_helper.facade()
         shutil.rmtree(RESULTS, True)
         delete_subjects(SUBJECT)
         
@@ -32,18 +31,21 @@ class TestXNATHelper(object):
         
     def test_upload_and_download(self):
         session = SUBJECT + '_MR1'
-        self.xnat.upload('QIN', SUBJECT, session, FIXTURE, scan=1, modality='MR', format='NIFTI')
-        _, fname = os.path.split(FIXTURE)
-        sbj = self.xnat.interface.select('/project/QIN').subject(SUBJECT)
-        f = sbj.experiment(session).scan('1').resource('NIFTI').file(fname)
-        assert_true(f.exists(), "File not uploaded: %s" % fname)
-        
-        # Download the uploaded file.
-        files = list(self.xnat.download('QIN', sbj.label(), session, dest=RESULTS, scan=1, format='NIFTI'))
+        with xnat_helper.connection() as xnat:
+            # Upload the file.
+            xnat.upload('QIN', SUBJECT, session, FIXTURE, scan=1, modality='MR', format='NIFTI')
+            _, fname = os.path.split(FIXTURE)
+            sbj = xnat.interface.select('/project/QIN').subject(SUBJECT)
+            file_obj = sbj.experiment(session).scan('1').resource('NIFTI').file(fname)
+            assert_true(file_obj.exists(), "File not uploaded: %s" % fname)
+            
+            # Download the uploaded file.
+            files = list(xnat.download('QIN', sbj.label(), session, dest=RESULTS, scan=1, format='NIFTI'))
         assert_not_equal(0, len(files), "No files were downloaded")
         assert_equal(1, len(files), "Too many files were downloaded: %s" % files)
         f = files[0]
         assert_true(os.path.exists(f), "File not downloaded: %s" % f)
+
 
 if __name__ == "__main__":
     import nose
