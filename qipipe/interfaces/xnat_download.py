@@ -7,9 +7,9 @@ from ..helpers import xnat_helper
 class XNATDownloadInputSpec(BaseInterfaceInputSpec):
     project = traits.Str(mandatory=True, desc='The XNAT project id')
 
-    subject = traits.Str(mandatory=True, desc='The XNAT subject id or label')
+    subject = traits.Str(mandatory=True, desc='The XNAT subject name')
 
-    session = traits.Str(mandatory=True, desc='The XNAT session id or label')
+    session = traits.Str(mandatory=True, desc='The XNAT session name')
     
     container_type = traits.Str(mandatory=True, desc='The XNAT resource container type, e.g. scan or reconstruction')
     
@@ -30,9 +30,10 @@ class XNATDownload(BaseInterface):
     output_spec = XNATDownloadOutputSpec
 
     def _run_interface(self, runtime):
-        self._out_files = xnat_helper.facade().download(self.inputs.project, self.inputs.subject,
-            self.inputs.session, format=self.inputs.format, container_type=self.inputs.container_type,
-            dest=self.inputs.dest)
+        with xnat_helper.connection() as xnat:
+            self._out_files = xnat.download(self.inputs.project, self.inputs.subject,
+                self.inputs.session, format=self.inputs.format, container_type=self.inputs.container_type,
+                dest=self.inputs.dest)
         return runtime
 
     def _list_outputs(self):

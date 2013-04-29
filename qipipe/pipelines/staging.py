@@ -16,7 +16,7 @@ def run(collection, *subject_dirs, **opts):
     @param collection: the AIRC image collection name 
     @param subject_dirs: the AIRC source subject directories to stage
     @param opts: the workflow options
-    @return: the new XNAT scans
+    @return: the new XNAT (subject, session) label tuples
     """
 
     # Collect the new AIRC visits into (subject, session, dicom_files)
@@ -40,11 +40,11 @@ def run(collection, *subject_dirs, **opts):
         logger.debug("The staging workflow graph is depicted at %s.png." % grf)
     
     # Run the staging workflow.
-    wf.run()
+    with xnat_helper.connection():
+        wf.run()
     
-    # Return the new XNAT sessions.
-    xnat = xnat_helper.facade()
-    return [xnat.get_session('QIN', subject=sbj, session=sess) for sbj, sess, _ in new_visits]
+    # Return the new XNAT (subject, session) tuples.
+    return [(sbj, sess) for sbj, sess, _ in new_visits]
 
 def _create_workflow(collection, *session_specs, **opts):
     """

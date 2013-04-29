@@ -1,6 +1,7 @@
 """The qipipeline L{run} function is the OHSU QIN pipeline facade."""
 
 import os, tempfile
+from ..helpers import xnat_helper
 from .pipeline_error import PipelineError
 from . import staging
 from . import registration as reg
@@ -37,7 +38,6 @@ def run(collection, *subject_dirs, **opts):
     @param opts: additional workflow options
     """
 
-    workflows = opts.pop('workflows', [])
     qip = QIPipeline(collection)
     return qip.run(*subject_dirs, **opts)
     
@@ -64,12 +64,11 @@ class QIPipeline(object):
         # The work option is the pipeline parent directory.
         work_dir = opts.pop('work', None) or tempfile.mkdtemp()
         
-        # Stage the input AIRC files.
-        stg_dir = os.path.join(work_dir, 'stage')
-        sessions = staging.run(self.collection, base_dir=stg_dir, *subject_dirs, **opts)
-        
-        # Register the images.
-        reg_dir = os.path.join(work_dir, 'register')
-        reg.run(base_dir=reg_dir, *sessions, **opts)
-        
-        return sessions
+        with xnat_helper.connection(): 
+            # Stage the input AIRC files.
+            stg_dir = os.path.join(work_dir, 'stage')
+            session_specs = staging.run(self.collection, base_dir=stg_dir, *subject_dirs, **opts)
+            
+            # Register the images.
+            reg_dir = os.path.join(work_dir, 'register')
+            return reg.run(base_dir=reg_dir, *session_specs, **opts)

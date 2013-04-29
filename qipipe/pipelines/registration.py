@@ -1,25 +1,29 @@
 import os
 import nipype.pipeline.engine as pe
-from nipype.interfaces.utility import Function
+from nipype.interfaces.utility import IdentityInterface
 from nipype.interfaces.ants.registration import Registration
 from nipype.interfaces.ants import AverageImages, WarpImageMultiTransform
 from ..interfaces import Glue, XNATDownload, XNATUpload
+from ..helpers import xnat_helper
 
 import logging
 logger = logging.getLogger(__name__)
 
-def run(*sessions, **opts):
+RECON_NAME = 'reg_1'
+"""The XNAT reconstruction label."""
+
+def run(*session_specs, **opts):
     """
     Builds and runs the registration workflow.
     
-    @param sessions: the XNAT sessions to register
+    @param session_specs: the XNAT (subject, session) label tuples to register
     @param opts: the workflow options
-    @return: the resampled image files
+    @return: the resampled XNAT (subject, session, reconstruction) designator tuples
     """
     
     # Make the registration workflow.
-    wf = _create_workflow(*sessions, **opts)
-    
+    wf = _create_workflow(*session_specs, **opts)
+
     # If debug is set, then diagram the registration workflow graph.
     if logger.level <= logging.DEBUG:
         if wf.base_dir:
@@ -30,14 +34,15 @@ def run(*sessions, **opts):
         logger.debug("The registration workflow graph is depicted at %s.png." % grf)
     
     # Run the registration workflow.
-    wf.run()
+    with xnat_helper.connection():
+        wf.run()
     
-    # Return the new XNAT reconstructions.
-    return [sess.reconstruction('reg_1') for sess in sessions]
+    # Return the new XNAT reconstruction specs.
+    return [(sbj, sess, RECON_NAME) for sbj, sess in session_specs]
 
-def _create_workflow(*sessions, **opts):
+def _create_workflow(*session_specs, **opts):
     """
-    @param sessions: the input XNAT sessions
+    @param session_specs: the input XNAT (subject, session) label tuples
     @param opts: the pyxnat workflow creation options
     @return: the registration workflow
     """
@@ -49,11 +54,12 @@ def _create_workflow(*sessions, **opts):
     wf = pe.Workflow(name='registration', **opts)
     
     # The (session, subject) label inputs.
-    series_spec = pe.Node(Glue(input_names=['hierarchy'], output_names=['session', 'subject']),
-        name='series_spec')
+    session_spec = pe.Node(IdentityInterface(fields=['subject', 'session']),
+        name='session_spec')
     # Iterate over each session.
-    sess_sbj_dict = {sess.label(): sess.parent().label() for sess in sessions}
-    series_spec.iterables = ('hierarchy', sess_sbj_dict.items())
+    subjects = [spec[0] for spec in session_specs]
+    sessions = [spec[1] for spec in session_specs]
+    session_spec.iterables = dict(subject=subjects, session=sessions).items()
     
     # Download the scan NIFTI files.
     download = pe.Node(XNATDownload(project='QIN', container_type='scan', format='NIFTI'),
@@ -71,18 +77,18 @@ def _create_workflow(*sessions, **opts):
     resample = pe.MapNode(WarpImageMultiTransform(), iterfield=['input_image', 'transformation_series'], name='resample')
     
     # Upload the resampled images to XNAT.
-    upload = pe.Node(XNATUpload(project='QIN', reconstruction='reg_1', format='NIFTI'),
+    upload = pe.Node(XNATUpload(project='QIN', reconstruction=RECON_NAME, format='NIFTI'),
         name='upload')
     
     wf.connect([
-        (series_spec, download, [('subject', 'subject'), ('session', 'session')]),
+        (session_spec, download, [('subject', 'subject'), ('session', 'session')]),
+        (session_spec, upload, [('subject', 'subject'), ('session', 'session')]),
         (download, average, [('out_files', 'images')]),
         (download, registration, [('out_files', 'moving_image')]),
         (download, resample, [('out_files', 'input_image')]),
         (average, registration, [('output_average_image', 'fixed_image')]),
         (average, resample, [('output_average_image', 'reference_image')]),
         (registration, resample, [('composite_transform', 'transformation_series')]),
-        (series_spec, upload, [('subject', 'subject'), ('session', 'session')]),
         (resample, upload, [('output_image', 'in_files')])])
     
     return wf

@@ -7,17 +7,17 @@ from ..helpers import xnat_helper
 class XNATUploadInputSpec(BaseInterfaceInputSpec):
     project = traits.Str(mandatory=True, desc='The XNAT project id')
 
-    subject = traits.Str(mandatory=True, desc='The XNAT subject id or label')
+    subject = traits.Str(mandatory=True, desc='The XNAT subject name')
 
-    session = traits.Str(mandatory=True, desc='The XNAT session id or label')
+    session = traits.Str(mandatory=True, desc='The XNAT session name')
     
-    format = traits.Str(mandatory=True, desc='The XNAT image format')
+    format = traits.Str(desc='The XNAT image format')
 
-    scan = traits.Either(traits.Int, traits.Str, desc='The XNAT scan id or label')
+    scan = traits.Either(traits.Int, traits.Str, desc='The XNAT scan name')
 
-    reconstruction = traits.Either(traits.Int, traits.Str, desc='The XNAT reconstruction id or label')
+    reconstruction = traits.Either(traits.Int, traits.Str, desc='The XNAT reconstruction name')
 
-    assessor = traits.Either(traits.Int, traits.Str, desc='The XNAT assessor id or label')
+    assessor = traits.Either(traits.Int, traits.Str, desc='The XNAT assessor name')
 
     in_files = InputMultiPath(File(exists=True), mandatory=True, desc='The files to upload')
 
@@ -34,6 +34,7 @@ class XNATUpload(BaseInterface):
             opts['reconstruction'] = self.inputs.reconstruction
         elif self.inputs.assessor:
             opts['assessor'] = self.inputs.assessor
-        xnat_helper.facade().upload(self.inputs.project, self.inputs.subject, self.inputs.session,
-            *self.inputs.in_files, **opts)
+        with xnat_helper.connection() as xnat:
+            xnat.upload(self.inputs.project, self.inputs.subject, self.inputs.session,
+                *self.inputs.in_files, **opts)
         return runtime
