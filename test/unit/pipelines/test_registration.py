@@ -73,7 +73,7 @@ class TestRegistrationPipeline:
         with xnat_helper.connection() as xnat:
             recon = xnat.get_reconstruction('QIN', *recon_specs[0])
             rsc = recon.out_resource('NIFTI')
-            assert_true(rsc.exists(), "Resource not created for %s" % recon.label())
+            assert_true(rsc.exists(), "Resource not created for %s" % recon.id())
             recon_files = list(rsc.files())
             assert_equals(2, len(recon_files), "Resampled XNAT file count incorrect: %s" % recon_files)
  

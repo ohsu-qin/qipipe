@@ -431,11 +431,11 @@ class XNAT(object):
         # Check for an existing file.
         if file_obj.exists():
             raise XNATError("The XNAT file object %s already exists in the %s resource %s" %
-                (fname, rsc_ctr.label(), resource.label()))
+                (fname, rsc_ctr.id(), resource.label()))
         
         # Upload the file.
         logger.debug("Inserting the XNAT file %s into the %s resource %s..." %
-            (fname, rsc_ctr.label(), resource))
+            (fname, rsc_ctr.id(), resource))
         file_obj.insert(in_file, **opts)
         logger.debug("Uploaded the XNAT file %s." % fname)
     
