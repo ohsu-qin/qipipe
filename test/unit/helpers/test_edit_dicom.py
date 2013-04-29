@@ -27,7 +27,7 @@ class TestEditDicom:
     
     def test_edit_dicom_files(self):
         # The tag name => value map.
-        tnv = dict(PatientID='Test Patient', BodyPartExamined='BREAST', PixelData='')
+        tnv = dict(PatientID='Test Patient', BodyPartExamined='HIP')
         
         # The tag => value map.
         tv = {dd.tag_for_name(name): value for name, value in tnv.iteritems()}
