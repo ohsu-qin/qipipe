@@ -11,7 +11,7 @@ from qipipe.registration import ants
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
 
-FIXTURE = os.path.join(ROOT, 'fixtures', 'registration', 'breast', 'Breast03', 'Session01')
+FIXTURE = os.path.join(ROOT, 'fixtures', 'stacks', 'breast')
 """The test fixture."""
 
 RESULT = os.path.join(ROOT, 'results', 'registration', 'ants')
