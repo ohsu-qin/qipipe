@@ -24,11 +24,11 @@ def delete_subjects(*labels):
     @param labels: the labels of the subjects to delete
     """
     
-    xnat = xnat_helper.facade()
-    for lbl in labels:
-        sbj = xnat.interface.select('/project/QIN/subject/' + lbl)
-        if sbj.exists():
-            sbj.delete()
+    with xnat_helper.connection() as xnat:
+        for lbl in labels:
+            sbj = xnat.interface.select('/project/QIN/subject/' + lbl)
+            if sbj.exists():
+                sbj.delete()
 
 def get_xnat_subjects(collection, source, pattern=None):
     """
@@ -42,38 +42,34 @@ def get_xnat_subjects(collection, source, pattern=None):
     @param source: the input parent directory
     @param pattern: the subject directory name match pattern
         (default L{airc.AIRCCollection.subject_pattern})
-    @return: the XNAT subject => directory dictionary
+    @return: the subject label => directory dictionary
     """
     
-    xnat = xnat_helper.facade()
     airc_coll = airc.collection_with_name(collection)
     pat = pattern or airc_coll.subject_pattern
     sbj_dir_dict = {}
-    for d in os.listdir(source):
-        match = re.match(pat, d)
-        if match:
-            # The XNAT subject label.
-            sbj_nm = SUBJECT_FMT % (collection, int(match.group(1)))
-            logger.debug("Checking whether the test subject %s exists in XNAT..." % sbj_nm)
-            # Get the XNAT subject.
-            sbj = xnat.interface.select('/project/QIN/subject/' + sbj_nm)
-            # If the subject does not exist, then set the label.
-            if not sbj.exists():
-                sbj.label = sbj_nm
-            sbj_dir_dict[sbj] = os.path.join(source, d)
-            logger.debug("Discovered QIN pipeline test subject subdirectory: %s" % d)
+    with xnat_helper.connection() as xnat:
+        for d in os.listdir(source):
+            match = re.match(pat, d)
+            if match:
+                # The XNAT subject label.
+                sbj_lbl = SUBJECT_FMT % (collection, int(match.group(1)))
+                # The subject source directory.
+                sbj_dir_dict[sbj_lbl] = os.path.join(source, d)
+                logger.debug("Discovered QIN pipeline test subject subdirectory: %s" % d)
     
     return sbj_dir_dict
 
-def clear_xnat_subjects(*subjects):
+def clear_xnat_subjects(*subject_labels):
     """
     Deletes the given XNAT subjects, if they exist.
     
-    @param subjects: the XNAT subjects
+    @param subject_labels: the XNAT subject labels
     """
     
-    for sbj in subjects:
-        if sbj.exists():
-            label = sbj.label()
-            sbj.delete(delete_files=True)
-            logger.debug("Deleted the QIN pipeline test subject from XNAT: %s" % label)
+    with xnat_helper.connection() as xnat:
+        for sbj_lbl in subject_labels:
+            sbj = xnat.get_subject('QIN', sbj_lbl)
+            if sbj.exists():
+                sbj.delete(delete_files=True)
+                logger.debug("Deleted the QIN pipeline test subject from XNAT: %s" % sbj_lbl)
