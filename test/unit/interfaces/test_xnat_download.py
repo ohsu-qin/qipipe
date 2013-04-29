@@ -34,21 +34,22 @@ class TestXNATDownload:
     """The  XNAT download interface unit tests."""
     
     def setUp(self):
-        self.xnat = xnat_helper.facade()
         delete_subjects(SUBJECT)
         shutil.rmtree(RESULTS, True)
-        # The XNAT test subject.
-        sbj = self.xnat.interface.select('/project/QIN').subject(SUBJECT)
-        # The test file objects.
-        self._file_names = set()
-        for scan_dir in glob.glob(FIXTURE + '/Series*'):
-                _, scan = os.path.split(scan_dir)
-                for f in glob.glob(scan_dir + '/*.dcm.gz'):
-                    _, fname = os.path.split(f)
-                    self._file_names.add(fname)
-                    file_obj = sbj.experiment(SESSION).scan('9').resource('DICOM').file(fname)
-                    # Upload the file.
-                    file_obj.insert(f, experiments='xnat:MRSessionData', format='DICOM')
+        
+        with xnat_helper.connection() as xnat:
+            # The XNAT test subject.
+            sbj = xnat.interface.select('/project/QIN').subject(SUBJECT)
+            # The test file objects.
+            self._file_names = set()
+            for scan_dir in glob.glob(FIXTURE + '/Series*'):
+                    _, scan = os.path.split(scan_dir)
+                    for f in glob.glob(scan_dir + '/*.dcm.gz'):
+                        _, fname = os.path.split(f)
+                        self._file_names.add(fname)
+                        file_obj = sbj.experiment(SESSION).scan('9').resource('DICOM').file(fname)
+                        # Upload the file.
+                        file_obj.insert(f, experiments='xnat:MRSessionData', format='DICOM')
         logger.debug("Uploaded the test %s files %s." % (SESSION, list(self._file_names)))
     
     def tearDown(self):
