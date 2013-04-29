@@ -7,42 +7,42 @@ from qipipe.helpers import xnat_helper
 import logging
 logger = logging.getLogger(__name__)
 
-def generate_subject_label(name):
+def generate_subject_name(name):
     """
-    Makes a subject label that is unique to the given test name.
+    Makes a subject name that is unique to the given test name.
     
     @param name: the test name
-    @return: the test subject label
+    @return: the test subject name
     """
     
     return 'Test_' + encode(name).strip('=')
     
-def delete_subjects(*labels):
+def delete_subjects(*names):
     """
     Deletes each given test subject, if it exists.
     
-    @param labels: the labels of the subjects to delete
+    @param names: the names of the subjects to delete
     """
     
     with xnat_helper.connection() as xnat:
-        for lbl in labels:
+        for lbl in names:
             sbj = xnat.interface.select('/project/QIN/subject/' + lbl)
             if sbj.exists():
                 sbj.delete()
 
 def get_xnat_subjects(collection, source, pattern=None):
     """
-    Infers the XNAT subject labels from the given source directory.
+    Infers the XNAT subject names from the given source directory.
     The source directory contains subject subdirectories.
     The match pattern matches on the subdirectories and captures the
-    subject number. The subject label is the collection name followed
+    subject number. The subject name is the collection name followed
     by the subject number, e.g. C{Breast004}.
     
     @param collection: the AIRC collection name
     @param source: the input parent directory
     @param pattern: the subject directory name match pattern
         (default L{airc.AIRCCollection.subject_pattern})
-    @return: the subject label => directory dictionary
+    @return: the subject name => directory dictionary
     """
     
     airc_coll = airc.collection_with_name(collection)
@@ -52,7 +52,7 @@ def get_xnat_subjects(collection, source, pattern=None):
         for d in os.listdir(source):
             match = re.match(pat, d)
             if match:
-                # The XNAT subject label.
+                # The XNAT subject name.
                 sbj_lbl = SUBJECT_FMT % (collection, int(match.group(1)))
                 # The subject source directory.
                 sbj_dir_dict[sbj_lbl] = os.path.join(source, d)
@@ -60,15 +60,15 @@ def get_xnat_subjects(collection, source, pattern=None):
     
     return sbj_dir_dict
 
-def clear_xnat_subjects(*subject_labels):
+def clear_xnat_subjects(*subject_names):
     """
     Deletes the given XNAT subjects, if they exist.
     
-    @param subject_labels: the XNAT subject labels
+    @param subject_names: the XNAT subject names
     """
     
     with xnat_helper.connection() as xnat:
-        for sbj_lbl in subject_labels:
+        for sbj_lbl in subject_names:
             sbj = xnat.get_subject('QIN', sbj_lbl)
             if sbj.exists():
                 sbj.delete(delete_files=True)

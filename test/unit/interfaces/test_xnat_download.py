@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.interfaces import XNATDownload
 from qipipe.helpers import xnat_helper
-from test.helpers.xnat_test_helper import generate_subject_label, delete_subjects
+from test.helpers.xnat_test_helper import generate_subject_name, delete_subjects
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
@@ -18,11 +18,11 @@ FIXTURE = os.path.join(ROOT, 'fixtures', 'interfaces', 'xnat', 'Sarcoma001', 'Se
 RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'xnat')
 """The test results directory."""
 
-SUBJECT = generate_subject_label(__name__)
-"""The test subject label."""
+SUBJECT = generate_subject_name(__name__)
+"""The test subject name."""
 
 SESSION = "%s_%s" % (SUBJECT, 'Session01')
-"""The test session label."""
+"""The test session name."""
 
 from nipype import config
 cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),

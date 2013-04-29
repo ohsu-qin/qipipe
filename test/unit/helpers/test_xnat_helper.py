@@ -3,7 +3,7 @@ import sys, os, shutil
 from qipipe.helpers import xnat_helper
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from test.helpers.xnat_test_helper import generate_subject_label, delete_subjects
+from test.helpers.xnat_test_helper import generate_subject_name, delete_subjects
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
@@ -14,8 +14,8 @@ FIXTURE = os.path.join(ROOT, 'fixtures', 'helpers', 'xnat', 'dummy.nii.gz')
 RESULTS = os.path.join(ROOT, 'results', 'helpers', 'xnat')
 """The test results directory."""
 
-SUBJECT = generate_subject_label(__name__)
-"""The test subject label."""
+SUBJECT = generate_subject_name(__name__)
+"""The test subject name."""
 
 
 class TestXNATHelper(object):
@@ -40,7 +40,7 @@ class TestXNATHelper(object):
             assert_true(file_obj.exists(), "File not uploaded: %s" % fname)
             
             # Download the uploaded file.
-            files = list(xnat.download('QIN', sbj.label(), session, dest=RESULTS, scan=1, format='NIFTI'))
+            files = list(xnat.download('QIN', sbj.name(), session, dest=RESULTS, scan=1, format='NIFTI'))
         assert_not_equal(0, len(files), "No files were downloaded")
         assert_equal(1, len(files), "Too many files were downloaded: %s" % files)
         f = files[0]

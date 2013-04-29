@@ -20,7 +20,7 @@ def iter_new_visits(collection, *subject_dirs):
     Iterates over the visits in the given subject directories which are not in XNAT.
     Each iteration item is a (subject, session, dicom_file_iterator) tuple, formed as follows:
         - The subject is the XNAT subject ID formatted by L{SUBJECT_FMT}
-        - The session is the XNAT experiment label formatted by L{SESSION_FMT}
+        - The session is the XNAT experiment name formatted by L{SESSION_FMT}
         _ The DICOM files iterator iterates over the files which match the
           L{qipipe.staging.airc_collection} DICOM file include pattern
     
@@ -38,7 +38,7 @@ def iter_new_visits(collection, *subject_dirs):
     with xnat_helper.connection() as xnat:
         for d in subject_dirs:
             d = os.path.abspath(d)
-            # Make the XNAT subject label.
+            # Make the XNAT subject name.
             sbj_nbr = airc_coll.path2subject_number(d)
             sbj = SUBJECT_FMT % (collection, sbj_nbr)
             # The subject subdirectories which match the visit pattern.
@@ -51,7 +51,7 @@ def iter_new_visits(collection, *subject_dirs):
                 if os.path.isdir(visit_dir):
                     # The visit (session) number.
                     sess_nbr = airc_coll.path2session_number(v)
-                    # The XNAT session label.
+                    # The XNAT session name.
                     sess = SESSION_FMT % (sbj, sess_nbr)
                     # If the session is not yet in XNAT, then yield the session and its files.
                     if xnat.get_session('QIN', sbj, sess).exists():

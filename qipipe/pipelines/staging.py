@@ -16,7 +16,7 @@ def run(collection, *subject_dirs, **opts):
     @param collection: the AIRC image collection name 
     @param subject_dirs: the AIRC source subject directories to stage
     @param opts: the workflow options
-    @return: the new XNAT (subject, session) label tuples
+    @return: the new XNAT (subject, session) name tuples
     """
 
     # Collect the new AIRC visits into (subject, session, dicom_files)

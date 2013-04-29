@@ -10,13 +10,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 RECON_NAME = 'reg_1'
-"""The XNAT reconstruction label."""
+"""The XNAT reconstruction name."""
 
 def run(*session_specs, **opts):
     """
     Builds and runs the registration workflow.
     
-    @param session_specs: the XNAT (subject, session) label tuples to register
+    @param session_specs: the XNAT (subject, session) name tuples to register
     @param opts: the workflow options
     @return: the resampled XNAT (subject, session, reconstruction) designator tuples
     """
@@ -42,7 +42,7 @@ def run(*session_specs, **opts):
 
 def _create_workflow(*session_specs, **opts):
     """
-    @param session_specs: the input XNAT (subject, session) label tuples
+    @param session_specs: the input XNAT (subject, session) name tuples
     @param opts: the pyxnat workflow creation options
     @return: the registration workflow
     """
@@ -53,7 +53,7 @@ def _create_workflow(*session_specs, **opts):
     logger.debug("%s...", msg)
     wf = pe.Workflow(name='registration', **opts)
     
-    # The (session, subject) label inputs.
+    # The (session, subject) name inputs.
     session_spec = pe.Node(IdentityInterface(fields=['subject', 'session']),
         name='session_spec')
     # Iterate over each session.

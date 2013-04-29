@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.pipelines import registration as reg
 from qipipe.helpers import xnat_helper
-from test.helpers.xnat_test_helper import generate_subject_label, delete_subjects
+from test.helpers.xnat_test_helper import generate_subject_name, delete_subjects
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
@@ -19,8 +19,8 @@ FIXTURE = os.path.join(ROOT, 'fixtures', 'stacks', 'breast')
 RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'registration')
 """The test results directory."""
 
-SUBJECT = generate_subject_label(__name__)
-"""The test subject label."""
+SUBJECT = generate_subject_name(__name__)
+"""The test subject name."""
 
 SESSION = "%s_%s" % (SUBJECT, 'Session01')
 
@@ -73,7 +73,7 @@ class TestRegistrationPipeline:
         with xnat_helper.connection() as xnat:
             recon = xnat.get_reconstruction('QIN', *recon_specs[0])
             rsc = recon.out_resource('NIFTI')
-            assert_true(rsc.exists(), "Resource not created for %s" % recon.label())
+            assert_true(rsc.exists(), "Resource not created for %s" % recon.name())
             recon_files = list(rsc.files())
             assert_equals(2, len(recon_files), "Resampled XNAT file count incorrect: %s" % recon_files)
  

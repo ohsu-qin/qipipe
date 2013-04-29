@@ -58,7 +58,7 @@ class QIPipeline(object):
         @param opts: the pipeline options
         @keyword dest: the destination directory (default current working directory)
         @keyword work: the pipeline execution work area (default a new temp directory)
-        @return: the new XNAT session labels
+        @return: the new XNAT session names
         """
         
         # The work option is the pipeline parent directory.
