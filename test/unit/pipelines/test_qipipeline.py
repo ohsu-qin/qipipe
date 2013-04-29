@@ -36,7 +36,7 @@ class TestPipeline:
         shutil.rmtree(RESULTS, True)
     
     def tearDown(self):
-        shutil.rmtree(RESULTS, True)
+        pass #shutil.rmtree(RESULTS, True)
     
     def test_breast(self):
         self._test_collection('Breast')
@@ -51,12 +51,12 @@ class TestPipeline:
         
         @param collection: the AIRC collection name
         @attention: This test does not verify the CTP staging area nor that the
-        image files are correctly uploaded. These features should be
-        verified manually.
+            image files are correctly uploaded. These features should be
+            verified manually.
         """
         
         fixture = os.path.join(FIXTURES, collection.lower())
-        logger.debug("Testing the registration pipeline on %s..." % fixture)
+        logger.debug("Testing the QIN pipeline on %s..." % fixture)
 
         # The staging destination and work area.
         dest = os.path.join(RESULTS, 'data')
@@ -64,21 +64,27 @@ class TestPipeline:
 
         # The test subject => directory dictionary.
         sbj_dir_dict = get_xnat_subjects(collection, fixture)
-        # Delete any existing test subjects.
-        clear_xnat_subjects(*sbj_dir_dict.keys())
-
-        # Run the workflow.
-        logger.debug("Executing the staging workflow...")
-        sessions = qip.run(collection, dest=dest, work=work, *sbj_dir_dict.itervalues())
-
-        # Verify the result.
-        for sbj in sbj_dir_dict.iterkeys():
-            assert_true(sbj.exists(), "The subject was not created in XNAT: %s" % sbj.label())
-        for sess in sessions:
-            assert_true(sess.exists(), "The session not created in XNAT: %s" % sess)
+        # The test subjects.
+        sbj_lbls = sbj_dir_dict.keys()
+        # The test source directories.
+        sources = sbj_dir_dict.values()
         
-        # Delete the test subjects.
-        clear_xnat_subjects(sbj_dir_dict.keys())
+        with xnat_helper.connection() as xnat:
+            # Delete any existing test subjects.
+            clear_xnat_subjects(*sbj_lbls)
+
+            # Run the workflow.
+            logger.debug("Executing the staging workflow...")
+            recon_specs = qip.run(collection, dest=dest, work=work, *sources)
+
+            # Verify the result.
+            for sbj_lbl, sess_lbl, recon_lbl in recon_specs:
+                recon = xnat.get_reconstruction('QIN', sbj_lbl, sess_lbl, recon_lbl)
+                assert_true(recon.exists(), "The %s resampled registration was not created in XNAT" % sess_lbl)
+        
+            # Delete the test subjects.
+            clear_xnat_subjects(*sbj_lbls)
+
 
 if __name__ == "__main__":
     import nose
