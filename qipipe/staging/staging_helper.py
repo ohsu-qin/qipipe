@@ -30,40 +30,39 @@ def iter_new_visits(collection, *subject_dirs):
     @param subject_dirs: the subject directories over which to iterate
     """
     
-    # The XNAT facade.
-    xnat = xnat_helper.facade()
     # The AIRC collection with the given name.
     airc_coll = airc.collection_with_name(collection)
     # The visit subdirectory match pattern.
     vpat = airc_coll.session_pattern
 
-    for d in subject_dirs:
-        d = os.path.abspath(d)
-        # Make the XNAT subject label.
-        sbj_nbr = airc_coll.path2subject_number(d)
-        sbj = SUBJECT_FMT % (collection, sbj_nbr)
-        # The subject subdirectories which match the visit pattern.
-        vmatches = [v for v in os.listdir(d) if re.match(vpat, v)]
-        # Generate the new (subject, session, DICOM files) items in each visit.
-        for v in vmatches:
-            # The visit directory path.
-            visit_dir = os.path.join(d, v)
-            # Silently skip non-directories.
-            if os.path.isdir(visit_dir):
-                # The visit (session) number.
-                sess_nbr = airc_coll.path2session_number(v)
-                # The XNAT session label.
-                sess = SESSION_FMT % (sbj, sess_nbr)
-                # If the session is not yet in XNAT, then yield the session and its files.
-                if xnat.get_session('QIN', sbj, sess).exists():
-                    logger.debug("Skipping session %s since it has already been loaded to XNAT." % sess)
-                else:
-                    # The DICOM file match pattern.
-                    dpat = os.path.join(visit_dir, airc_coll.dicom_pattern)
-                    # The visit directory DICOM file iterator.
-                    dicom_file_iter = glob.iglob(dpat)
-                    logger.debug("Discovered new session %s in %s" % (sess, visit_dir))
-                    yield (sbj, sess, dicom_file_iter)
+    with xnat_helper.connection() as xnat:
+        for d in subject_dirs:
+            d = os.path.abspath(d)
+            # Make the XNAT subject label.
+            sbj_nbr = airc_coll.path2subject_number(d)
+            sbj = SUBJECT_FMT % (collection, sbj_nbr)
+            # The subject subdirectories which match the visit pattern.
+            vmatches = [v for v in os.listdir(d) if re.match(vpat, v)]
+            # Generate the new (subject, session, DICOM files) items in each visit.
+            for v in vmatches:
+                # The visit directory path.
+                visit_dir = os.path.join(d, v)
+                # Silently skip non-directories.
+                if os.path.isdir(visit_dir):
+                    # The visit (session) number.
+                    sess_nbr = airc_coll.path2session_number(v)
+                    # The XNAT session label.
+                    sess = SESSION_FMT % (sbj, sess_nbr)
+                    # If the session is not yet in XNAT, then yield the session and its files.
+                    if xnat.get_session('QIN', sbj, sess).exists():
+                        logger.debug("Skipping session %s since it has already been loaded to XNAT." % sess)
+                    else:
+                        # The DICOM file match pattern.
+                        dpat = os.path.join(visit_dir, airc_coll.dicom_pattern)
+                        # The visit directory DICOM file iterator.
+                        dicom_file_iter = glob.iglob(dpat)
+                        logger.debug("Discovered new session %s in %s" % (sess, visit_dir))
+                        yield (sbj, sess, dicom_file_iter)
 
 def group_dicom_files_by_series(*dicom_files):
     """
