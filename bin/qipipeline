@@ -34,17 +34,23 @@ def main(argv=None):
     
     # Parse the options.
     parser = argparse.ArgumentParser()
+
     coll_grp = parser.add_mutually_exclusive_group()
     coll_grp.add_argument("-b", "--breast", help="the breast TCIA collection",
         dest='collection', action="store_const", const='Breast')
     coll_grp.add_argument("-s", "--sarcoma", help="the sarcoma TCIA collection",
         dest='collection', action="store_const", const='Sarcoma')
-    parser.add_argument("-o", "--output", help="the destination directory (default current directory)")
-    parser.add_argument("-w", "--work", help="the work directory (default a new temp directory)")
+    
     verbosity_grp = parser.add_mutually_exclusive_group()
     verbosity_grp.add_argument("-q", "--quiet", help="don't print messages", dest='log_level', action="store_const", const=logging.ERROR)
     verbosity_grp.add_argument("-v", "--verbose", help="print verbose messages", dest='log_level', action="store_const", const=logging.DEBUG)
-        
+    
+    parser.add_argument("-o", "--output", help="the destination directory (default current directory)")
+    parser.add_argument("-w", "--work", help="the work directory (default a new temp directory)")
+    parser.add_argument("files", help="the DICOM files or directories to list (default stdin)", metavar="FILE", nargs='+')
+
+    args = parser.parse_args()
+    
     # Import the application now, after logging has been set.
     from qipipe.pipelines import qipipeline as qip
     

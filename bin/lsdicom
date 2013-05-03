@@ -16,20 +16,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 def main(argv=None):
-    # Parse the options.
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-n", "--no-header", help="omit the tag name header line", dest='header', action="store_false")
-    tag_grp = parser.add_mutually_exclusive_group()
-    tag_grp.add_argument("-s", "--summary", help="print only the Patient ID, Study Instance UID, Series Instance UID and Instance Number tags",
-        action="store_true")
-    tag_grp.add_argument("-t", "--tags",
-        help="the comma-separated tags to print (default is all non-pixel, non-bracketed tags whose value does not include a line break)")
-    verbosity_grp = parser.add_mutually_exclusive_group()
-    verbosity_grp.add_argument("-q", "--quiet", help="don't print messages", dest='log_level', action="store_const", const=logging.ERROR)
-    verbosity_grp.add_argument("-v", "--verbose", help="print verbose messages", dest='log_level', action="store_const", const=logging.DEBUG)
-    parser.add_argument("-o", "--output", help="print the values to the given file")
-    parser.add_argument("files", help="the DICOM files or directories to list (default stdin)", metavar="FILE", nargs='+')
-    args = parser.parse_args()
+    # Parse the command line arguments.
+    args = _parse_arguments()
     
     # Configure the logger.
     if args.log_level:
@@ -46,7 +34,29 @@ def main(argv=None):
     _print_tag_values(tags, output=args.output, header=args.header, *args.files)
     
     return 0
-        
+
+def _parse_arguments():
+    """Parses the command line arguments."""
+    
+    parser = argparse.ArgumentParser()
+
+    tag_grp = parser.add_mutually_exclusive_group()
+    tag_grp.add_argument("-s", "--summary", help="print only the Patient ID, Study Instance UID, Series Instance UID and Instance Number tags",
+        action="store_true")
+    tag_grp.add_argument("-t", "--tags",
+        help="the comma-separated tags to print (default is all non-pixel, non-bracketed tags whose value does not include a line break)")
+
+    verbosity_grp = parser.add_mutually_exclusive_group()
+    verbosity_grp.add_argument("-q", "--quiet", help="don't print messages", dest='log_level', action="store_const", const=logging.ERROR)
+    verbosity_grp.add_argument("-v", "--verbose", help="print verbose messages", dest='log_level', action="store_const", const=logging.DEBUG)
+
+    parser.add_argument("-n", "--no-header", help="omit the tag name header line", dest='header', action="store_false")
+    parser.add_argument("-o", "--output", help="print the values to the given file")
+    parser.add_argument("files", help="the DICOM files or directories to list (default stdin)", metavar="FILE", nargs='+')
+
+    return parser.parse_args()
+    
+            
 def _print_tag_values(tags, *files, **opts):
     """
     Prints the tab-delimited tag value lines.
