@@ -3,46 +3,114 @@ import nipype.pipeline.engine as pe
 from nipype.interfaces.utility import IdentityInterface
 from nipype.interfaces.ants.registration import Registration
 from nipype.interfaces.ants import AverageImages, WarpImageMultiTransform
-from ..interfaces import Glue, XNATDownload, XNATUpload
+from nipype.interfaces.dcmstack import CopyMeta
+from ..interfaces import Glue, Copy, XNATDownload, XNATUpload
 from ..helpers import xnat_helper
+from ..helpers import file_helper
 
 import logging
 logger = logging.getLogger(__name__)
 
-RECON_NAME = 'reg_1'
-"""The XNAT reconstruction name."""
+
+# AVG_FNAME = 'average'
+# """The XNAT averaged reference image name."""
+# 
+# AVG_RECON = 'avg_1'
+# """The XNAT averaging reconstruction name."""
+# 
+REG_PREFIX = 'reg'
+"""The XNAT registration reconstruction name prefix."""
 
 def run(*session_specs, **opts):
     """
-    Builds and runs the registration workflow.
+    Registers the scan NiFTI images for the given sessions.
+    
+    Registration is split into two Nipype workflows, C{average} and C{register},
+    as follows:
+    
+    The NiFTI scan images for each session are downloaded from XNAT into the
+    C{scans} subdirectory of the C{base_dir} specified in the options (default is the current directory).
+    
+    The average workflow input is a directory containing the NiFTI scan images
+    downloaded from XNAT. These images are averaged into a fixed reference
+    template image. This template is stored in the same directory as the
     
     @param session_specs: the XNAT (subject, session) name tuples to register
     @param opts: the workflow options
     @return: the resampled XNAT (subject, session, reconstruction) designator tuples
     """
-    
-    # Make the registration workflow.
-    wf = _create_workflow(*session_specs, **opts)
 
-    # If debug is set, then diagram the registration workflow graph.
-    if logger.level <= logging.DEBUG:
-        if wf.base_dir:
-            grf = os.path.join(wf.base_dir, 'staging.dot')
-        else:
-            grf = 'staging.dot'
-        wf.write_graph(dotfilename=grf)
-        logger.debug("The registration workflow graph is depicted at %s.png." % grf)
+    # The work directory.
+    work = opts.get('base_dir') or os.getcwd()
+    # The scan image downloaad location.
+    dest = os.path.join(work, 'scans')
+    # Run the workflow on each session.
+    recon_specs = [_register(sbj, sess, dest, **opts) for sbj, sess in session_specs]
     
-    # Run the registration workflow.
-    with xnat_helper.connection():
-        wf.run()
-    
-    # Return the new XNAT reconstruction specs.
-    return [(sbj, sess, RECON_NAME) for sbj, sess in session_specs]
+    return recon_specs
 
-def _create_workflow(*session_specs, **opts):
+def _download_scans(subject, session, dest):
     """
-    @param session_specs: the input XNAT (subject, session) name tuples
+    Download the NIFTI scan files for the given session.
+    
+    @param subject: the XNAT subject label
+    @param session: the XNAT session label
+    @param dest: the destination directory path
+    @return: the download file paths
+    """
+
+    with xnat_helper.connection() as xnat:
+        return xnat.download('QIN', subject, session, dest=dest, container_type='scan', format='NIFTI')
+
+def _register(subject, session, dest, **opts):
+    """
+    Builds and runs the registration workflow.
+    
+    @param subject: the XNAT subject label
+    @param session: the XNAT session label
+    @param dest: the scan download directory
+    @param opts: the workflow options
+    @return: the resampled XNAT (subject, session, reconstruction) designator tuple
+    """
+    
+    # Download the scan images.
+    tgt = os.path.join(dest, subject, session)
+    images = _download_scans(subject, session, tgt)
+    # The registration reconstruction name.
+    recon = _generate_name(REG_PREFIX)
+    # Make the workflow
+    wf = _create_workflow(subject, session, recon, images, **opts)
+    # Execute the workflow
+    wf.run()
+    
+    # Return the recon specification.
+    return (subject, session, recon)
+
+def _run_workflow(wf):
+    """
+    Executes the given workflow.
+    
+    @param wf: the workflow to run
+    """
+
+    # If debug is set, then diagram the workflow graph.
+    if logger.level <= logging.DEBUG:
+        fname = "%s.dot" % wf.name
+        if wf.base_dir:
+            grf = os.path.join(wf.base_dir, fname)
+        else:
+            grf = fname
+        wf.write_graph(dotfilename=grf)
+        logger.debug("The %s workflow graph is depicted at %s.png." % (wf.name, grf))
+    
+    # Run the workflow.
+    wf.run()
+
+def _create_workflow(subject, session, recon, images, **opts):
+    """
+    @param subject: the XNAT subject label
+    @param session: the XNAT session label
+    @param recon: the target XNAT reconstruction id
     @param opts: the pyxnat workflow creation options
     @return: the registration workflow
     """
@@ -51,48 +119,57 @@ def _create_workflow(*session_specs, **opts):
     if opts:
         msg = msg + ' with options %s' % opts
     logger.debug("%s...", msg)
-    wf = pe.Workflow(name='registration', **opts)
-    
-    # The (session, subject) name inputs.
-    session_spec = pe.Node(IdentityInterface(fields=['subject', 'session']),
-        name='session_spec')
-    # Iterate over each session.
-    subjects = [spec[0] for spec in session_specs]
-    sessions = [spec[1] for spec in session_specs]
-    session_spec.iterables = dict(subject=subjects, session=sessions).items()
-    
-    # Download the scan NIFTI files.
-    download = pe.Node(XNATDownload(project='QIN', container_type='scan', format='NIFTI'),
-        name='download')
+    wf = pe.Workflow(name='register', **opts)
     
     # Make the ANTS template.
     avg_xf = _create_average_interface()
     average = pe.Node(avg_xf, name='average')
-    
+    average.inputs.images = images
+
+    input_spec = pe.Node(IdentityInterface(fields=['subject', 'session', 'image']),
+         name='input_spec')
+    input_spec.inputs.subject = subject
+    input_spec.inputs.session = session
+    input_spec.iterables = dict(image=images).items()
+
     # Register the images to create the warp and affine transformations.
     reg_xf = _create_registration_interface()
-    registration = pe.MapNode(reg_xf, iterfield='moving_image', name='registration')
+    register = pe.Node(reg_xf, name='register')
     
-    # Resample the input images.
-    resample = pe.MapNode(WarpImageMultiTransform(), iterfield=['input_image', 'transformation_series'], name='resample')
+    # Resample the input image.
+    resample = pe.Node(WarpImageMultiTransform(),  name='resample')
     
-    # Upload the resampled images to XNAT.
-    upload = pe.Node(XNATUpload(project='QIN', reconstruction=RECON_NAME, format='NIFTI'),
+    # Copy the DICOM meta-data.
+    copy_meta = pe.Node(CopyMeta(), name='copy_meta')
+    
+    # Upload the resampled image to XNAT.
+    upload = pe.Node(XNATUpload(project='QIN', reconstruction=recon, format='NIFTI'),
         name='upload')
     
     wf.connect([
-        (session_spec, download, [('subject', 'subject'), ('session', 'session')]),
-        (session_spec, upload, [('subject', 'subject'), ('session', 'session')]),
-        (download, average, [('out_files', 'images')]),
-        (download, registration, [('out_files', 'moving_image')]),
-        (download, resample, [('out_files', 'input_image')]),
-        (average, registration, [('output_average_image', 'fixed_image')]),
+        (input_spec, register, [('image', 'moving_image')]),
+        (input_spec, resample, [('image', 'input_image')]),
+        (input_spec, copy_meta, [('image', 'src_file')]),
+        (input_spec, upload, [('subject', 'subject'), ('session', 'session')]),
+        (average, register, [('output_average_image', 'fixed_image')]),
         (average, resample, [('output_average_image', 'reference_image')]),
-        (registration, resample, [('composite_transform', 'transformation_series')]),
-        (resample, upload, [('output_image', 'in_files')])])
+        (register, resample, [('composite_transform', 'transformation_series')]),
+        (resample, copy_meta, [('output_image', 'dest_file')]),
+        (copy_meta, upload, [('dest_file', 'in_files')])])
     
     return wf
- 
+
+def _generate_name(prefix):
+    """
+    @param: the name prefix
+    @return: a unique name which starts with the given prefix
+    """
+    
+    # The name suffix.
+    suffix = file_helper.generate_file_name()
+    
+    return "%s_%s" % (prefix, suffix)
+
 def _first(in_files):
     for item in in_files:
         return item
@@ -114,7 +191,9 @@ def _create_registration_interface():
     """
     
     
+    # TODO - remove line below
     return Glue(input_names=['moving_image', 'fixed_image'], output_names=['composite_transform'])
+
     
     
     reg = Registration()

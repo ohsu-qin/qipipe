@@ -1,5 +1,29 @@
 import os
 import inspect
+import base64
+import struct
+import time
+import calendar
+
+def generate_file_name(ext=None):
+    """
+    Makes a valid file name which is unique to within one millisecond of calling this function.
+    
+    @param: the optional file extension, with leading period delimiter
+    @return: the file name
+    """
+    
+    # A starting time prior to now.
+    start = time.mktime(calendar.datetime.date(2013,01,01).timetuple())
+    # A long which is unique to within one millisecond.
+    offset = long((time.time() - start) * 1000)
+    # The file name is encoded from the offset without trailing filler or linebreak.
+    fname = base64.urlsafe_b64encode(struct.pack('L', offset)).rstrip('A=\n')
+    
+    if ext:
+        return fname + ext
+    else:
+        return fname
 
 class FileIteratorError(Exception):
     pass
