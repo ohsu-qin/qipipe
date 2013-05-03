@@ -8,21 +8,16 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.pipelines import registration as reg
 from qipipe.helpers import xnat_helper
-from test.helpers.xnat_test_helper import generate_subject_name, delete_subjects
+from test.helpers.xnat_test_helper import clear_xnat_subjects
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
 
-FIXTURE = os.path.join(ROOT, 'fixtures', 'stacks', 'breast')
-"""The test fixture directory."""
+FIXTURES = os.path.join(ROOT, 'fixtures', 'stacks')
+"""The test fixtures directory."""
 
-RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'registration')
+RESULTS = os.path.join(ROOT, 'results', 'registration')
 """The test results directory."""
-
-SUBJECT = generate_subject_name(__name__)
-"""The test subject name."""
-
-SESSION = "%s_%s" % (SUBJECT, 'Session01')
 
 from nipype import config
 cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
@@ -34,49 +29,98 @@ class TestRegistrationPipeline:
     """Registration pipeline unit tests."""
     
     def setUp(self):
-        delete_subjects(SUBJECT)
         shutil.rmtree(RESULTS, True)
-        # The XNAT test session.
-        with xnat_helper.connection() as xnat:
-            sess = xnat.interface.select('/project/QIN').subject(SUBJECT).experiment(SESSION)
-            # The test file objects.
-            self._file_names = set()
-            for f in glob.glob(FIXTURE + '/Breast*/Session*/series*.nii.gz'):
-                _, fname = os.path.split(f)
-                self._file_names.add(fname)
-                scan = str(int(re.match('series(\d{3}).nii.gz', fname).group(1)))
-                file_obj = sess.scan(scan).resource('NIFTI').file(fname)
-                # Upload the file.
-                file_obj.insert(f, experiments='xnat:MRSessionData', format='NIFTI')
-        logger.debug("Uploaded the test %s files %s." % (SESSION, list(self._file_names)))
     
     def tearDown(self):
-        #delete_subjects(SUBJECT)
         shutil.rmtree(RESULTS, True)
+    
+    def test_breast(self):
+        self._test_collection('Breast')
 
-    def test_registration(self):
+    def test_sarcoma(self):
+        self._test_collection('Sarcoma')
+    
+    def _test_collection(self, collection):
         """
-        Run the registration workflow and verify that the registered images are created
-        in XNAT.
+        Run the registration workflow and verify that the registered images are
+        created in XNAT.
+        
+        @param collection: the collection name
         """
         
-        logger.debug("Testing the registration workflow on %s..." % SUBJECT)
+        fixture = os.path.join(FIXTURES, collection.lower())
+        logger.debug("Testing the registration pipeline on %s..." % fixture)
 
-        # The staging work area.
-        work = os.path.join(RESULTS, 'work')
+        results = os.path.join(RESULTS, collection.lower())
+        
+        work = os.path.join(results, 'work')
 
-        # Run the workflow.
-        recon_specs = reg.run((SUBJECT, SESSION), base_dir=work)
-
-        # Verify the result.
-        assert_equals(1, len(recon_specs), "Resampled XNAT file count incorrect: %s" % len(recon_specs))
+        # The (subject, session) => scan files dictionary.
+        sess_files_dict = {}
+        subjects = set()
         with xnat_helper.connection() as xnat:
-            recon = xnat.get_reconstruction('QIN', *recon_specs[0])
-            rsc = recon.out_resource('NIFTI')
-            assert_true(rsc.exists(), "Resource not created for %s" % recon.id())
-            recon_files = list(rsc.files())
-            assert_equals(2, len(recon_files), "Resampled XNAT file count incorrect: %s" % recon_files)
- 
+            # Seed XNAT with the test files.
+            for sbj_dir in glob.glob(fixture + '/' + collection + '*'):
+                _, sbj = os.path.split(sbj_dir)
+                subjects.add(sbj)
+                clear_xnat_subjects(sbj)
+                for sess_dir in glob.glob(sbj_dir + '/Session*'):
+                    sess, in_files = self._upload_session_files(sbj, sess_dir)
+                    sess_files_dict[(sbj, sess)] = in_files
+            
+            # Run the workflow.
+            recon_specs = reg.run(*sess_files_dict.iterkeys(), base_dir=work)
+            
+            # Verify the result.
+            sess_recon_dict = {(sbj, sess): recon for sbj, sess, recon in recon_specs}
+            for spec, in_files in sess_files_dict.iteritems():
+                assert_in(spec, sess_recon_dict, "The session %s %s was not registered" % spec)
+                recon = sess_recon_dict[spec]
+                sbj, sess = spec
+                recon_obj = xnat.get_reconstruction('QIN', sbj, sess, recon)
+                assert_true(recon_obj.exists(),
+                    "The %s %s %s reconstruction was not created" % (sbj, sess, recon))
+                recon_files = recon_obj.out_resource('NIFTI').files().get()
+                assert_equals(len(in_files), len(recon_files),
+                    "The registered %s %s file count is incorrect - expected: %d, found: %d" %
+                    (sbj, sess, len(in_files), len(recon_files)))
+
+            # Clean up.
+            clear_xnat_subjects(*subjects)
+    
+    def _upload_session_files(self, subject, session_dir):
+        """
+        Uploads the test files in the given session directory.
+        
+        @param subject: the test subject label
+        @param session_dir: the session directory
+        @return: the XNAT (session, files) labels
+        """
+        
+        _, dname = os.path.split(session_dir)
+        with xnat_helper.connection() as xnat:
+            sess_obj = xnat.get_session('QIN', subject, dname)
+            fnames = [self._upload_file(sess_obj, f) for f in glob.glob(session_dir + '/series*.nii.gz')]
+            logger.debug("%s uploaded the %s test files %s." % (self.__class__, sess_obj.label(), fnames))
+        
+        return (sess_obj.label(), fnames)
+    
+    def _upload_file(self, session_obj, path):
+        """
+        @param session_obj: the XNAT session object
+        @param path: the file path
+        @return: the XNAT file object label
+        """
+        
+        _, fname = os.path.split(path)
+        scan = re.match('series(\d{3}).nii.gz', fname).group(1)
+        # The XNAT file object
+        file_obj = session_obj.scan(scan).resource('NIFTI').file(fname)
+        # Upload the file.
+        file_obj.insert(path, experiments='xnat:MRSessionData', format='NIFTI')
+        
+        return fname
+
 
 if __name__ == "__main__":
     import nose
