@@ -16,7 +16,7 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
 
 FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
-"""The test fixture directory."""
+"""The test fixtures directory."""
 
 RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'qipipeline')
 """The test results directory."""
@@ -36,7 +36,7 @@ class TestPipeline:
         shutil.rmtree(RESULTS, True)
     
     def tearDown(self):
-        pass #shutil.rmtree(RESULTS, True)
+        shutil.rmtree(RESULTS, True)
     
     def test_breast(self):
         self._test_collection('Breast')
@@ -65,25 +65,25 @@ class TestPipeline:
         # The test subject => directory dictionary.
         sbj_dir_dict = get_xnat_subjects(collection, fixture)
         # The test subjects.
-        sbj_lbls = sbj_dir_dict.keys()
+        subjects = sbj_dir_dict.keys()
         # The test source directories.
         sources = sbj_dir_dict.values()
         
         with xnat_helper.connection() as xnat:
             # Delete any existing test subjects.
-            clear_xnat_subjects(*sbj_lbls)
+            clear_xnat_subjects(*subjects)
 
             # Run the workflow.
             logger.debug("Executing the staging workflow...")
             recon_specs = qip.run(collection, dest=dest, work=work, *sources)
 
             # Verify the result.
-            for sbj_lbl, sess_lbl, recon_lbl in recon_specs:
-                recon = xnat.get_reconstruction('QIN', sbj_lbl, sess_lbl, recon_lbl)
-                assert_true(recon.exists(), "The %s resampled registration was not created in XNAT" % sess_lbl)
+            for sbj, sess, recon in recon_specs:
+                recon_obj = xnat.get_reconstruction('QIN', sbj, sess, recon)
+                assert_true(recon_obj.exists(), "The %s %s reconstruction %s was not created in XNAT" % (sbj, sess, recon))
         
             # Delete the test subjects.
-            clear_xnat_subjects(*sbj_lbls)
+            clear_xnat_subjects(*subjects)
 
 
 if __name__ == "__main__":
