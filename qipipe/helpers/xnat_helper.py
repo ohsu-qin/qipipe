@@ -68,8 +68,10 @@ class XNAT(object):
     
     def get_subject(self, project, subject):
         """
+        Returns the XNAT subject object for the given XNAT lineage.
+        
         @param project: the XNAT project id
-        @param subject: the XNAT subject name
+        @param subject: the XNAT subject label
         @return: the corresponding XNAT subject (which may not exist)
         """
         
@@ -79,24 +81,68 @@ class XNAT(object):
     
     def get_session(self, project, subject, session):
         """
+        Returns the XNAT session object for the given XNAT lineage.
+        The session name is qualified by the subject name prefix, if necessary.
+        
         @param project: the XNAT project id
-        @param subject: the XNAT subject name
-        @param session: the session (XNAT experiment) name
+        @param subject: the XNAT subject label
+        @param session: the XNAT experiment label
         @return: the corresponding XNAT session (which may not exist)
         """
         
-        return self.get_subject(project, subject).experiment(session)
+        sess_lbl = self._canonical_session_label(subject, session)
+        
+        return self.get_subject(project, subject).experiment(sess_lbl)
     
+    def get_scan(self, project, subject, session, scan):
+        """
+        Returns the XNAT scan object for the given XNAT lineage.
+        
+        @see: L{get_session}
+        @param project: the XNAT project id
+        @param subject: the XNAT subject label
+        @param session: the XNAT experiment label
+        @param scan: the XNAT scan name or number
+        @return: the corresponding XNAT scan object (which may not exist)
+        """
+        
+        return self.get_session(project, subject, session).scan(str(scan))
+      
     def get_reconstruction(self, project, subject, session, recon):
         """
+        Returns the XNAT reconstruction object for the given XNAT lineage.
+        The session and reconstruction name is qualified by the session name prefix,
+        if necessary.
+        
+        @see: L{get_session}
         @param project: the XNAT project id
-        @param subject: the XNAT subject name
-        @param session: the session (XNAT experiment) name
-        @param reconstruction: the XNAT reconstruction name
-        @return: the corresponding XNAT reconstruction (which may not exist)
+        @param subject: the XNAT subject label
+        @param session: the XNAT experiment label
+        @param recon: the unique XNAT reconstruction name
+        @return: the corresponding XNAT reconstruction object (which may not exist)
         """
-
-        return self.get_session(project, subject, session).reconstruction(recon)
+        
+        sess_lbl = self._canonical_session_label(subject, session)
+        if recon.startswith(sess_lbl):
+            recon_lbl = recon
+        else:
+            recon_lbl = "%s_%s" % (sess_lbl, recon)
+        
+        return self.get_session(project, subject, session).reconstruction(recon_lbl)
+    
+    def _canonical_session_label(self, subject, session):
+        """
+        Returns the XNAT session name is qualified by the subject name prefix, if necessary.
+        
+        @param subject: the XNAT subject label
+        @param session: the XNAT experiment label
+        @return: the corresponding XNAT session label
+        """
+        
+        if session.startswith(subject):
+            return session
+        else:
+            return "%s_%s" % (subject, session)
     
     def download(self, project, subject, session, **opts):
         """
@@ -108,8 +154,10 @@ class XNAT(object):
         container type. In the latter case, the C{container_type} parameter is set.
         The permissible container types are described in L{XNAT.upload}.
         
+        A reconstruction option value is qualified by the session label, if necessary.
+        
         @param project: the XNAT project id
-        @param session: the XNAT experiment name
+        @param session: the XNAT experiment label
         @param opts: the resource selection options
         @keyword format: the image file format (C{NIFTI} or C{DICOM})
         @keyword scan: the scan number
@@ -205,14 +253,8 @@ class XNAT(object):
         @raise XNATError: if the XNAT experiment does not exist and the modality option is missing
         """
     
-        # The XNAT project, which must already exist.
-        prj = self.interface.select.project(project)
-        if not prj.exists():
-            logger.error("XNAT project not found: %s" % project)
-            raise XNATError("XNAT upload project not found: %s" % project)
-        
         # The XNAT experiment.
-        exp = prj.subject(subject).experiment(session)
+        exp = self.get_session(project, subject, session)
 
         # If the experiment must be created, then the experiment create parameters
         # consists of the session modality data type.
@@ -233,7 +275,7 @@ class XNAT(object):
 
         # Make the resource parent container, if necessary.
         ctr_type, ctr_id = self._infer_resource_container(opts)
-        ctr = self._xnat_resource_parent(exp, ctr_type, ctr_name)
+        ctr = self._xnat_resource_parent(exp, ctr_type, ctr_id)
         if not ctr.exists():
             logger.debug("Creating the XNAT %s resource parent container %s..." % (session, ctr_id))
             ctr.create()
@@ -249,12 +291,12 @@ class XNAT(object):
                 raise XNATError("XNAT %s upload cannot infer the image format" % session)
 
         # The XNAT resource that will hold the files.
-        rsc = self._xnat_child_resource(ctr, format, opts.pop('inout'))
+        rsc = self._xnat_child_resource(ctr, format, opts.pop('inout', None))
         # Make the resource, if necessary.
         if not rsc.exists():
-            logger.debug("Creating the XNAT %s %s %s resource..." % (session, ctr_name, format))
+            logger.debug("Creating the XNAT %s %s %s resource..." % (session, ctr_id, format))
             rsc.create()
-            logger.debug("Created the XNAT %s %s resource with name %s and id %s." % (session, ctr_name, rsc.label(), rsc.id()))
+            logger.debug("Created the XNAT %s %s resource with name %s and id %s." % (session, ctr_id, rsc.label(), rsc.id()))
         
         # Upload each file.
         logger.debug("Uploading the %s files to XNAT..." % session)
@@ -343,7 +385,7 @@ class XNAT(object):
                 if name.startswith(prefix):
                    recon_id = name
                 else:
-                    recon_id = '_'.join(prefix, name)
+                    recon_id = "%s_%s" % (prefix, name)
                 return experiment.reconstruction(recon_id)
             elif container_type == 'assessor':
                 return experiment.assessor(name)
@@ -436,12 +478,12 @@ class XNAT(object):
         rsc_ctr = resource.parent()
         # Check for an existing file.
         if file_obj.exists():
-            raise XNATError("The XNAT file object %s already exists in the %s resource %s" %
+            raise XNATError("The XNAT file object %s already exists in the %s %s resource" %
                 (fname, rsc_ctr.id(), resource.label()))
         
         # Upload the file.
-        logger.debug("Inserting the XNAT file %s into the %s resource %s..." %
-            (fname, rsc_ctr.id(), resource))
+        logger.debug("Inserting the XNAT file %s into the %s %s %s resource..." %
+            (fname, rsc_ctr.__class__.__name__.lower(), rsc_ctr.id(), resource.label()))
         file_obj.insert(in_file, **opts)
         logger.debug("Uploaded the XNAT file %s." % fname)
     
