@@ -26,9 +26,12 @@ def run(collection, *subject_dirs, **opts):
     if not new_visits:
         logger.info("No new images were detected.")
         return
+    
+    # Group the DICOM files by series.
+    scan_specs = _group_sessions_by_series(*new_visits)
 
     # Make the staging workflow.
-    wf = _create_workflow(collection, *new_visits, **opts)
+    wf = _create_workflow(collection, *scan_specs, **opts)
     
     # If debug is set, then diagram the staging workflow graph.
     if logger.level <= logging.DEBUG:
@@ -46,10 +49,10 @@ def run(collection, *subject_dirs, **opts):
     # Return the new XNAT (subject, session) tuples.
     return [(sbj, sess) for sbj, sess, _ in new_visits]
 
-def _create_workflow(collection, *session_specs, **opts):
+def _create_workflow(collection, *scan_specs, **opts):
     """
     @param collection: the AIRC image collection name 
-    @param session_specs: the (subject, session, dicom_files) tuples to stage
+    @param scan_specs: the (subject, session, scan, dicom_files) tuples to stage
     @param opts: the workflow options
     @keyword dest: the destination directory (default current working directory)
     @return: the staging workflow, or None if there are no new images
@@ -64,15 +67,12 @@ def _create_workflow(collection, *session_specs, **opts):
     wf = pe.Workflow(name='staging', **opts)
     
     # The subjects with new sessions.
-    subjects = {sbj for sbj, _, _ in session_specs}
-    
-    # Group the series.
-    series_specs = _group_sessions_by_series(*session_specs)
+    subjects = {sbj for sbj, _, _, _ in scan_specs}
 
     # The iterable series specification.
-    glue = Glue(input_names=['series_spec'], output_names=['subject', 'session', 'series', 'dicom_files'])
-    series_spec = pe.Node(glue, name='series_spec')
-    series_spec.iterables = ('series_spec', series_specs)
+    glue = Glue(input_names=['scan_spec'], output_names=['subject', 'session', 'scan', 'dicom_files'])
+    scan_spec = pe.Node(glue, name='scan_spec')
+    scan_spec.iterables = ('scan_spec', scan_specs)
 
     # The staging location.
     dest = os.path.abspath(opts.pop('dest', os.getcwd()))
@@ -102,7 +102,7 @@ def _create_workflow(collection, *session_specs, **opts):
     # Store the fixed DICOM files in XNAT.
     store_dicom = pe.Node(XNATUpload(project='QIN', format='DICOM'), name='store_dicom')
 
-    # Stack the series.
+    # Stack the scan.
     stack = pe.Node(DcmStack(embed_meta=True, out_format="series%(SeriesNumber)03d"),
         name='stack')
     
@@ -112,10 +112,10 @@ def _create_workflow(collection, *session_specs, **opts):
     wf.connect([
         (input_spec, map_ctp, [('collection', 'collection'), ('subjects', 'patient_ids'), ('dest', 'dest')]),
         (input_spec, ctp_dir, [('dest', 'dest')]),
-        (series_spec, ctp_dir, [('subject', 'subject'), ('session', 'session'), ('series', 'series')]),
-        (series_spec, fix_dicom, [('subject', 'subject'), ('dicom_files', 'in_files')]),
-        (series_spec, store_dicom, [('subject', 'subject'), ('session', 'session'), ('series', 'scan')]),
-        (series_spec, store_stack, [('subject', 'subject'), ('session', 'session'), ('series', 'scan')]),
+        (scan_spec, ctp_dir, [('subject', 'subject'), ('session', 'session'), ('scan', 'series')]),
+        (scan_spec, fix_dicom, [('subject', 'subject'), ('dicom_files', 'in_files')]),
+        (scan_spec, store_dicom, [('subject', 'subject'), ('session', 'session'), ('scan', 'scan')]),
+        (scan_spec, store_stack, [('subject', 'subject'), ('session', 'session'), ('scan', 'scan')]),
         (ctp_dir, compress, [('out_dir', 'dest')]),
         (fix_dicom, compress, [('out_files', 'in_file')]),
         (fix_dicom, stack, [('out_files', 'dicom_files')]),
@@ -129,7 +129,7 @@ def _group_sessions_by_series(*session_specs):
     Creates the series specifications for the new images in the given sessions.
 
     @param session_specs: the (subject, session, dicom_files) tuples to group
-    @return: the new series specifications
+    @return: the series (subject, session, series, dicom_files) tuples
     """
 
     # The (subject, session, series, dicom files) inputs.
