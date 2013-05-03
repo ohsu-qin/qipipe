@@ -40,11 +40,15 @@ class TestXNATHelper(object):
             assert_true(file_obj.exists(), "File not uploaded: %s" % fname)
             
             # Download the uploaded file.
-            files = list(xnat.download('QIN', sbj.label(), session, dest=RESULTS, scan=1, format='NIFTI'))
-        assert_not_equal(0, len(files), "No files were downloaded")
-        assert_equal(1, len(files), "Too many files were downloaded: %s" % files)
+            files = xnat.download('QIN', sbj.label(), session, dest=RESULTS, scan=1, format='NIFTI')
+            # Download all scans.
+            all_files = xnat.download('QIN', sbj.label(), session, dest=RESULTS, container_type='scan', format='NIFTI')
+            
+        # Verify the result.
+        assert_equal(1, len(files), "The download file count is incorrect: %d" % len(files))
         f = files[0]
         assert_true(os.path.exists(f), "File not downloaded: %s" % f)
+        assert_equal(set(files), set(all_files), "The scan 1 download differs from all scans download: %s vs %s" % (files, all_files))
 
 
 if __name__ == "__main__":
