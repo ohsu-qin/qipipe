@@ -17,7 +17,7 @@ def generate_subject_name(name):
     
     return 'Test_' + encode(name).strip('=')
 
-def get_xnat_subjects(collection, source, pattern=None):
+def get_subjects(collection, source, pattern=None):
     """
     Infers the XNAT subject names from the given source directory.
     The source directory contains subject subdirectories.

@@ -10,7 +10,7 @@ from qipipe.pipelines import QIPipeline
 from qipipe.helpers.dicom_helper import iter_dicom
 from qipipe.helpers import xnat_helper
 from qipipe.staging import airc_collection as airc
-from test.helpers.xnat_test_helper import get_xnat_subjects, delete_subjects
+from test.helpers.xnat_test_helper import get_subjects, delete_subjects
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
@@ -63,7 +63,7 @@ class TestPipeline:
         work = os.path.join(RESULTS, 'work')
 
         # The test subject => directory dictionary.
-        sbj_dir_dict = get_xnat_subjects(collection, fixture)
+        sbj_dir_dict = get_subjects(collection, fixture)
         # The test subjects.
         subjects = sbj_dir_dict.keys()
         # The test source directories.
