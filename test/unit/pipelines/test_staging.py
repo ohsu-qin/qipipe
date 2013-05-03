@@ -13,14 +13,11 @@ from test.helpers.xnat_test_helper import get_xnat_subjects, clear_xnat_subjects
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
 
-FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'breast')
+FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
 """The test fixture directory."""
 
-RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'staging')
+RESULTS = os.path.join(ROOT, 'results', 'staging')
 """The test results directory."""
-
-COLLECTION = "Breast"
-"""The QIN test collection."""
 
 from nipype import config
 cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
@@ -28,43 +25,59 @@ cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_fi
 config.update_config(cfg)
 
 class TestStagingWorkflow:
-    """Registration pipeline unit tests."""
+    """Staging pipeline unit tests."""
     
     def setUp(self):
         shutil.rmtree(RESULTS, True)
-        # The test subject => directory dictionary.
-        self._sbj_dir_dict = get_xnat_subjects(COLLECTION, FIXTURE)
-        # Delete any existing test subjects.
-        clear_xnat_subjects(*self._sbj_dir_dict.keys())
     
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
-        clear_xnat_subjects(*self._sbj_dir_dict.keys())
-
-    def test_staging(self):
+    
+    def test_breast(self):
+        self._test_collection('Breast')
+    
+    def test_sarcoma(self):
+        self._test_collection('Sarcoma')
+    
+    def _test_collection(self, collection):
         """
-        Run the staging pipeline and verify that the registered images are created
-        in XNAT.
+        Run the staging pipeline on the given collection and verify that
+        the sessions are created in XNAT.
+        
+        @param collection: the AIRC collection name
+        @attention: This test does not verify the CTP staging area nor that the
+            image files are correctly uploaded. These features should be
+            verified manually.
         """
         
-        logger.debug("Testing the registration pipeline on %s..." % FIXTURE)
+        fixture = os.path.join(FIXTURES, collection.lower())
+        logger.debug("Testing the staging pipeline on %s..." % fixture)
 
         # The staging destination and work area.
         dest = os.path.join(RESULTS, 'data')
         work = os.path.join(RESULTS, 'work')
 
-        # Run the workflow.
-        logger.debug("Executing the staging workflow...")
-        session_specs = staging.run(COLLECTION, dest=dest, base_dir=work, *self._sbj_dir_dict.itervalues())
-
-        # Verify the result.
+        # The test subject => directory dictionary.
+        sbj_dir_dict = get_xnat_subjects(collection, fixture)
+        # The test subjects.
+        subjects = sbj_dir_dict.keys()
+        # The test source directories.
+        sources = sbj_dir_dict.values()
+        
         with xnat_helper.connection() as xnat:
-            for sbj_lbl in self._sbj_dir_dict.iterkeys():
-                sbj = xnat.get_subject('QIN', sbj_lbl)
-                assert_true(sbj.exists(), "The subject was not created in XNAT: %s" % sbj.label())
-            for sbj_lbl, sess_lbl in session_specs:
-                sess = xnat.get_session('QIN', sbj_lbl, sess_lbl)
-                assert_true(sess.exists(), "The session not created in XNAT: %s" % sess)
+            # Delete any existing test subjects.
+            clear_xnat_subjects(*subjects)
+
+            # Run the pipeline.
+            session_specs = staging.run(collection, *sources, dest=dest, work=work)
+
+            # Verify the result.
+            for sbj, sess in session_specs:
+                sess_obj = xnat.get_session('QIN', sbj, sess)
+                assert_true(sess_obj.exists(), "The %s %s session was not created in XNAT" % (sbj, sess))
+        
+            # Delete the test subjects.
+            clear_xnat_subjects(*subjects)
 
 
 if __name__ == "__main__":
