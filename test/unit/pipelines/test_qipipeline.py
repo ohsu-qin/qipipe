@@ -75,7 +75,7 @@ class TestPipeline:
 
             # Run the workflow.
             logger.debug("Executing the staging workflow...")
-            recon_specs = qip.run(collection, dest=dest, work=work, *sources)
+            recon_specs = qip.run(collection, *sources, dest=dest, work=work)
 
             # Verify the result.
             for sbj, sess, recon in recon_specs:
