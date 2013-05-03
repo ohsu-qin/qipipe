@@ -16,19 +16,6 @@ def generate_subject_name(name):
     """
     
     return 'Test_' + encode(name).strip('=')
-    
-def delete_subjects(*names):
-    """
-    Deletes each given test subject, if it exists.
-    
-    @param names: the names of the subjects to delete
-    """
-    
-    with xnat_helper.connection() as xnat:
-        for lbl in names:
-            sbj = xnat.interface.select('/project/QIN/subject/' + lbl)
-            if sbj.exists():
-                sbj.delete()
 
 def get_xnat_subjects(collection, source, pattern=None):
     """
@@ -60,7 +47,7 @@ def get_xnat_subjects(collection, source, pattern=None):
     
     return sbj_dir_dict
 
-def clear_xnat_subjects(*subject_names):
+def delete_subjects(*subject_names):
     """
     Deletes the given XNAT subjects, if they exist.
     
@@ -71,5 +58,5 @@ def clear_xnat_subjects(*subject_names):
         for sbj_lbl in subject_names:
             sbj = xnat.get_subject('QIN', sbj_lbl)
             if sbj.exists():
-                sbj.delete(delete_files=True)
-                logger.debug("Deleted the QIN pipeline test subject from XNAT: %s" % sbj_lbl)
+                sbj.delete()
+                logger.debug("Deleted the XNAT test subject %s." % sbj_lbl)

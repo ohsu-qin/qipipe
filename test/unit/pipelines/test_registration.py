@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.pipelines import registration as reg
 from qipipe.helpers import xnat_helper
-from test.helpers.xnat_test_helper import clear_xnat_subjects
+from test.helpers.xnat_test_helper import delete_subjects
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
@@ -63,7 +63,7 @@ class TestRegistrationPipeline:
             for sbj_dir in glob.glob(fixture + '/' + collection + '*'):
                 _, sbj = os.path.split(sbj_dir)
                 subjects.add(sbj)
-                clear_xnat_subjects(sbj)
+                delete_subjects(sbj)
                 for sess_dir in glob.glob(sbj_dir + '/Session*'):
                     sess, in_files = self._upload_session_files(sbj, sess_dir)
                     sess_files_dict[(sbj, sess)] = in_files
@@ -86,7 +86,7 @@ class TestRegistrationPipeline:
                     (sbj, sess, len(in_files), len(recon_files)))
 
             # Clean up.
-            clear_xnat_subjects(*subjects)
+            delete_subjects(*subjects)
     
     def _upload_session_files(self, subject, session_dir):
         """

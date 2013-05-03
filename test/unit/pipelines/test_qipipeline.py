@@ -10,7 +10,7 @@ from qipipe.pipelines import QIPipeline
 from qipipe.helpers.dicom_helper import iter_dicom
 from qipipe.helpers import xnat_helper
 from qipipe.staging import airc_collection as airc
-from test.helpers.xnat_test_helper import get_xnat_subjects, clear_xnat_subjects
+from test.helpers.xnat_test_helper import get_xnat_subjects, delete_subjects
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
@@ -71,7 +71,7 @@ class TestPipeline:
         
         with xnat_helper.connection() as xnat:
             # Delete any existing test subjects.
-            clear_xnat_subjects(*subjects)
+            delete_subjects(*subjects)
 
             # Run the workflow.
             logger.debug("Executing the staging workflow...")
@@ -83,7 +83,7 @@ class TestPipeline:
                 assert_true(recon_obj.exists(), "The %s %s reconstruction %s was not created in XNAT" % (sbj, sess, recon))
         
             # Delete the test subjects.
-            clear_xnat_subjects(*subjects)
+            delete_subjects(*subjects)
 
 
 if __name__ == "__main__":
