@@ -10,7 +10,6 @@ def collection_with_name(name):
     @param name: the OHSU QIN collection name
     @return: the corresponding AIRC collection
     """
-    
     return EXTENT[name]
 
 
@@ -24,7 +23,6 @@ class AIRCCollection(object):
         @param session_pattern: the session directory name match regular expression pattern
         @param dicom_pattern: the DICOM directory name match glob pattern
         """
-        
         self.name = name
         self.subject_pattern = subject_pattern
         self.session_pattern = session_pattern
@@ -36,7 +34,6 @@ class AIRCCollection(object):
         @param path: the directory path
         @return: the subject number
         """
-        
         match = re.search(self.subject_pattern, path)
         if not match:
             raise StagingError("The directory path %s does not match the subject pattern %s" % (path, self.subject_pattern))
@@ -48,7 +45,6 @@ class AIRCCollection(object):
         @param path: the directory path
         @return: the session number
         """
-        
         return int(re.search(self.session_pattern, path).group(1))
 
 class AIRCCollection:

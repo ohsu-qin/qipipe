@@ -12,7 +12,6 @@ def generate_file_name(ext=None):
     @param: the optional file extension, with leading period delimiter
     @return: the file name
     """
-    
     # A starting time prior to now.
     start = time.mktime(calendar.datetime.date(2013,01,01).timetuple())
     # A long which is unique to within one millisecond.

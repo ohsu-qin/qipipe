@@ -60,7 +60,6 @@ class QIPipeline(object):
         @keyword work: the pipeline execution work area (default a new temp directory)
         @return: the new XNAT session names
         """
-        
         # The work option is the pipeline parent directory.
         work_dir = opts.pop('work', None) or tempfile.mkdtemp()
         
