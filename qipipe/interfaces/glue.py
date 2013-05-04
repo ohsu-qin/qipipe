@@ -51,6 +51,7 @@ class Glue(IOBase):
         >>> result.outputs.last
         'Brainsample'
     """
+    
     input_spec = DynamicTraitedSpec
     
     output_spec = DynamicTraitedSpec

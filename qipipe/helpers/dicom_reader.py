@@ -92,6 +92,7 @@ class DicomIterator(FileIterator):
     """
     DicomIterator is a utility class for reading the pydicom data sets from DICOM files.
     """
+
     def __init__(self, *dicom_files):
         super(DicomIterator, self).__init__(*dicom_files)
         self.args = []

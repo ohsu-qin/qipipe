@@ -31,6 +31,7 @@ class DictionaryHierarchy(object):
         2, 6, 7, '7'
         8, '8'
     """
+
     def __init__(self, root):
         """
         @param root: the nested dictionary to wrap by this hierarchy

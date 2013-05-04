@@ -31,6 +31,7 @@ class FileIterator(object):
     """
     This FileIterator iterates over the files contained in the given file specifications.
     """
+
     def __init__(self, *filespecs):
         """
         @param filespecs: the files, directories or file generators over which to iterate
