@@ -54,7 +54,6 @@ class TestPipeline:
             image files are correctly uploaded. These features should be
             verified manually.
         """
-        
         fixture = os.path.join(FIXTURES, collection.lower())
         logger.debug("Testing the QIN pipeline on %s..." % fixture)
 

@@ -37,7 +37,6 @@ def main(argv=None):
 
 def _parse_arguments():
     """Parses the command line arguments."""
-    
     parser = argparse.ArgumentParser()
 
     tag_grp = parser.add_mutually_exclusive_group()
@@ -67,7 +66,6 @@ def _print_tag_values(tags, *files, **opts):
     @keyword output: the destination (default stdout)
     @keyword header: flag indicating whether to print a header line (default True)
     """
-    
     # The default tags include any tag defined in at least one file.
     # This preparatory step requires reading each DICOM file to collect
     # the tags before rereading the file to print the tag values.

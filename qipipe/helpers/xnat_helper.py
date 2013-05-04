@@ -25,7 +25,6 @@ def connection():
 
     @return a L{XNAT} instance
     """
-    
     if hasattr(connection, 'xnat'):
         yield connection.xnat
     else:
@@ -62,7 +61,6 @@ class XNAT(object):
     
     def close(self):
         """Drops the XNAT connection."""
-        
         self.interface.disconnect()
         logger.debug("Closed the XNAT connection.")
     
@@ -74,7 +72,6 @@ class XNAT(object):
         @param subject: the XNAT subject label
         @return: the corresponding XNAT subject (which may not exist)
         """
-        
         # The query path.
         qpath = XNAT.SUBJECT_QUERY_FMT % (project, subject)
         return self.interface.select(qpath)
@@ -89,7 +86,6 @@ class XNAT(object):
         @param session: the XNAT experiment label
         @return: the corresponding XNAT session (which may not exist)
         """
-        
         sess_lbl = self._canonical_session_label(subject, session)
         
         return self.get_subject(project, subject).experiment(sess_lbl)
@@ -105,7 +101,6 @@ class XNAT(object):
         @param scan: the XNAT scan name or number
         @return: the corresponding XNAT scan object (which may not exist)
         """
-        
         return self.get_session(project, subject, session).scan(str(scan))
       
     def get_reconstruction(self, project, subject, session, recon):
@@ -121,7 +116,6 @@ class XNAT(object):
         @param recon: the unique XNAT reconstruction name
         @return: the corresponding XNAT reconstruction object (which may not exist)
         """
-        
         sess_lbl = self._canonical_session_label(subject, session)
         if recon.startswith(sess_lbl):
             recon_lbl = recon
@@ -138,7 +132,6 @@ class XNAT(object):
         @param session: the XNAT experiment label
         @return: the corresponding XNAT session label
         """
-        
         if session.startswith(subject):
             return session
         else:
@@ -167,7 +160,6 @@ class XNAT(object):
         @keyword inout: @param inout: the C{in}/C{out} reconstruction resource qualifier
         @keyword dest: the optional download location (default current directory)
         """
-        
         # The XNAT experiment, which must exist.
         exp = self.get_session(project, subject, session)
         if not exp.exists():
@@ -193,7 +185,6 @@ class XNAT(object):
         @param dest: the target directory
         @return: the downloaded file path
         """
-        
         fname = file_obj.label()
         if not fname:
             raise XNATError("XNAT file object does not have a name: %s" % file_obj)
@@ -252,7 +243,6 @@ class XNAT(object):
         @raise XNATError: if the session child resource container type option is missing
         @raise XNATError: if the XNAT experiment does not exist and the modality option is missing
         """
-    
         # The XNAT experiment.
         exp = self.get_session(project, subject, session)
 
@@ -313,7 +303,6 @@ class XNAT(object):
         @param opts: the L{XNAT.download} options
         @return: the container (type, value) tuple
         """
-        
         # The image format.
         if not opts.has_key('format'):
             raise XNATError("XNAT upload is missing the image format for session: %s" % experiment.label())
@@ -334,7 +323,6 @@ class XNAT(object):
         @param opts: the options to check
         @return: the container (type, value) tuple, or (None, None) if not found
         """
-        
         if opts.has_key('container_type'):
             return (opts['container_type'], None)
         for t in XNAT.CONTAINER_TYPES:
@@ -351,7 +339,6 @@ class XNAT(object):
         @return: the standard XNAT designator in L{XNAT.CONTAINER_TYPES}
         @raise XNATError: if the name does not designate a valid container type
         """
-        
         if name in XNAT.ASSESSOR_SYNONYMS:
             return 'assessor'
         elif name in XNAT.CONTAINER_TYPES:
@@ -372,7 +359,6 @@ class XNAT(object):
         @param name: the optional container name, e.g. C{NIFTI}
         @return: the XNAT resource parent object
         """
-        
         if name:
             # Convert an integer name, e.g. scan number, to a string.
             name = str(name)
@@ -405,7 +391,6 @@ class XNAT(object):
         @return: the XNAT resource object
         @raise XNATError: if the inout option is invalid
         """
-        
         if name:
             if isinstance(parent, Reconstruction) or isinstance(parent, Reconstructions):
                 if inout == 'in':
@@ -434,7 +419,6 @@ class XNAT(object):
         @return: the image format, or None if the format could not be inferred
         @raise XNATError: if the input files don't have the same file extension
         """
-        
         # A sample input file.
         in_file = in_files[0]
         # The XNAT file name.
@@ -467,7 +451,6 @@ class XNAT(object):
         @return: the XNAT file name
         @raise XNATError: if the XNAT file already exists
         """
-        
         # The XNAT file name.
         _, fname = os.path.split(in_file)
         logger.debug("Uploading the XNAT file %s from %s..." % (fname, in_file))
