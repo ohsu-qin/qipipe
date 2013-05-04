@@ -36,7 +36,7 @@ class TestANTS:
         images = []
         for root, _, _ in os.walk(FIXTURE):
             images.extend(glob.glob(root + '/*.nii.gz'))
-        rdict = ants.register(output=OUTPUT, work=WORK, *images)
+        rdict = ants.register(*images, output=OUTPUT, work=WORK)
         # Verify that each input is registered.
         for f in images:
             registered = f.replace('.nii.gz', 'Registered.nii.gz')
