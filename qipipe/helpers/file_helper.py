@@ -29,7 +29,8 @@ class FileIteratorError(Exception):
 
 class FileIterator(object):
     """
-    This FileIterator iterates over the files contained in the given file specifications.
+    FileIterator is a generator class which iterates over the files contained
+    recursively in the L{__init__} file specifications.
     """
 
     def __init__(self, *filespecs):
