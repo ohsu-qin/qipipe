@@ -3,6 +3,7 @@ import nipype.pipeline.engine as pe
 from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.dcmstack import DcmStack
 from ..interfaces import Glue, FixDicom, Compress, MapCTP, XNATUpload
+from ..staging.staging_error import StagingError
 from ..staging.staging_helper import iter_new_visits, group_dicom_files_by_series
 from ..helpers import xnat_helper
 
@@ -25,7 +26,8 @@ def run(collection, *subject_dirs, **opts):
     # If there are no new images, then bail.
     if not new_visits:
         logger.info("No new images were detected.")
-        return
+        return []
+    logger.debug("%d new visits were detected" % len(new_visits))
     
     # Group the DICOM files by series.
     scan_specs = _group_sessions_by_series(*new_visits)
@@ -137,6 +139,8 @@ def _group_sessions_by_series(*session_specs):
     for sbj, sess, dcm_file_iter in session_specs:
         # Group the session DICOM input files by series.
         ser_dcm_dict = group_dicom_files_by_series(dcm_file_iter)
+        if not ser_dcm_dict:
+            raise StagingError("No DICOM files were detected in the %s %s session source directory." % (sbj, sess))
         # Collect the (subject, session, series, dicom_files) tuples.
         for ser, dcm in ser_dcm_dict.iteritems():
             logger.debug("The staging workflow will iterate over subject %s session %s series %s." % (sbj, sess, ser))

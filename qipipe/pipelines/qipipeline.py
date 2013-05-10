@@ -58,7 +58,7 @@ class QIPipeline(object):
         @param opts: the pipeline options
         @keyword dest: the CTP staging destination directory (default current working directory)
         @keyword work: the pipeline execution work area (default a new temp directory)
-        @return: the new XNAT session names
+        @return: the L{reg.run} result
         """
         # The work option is the pipeline parent directory.
         work_dir = opts.pop('work', None) or tempfile.mkdtemp()
@@ -67,6 +67,9 @@ class QIPipeline(object):
             # Stage the input AIRC files.
             stg_dir = os.path.join(work_dir, 'stage')
             session_specs = staging.run(self.collection, base_dir=stg_dir, *subject_dirs, **opts)
+            if not session_specs:
+                return []
+            
             # The dest option is only used for staging.
             opts.pop('dest', None)
             
