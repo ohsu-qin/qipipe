@@ -72,7 +72,6 @@ def _register(subject, session, dest, **opts):
     @param opts: the workflow options
     @return: the resampled XNAT (subject, session, reconstruction) designator tuple
     """
-    
     # Download the scan images.
     tgt = os.path.join(dest, subject, session)
     images = _download_scans(subject, session, tgt)
@@ -114,7 +113,6 @@ def _create_workflow(subject, session, recon, images, **opts):
     @param opts: the pyxnat workflow creation options
     @return: the registration workflow
     """
-    
     msg = 'Creating the registration workflow'
     if opts:
         msg = msg + ' with options %s' % opts
@@ -164,7 +162,6 @@ def _generate_name(prefix):
     @param: the name prefix
     @return: a unique name which starts with the given prefix
     """
-    
     # The name suffix.
     suffix = file_helper.generate_file_name()
     
@@ -178,7 +175,6 @@ def _create_average_interface():
     """
     @return: the ANTS average generation interface with default parameter settings
     """
-    
     avg = AverageImages()
     avg.inputs.dimension = 3
     avg.inputs.normalize = True
@@ -189,8 +185,6 @@ def _create_registration_interface():
     """
     @return: a new ANTS Registration interface with the preferred parameter settings
     """
-    
-    
     # TODO - remove line below
     return Glue(input_names=['moving_image', 'fixed_image'], output_names=['composite_transform'])
 

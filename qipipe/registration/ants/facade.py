@@ -24,7 +24,6 @@ def register(*in_files, **opts):
     @keyword reference: the fixed reference image (default is generated)
     @return: the source => registered file dictionary
     """
-    
     return ANTS(**opts).register(*in_files)
 
 
@@ -50,7 +49,6 @@ def create_dce_template(files, metric=None):
     @param metric: the similarity metric (default is cross-correlation)
     @return: the reference template
     """
-    
     # If there are many input files, then build the template with a subset.
     if len(files) >= 100:
         tfiles = []

@@ -17,7 +17,6 @@ def sarcoma_config():
     @return: the sarcoma configuration
     @rtype: ConfigParser
     """
-    
     if not hasattr(sarcoma_config, 'instance'):
         sarcoma_config.instance = Config()
         sarcoma_config.instance.read(_CFG_FILE)

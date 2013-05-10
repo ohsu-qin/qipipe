@@ -59,7 +59,6 @@ def _create_workflow(collection, *scan_specs, **opts):
     @keyword dest: the destination directory (default current working directory)
     @return: the staging workflow, or None if there are no new images
     """
-    
     msg = 'Creating the staging workflow'
     if opts:
         msg = msg + ' with options %s...' % opts

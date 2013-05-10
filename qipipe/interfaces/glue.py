@@ -64,7 +64,6 @@ class Glue(IOBase):
         @param mandatory_inputs: a flag indicating whether every input field is required
         @param kwargs: the input field name => value bindings
         """
-        
         super(Glue, self).__init__(**kwargs)
         if not input_names:
             raise Exception('Glue input fields must be a non-empty list')

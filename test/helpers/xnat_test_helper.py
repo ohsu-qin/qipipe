@@ -14,7 +14,6 @@ def generate_subject_name(name):
     @param name: the test name
     @return: the test subject name
     """
-    
     return 'Test_' + encode(name).strip('=')
 
 def get_subjects(collection, source, pattern=None):
@@ -31,7 +30,6 @@ def get_subjects(collection, source, pattern=None):
         (default L{airc.AIRCCollection.subject_pattern})
     @return: the subject name => directory dictionary
     """
-    
     airc_coll = airc.collection_with_name(collection)
     pat = pattern or airc_coll.subject_pattern
     sbj_dir_dict = {}
@@ -53,7 +51,6 @@ def delete_subjects(*subject_names):
     
     @param subject_names: the XNAT subject names
     """
-    
     with xnat_helper.connection() as xnat:
         for sbj_lbl in subject_names:
             sbj = xnat.get_subject('QIN', sbj_lbl)

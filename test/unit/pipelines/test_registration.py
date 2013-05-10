@@ -47,7 +47,6 @@ class TestRegistrationPipeline:
         
         @param collection: the collection name
         """
-        
         fixture = os.path.join(FIXTURES, collection.lower())
         logger.debug("Testing the registration pipeline on %s..." % fixture)
 
@@ -96,7 +95,6 @@ class TestRegistrationPipeline:
         @param session_dir: the session directory
         @return: the XNAT (session, files) labels
         """
-        
         _, dname = os.path.split(session_dir)
         with xnat_helper.connection() as xnat:
             sess_obj = xnat.get_session('QIN', subject, dname)
@@ -111,7 +109,6 @@ class TestRegistrationPipeline:
         @param path: the file path
         @return: the XNAT file object label
         """
-        
         _, fname = os.path.split(path)
         scan = re.match('series(\d{3}).nii.gz', fname).group(1)
         # The XNAT file object

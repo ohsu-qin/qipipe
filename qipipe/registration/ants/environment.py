@@ -10,7 +10,6 @@ def ants_environ():
     @return: the environment dictionary
     @raise ANTSError: if the ANTSPATH environment variable is not set
     """
-    
     # Lazy initializer.
     global _environ
     if not _environ:

@@ -21,7 +21,6 @@ def edit_dicom_headers(dest, *dicom_files, **tag_values):
     @param tag_values: the DICOM header (I{name}, I{value}) tag values to set
     @return: the files which were created
     """
-    
     dest = os.path.abspath(dest)
     if not os.path.exists(dest):
         os.makedirs(dest)
