@@ -14,11 +14,11 @@ def read_dicom_file(fp, *args):
     @param fp: the file pathname or stream
     @param args: the remaining pydicom read_file arguments
     @return: the pydicom dicom object
-    :raise: InvalidDicomError if the file is not a DICOM file
-    :raise: IOError if the file cannot be read
+    @raise: InvalidDicomError if the file is not a DICOM file
+    @raise: IOError if the file cannot be read
     """
     if isinstance(fp, str):
-        logger.debug("Opening the file %s..." % fp)
+        logger.debug("Opening the DICOM file %s..." % fp)
         _, ext = os.path.splitext(fp)
         if ext == '.gz':
             fp = gzip.open(fp)
@@ -32,8 +32,8 @@ def read_dicom_header(fp):
     
     @param fp: the file pathname or stream
     @return: the pydicom dicom object without the non-pixel tags
-    :raise: InvalidDicomError if the file is not a DICOM file
-    :raise: IOError if the file cannot be read
+    @raise: InvalidDicomError if the file is not a DICOM file
+    @raise: IOError if the file cannot be read
     """
     return read_dicom_file(fp, *DicomHeaderIterator.OPTS)
 
@@ -41,7 +41,7 @@ def isdicom(fp):
     """
     @param fp: the file path or stream
     @return: whether the file is a DICOM file
-    :raise: IOError if the file cannot be read
+    @raise: IOError if the file cannot be read
     """
     try:
         read_dicom_header(fp)
@@ -90,7 +90,7 @@ def iter_dicom_headers(*dicom_files):
 
 class DicomIterator(FileIterator):
     """
-    DicomIterator is a utility class for reading the pydicom data sets from DICOM files.
+    DicomIterator is a generator class for reading the pydicom data sets from DICOM files.
     """
 
     def __init__(self, *dicom_files):
@@ -109,7 +109,7 @@ class DicomIterator(FileIterator):
 
 class DicomHeaderIterator(DicomIterator):
     """
-    DicomHeaderIterator is a utility class for reading the pydicom non-pixel data sets from DICOM files.
+    DicomHeaderIterator is a generator class for reading the pydicom non-pixel data sets from DICOM files.
     """
     # Read the DICOM file with defer_size=256, stop_before_pixels=True and force=False.
     OPTS = [256, True, False]
