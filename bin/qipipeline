@@ -6,7 +6,7 @@ Runs the QIN pipeline.
 import sys, os
 import argparse
 import logging
-# Defer importing the application until the logging level has been set.
+# Defer importing the application modules until the logging level has been set.
 
 
 def main(argv=sys.argv):
