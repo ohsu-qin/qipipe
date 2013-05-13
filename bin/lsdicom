@@ -18,18 +18,14 @@ def main(argv=sys.argv):
     # Parse the command line arguments.
     args = _parse_arguments()
     
-    # Configure the logger.
-    if args.log:
-        logging.basicConfig(filename=args.log)
-    if args.log_level:
-        logging.getLogger().setLevel(args.log_level)
-    
     # The summary tag list is set here rather than in the argument, since the constant is imported
     # after parsing the commmand line arguments.
     if args.summary:
         tags = ImageHierarchy.TAGS
     else:
         tags = args.tags
+        if tags:
+            tags = tags.split(',')
     
     # Print the tag value lines.
     _print_tag_values(tags, output=args.output, header=args.header, *args.files)
@@ -54,7 +50,6 @@ def _parse_arguments():
     verbosity_grp.add_argument("-d", "--debug", help="print debug messages", dest='log_level',
         action="store_const", const=logging.DEBUG)
 
-    parser.add_argument("-l", "--log", help="the log file")
     parser.add_argument("-n", "--no-header", help="omit the tag name header line", dest='header', action="store_false")
     parser.add_argument("-o", "--output", help="print the values to the given file")
     parser.add_argument("files", help="the DICOM files or directories to list (default stdin)", metavar="FILE", nargs='+')
