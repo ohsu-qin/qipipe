@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.pipelines import registration as reg
 from qipipe.helpers import xnat_helper
 from test.helpers.xnat_test_helper import delete_subjects
+from test.helpers.registration import ANTS_TEST_REG_OPTS
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
@@ -16,14 +17,13 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 FIXTURES = os.path.join(ROOT, 'fixtures', 'stacks')
 """The test fixtures directory."""
 
-RESULTS = os.path.join(ROOT, 'results', 'registration')
+RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'registration')
 """The test results directory."""
 
 from nipype import config
 cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
     execution=dict(crashdump_dir=RESULTS, create_report=False))
 config.update_config(cfg)
-
 
 class TestRegistrationPipeline:
     """Registration pipeline unit tests."""
@@ -32,13 +32,13 @@ class TestRegistrationPipeline:
         shutil.rmtree(RESULTS, True)
     
     def tearDown(self):
-        shutil.rmtree(RESULTS, True)
+        pass #shutil.rmtree(RESULTS, True)
     
     def test_breast(self):
         self._test_collection('Breast')
 
-    def test_sarcoma(self):
-        self._test_collection('Sarcoma')
+    # def test_sarcoma(self):
+    #     self._test_collection('Sarcoma')
     
     def _test_collection(self, collection):
         """
@@ -68,7 +68,7 @@ class TestRegistrationPipeline:
                     sess_files_dict[(sbj, sess)] = in_files
             
             # Run the workflow.
-            recon_specs = reg.run(*sess_files_dict.iterkeys(), base_dir=work)
+            recon_specs = reg.run(*sess_files_dict.iterkeys(), base_dir=work, register=ANTS_TEST_REG_OPTS)
             
             # Verify the result.
             sess_recon_dict = {(sbj, sess): recon for sbj, sess, recon in recon_specs}

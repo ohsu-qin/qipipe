@@ -11,6 +11,7 @@ from qipipe.helpers.dicom_helper import iter_dicom
 from qipipe.helpers import xnat_helper
 from qipipe.staging import airc_collection as airc
 from test.helpers.xnat_test_helper import get_subjects, delete_subjects
+from test.helpers.registration import ANTS_TEST_REG_OPTS
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
@@ -74,7 +75,7 @@ class TestPipeline:
 
             # Run the workflow.
             logger.debug("Executing the staging workflow...")
-            recon_specs = qip.run(collection, *sources, dest=dest, work=work)
+            recon_specs = qip.run(collection, *sources, dest=dest, work=work, register=ANTS_TEST_REG_OPTS)
 
             # Verify the result.
             for sbj, sess, recon in recon_specs:
