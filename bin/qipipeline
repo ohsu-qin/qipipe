@@ -23,7 +23,7 @@ def main(argv=sys.argv):
     from qipipe.pipelines import qipipeline as qip
     
     # Run the QIN workflow.
-    qip.run(args.collection, *args.files, output=args.output, work=args.work)
+    qip.run(args.collection, *args.files, dest=args.output, work=args.work)
 
     return 0
 
