@@ -10,6 +10,7 @@ from . import pk_mapping as pk
 import logging
 logger = logging.getLogger(__name__)
 
+
 def run(collection, *subject_dirs, **opts):
     """
     Runs the OHSU QIN pipeline on the the given AIRC subject directories as follows:
@@ -40,6 +41,7 @@ def run(collection, *subject_dirs, **opts):
 
     qip = QIPipeline(collection)
     return qip.run(*subject_dirs, **opts)
+
     
 class QIPipeline(object):
     """The OHSU QIN pipeline."""
