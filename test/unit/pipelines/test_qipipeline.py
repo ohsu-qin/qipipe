@@ -16,7 +16,7 @@ from test.helpers.registration import ANTS_TEST_REG_OPTS
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
 
-FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
+FIXTURES = os.path.join(ROOT, 'fixtures', 'pipelines', 'qipipeline')
 """The test fixtures directory."""
 
 RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'qipipeline')
@@ -31,7 +31,11 @@ cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_fi
 config.update_config(cfg)
 
 class TestPipeline:
-    """Pipeline unit tests."""
+    """
+    Pipeline unit tests.
+    
+    See test_registration.py for a caveat about improved test coverage.
+    """
     
     def setUp(self):
         shutil.rmtree(RESULTS, True)

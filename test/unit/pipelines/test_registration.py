@@ -26,19 +26,27 @@ cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_fi
 config.update_config(cfg)
 
 class TestRegistrationPipeline:
-    """Registration pipeline unit tests."""
+    """
+    Registration pipeline unit tests.
+    
+    This test exercises trivially small Breast and Sarcoma single image test fixtures.
+    Coverage is improved by manually testing against at least one AIRC input visit of
+    each study. However, the test fixture for such a test is prohibitively large to
+    add to the source code and the pipeline takes app. 2 days to complete when run
+    serially.
+    """
     
     def setUp(self):
         shutil.rmtree(RESULTS, True)
     
     def tearDown(self):
-        pass #shutil.rmtree(RESULTS, True)
+        shutil.rmtree(RESULTS, True)
     
     def test_breast(self):
         self._test_collection('Breast')
 
-    # def test_sarcoma(self):
-    #     self._test_collection('Sarcoma')
+    def test_sarcoma(self):
+        self._test_collection('Sarcoma')
     
     def _test_collection(self, collection):
         """
