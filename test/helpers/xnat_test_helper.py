@@ -38,10 +38,10 @@ def get_subjects(collection, source, pattern=None):
             match = re.match(pat, d)
             if match:
                 # The XNAT subject name.
-                sbj_lbl = SUBJECT_FMT % (collection, int(match.group(1)))
+                subject = SUBJECT_FMT % (collection, int(match.group(1)))
                 # The subject source directory.
-                sbj_dir_dict[sbj_lbl] = os.path.join(source, d)
-                logger.debug("Discovered QIN pipeline test subject subdirectory: %s" % d)
+                sbj_dir_dict[subject] = os.path.join(source, d)
+                logger.debug("Discovered XNAT test subject %s subdirectory: %s" % (subject, d))
     
     return sbj_dir_dict
 
