@@ -1,5 +1,4 @@
 import os
-import io
 from ConfigParser import ConfigParser as Config
 
 _CFG_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'conf', 'sarcoma.cfg')
