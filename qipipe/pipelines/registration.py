@@ -4,13 +4,20 @@ from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.ants.registration import Registration
 from nipype.interfaces.ants import AverageImages, ApplyTransforms
 from nipype.interfaces.dcmstack import CopyMeta
-from ..interfaces import Glue, Copy, XNATDownload, XNATUpload
+from nipype.interfaces import fsl
+from nipype.interfaces.dcmstack import DcmStack, MergeNifti, CopyMeta
+from nipype.interfaces.utility import Select, IdentityInterface, Function
+from ..interfaces import XNATDownload, XNATUpload, MriVolCluster
 from ..helpers import xnat_helper
 from ..helpers import file_helper
 
 import logging
 logger = logging.getLogger(__name__)
 
+DEF_MASK_CLUSTER_OPTS = dict(
+    max_thresh=10,
+    min_voxels = 10000
+)
 
 DEF_ANTS_AVG_OPTS = dict(
     dimension=3,
@@ -32,11 +39,11 @@ DEF_ANTS_REG_OPTS = dict(
     sampling_percentage=[0.10, None],
     convergence_threshold=[1.e-8, 1.e-9],
     convergence_window_size=[100]*2,
-    smoothing_sigmas=[[1,0], [2,1,0]],
+    smoothing_sigmas=[[4,2], [4,2,0]],
     shrink_factors=[[1,1], [3,2,1]],
     use_estimate_learning_rate_once=[True, True],
     output_transform_prefix='xfm',
-    output_warped_image='warp.nii.gz',
+    output_warped_image='warp.nii.gz'
 )
 """The default ANTS Registration options."""
 
@@ -53,29 +60,34 @@ REG_PREFIX = 'reg'
 
 def run(*session_specs, **opts):
     """
-    Registers the scan NiFTI images for the given sessions.
-    
-    Registration is split into two Nipype workflows, C{average} and C{register},
-    as follows:
+    Registers the scan NiFTI images for the given sessions as follows:
+        - Download the NiFTI scans from XNAT
+        - Make a mask to subtract extraneous tissue
+        - Mask each input scan
+        - Make a template by averaging the masked images
+        - Create an affine and non-rigid transform for each image
+        - Reslice the masked image with the transforms
+        - Upload the mask and the resliced images
     
     The NiFTI scan images for each session are downloaded from XNAT into the
-    C{scans} subdirectory of the C{base_dir} specified in the options (default is the current directory).
+    C{scans} subdirectory of the C{base_dir} specified in the options
+    (default is the current directory).
     
-    The C{average} workflow input is a directory containing the NiFTI scan images
-    downloaded from XNAT. These images are averaged into a fixed reference
-    template image. This template is stored in the same directory as the
+    The average is taken on the middle half of the NiFTI scan images.
+    These images are averaged into a fixed reference template image.
 
     The options include the Pyxnat Workflow initialization options, as well as
     the following key => dictionary options:
+        - C{mask}: the FSL C{mri_volcluster} interface options
         - C{average}: the ANTS C{Average} interface options
-        - C{register}: the ANTS C{AverageImages} interface options
-        - C{warp}: the ANTS C{ApplyTransforms} interface options
+        - C{register}: the ANTS C{Registration} interface options
+        - C{reslice}: the ANTS C{ApplyTransforms} interface options
     
     The registration applies an affine followed by a symmetric normalization transform.
     
     @param session_specs: the XNAT (subject, session) name tuples to register
     @param opts: the workflow options
-    @return: the warpd XNAT (subject, session, reconstruction) designator tuples
+    @return: the resliced XNAT (subject, session, reconstruction) designator tuples
     """
 
     # The work directory.
@@ -101,12 +113,15 @@ def _register(subject, session, dest, **opts):
     tgt = os.path.join(dest, subject, session)
     images = _download_scans(subject, session, tgt)
     
-    # The registration reconstruction name.
+    # Make a unique registration reconstruction name. This permits more than one
+    # registration to be stored for each input image without a name conflict.
     recon = _generate_name(REG_PREFIX)
+    
+    
     # Make the workflow
-    wf = _create_workflow(subject, session, recon, images, **opts)
+    workflow = _create_workflow(subject, session, recon, images, **opts)
     # Execute the workflow
-    wf.run()
+    workflow.run()
     
     # Return the recon specification.
     return (subject, session, recon)
@@ -126,19 +141,21 @@ def _download_scans(subject, session, dest):
 
 def _create_workflow(subject, session, recon, images, **opts):
     """
-    Creates the Pyxnat Workflow for the given specification.
+    Creates the Pyxnat Workflow for the given session images.
     
     @param subject: the XNAT subject label
     @param session: the XNAT session label
-    @param recon: the target XNAT reconstruction id
-    @param opts: the workflow creation options described in L{registration.run}
+    @param recon: the XNAT registration reconstruction label
+    @param images: the input session scan NiFTI stacks
     @return: the registration workflow
     """
-    msg = 'Creating the registration workflow'
+    msg = 'Creating the %s %s registration workflow' % (subject, session)
     if opts:
         msg = msg + ' with options %s' % opts
     logger.debug("%s...", msg)
 
+    # The mask step options.
+    mask_opts = opts.pop('mask', {})
     # The average step options.
     avg_opts = opts.pop('average', {})
     # The registration step options.
@@ -146,65 +163,121 @@ def _create_workflow(subject, session, recon, images, **opts):
     # The warp step options.
     rsmpl_opts = opts.pop('warp', {})
 
-    wf = pe.Workflow(name='register', **opts)
+    workflow = pe.Workflow(name='register', **opts)
 
-    # The workflow input (subject, session, image) tuples
-    input_spec = pe.Node(IdentityInterface(fields=['subject', 'session', 'image']),
-         name='input_spec')
+    # The workflow input image iterator.
+    input_spec = pe.Node(IdentityInterface(fields=['image']), name='input_spec')
     input_spec.inputs.subject = subject
     input_spec.inputs.session = session
     input_spec.iterables = dict(image=images).items()
     
+    # Merge the DCE data to 4D.
+    dce_merge = pe.Node(MergeNifti(), name='dce_merge')
+    dce_merge.inputs.out_format = 'dce_series'
+    dce_merge.inputs.in_files = images
+
+    # Get a mean image from the DCE data.
+    dce_mean = pe.Node(fsl.MeanImage(), name='dce_mean')
+    workflow.connect(dce_merge, 'out_file', dce_mean, 'in_file')
+
+    # Find the center of gravity from the mean image.
+    find_cog = pe.Node(fsl.ImageStats(), name='find_cog')
+    find_cog.inputs.op_string = '-C'
+    workflow.connect(dce_mean, 'out_file', find_cog, 'in_file')
+
+    # Zero everything posterior to the center of gravity on mean image.
+    crop_back = pe.Node(fsl.ImageMaths(), name='crop_back')
+    workflow.connect(dce_mean, 'out_file', crop_back, 'in_file')
+    workflow.connect(find_cog, ('out_stat', _gen_crop_op_string), crop_back, 'op_string')
+    # crop_back = pe.Node(Function(input_names=['image', 'cog'],
+    #                              output_names=['cropped'],
+    #                              function=_crop_posterior), 
+    #                     name='crop_back')
+    # workflow.connect(dce_mean, 'out_file', crop_back, 'image')
+    # workflow.connect(find_cog, 'out_stat', crop_back, 'cog')
+
+    # Find large clusters of empty space on the cropped image.
+    cluster_mask_xf = _create_mask_cluster_interface(**mask_opts)
+    cluster_mask = pe.Node(cluster_mask_xf, name='cluster_mask')
+    workflow.connect(crop_back, 'out_file', cluster_mask, 'in_file')
+
+    # Convert the cluster labels to binary mask.
+    binarize = pe.Node(fsl.BinaryMaths(), name='binarize')
+    binarize.inputs.operation = 'min'
+    binarize.inputs.operand_value = 1
+    workflow.connect(cluster_mask, 'out_cluster_file', binarize, 'in_file')
+
+    # Invert the binary mask.
+    inv_mask = pe.Node(fsl.maths.MathsCommand(), name='inv_mask')
+    inv_mask.inputs.args = '-sub 1 -mul -1'
+    inv_mask.inputs.out_file = "%s_%s.nii.gz" % (session.lower(), 'mask')
+    workflow.connect(binarize, 'out_file', inv_mask, 'in_file')
+    
+    # Upload the mask to XNAT.
+    upload_mask = pe.Node(XNATUpload(project='QIN', reconstruction='mask', format='NIFTI'),
+        name='upload_mask')
+    upload_mask.inputs.subject = subject
+    upload_mask.inputs.session = session
+    workflow.connect(inv_mask, 'out_file', upload_mask, 'in_files')
+    
+    # Apply the mask.
+    apply_mask = pe.Node(fsl.ApplyMask(), name='apply_mask')
+    workflow.connect(inv_mask, 'out_file', apply_mask, 'mask_file')
+    workflow.connect(input_spec, 'image', apply_mask, 'in_file')
+    
     # Make the ANTS template.
     avg_xf = _create_average_interface(**avg_opts)
     average = pe.Node(avg_xf, name='average')
-    average.inputs.images = images
+    # Use the middle half of the images.
+    offset = len(images) / 4
+    average.inputs.images = sorted(images)[offset:len(images)-offset]
 
     # Register the images to create the warp and affine transformations.
     reg_xf = _create_registration_interface(**reg_opts)
     register = pe.Node(reg_xf, name='register')
+    workflow.connect(apply_mask, 'out_file', register, 'moving_image')
+    workflow.connect(average, 'output_average_image', register, 'fixed_image')
     
     # Apply the transforms to the input image.
     reslice = pe.Node(_create_reslice_interface(**rsmpl_opts), name='reslice')
+    workflow.connect(input_spec, ('image', _gen_reslice_filename), reslice, 'output_image')
+    workflow.connect(apply_mask, 'out_file', reslice, 'input_image')
+    workflow.connect(average, 'output_average_image', reslice, 'reference_image')
+    workflow.connect(register, 'forward_transforms', reslice, 'transforms')
     
     # Copy the DICOM meta-data.
     copy_meta = pe.Node(CopyMeta(), name='copy_meta')
+    workflow.connect(input_spec, 'image', copy_meta, 'src_file')
+    workflow.connect(reslice, 'output_image', copy_meta, 'dest_file')
     
     # Upload the resliced image to XNAT.
-    upload = pe.Node(XNATUpload(project='QIN', reconstruction=recon, format='NIFTI'),
-        name='upload')
+    upload_reg = pe.Node(XNATUpload(project='QIN', format='NIFTI'),
+        name='upload_reg')
+    upload_reg.inputs.subject = subject
+    upload_reg.inputs.session = session
+    upload_reg.inputs.reconstruction = recon
+    workflow.connect(copy_meta, 'dest_file', upload_reg, 'in_files')
     
-    wf.connect([
-        (input_spec, register, [('image', 'moving_image')]),
-        (input_spec, reslice, [('image', 'input_image')]),
-        (input_spec, copy_meta, [('image', 'src_file')]),
-        (input_spec, upload, [('subject', 'subject'), ('session', 'session')]),
-        (average, register, [('output_average_image', 'fixed_image')]),
-        (average, reslice, [('output_average_image', 'reference_image')]),
-        (register, reslice, [('forward_transforms', 'transforms')]),
-        (reslice, copy_meta, [('output_image', 'dest_file')]),
-        (copy_meta, upload, [('dest_file', 'in_files')])])
-    
-    return wf
+    return workflow
 
-def _run_workflow(wf):
+def _run_workflow(workflow):
     """
     Executes the given workflow.
     
-    @param wf: the workflow to run
+    @param workflow: the workflow to run
     """
     # If debug is set, then diagram the workflow graph.
     if logger.level <= logging.DEBUG:
-        fname = "%s.dot" % wf.name
-        if wf.base_dir:
-            grf = os.path.join(wf.base_dir, fname)
+        fname = "%s.dot" % workflow.name
+        if workflow.base_dir:
+            grf = os.path.join(workflow.base_dir, fname)
         else:
             grf = fname
-        wf.write_graph(dotfilename=grf)
-        logger.debug("The %s workflow graph is depicted at %s.png." % (wf.name, grf))
+        workflow.write_graph(dotfilename=grf)
+        logger.debug("The %s workflow graph is depicted at %s.png." % (workflow.name, grf))
     
     # Run the workflow.
-    wf.run()
+    workflow.run()
 
 def _generate_name(prefix):
     """
@@ -216,14 +289,49 @@ def _generate_name(prefix):
     
     return "%s_%s" % (prefix, suffix)
 
-def _first(in_files):
-    for item in in_files:
-        return item
+def _gen_reslice_filename(in_file):
+    """
+    @param in_file: the input scan image filename
+    @return: the registered image filename
+    """
+    import re
+    
+    base, ext = re.match('(.*?)(\.[.\w]+)*$', in_file).groups()
+    fname = "%s_%s" % (base, 'reg')
+    if ext:
+        return fname + ext
+    else:
+        return fname
+    
+def _gen_crop_op_string(cog):
+    """
+    @param cog: the center of gravity
+    @return: the crop -roi option
+    """
+    return "-roi 0 -1 %d -1 0 -1 0 -1" % cog[1]
+        
+def _crop_posterior(image, cog):
+    from nipype.interfaces import fsl
+    
+    crop_back = fsl.ImageMaths()
+    crop_back.inputs.op_string = '-roi 0 -1 %d -1 0 -1 0 -1' % cog[1]
+    crop_back.inputs.in_file = image
+    return crop_back.run().outputs.out_file
+    
+def _create_mask_cluster_interface(**opts):
+    """
+    @param opts: the Nipype MRIVolCluster option overrides
+    @return: a new MRIVolCluster interface
+    """
+    mask_opts = DEF_MASK_CLUSTER_OPTS.copy()
+    mask_opts.update(opts)
+    
+    return MriVolCluster(**mask_opts)
     
 def _create_average_interface(**opts):
     """
-    @param opts: the Nipype ANTS AverageImages options
-    @return: the ANTS average generation interface with default parameter settings
+    @param opts: the Nipype ANTS AverageImages option overrides
+    @return: a new ANTS average generation interface
     """
     avg_opts = DEF_ANTS_AVG_OPTS.copy()
     avg_opts.update(opts)
@@ -232,40 +340,13 @@ def _create_average_interface(**opts):
 
 def _create_registration_interface(**opts):
     """
-    @param opts: the Nipype ANTS Registration options
-    @return: a new ANTS Registration interface with the preferred parameter settings
+    @param opts: the Nipype ANTS Registration option overrides
+    @return: a new ANTS Registration interface
     """
     reg_opts = DEF_ANTS_REG_OPTS.copy()
     reg_opts.update(opts)
     
     return Registration(**reg_opts)
-
-
-    # reg = Registration()
-    # reg.inputs.fixed_image =  [input_images[0], input_images[0] ]
-    # reg.inputs.moving_image = [input_images[1], input_images[1] ]
-    # reg.inputs.transforms = ['Affine', 'SyN']
-    # reg.inputs.transform_parameters = [(2.0,), (0.25, 3.0, 0.0)]
-    # reg.inputs.number_of_iterations = [[1500, 200], [100, 50, 30]]
-    # reg.inputs.dimension = 3
-    # reg.inputs.write_composite_transform = True
-    # reg.inputs.metric = ['Mattes']*2
-    # reg.inputs.metric_weight = [1]*2 # Default (value ignored currently by ANTs)
-    # reg.inputs.radius_or_number_of_bins = [32]*2
-    # reg.inputs.sampling_strategy = ['Random', None]
-    # reg.inputs.sampling_percentage = [0.05, None]
-    # reg.inputs.convergence_threshold = [1.e-8, 1.e-9]
-    # reg.inputs.convergence_window_size = [20]*2
-    # reg.inputs.smoothing_sigmas = [[1,0], [2,1,0]]
-    # reg.inputs.shrink_factors = [[2,1], [3,2,1]]
-    # reg.inputs.use_estimate_learning_rate_once = [True, True]
-    # reg.inputs.use_histogram_matching = [True, True] # This is the default
-    # reg.inputs.output_transform_prefix = 'thisTransform'
-    # reg.inputs.output_warped_image = 'INTERNAL_WARPED.nii.gz'
-
-    # antsRegistration --collapse-linear-transforms-to-fixed-image-header 0 --dimensionality 3 --interpolation Linear --output [ thisTransform, INTERNAL_WARPED.nii.gz ] --transform Affine[ 2.0 ] --metric Mattes[ /Users/loneyf/nipypeTestPath/01_T1_half.nii.gz, /Users/loneyf/nipypeTestPath/02_T1_half.nii.gz, 1, 32 ,Random,0.05 ] --convergence [ 15x2, 1e-08, 20 ] --smoothing-sigmas 1x0 --shrink-factors 2x1 --use-estimate-learning-rate-once 1 --use-histogram-matching 1 --transform SyN[ 0.25, 3.0, 0.0 ] --metric Mattes[ /Users/loneyf/nipypeTestPath/01_T1_half.nii.gz, /Users/loneyf/nipypeTestPath/02_T1_half.nii.gz, 1, 32  ] --convergence [ 10x5x3, 1e-09, 20 ] --smoothing-sigmas 2x1x0 --shrink-factors 3x2x1 --use-estimate-learning-rate-once 1 --use-histogram-matching 1 --winsorize-image-intensities [ 0.0, 1.0 ]  --write-composite-transform 1
-
-    # antsRegistration --collapse-linear-transforms-to-fixed-image-header 0 --dimensionality 3 --interpolation Linear --output [ xfm, warped.nii.gz ] --transform Affine[ 2.0 ] --metric Mattes[ /Users/loneyf/workspace/qipipe/test/results/pipelines/registration/sarcoma/work/register/average/average.nii, /Users/loneyf/workspace/qipipe/test/results/pipelines/registration/sarcoma/work/scans/Sarcoma001/Sarcoma001_Session01/series009.nii.gz, 1, 32 ,Random,0.05 ] --convergence [ 15x2, 1e-08, 20 ] --smoothing-sigmas 1x0 --shrink-factors 2x1 --use-estimate-learning-rate-once 1 --use-histogram-matching 1 --transform SyN[ 0.25, 3.0, 0.0 ] --metric Mattes[ /Users/loneyf/workspace/qipipe/test/results/pipelines/registration/sarcoma/work/register/average/average.nii, /Users/loneyf/workspace/qipipe/test/results/pipelines/registration/sarcoma/work/scans/Sarcoma001/Sarcoma001_Session01/series009.nii.gz, 1, 32  ] --convergence [ 10x5x3, 1e-09, 20 ] --smoothing-sigmas 2x1x0 --shrink-factors 3x2x1 --use-estimate-learning-rate-once 1 --use-histogram-matching 1 --winsorize-image-intensities [ 0.0, 1.0 ]  --write-composite-transform 1
 
 def _create_reslice_interface(**opts):
     reslice_opts = DEF_ANTS_WARP_OPTS.copy()
