@@ -18,7 +18,8 @@ SESSION_FMT = '%s_Session%02d'
 def iter_new_visits(collection, *subject_dirs):
     """
     Iterates over the visits in the given subject directories which are not in XNAT.
-    Each iteration item is a (subject, session, dicom_file_iterator) tuple, formed as follows:
+    Each iteration item is a (subject, session, dicom_file_iterator) tuple, formed
+    as follows:
         - The subject is the XNAT subject ID formatted by L{SUBJECT_FMT}
         - The session is the XNAT experiment name formatted by L{SESSION_FMT}
         _ The DICOM files iterator iterates over the files which match the
@@ -34,14 +35,17 @@ def iter_new_visits(collection, *subject_dirs):
 
 def group_dicom_files_by_series(*dicom_files):
     """
-    Groups the given DICOM files by series.
+    Groups the given DICOM files by series. Subtraction images, indicated by a C{SUB}
+    DICOM Image Type, are ignored.
     
     @param dicom_files: the DICOM files or directories
     @return: a series number => DICOM file names dictionary
     """
     ser_files_dict = {}    
     for ds in iter_dicom_headers(*dicom_files):
-        ser_files_dict.setdefault(int(ds.SeriesNumber), []).append(ds.filename)
+        # Ignore subtraction images.
+        if not 'SUB' in ds.ImageType:
+            ser_files_dict.setdefault(int(ds.SeriesNumber), []).append(ds.filename)
     return ser_files_dict
 
 class NewVisitIterator(object):
