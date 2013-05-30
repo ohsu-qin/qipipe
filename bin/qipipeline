@@ -5,7 +5,6 @@ Runs the QIN pipeline.
 
 import sys, os
 import argparse
-from ConfigParser import ConfigParser as Config
 import logging
 # Defer importing the application modules until the logging level has been set.
 
@@ -29,19 +28,19 @@ def main(argv=sys.argv):
         opts['dest'] = args.output
     if args.work:
         opts['work'] = args.work
-    if args.registration == False:
+    if args.staging:
+        opts['staging'] = _read_config(args.staging)
+    if args.registration:
+        opts['registration'] = _read_config(args.registration)
+    elif args.registration == False:
         opts['registration'] = False
-    if args.pk_mapping == False:
+    if args.pk_mapping:
+        opts['pk_mapping'] = _read_config(args.pk_mapping)
+    elif args.pk_mapping:
         opts['pk_mapping'] = False
-        
-    # If there is a config file, then load the additional options.
-    if args.config:
-        config = Config()
-        config.read(args.config)
-        opts.merge(config)
     
     # Run the QIN workflow.
-    qip.run(args.collection, *args.files, **opts)
+    qip.run(args.collection, *args.subject_dirs, **opts)
 
     return 0
 
@@ -49,12 +48,14 @@ def _parse_arguments():
     """Parses the command line arguments."""
     parser = argparse.ArgumentParser()
 
+    # The AIRC collection to process.
     coll_grp = parser.add_mutually_exclusive_group(required=True)
     coll_grp.add_argument('-b', '--breast', help='the breast TCIA collection',
         dest='collection', action='store_const', const='Breast')
     coll_grp.add_argument('-s', '--sarcoma', help='the sarcoma TCIA collection',
         dest='collection', action='store_const', const='Sarcoma')
     
+    # The logging level.
     verbosity_grp = parser.add_mutually_exclusive_group()
     verbosity_grp.add_argument('-q', '--quiet', help="don't print messages", dest='log_level',
         action='store_const', const=logging.ERROR)
@@ -63,21 +64,30 @@ def _parse_arguments():
     verbosity_grp.add_argument('-d', '--debug', help='print debug messages', dest='log_level',
         action='store_const', const=logging.DEBUG)
     
-    parser.add_argument('--no-registration', help='only perform the staging workflow', dest='registration',
+    # The workflow configurations.
+    parser.add_argument('--staging', help="the staging configuration file", dest='staging')
+    reg_grp = parser.add_mutually_exclusive_group()
+    reg_grp.add_argument('--registration', help="the registration configuration file", dest='registration')
+    reg_grp.add_argument('--no-registration', help='only perform the staging workflow', dest='registration',
         action='store_false')
-    parser.add_argument('--no-pk-mapping', help="don't perform the PK mapping workflow", dest='pk_mapping',
+    pk_mapping_grp = parser.add_mutually_exclusive_group()
+    pk_mapping_grp.add_argument('--pk-mapping', help="the PK mapping configuration file", dest='pk_mapping')
+    pk_mapping_grp.add_argument('--no-pk-mapping', help="don't perform the PK mapping workflow", dest='pk_mapping',
         action='store_false')
-
-    parser.add_argument('-c', '--config', help="the workflow configuration file", dest='config')
     
+    # The log, work and output options.
     parser.add_argument('-l', '--log', help='the log file')
     parser.add_argument('-o', '--output', help='the destination directory (default current directory)')
     parser.add_argument('-w', '--work', help='the work directory (default a new temp directory)')
+    
+    # The input subject directories to process.
     parser.add_argument('subject_dirs', help='the input AIRC DICOM subject directories',
         metavar='DIR', nargs='+')
 
     return parser.parse_args()
 
-
+def _read_config(in_file):
+    pass # TODO
+    
 if __name__ == '__main__':
     sys.exit(main())
