@@ -4,7 +4,6 @@ import pyxnat
 from pyxnat.core.resources import Reconstruction, Reconstructions
 from pyxnat.core.errors import DatabaseError
 from .xnat_config import default_configuration
-from logging_helper import log_stack
 
 import logging
 logger = logging.getLogger(__name__)
