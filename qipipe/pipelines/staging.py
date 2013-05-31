@@ -2,10 +2,12 @@ import os
 import nipype.pipeline.engine as pe
 from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.dcmstack import DcmStack
+from .. import PROJECT
 from ..interfaces import Unpack, FixDicom, Compress, MapCTP, XNATUpload
 from ..staging.staging_error import StagingError
-from ..staging.staging_helper import iter_new_visits, group_dicom_files_by_series
+from ..staging.staging_helper import subject_for_directory, iter_new_visits, group_dicom_files_by_series
 from ..helpers import xnat_helper
+from .pipeline_error import PipelineError
 
 import logging
 logger = logging.getLogger(__name__)
@@ -19,6 +21,11 @@ def run(collection, *subject_dirs, **opts):
     @param opts: the workflow options
     @return: the new XNAT (subject, session) name tuples
     """
+
+    # If the force option is set, then delete existing subjects.
+    if opts.pop('force', False):
+        subjects = [subject_for_directory(collection, d) for d in subject_dirs]
+        xnat_helper.delete_subjects(*subjects)
 
     # Collect the new AIRC visits into (subject, session, dicom_files)
     # tuples.
@@ -112,7 +119,7 @@ def _create_workflow(collection, *series_specs, **opts):
     workflow.connect(ctp_dir, 'out_dir', compress_dicom, 'dest')
 
     # Store the compressed scan DICOM files in XNAT.
-    upload_dicom = pe.Node(XNATUpload(project='QIN', format='DICOM'), name='upload_dicom')
+    upload_dicom = pe.Node(XNATUpload(project=PROJECT, format='DICOM'), name='upload_dicom')
     workflow.connect(series_spec, 'subject', upload_dicom, 'subject')
     workflow.connect(series_spec, 'session', upload_dicom, 'session')
     workflow.connect(series_spec, 'scan', upload_dicom, 'scan')
@@ -124,7 +131,7 @@ def _create_workflow(collection, *series_specs, **opts):
     workflow.connect(fix_dicom, 'out_files', stack, 'dicom_files')
     
     # Store the stack files in XNAT.
-    upload_stack = pe.Node(XNATUpload(project='QIN', format='NIFTI'), name='upload_stack')
+    upload_stack = pe.Node(XNATUpload(project=PROJECT, format='NIFTI'), name='upload_stack')
     workflow.connect(series_spec, 'subject', upload_stack, 'subject')
     workflow.connect(series_spec, 'session', upload_stack, 'session')
     workflow.connect(series_spec, 'scan', upload_stack, 'scan')

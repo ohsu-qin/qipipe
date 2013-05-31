@@ -38,6 +38,8 @@ def main(argv=sys.argv):
         opts['pk_mapping'] = _read_config(args.pk_mapping)
     elif args.pk_mapping:
         opts['pk_mapping'] = False
+    if args.force:
+        opts['force'] = True
     
     # Run the QIN workflow.
     qip.run(args.collection, *args.subject_dirs, **opts)
@@ -79,6 +81,9 @@ def _parse_arguments():
     parser.add_argument('-l', '--log', help='the log file')
     parser.add_argument('-o', '--output', help='the destination directory (default current directory)')
     parser.add_argument('-w', '--work', help='the work directory (default a new temp directory)')
+    
+    # The dangerous force option.
+    parser.add_argument('-f', '--force', help='reload existing XNAT subjects')
     
     # The input subject directories to process.
     parser.add_argument('subject_dirs', help='the input AIRC DICOM subject directories',
