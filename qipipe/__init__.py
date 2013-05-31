@@ -1,1 +1,3 @@
-from . import helpers, staging, registration, interfaces, pipelines
+PROJECT = 'QIN'
+
+from . import helpers, interfaces, pipelines, registration, staging

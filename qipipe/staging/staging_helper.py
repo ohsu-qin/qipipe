@@ -1,6 +1,7 @@
 """Pipeline utility functions."""
 
 import os, re, glob
+from .. import PROJECT
 from ..helpers import xnat_helper
 from ..helpers.dicom_helper import iter_dicom_headers
 from .staging_error import StagingError
@@ -14,6 +15,47 @@ SUBJECT_FMT = '%s%03d'
 
 SESSION_FMT = '%s_Session%02d'
 """The QIN series name format with arguments (subject, series number)."""
+
+def subject_for_directory(collection, path):
+    """
+    Infers the XNAT subject names from the given directory name.
+    
+    @param collection: the AIRC collection name
+    @return: the corresponding XNAT subject label
+    @raise StagingError: if the name does not match the collection subject pattern
+    """
+    airc_coll = airc.collection_with_name(collection)
+    sbj_nbr = airc_coll.path2subject_number(path)
+    return SUBJECT_FMT % (collection, sbj_nbr)
+    
+def get_subjects(collection, source, pattern=None):
+    """
+    Infers the XNAT subject names from the given source directory.
+    The source directory contains subject subdirectories.
+    The match pattern matches on the subdirectories and captures the
+    subject number. The subject name is the collection name followed
+    by the subject number, e.g. C{Breast004}.
+    
+    @param collection: the AIRC collection name
+    @param source: the input parent directory
+    @param pattern: the subject directory name match pattern
+        (default L{airc.AIRCCollection.subject_pattern})
+    @return: the subject name => directory dictionary
+    """
+    airc_coll = airc.collection_with_name(collection)
+    pat = pattern or airc_coll.subject_pattern
+    sbj_dir_dict = {}
+    with xnat_helper.connection() as xnat:
+        for d in os.listdir(source):
+            match = re.match(pat, d)
+            if match:
+                # The XNAT subject name.
+                subject = SUBJECT_FMT % (collection, int(match.group(1)))
+                # The subject source directory.
+                sbj_dir_dict[subject] = os.path.join(source, d)
+                logger.debug("Discovered XNAT test subject %s subdirectory: %s" % (subject, d))
+    
+    return sbj_dir_dict
 
 def iter_new_visits(collection, *subject_dirs):
     """
@@ -93,7 +135,7 @@ class NewVisitIterator(object):
                         # The XNAT session name.
                         sess = SESSION_FMT % (sbj, sess_nbr)
                         # If the session is not yet in XNAT, then yield the session and its files.
-                        if xnat.get_session('QIN', sbj, sess).exists():
+                        if xnat.get_session(PROJECT, sbj, sess).exists():
                             logger.debug("Skipping session %s since it has already been loaded to XNAT." % sess)
                         else:
                             # The DICOM file match pattern.

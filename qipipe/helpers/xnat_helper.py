@@ -3,13 +3,11 @@ from contextlib import contextmanager, closing
 import pyxnat
 from pyxnat.core.resources import Reconstruction, Reconstructions
 from pyxnat.core.errors import DatabaseError
+from .. import PROJECT
 from .xnat_config import default_configuration
 
 import logging
 logger = logging.getLogger(__name__)
-
-class XNATError(Exception):
-    pass
 
 @contextmanager
 def connection():
@@ -20,7 +18,7 @@ def connection():
     Example:
         >>> from qipipe.helpers import xnat_helper
         >>> with xnat_helper.connection() as xnat:
-        >>>    sbj = xnat.get_subject('QIN', 'Breast003')
+        >>>    sbj = xnat.get_subject(PROJECT, 'Breast003')
 
     @return a L{XNAT} instance
     """
@@ -31,6 +29,24 @@ def connection():
             connection.xnat = xnat
             yield xnat
             del connection.xnat
+
+def delete_subjects(project, *subject_names):
+    """
+    Deletes the given XNAT subjects, if they exist.
+    
+    @param project: the XNAT project id
+    @param subject_names: the XNAT subject names
+    """
+    with connection() as xnat:
+        for sbj_lbl in subject_names:
+            sbj = xnat.get_subject(project, sbj_lbl)
+            if sbj.exists():
+                sbj.delete()
+                logger.debug("Deleted the XNAT test subject %s." % sbj_lbl)
+
+
+class XNATError(Exception):
+    pass
 
 
 class XNAT(object):
@@ -223,7 +239,7 @@ class XNAT(object):
     
         >>> from qipipe.helpers import xnat_helper
         >>> xnat = xnat_helper.facade()
-        >>> xnat.upload('QIN', 'Sarcoma003', 'Sarcoma003_Session01', scan=4, modality='MR',
+        >>> xnat.upload(PROJECT, 'Sarcoma003', 'Sarcoma003_Session01', scan=4, modality='MR',
         >>>    format='NIFTI', *in_files)
 
         @param project: the XNAT project id

@@ -6,9 +6,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+from qipipe import PROJECT
 from qipipe.pipelines import staging
 from qipipe.helpers import xnat_helper
-from test.helpers.xnat_test_helper import get_subjects, delete_subjects
+from qipipe.helpers.xnat_helper import delete_subjects
+from qipipe.staging.staging_helper import get_subjects
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
@@ -65,18 +67,18 @@ class TestStagingWorkflow:
         
         with xnat_helper.connection() as xnat:
             # Delete any existing test subjects.
-            delete_subjects(*subjects)
+            delete_subjects(PROJECT, *subjects)
 
             # Run the pipeline.
             session_specs = staging.run(collection, *sources, dest=dest, work=work)
 
             # Verify the result.
             for sbj, sess in session_specs:
-                sess_obj = xnat.get_session('QIN', sbj, sess)
+                sess_obj = xnat.get_session(PROJECT, sbj, sess)
                 assert_true(sess_obj.exists(), "The %s %s session was not created in XNAT" % (sbj, sess))
         
             # Delete the test subjects.
-            delete_subjects(*subjects)
+            delete_subjects(PROJECT, *subjects)
 
 
 if __name__ == "__main__":

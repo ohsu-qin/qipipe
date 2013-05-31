@@ -5,9 +5,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+from qipipe import PROJECT
 from qipipe.interfaces import XNATDownload
 from qipipe.helpers import xnat_helper
-from test.helpers.xnat_test_helper import generate_subject_name, delete_subjects
+from qipipe.helpers.xnat_helper import delete_subjects
+from test.helpers.xnat_test_helper import generate_subject_name
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
@@ -34,7 +36,7 @@ class TestXNATDownload:
     """The  XNAT download interface unit tests."""
     
     def setUp(self):
-        delete_subjects(SUBJECT)
+        delete_subjects(PROJECT, SUBJECT)
         shutil.rmtree(RESULTS, True)
         
         with xnat_helper.connection() as xnat:
@@ -53,13 +55,13 @@ class TestXNATDownload:
         logger.debug("Uploaded the test %s files %s." % (SESSION, list(self._file_names)))
     
     def tearDown(self):
-        delete_subjects(SUBJECT)
+        delete_subjects(PROJECT, SUBJECT)
         shutil.rmtree(RESULTS, True)
     
     def test_download(self):
         logger.debug("Testing the XNATDownload interface on %s..." % SUBJECT)
         # Download the file.
-        download = XNATDownload(project='QIN', subject=SUBJECT, session=SESSION,
+        download = XNATDownload(project=PROJECT, subject=SUBJECT, session=SESSION,
             container_type='scan', format='DICOM', dest=RESULTS)
         result = download.run()
         

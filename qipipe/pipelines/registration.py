@@ -7,6 +7,7 @@ from nipype.interfaces.dcmstack import CopyMeta
 from nipype.interfaces import fsl
 from nipype.interfaces.dcmstack import DcmStack, MergeNifti, CopyMeta
 from nipype.interfaces.utility import Select, IdentityInterface, Function
+from .. import PROJECT
 from ..interfaces import XNATDownload, XNATUpload, MriVolCluster
 from ..helpers import xnat_helper
 from ..helpers import file_helper
@@ -78,10 +79,10 @@ def run(*session_specs, **opts):
 
     The options include the Pyxnat Workflow initialization options, as well as
     the following key => dictionary options:
-        - C{mask}: the FSL C{mri_volcluster} interface options
-        - C{average}: the ANTS C{Average} interface options
-        - C{register}: the ANTS C{Registration} interface options
-        - C{reslice}: the ANTS C{ApplyTransforms} interface options
+        - C{Mask}: the FSL C{mri_volcluster} interface options
+        - C{Average}: the ANTS C{Average} interface options
+        - C{Register}: the ANTS C{Registration} interface options
+        - C{Reslice}: the ANTS C{ApplyTransforms} interface options
     
     The registration applies an affine followed by a symmetric normalization transform.
     
@@ -137,7 +138,7 @@ def _download_scans(subject, session, dest):
     """
 
     with xnat_helper.connection() as xnat:
-        return xnat.download('QIN', subject, session, dest=dest, container_type='scan', format='NIFTI')
+        return xnat.download(PROJECT, subject, session, dest=dest, container_type='scan', format='NIFTI')
 
 def _create_workflow(subject, session, recon, images, **opts):
     """
@@ -155,13 +156,13 @@ def _create_workflow(subject, session, recon, images, **opts):
     logger.debug("%s...", msg)
 
     # The mask step options.
-    mask_opts = opts.pop('mask', {})
+    mask_opts = opts.pop('Mask', {})
     # The average step options.
-    avg_opts = opts.pop('average', {})
+    avg_opts = opts.pop('Average', {})
     # The registration step options.
-    reg_opts = opts.pop('register', {})
+    reg_opts = opts.pop('Register', {})
     # The warp step options.
-    rsmpl_opts = opts.pop('warp', {})
+    rsmpl_opts = opts.pop('Warp', {})
 
     workflow = pe.Workflow(name='register', **opts)
 
@@ -214,7 +215,7 @@ def _create_workflow(subject, session, recon, images, **opts):
     workflow.connect(binarize, 'out_file', inv_mask, 'in_file')
     
     # Upload the mask to XNAT.
-    upload_mask = pe.Node(XNATUpload(project='QIN', reconstruction='mask', format='NIFTI'),
+    upload_mask = pe.Node(XNATUpload(project=PROJECT, reconstruction='mask', format='NIFTI'),
         name='upload_mask')
     upload_mask.inputs.subject = subject
     upload_mask.inputs.session = session
@@ -251,7 +252,7 @@ def _create_workflow(subject, session, recon, images, **opts):
     workflow.connect(reslice, 'output_image', copy_meta, 'dest_file')
     
     # Upload the resliced image to XNAT.
-    upload_reg = pe.Node(XNATUpload(project='QIN', format='NIFTI'),
+    upload_reg = pe.Node(XNATUpload(project=PROJECT, format='NIFTI'),
         name='upload_reg')
     upload_reg.inputs.subject = subject
     upload_reg.inputs.session = session
