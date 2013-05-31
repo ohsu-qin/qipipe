@@ -27,7 +27,7 @@ def run(collection, *subject_dirs, **opts):
         - Uploads the parameteric mappings into XNAT.
     
     The supported AIRC collections are defined L{qipipe.staging.airc_collection}.
-
+    
     The options include the workflows to run, as well as any additional
     L{QIPipeline.run} options.
     
@@ -38,11 +38,11 @@ def run(collection, *subject_dirs, **opts):
     @param subject_dirs: the AIRC source subject directories to stage
     @param opts: additional workflow options
     """
-
+    
     qip = QIPipeline(collection)
     return qip.run(*subject_dirs, **opts)
 
-    
+
 class QIPipeline(object):
     """The OHSU QIN pipeline."""
     
@@ -93,7 +93,7 @@ class QIPipeline(object):
             
             reg_dir = os.path.join(work_dir, 'register')
             reg_specs = reg.run(base_dir=reg_dir, *session_specs, **opts)
-        
+            
             # If the pk_mapping flag is set to False, then return the registered XNAT reconstructions.
             if 'pk_mapping' in opts and opts['pk_mapping'] == False:
                 logger.debug("Skipping PK mapping since the pk_mapping option is set to False.")
