@@ -33,6 +33,7 @@ class AIRCCollection(object):
         """
         @param path: the directory path
         @return: the subject number
+        @raise StagingError: if the path does not match the collection subject pattern
         """
         match = re.search(self.subject_pattern, path)
         if not match:
@@ -44,8 +45,13 @@ class AIRCCollection(object):
         """
         @param path: the directory path
         @return: the session number
+        @raise StagingError: if the path does not match the collection session pattern
         """
-        return int(re.search(self.session_pattern, path).group(1))
+        match = re.search(self.session_pattern, path)
+        if not match:
+            raise StagingError("The directory path %s does not match the session pattern %s" % (path, self.session_pattern))
+        return int(match.group(1))
+
 
 class AIRCCollection:
     BREAST = AIRCCollection('Breast', 'BreastChemo(\d+)', 'Visit(\d+)', '*concat*/*')
