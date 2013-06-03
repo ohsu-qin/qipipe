@@ -23,7 +23,8 @@ class TestJSONConfig:
         opts = cfg['Tuning']
         expected = dict(method = 'FFT',
             iterations = [1, [2, [3, 4], 5]],
-            two_tailed = False,
+            sampling = [0.3, [None, [None]*2, 1.0]],
+            two_tailed = [True, False],
             threshold = 4.0)
         assert_equal(expected, opts, "The configuration Tuning options are incorrect: %s" % opts)
 
