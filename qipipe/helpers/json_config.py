@@ -2,6 +2,9 @@ import re
 from ConfigParser import ConfigParser as Config
 import json
 
+import logging
+logger = logging.getLogger(__name__)
+
 def read_config(in_file):
     """
     Reads and parses the given configuration file.
@@ -45,14 +48,37 @@ class JSONConfig(Config):
     @return: the L{JSONConfig}
     """
 
-    LIST_PAT = re.compile('\[(.*)\]$')
+    LIST_PAT = re.compile("""
+        \[      # The left bracket
+        (.*)    # The list items
+        \]$     # The right bracket
+    """, re.VERBOSE)
     """A list string pattern."""
     
-    EMBEDDED_LIST_PAT = re.compile('([^[]*)(\[.*\])?([^]]*)$')
+    EMBEDDED_LIST_PAT = re.compile("""
+        ([^[]*)     # A prefix without the '[' character
+        (\[.*\])?   # The embedded list
+        ([^]]*)     # A suffix without the ']' character
+        $           # The end of the value
+    """, re.VERBOSE)
     """A (prefix)(list)(suffix) recognition pattern."""
     
-    PARSEABLE_ITEM_PAT = re.compile("true|false|\.\d+|\d+(\.(\d*))?|'.*'|\".*\"$")
+    PARSEABLE_ITEM_PAT = re.compile("""
+        (
+            true            # The JSON True literal
+            | false         # The JSON False literal
+            | \d+(\.\d+)?   # A JSON number
+            | '.*'          # A single-quoted string
+            | \".*\"        # A double-quoted string
+        )$                  # The end of the value
+        """, re.VERBOSE)
     """A non-list string parseable by JSON."""
+    
+    DECIMAL_WITH_LEADING_PERIOD_PAT = re.compile('\.\d+$')
+    """A decimal with a leading period."""
+    
+    DECIMAL_WITH_TRAILING_PERIOD_PAT = re.compile('\d+\.$')
+    """A decimal with a trailing period."""
     
     def __iter__(self):
         return self.next()
@@ -76,18 +102,24 @@ class JSONConfig(Config):
         @param section: the configuration section name
         @return: the section option => value dictionary
         """
-        return {name: self._parse_value(value) for name, value in self.items(section)}
+        return {name: self._parse_entry(name, value) for name, value in self.items(section)}
     
-    def _parse_value(self, s):
+    def _parse_entry(self, name, s):
         """
-        @param s: the string value to parse
+        @param name: the option name
+        @param s: the option string value to parse
         @return: the parsed JSON value
+        @raise ValueError: if the value cannot be parsed
         """
         if s:
-            json_value = self._add_quotes(s)
-            return json.loads(json_value)
+            json_value = self._to_json(s)
+            try:
+                return json.loads(json_value)
+            except ValueError:
+                logger.error("Cannot load the configuration entry %s: %s parsed as %s" % (name, s, json_value))
+                raise
     
-    def _add_quotes(self, s):
+    def _to_json(self, s):
         """
         @param s: the input string
         @return: the equivalent JSON string
@@ -105,16 +137,24 @@ class JSONConfig(Config):
         # Otherwise, quote the content.
         if JSONConfig.LIST_PAT.match(s):
             return self._quote_list(s)
+        elif JSONConfig.DECIMAL_WITH_LEADING_PERIOD_PAT.match(s):
+            return '0' + s
+        elif JSONConfig.DECIMAL_WITH_TRAILING_PERIOD_PAT.match(s):
+            return s + '0'
         elif s.lower() == 'true':
-            return True
+            return 'true'
+        elif s.lower() == 'true':
+            return 'true'
         elif s.lower() == 'false':
-            return False
+            return 'false'
+        elif s.lower() in ['null', 'none', 'nil']:
+            return 'null'
         else:
-            return '"' + s + '"'
+            return '"%s"' % s
     
     def _quote_list(self, s):
         quoted_items = self._quote_list_content(s[1:-1])
-        return '[' + ' ,'.join(quoted_items) + ']'
+        return "[%s]" % ', '.join(quoted_items)
     
     def _quote_list_content(self, s):
         """
@@ -122,6 +162,7 @@ class JSONConfig(Config):
         @return: the list of quoted items
         """
         pre, mid, post = JSONConfig.EMBEDDED_LIST_PAT.match(s).groups()
+
         if mid:
             items = []
             if pre:
@@ -133,7 +174,7 @@ class JSONConfig(Config):
         else:
             # No embedded list.
             items = re.split('\s*,\s*', s)
-            quoted_items = [self._add_quotes(item) for item in items if item]
+            quoted_items = [self._to_json(item) for item in items if item]
             return quoted_items
         
         
