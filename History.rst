@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub commits (http://quip1:6060/qipipe)
 for change details.
 
+2.1.2 / 2013-06-04
+------------------
+* Enable SGE parallelization.
+
 2.1.1 / 2013-06-03
 ------------------
 * Integrate PK mapping.
