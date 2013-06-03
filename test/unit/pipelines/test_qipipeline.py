@@ -75,6 +75,9 @@ class TestQIPipeline:
         # The staging destination and work area.
         dest = os.path.join(RESULTS, 'data')
         work = os.path.join(RESULTS, 'work')
+        
+        # The test registration configuration.
+        reg_opts = dict(read_config(REG_CONF))
 
         # The test subject => directory dictionary.
         sbj_dir_dict = get_subjects(collection, fixture)
@@ -90,8 +93,7 @@ class TestQIPipeline:
             # Run the staging and registration workflows, but not the PK mapping.
             logger.debug("Executing the QIN pipeline...")
             reg_specs = qip.run(collection, *sources, dest=dest, work=work,
-                register=ANTS_REG_TEST_OPTS, 
-                mask=VOL_CLUSTER_TEST_OPTS)
+                registration=reg_opts)
 
             # Verify the result.
             for sbj, sess, recon in reg_specs:

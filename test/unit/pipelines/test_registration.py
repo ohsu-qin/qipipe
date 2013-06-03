@@ -10,7 +10,6 @@ from qipipe import PROJECT
 from qipipe.pipelines import registration as reg
 from qipipe.helpers import xnat_helper
 from qipipe.helpers.xnat_helper import delete_subjects
-from test.helpers.registration import VOL_CLUSTER_TEST_OPTS, ANTS_REG_TEST_OPTS
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
