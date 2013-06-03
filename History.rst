@@ -1,7 +1,7 @@
 This history lists major release themes. See the GitHub commits (http://quip1:6060/qipipe)
 for change details.
 
-1.3.1 / 2013-05-31
+2.1.1 / 2013-06-03
 ------------------
 * Integrate PK mapping.
 
