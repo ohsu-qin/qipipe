@@ -28,6 +28,7 @@ cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_fi
     execution=dict(crashdump_dir=RESULTS, create_report=False))
 config.update_config(cfg)
 
+
 class TestQIPipeline:
     """
     QIN Pipeline unit tests.
