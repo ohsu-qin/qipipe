@@ -15,7 +15,7 @@ from test.helpers.registration import VOL_CLUSTER_TEST_OPTS, ANTS_REG_TEST_OPTS
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
 
-FIXTURES = os.path.join(ROOT, 'fixtures', 'stacks')
+FIXTURES = os.path.join(ROOT, 'fixtures', 'registration')
 """The test fixtures directory."""
 
 REG_CONF = os.path.join(ROOT, 'conf', 'register.cfg')
