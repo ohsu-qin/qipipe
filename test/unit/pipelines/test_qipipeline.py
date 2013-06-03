@@ -12,19 +12,15 @@ from qipipe.helpers import xnat_helper
 from qipipe.staging import airc_collection as airc
 from qipipe.helpers.xnat_helper import delete_subjects
 from qipipe.staging.staging_helper import get_subjects
-from test.helpers.registration import VOL_CLUSTER_TEST_OPTS, ANTS_REG_TEST_OPTS
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
 
+REG_CONF = os.path.join(ROOT, 'conf', 'register.cfg')
+"""The test registration configuration."""
+
 RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'qipipeline')
 """The test results directory."""
-
-CONFIGS = os.path.join(ROOT, 'conf')
-"""The test configurations directory."""
-
-REG_CONF = os.path.join(CONFIGS, 'register.cfg')
-"""The test registration configuration."""
 
 from nipype import config
 cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
