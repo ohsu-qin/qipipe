@@ -19,7 +19,7 @@ class TestASTConfig:
     def test_config(self):
         logger.debug("Testing the JSON configuration loader on %s..." % FIXTURE)
         cfg = read_config(FIXTURE)
-        assert_is_not_none(cfg.has_section('Tuning'), "The configuration is missing the Tuning topic")
+        assert_is_not_none(cfg.has_section('Tuning'), "The configuration is missing the Tuning section")
         opts = cfg['Tuning']
         expected = dict(method = 'FFT',
             description = "String with [ ( 3 , a\" ' 4.5 'b' ) ] characters",
