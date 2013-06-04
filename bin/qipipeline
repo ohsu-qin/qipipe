@@ -21,7 +21,6 @@ def main(argv=sys.argv):
     
     # Import the application now, after logging has been set.
     from qipipe.pipelines import qipipeline as qip
-    from qipipe.helpers.ast_config import read_config
     
     # The options.
     opts = {}
@@ -29,18 +28,12 @@ def main(argv=sys.argv):
         opts['dest'] = args.output
     if args.work:
         opts['work'] = args.work
-    if args.staging:
-        opts['staging'] = dict(read_config(args.staging))
-    elif args.staging == False:
-        opts['staging'] = False
-    if args.registration:
-        opts['registration'] = dict(read_config(args.registration))
-    elif args.registration == False:
-        opts['registration'] = False
-    if args.pk_mapping:
-        opts['pk_mapping'] = dict(read_config(args.pk_mapping))
-    elif args.pk_mapping == False:
-        opts['pk_mapping'] = False
+    if args.staging != None:
+        opts['staging'] = args.staging
+    if args.registration != None:
+        opts['registration'] = args.registration
+    if args.pk_mapping != None:
+        opts['pk_mapping'] = args.pk_mapping
     if args.force:
         opts['force'] = True
     

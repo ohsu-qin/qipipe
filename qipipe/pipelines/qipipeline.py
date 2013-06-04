@@ -79,7 +79,7 @@ class QIPipeline(object):
         with xnat_helper.connection():
             # Stage the input AIRC files.
             stg_dir = os.path.join(work_dir, 'stage')
-            session_specs = staging.run(self.collection, base_dir=stg_dir, *subject_dirs, **opts)
+            session_specs = staging.run(self.collection, *subject_dirs, base_dir=stg_dir, **opts)
             if not session_specs:
                 return []
             
@@ -87,17 +87,17 @@ class QIPipeline(object):
             opts.pop('dest', None)
             
             # If the register flag is set to False, then return the staged XNAT sessions.
-            if 'registration' in opts and opts['registration'] == False:
+            if opts.get('registration') == False:
                 logger.debug("Skipping registration since the registration option is set to False.")
                 return session_specs
             
             reg_dir = os.path.join(work_dir, 'register')
-            reg_specs = reg.run(base_dir=reg_dir, *session_specs, **opts)
+            reg_specs = reg.run(*session_specs, base_dir=reg_dir, **opts)
             
             # If the pk_mapping flag is set to False, then return the registered XNAT reconstructions.
-            if 'pk_mapping' in opts and opts['pk_mapping'] == False:
+            if opts.get('pk_mapping') == False:
                 logger.debug("Skipping PK mapping since the pk_mapping option is set to False.")
                 return reg_specs
             
             pk_dir = os.path.join(work_dir, 'pk_mapping')
-            return pk.run(base_dir=pk_dir, *reg_specs, **opts)
+            return pk.run(*reg_specs, base_dir=pk_dir, **opts)

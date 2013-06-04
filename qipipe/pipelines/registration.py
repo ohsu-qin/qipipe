@@ -9,8 +9,8 @@ from nipype.interfaces.dcmstack import DcmStack, MergeNifti, CopyMeta
 from nipype.interfaces.utility import Select, IdentityInterface, Function
 from .. import PROJECT
 from ..interfaces import XNATDownload, XNATUpload, MriVolCluster
-from ..helpers import xnat_helper
-from ..helpers import file_helper
+from ..helpers import xnat_helper, file_helper
+from ..helpers.ast_config import read_config
 
 import logging
 logger = logging.getLogger(__name__)
@@ -56,6 +56,8 @@ DEF_ANTS_WARP_OPTS = dict(
 )
 """The default ANTS ApplyTransforms options."""
 
+DEF_CONFIG_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'conf', 'registration.cfg')
+
 REG_PREFIX = 'reg'
 """The XNAT registration reconstruction name prefix."""
 
@@ -78,13 +80,17 @@ def run(*session_specs, **opts):
     These images are averaged into a fixed reference template image.
 
     The options include the Pyxnat Workflow initialization options, as well as
-    the following key => dictionary options:
+    the following options:
+        - C{config}: an optional configuration file
+    
+    The configuration file can contain the following sections:
         - C{Mask}: the FSL C{mri_volcluster} interface options
         - C{ANTSAverage}: the ANTS C{Average} interface options
         - C{ANTSRegistration}: the ANTS C{Registration} interface options
         - C{ANTSReslice}: the ANTS C{ApplyTransforms} interface options
     
-    The registration applies an affine followed by a symmetric normalization transform.
+    The default registration applies an affine followed by a symmetric normalization
+    transform.
     
     @param session_specs: the XNAT (subject, session) name tuples to register
     @param opts: the workflow options
@@ -95,6 +101,7 @@ def run(*session_specs, **opts):
     work = opts.get('base_dir') or os.getcwd()
     # The scan image downloaad location.
     dest = os.path.join(work, 'scans')
+    
     # Run the workflow on each session.
     recon_specs = [_register(sbj, sess, dest, **opts) for sbj, sess in session_specs]
     
@@ -147,6 +154,7 @@ def _create_workflow(subject, session, recon, images, **opts):
     @param session: the XNAT session label
     @param recon: the XNAT registration reconstruction label
     @param images: the input session scan NiFTI stacks
+    @param opts: the workflow options
     @return: the registration workflow
     """
     msg = 'Creating the %s %s registration workflow' % (subject, session)
@@ -154,14 +162,22 @@ def _create_workflow(subject, session, recon, images, **opts):
         msg = msg + ' with options %s' % opts
     logger.debug("%s...", msg)
 
+    # The configuration.
+    cfg_file = opts.pop('config', None)
+    if cfg_file:
+        cfg = read_config(DEF_CONFIG_FILE, cfg_file)
+    else:
+        cfg = read_config(DEF_CONFIG_FILE)
+    cfg_opts = dict(cfg)
+    
     # The mask step options.
-    mask_opts = opts.pop('Mask', {})
+    mask_opts = cfg_opts.get('Mask', {})
     # The average step options.
-    avg_opts = opts.pop('ANTSAverage', {})
+    avg_opts = cfg_opts.get('ANTSAverage', {})
     # The registration step options.
-    reg_opts = opts.pop('ANTSRegistration', {})
+    reg_opts = cfg_opts.get('ANTSRegistration', {})
     # The warp step options.
-    rsmpl_opts = opts.pop('ANTSWarp', {})
+    rsmpl_opts = cfg_opts.get('ANTSWarp', {})
 
     workflow = pe.Workflow(name='register', **opts)
 

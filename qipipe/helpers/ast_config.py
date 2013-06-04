@@ -1,20 +1,25 @@
-import re
+import os, re, ast
 from ConfigParser import ConfigParser as Config
-import ast
+from qipipe.helpers.collection_helper import to_series
 
 import logging
 logger = logging.getLogger(__name__)
 
-def read_config(in_file):
+def read_config(*filenames):
     """
     Reads and parses the given configuration file.
     
     @see ASTConfig
-    @param in_file: the input configuration file path
+    @param filenames: the input configuration file names
     @return: the L{ASTConfig}
+    @raise ValueError: if none of the files could not be read
     """
     cfg = ASTConfig()
-    cfg.read(in_file)
+    cfg_files = cfg.read(filenames)
+    if not cfg_files:
+        raise ValueError("Configuration file could not be read: %s" % filenames)
+    logger.debug("Loaded configuration from %s with sections %s." %
+        (to_series(cfg_files), to_series(cfg.sections())))
     
     return cfg
 

@@ -18,7 +18,7 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 FIXTURES = os.path.join(ROOT, 'fixtures', 'registration')
 """The test fixtures directory."""
 
-REG_CONF = os.path.join(ROOT, 'conf', 'register.cfg')
+REG_CONF = os.path.join(ROOT, 'conf', 'registration.cfg')
 """The test registration configuration."""
 
 RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'registration')
@@ -59,11 +59,9 @@ class TestRegistrationPipeline:
         """
         fixture = os.path.join(FIXTURES, collection.lower())
         logger.debug("Testing the registration pipeline on %s..." % fixture)
-        
-        # The test configuration.
-        opts = dict(read_config(REG_CONF))
+
         # The workflow base directory.
-        opts['base_dir'] = os.path.join(RESULTS, collection.lower(), 'work')
+        base_dir = os.path.join(RESULTS, collection.lower(), 'work')
         
         # The (subject, session) => scan files dictionary.
         sess_files_dict = {}
@@ -82,7 +80,7 @@ class TestRegistrationPipeline:
                     sess_files_dict[(sbj, sess)] = in_files
             
             # Run the workflow.
-            recon_specs = reg.run(*sess_files_dict.iterkeys(), **opts)
+            recon_specs = reg.run(*sess_files_dict.iterkeys(), base_dir=base_dir, config=REG_CONF)
             
             # Verify the result.
             sess_recon_dict = {(sbj, sess): recon for sbj, sess, recon in recon_specs}
