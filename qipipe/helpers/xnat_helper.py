@@ -141,7 +141,7 @@ class XNAT(object):
     
     def _canonical_session_label(self, subject, session):
         """
-        Returns the XNAT session name is qualified by the subject name prefix, if necessary.
+        Returns the XNAT session name, qualified by the subject name prefix if necessary.
         
         @param subject: the XNAT subject label
         @param session: the XNAT experiment label
