@@ -15,47 +15,6 @@ from ..helpers.ast_config import read_config
 import logging
 logger = logging.getLogger(__name__)
 
-DEF_MASK_CLUSTER_OPTS = dict(
-    max_thresh=10,
-    min_voxels = 10000
-)
-
-DEF_ANTS_AVG_OPTS = dict(
-    dimension=3,
-    normalize=True
-)
-"""The default ANTS AverageImages options."""
-
-DEF_ANTS_REG_OPTS = dict(
-    dimension=3,
-    transforms=['Affine', 'SyN'],
-    transform_parameters=[(2.0,), (0.25, 3.0, 0.0)],
-    number_of_iterations=[[1500, 200], [100, 50, 30]],
-    write_composite_transform=True,
-    collapse_output_transforms=False,
-    metric=['Mattes']*2,
-    metric_weight=[1]*2,
-    radius_or_number_of_bins=[200]*2,
-    sampling_strategy=['Regular', None],
-    sampling_percentage=[0.10, None],
-    convergence_threshold=[1.e-8, 1.e-9],
-    convergence_window_size=[100]*2,
-    smoothing_sigmas=[[4,2], [4,2,0]],
-    shrink_factors=[[1,1], [3,2,1]],
-    use_estimate_learning_rate_once=[True, True],
-    output_transform_prefix='xfm',
-    output_warped_image='warp.nii.gz'
-)
-"""The default ANTS Registration options."""
-
-DEF_ANTS_WARP_OPTS = dict(
-    dimension=3,
-    interpolation='Linear',
-    default_value=0,
-    invert_transform_flags=[False, False]
-)
-"""The default ANTS ApplyTransforms options."""
-
 DEF_CONFIG_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'conf', 'registration.cfg')
 
 REG_PREFIX = 'reg'
@@ -84,10 +43,10 @@ def run(*session_specs, **opts):
         - C{config}: an optional configuration file
     
     The configuration file can contain the following sections:
-        - C{Mask}: the FSL C{mri_volcluster} interface options
+        - C{FSLMriVolCluster}: the FSL C{MriVolCluster} interface options
         - C{ANTSAverage}: the ANTS C{Average} interface options
         - C{ANTSRegistration}: the ANTS C{Registration} interface options
-        - C{ANTSReslice}: the ANTS C{ApplyTransforms} interface options
+        - C{ANTSApplyTransforms}: the ANTS C{ApplyTransforms} interface options
     
     The default registration applies an affine followed by a symmetric normalization
     transform.
@@ -171,13 +130,13 @@ def _create_workflow(subject, session, recon, images, **opts):
     cfg_opts = dict(cfg)
     
     # The mask step options.
-    mask_opts = cfg_opts.get('Mask', {})
+    mask_opts = cfg_opts.get('FSLMriVolCluster', {})
     # The average step options.
     avg_opts = cfg_opts.get('ANTSAverage', {})
     # The registration step options.
     reg_opts = cfg_opts.get('ANTSRegistration', {})
-    # The warp step options.
-    rsmpl_opts = cfg_opts.get('ANTSWarp', {})
+    # The reslice step options.
+    reslice_opts = cfg_opts.get('ANTSApplyTransforms', {})
 
     workflow = pe.Workflow(name='register', **opts)
 
@@ -213,8 +172,7 @@ def _create_workflow(subject, session, recon, images, **opts):
     # workflow.connect(find_cog, 'out_stat', crop_back, 'cog')
 
     # Find large clusters of empty space on the cropped image.
-    cluster_mask_xf = _create_mask_cluster_interface(**mask_opts)
-    cluster_mask = pe.Node(cluster_mask_xf, name='cluster_mask')
+    cluster_mask = pe.Node(MriVolCluster(**mask_opts), name='cluster_mask')
     workflow.connect(crop_back, 'out_file', cluster_mask, 'in_file')
 
     # Convert the cluster labels to binary mask.
@@ -242,20 +200,18 @@ def _create_workflow(subject, session, recon, images, **opts):
     workflow.connect(input_spec, 'image', apply_mask, 'in_file')
     
     # Make the ANTS template.
-    avg_xf = _create_average_interface(**avg_opts)
-    average = pe.Node(avg_xf, name='average')
+    average = pe.Node(AverageImages(**avg_opts), name='average')
     # Use the middle half of the images.
     offset = len(images) / 4
     average.inputs.images = sorted(images)[offset:len(images)-offset]
 
     # Register the images to create the warp and affine transformations.
-    reg_xf = _create_registration_interface(**reg_opts)
-    register = pe.Node(reg_xf, name='register')
+    register = pe.Node(Registration(**reg_opts), name='register')
     workflow.connect(apply_mask, 'out_file', register, 'moving_image')
     workflow.connect(average, 'output_average_image', register, 'fixed_image')
     
     # Apply the transforms to the input image.
-    reslice = pe.Node(_create_reslice_interface(**rsmpl_opts), name='reslice')
+    reslice = pe.Node(ApplyTransforms(**reslice_opts), name='reslice')
     workflow.connect(input_spec, ('image', _gen_reslice_filename), reslice, 'output_image')
     workflow.connect(apply_mask, 'out_file', reslice, 'input_image')
     workflow.connect(average, 'output_average_image', reslice, 'reference_image')
@@ -333,39 +289,3 @@ def _crop_posterior(image, cog):
     crop_back.inputs.op_string = '-roi 0 -1 %d -1 0 -1 0 -1' % cog[1]
     crop_back.inputs.in_file = image
     return crop_back.run().outputs.out_file
-    
-def _create_mask_cluster_interface(**opts):
-    """
-    @param opts: the Nipype MRIVolCluster option overrides
-    @return: a new MRIVolCluster interface
-    """
-    mask_opts = DEF_MASK_CLUSTER_OPTS.copy()
-    mask_opts.update(opts)
-    
-    return MriVolCluster(**mask_opts)
-    
-def _create_average_interface(**opts):
-    """
-    @param opts: the Nipype ANTS AverageImages option overrides
-    @return: a new ANTS average generation interface
-    """
-    avg_opts = DEF_ANTS_AVG_OPTS.copy()
-    avg_opts.update(opts)
-    
-    return AverageImages(**avg_opts)
-
-def _create_registration_interface(**opts):
-    """
-    @param opts: the Nipype ANTS Registration option overrides
-    @return: a new ANTS Registration interface
-    """
-    reg_opts = DEF_ANTS_REG_OPTS.copy()
-    reg_opts.update(opts)
-    
-    return Registration(**reg_opts)
-
-def _create_reslice_interface(**opts):
-    reslice_opts = DEF_ANTS_WARP_OPTS.copy()
-    reslice_opts.update(opts)
-    
-    return ApplyTransforms(**reslice_opts)
