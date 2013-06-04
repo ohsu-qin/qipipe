@@ -21,7 +21,7 @@ def main(argv=sys.argv):
     
     # Import the application now, after logging has been set.
     from qipipe.pipelines import qipipeline as qip
-    from qipipe.helpers.json_config import read_config
+    from qipipe.helpers.ast_config import read_config
     
     # The options.
     opts = {}

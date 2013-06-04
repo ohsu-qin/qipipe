@@ -10,7 +10,7 @@ from qipipe import PROJECT
 from qipipe.pipelines import registration as reg
 from qipipe.helpers import xnat_helper
 from qipipe.helpers.xnat_helper import delete_subjects
-from qipipe.helpers.json_config import read_config
+from qipipe.helpers.ast_config import read_config
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
