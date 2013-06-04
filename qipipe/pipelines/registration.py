@@ -80,9 +80,9 @@ def run(*session_specs, **opts):
     The options include the Pyxnat Workflow initialization options, as well as
     the following key => dictionary options:
         - C{Mask}: the FSL C{mri_volcluster} interface options
-        - C{Average}: the ANTS C{Average} interface options
-        - C{Register}: the ANTS C{Registration} interface options
-        - C{Reslice}: the ANTS C{ApplyTransforms} interface options
+        - C{ANTSAverage}: the ANTS C{Average} interface options
+        - C{ANTSRegistration}: the ANTS C{Registration} interface options
+        - C{ANTSReslice}: the ANTS C{ApplyTransforms} interface options
     
     The registration applies an affine followed by a symmetric normalization transform.
     
@@ -117,7 +117,6 @@ def _register(subject, session, dest, **opts):
     # Make a unique registration reconstruction name. This permits more than one
     # registration to be stored for each input image without a name conflict.
     recon = _generate_name(REG_PREFIX)
-    
     
     # Make the workflow
     workflow = _create_workflow(subject, session, recon, images, **opts)
@@ -158,11 +157,11 @@ def _create_workflow(subject, session, recon, images, **opts):
     # The mask step options.
     mask_opts = opts.pop('Mask', {})
     # The average step options.
-    avg_opts = opts.pop('Average', {})
+    avg_opts = opts.pop('ANTSAverage', {})
     # The registration step options.
-    reg_opts = opts.pop('Register', {})
+    reg_opts = opts.pop('ANTSRegistration', {})
     # The warp step options.
-    rsmpl_opts = opts.pop('Warp', {})
+    rsmpl_opts = opts.pop('ANTSWarp', {})
 
     workflow = pe.Workflow(name='register', **opts)
 
