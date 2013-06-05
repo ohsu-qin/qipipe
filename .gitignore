@@ -15,5 +15,5 @@ ext
 *.pyc
 *.tar*
 **log
-/doc/api
+/doc/_build
 /test/results
