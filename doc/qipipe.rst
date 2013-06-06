@@ -1,16 +1,5 @@
-API
-===
-
-:mod:`qipipe` Package
----------------------
-
-.. automodule:: qipipe.__init__
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-Subpackages
------------
+qipipe Package
+==============
 
 .. toctree::
 
