@@ -5,16 +5,16 @@ _CFG_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'conf', 'sarcoma
 
 def sarcoma_location(subject):
     """
-    @param subject: the XNAT Subject ID
-    @return: the subject tumor location
+    :param subject: the XNAT Subject ID
+    :return: the subject tumor location
     """
 
     return sarcoma_config().get('Tumor Location', subject)
 
 def sarcoma_config():
     """
-    @return: the sarcoma configuration
-    @rtype: ConfigParser
+    :return: the sarcoma configuration
+    :rtype: ConfigParser
     """
     if not hasattr(sarcoma_config, 'instance'):
         sarcoma_config.instance = Config()

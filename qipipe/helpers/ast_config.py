@@ -10,9 +10,9 @@ def read_config(*filenames):
     Reads and parses the given configuration file.
     
     @see ASTConfig
-    @param filenames: the input configuration file names
-    @return: the L{ASTConfig}
-    @raise ValueError: if none of the files could not be read
+    :param filenames: the input configuration file names
+    :return: the L{ASTConfig}
+    :raise ValueError: if none of the files could not be read
     """
     cfg = ASTConfig()
     cfg_files = cfg.read(filenames)
@@ -48,8 +48,8 @@ class ASTConfig(Config):
     {'method': u'FFT', 'parameters' = [(1,), (2, 3)], 'iterations': [[1, 2], 5],
     'two_tailed': False, 'threshold': 4.0}
     
-    @param in_file: the input configuration file path
-    @return: the L{ASTConfig}
+    :param in_file: the input configuration file path
+    :return: the L{ASTConfig}
     """
 
     LIST_PAT = re.compile("""
@@ -101,31 +101,31 @@ class ASTConfig(Config):
     
     def next(self):
         """
-        @return the next (section, {item: value}) tuple
+        :return the next (section, {item: value}) tuple
         """
         for s in self.sections():
             yield (s, self[s])
     
     def __contains__(self, section):
         """
-        @param: the config section to find
-        @return: whether this config has the given section
+        :param: the config section to find
+        :return: whether this config has the given section
         """
         return self.has_section(section)
     
     def __getitem__(self, section):
         """
-        @param section: the configuration section name
-        @return: the section option => value dictionary
+        :param section: the configuration section name
+        :return: the section option => value dictionary
         """
         return {name: self._parse_entry(name, value) for name, value in self.items(section)}
     
     def _parse_entry(self, name, s):
         """
-        @param name: the option name
-        @param s: the option string value to parse
-        @return: the parsed AST value
-        @raise SyntaxError: if the value cannot be parsed
+        :param name: the option name
+        :param s: the option string value to parse
+        :return: the parsed AST value
+        :raise SyntaxError: if the value cannot be parsed
         """
         if s:
             ast_value = self._to_ast(s)
@@ -137,8 +137,8 @@ class ASTConfig(Config):
     
     def _to_ast(self, s):
         """
-        @param s: the input string
-        @return: the equivalent AST string
+        :param s: the input string
+        :return: the equivalent AST string
         """
         # Trivial case.
         if not s:
@@ -170,8 +170,8 @@ class ASTConfig(Config):
     
     def _quote_list_content(self, s):
         """
-        @param s: the comma-separated items
-        @return: the list of quoted items
+        :param s: the comma-separated items
+        :return: the list of quoted items
         """
         pre, mid, post = ASTConfig.EMBEDDED_LIST_PAT.match(s).groups()
         if not mid:

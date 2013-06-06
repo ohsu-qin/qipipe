@@ -31,9 +31,9 @@ class Uncompress(BaseInterface):
         """
         Uncompresses the given file.
     
-        @param in_file: the path of the file to uncompress
+        :param in_file: the path of the file to uncompress
         @parma dest: the destination (default is the working directory)
-        @return: the compressed file path
+        :return: the compressed file path
         """
         if not dest:
             dest = os.getcwd()

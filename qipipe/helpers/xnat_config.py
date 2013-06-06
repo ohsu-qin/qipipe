@@ -13,7 +13,7 @@ def default_configuration():
     
     3. C{xnat.cfg} in the C{/etc} directory
 
-    @return: the configuration location, if any
+    :return: the configuration location, if any
     """
     for f in [DOT_CFG, HOME_CFG, ETC_CFG]:
         if os.path.exists(f):

@@ -8,8 +8,8 @@ class SimilarityMetric(object):
         """
         Initializes this metric.
         
-        @param name: the metric name
-        @param opts: the metric options
+        :param name: the metric name
+        :param opts: the metric options
         """
         self.name = name
         self.opts = opts
@@ -18,9 +18,9 @@ class SimilarityMetric(object):
         """
         Formats the ANTS similiarity metric argument.
 
-        @param fixed: the fixed reference file
-        @param moving: the moving file to register
-        @rtype: str
+        :param fixed: the fixed reference file
+        :param moving: the moving file to register
+        :rtype: str
         """
         opts = [weight]
         opts.extend(self.opts)

@@ -50,9 +50,9 @@ class CTPPatientIdMap(dict):
         """
         Adds the input => CTP Patient ID association for the given input DICOM patient ids.
 
-        @param collection: the AIRC collection name 
-        @param patient_ids: the DICOM Patient IDs to map
-        @raise ValueError: if an input patient id format is not the study followed by the
+        :param collection: the AIRC collection name 
+        :param patient_ids: the DICOM Patient IDs to map
+        :raise ValueError: if an input patient id format is not the study followed by the
             patient number
         """
         ctp_coll = ctp_collection_for(collection)
@@ -69,7 +69,7 @@ class CTPPatientIdMap(dict):
         """
         Writes this id map in the standard CTP format.
         
-        @param dest: the IO stream on which to write this map (default stdout)
+        :param dest: the IO stream on which to write this map (default stdout)
         """
         for qin_id in sorted(self.iterkeys()):
             print >> dest, CTPPatientIdMap.MAP_FMT % (qin_id, self[qin_id])

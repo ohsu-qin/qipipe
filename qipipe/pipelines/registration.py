@@ -51,9 +51,9 @@ def run(*session_specs, **opts):
     The default registration applies an affine followed by a symmetric normalization
     transform.
     
-    @param session_specs: the XNAT (subject, session) name tuples to register
-    @param opts: the workflow options
-    @return: the resliced XNAT (subject, session, reconstruction) designator tuples
+    :param session_specs: the XNAT (subject, session) name tuples to register
+    :param opts: the workflow options
+    :return: the resliced XNAT (subject, session, reconstruction) designator tuples
     """
 
     # The work directory.
@@ -70,11 +70,11 @@ def _register(subject, session, dest, **opts):
     """
     Builds and runs the registration workflow.
     
-    @param subject: the XNAT subject label
-    @param session: the XNAT session label
-    @param dest: the scan download directory
-    @param opts: the workflow options
-    @return: the warpd XNAT (subject, session, reconstruction) designator tuple
+    :param subject: the XNAT subject label
+    :param session: the XNAT session label
+    :param dest: the scan download directory
+    :param opts: the workflow options
+    :return: the warpd XNAT (subject, session, reconstruction) designator tuple
     """
     # Download the scan images.
     tgt = os.path.join(dest, subject, session)
@@ -96,10 +96,10 @@ def _download_scans(subject, session, dest):
     """
     Download the NIFTI scan files for the given session.
     
-    @param subject: the XNAT subject label
-    @param session: the XNAT session label
-    @param dest: the destination directory path
-    @return: the download file paths
+    :param subject: the XNAT subject label
+    :param session: the XNAT session label
+    :param dest: the destination directory path
+    :return: the download file paths
     """
 
     with xnat_helper.connection() as xnat:
@@ -109,12 +109,12 @@ def _create_workflow(subject, session, recon, images, **opts):
     """
     Creates the Pyxnat Workflow for the given session images.
     
-    @param subject: the XNAT subject label
-    @param session: the XNAT session label
-    @param recon: the XNAT registration reconstruction label
-    @param images: the input session scan NiFTI stacks
-    @param opts: the workflow options
-    @return: the registration workflow
+    :param subject: the XNAT subject label
+    :param session: the XNAT session label
+    :param recon: the XNAT registration reconstruction label
+    :param images: the input session scan NiFTI stacks
+    :param opts: the workflow options
+    :return: the registration workflow
     """
     msg = 'Creating the %s %s registration workflow' % (subject, session)
     if opts:
@@ -236,7 +236,7 @@ def _run_workflow(workflow):
     """
     Executes the given workflow.
     
-    @param workflow: the workflow to run
+    :param workflow: the workflow to run
     """
     # If debug is set, then diagram the workflow graph.
     if logger.level <= logging.DEBUG:
@@ -253,8 +253,8 @@ def _run_workflow(workflow):
 
 def _generate_name(prefix):
     """
-    @param: the name prefix
-    @return: a unique name which starts with the given prefix
+    :param: the name prefix
+    :return: a unique name which starts with the given prefix
     """
     # The name suffix.
     suffix = file_helper.generate_file_name()
@@ -263,8 +263,8 @@ def _generate_name(prefix):
 
 def _gen_reslice_filename(in_file):
     """
-    @param in_file: the input scan image filename
-    @return: the registered image filename
+    :param in_file: the input scan image filename
+    :return: the registered image filename
     """
     import re
     
@@ -277,8 +277,8 @@ def _gen_reslice_filename(in_file):
     
 def _gen_crop_op_string(cog):
     """
-    @param cog: the center of gravity
-    @return: the crop -roi option
+    :param cog: the center of gravity
+    :return: the crop -roi option
     """
     return "-roi 0 -1 %d -1 0 -1 0 -1" % cog[1]
         

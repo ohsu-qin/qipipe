@@ -21,10 +21,10 @@ class Unpack(IOBase):
 
     def __init__(self, input_name, output_names, mandatory_inputs=True, **kwargs):
         """
-        @param input_name: the input list field name
-        @param output_names: the output field names
-        @param mandatory_inputs: a flag indicating whether every input field is required
-        @param kwargs: the input field name => value bindings
+        :param input_name: the input list field name
+        :param output_names: the output field names
+        :param mandatory_inputs: a flag indicating whether every input field is required
+        :param kwargs: the input field name => value bindings
         """
         super(Unpack, self).__init__(**kwargs)
         if not input_name:

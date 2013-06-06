@@ -33,10 +33,10 @@ def run(collection, *subject_dirs, **opts):
     
     The destination directory is populated with the CTP import staging files.
     
-    @param collection: the AIRC image collection name
-    @param dest: the destination directory
-    @param subject_dirs: the AIRC source subject directories to stage
-    @param opts: additional workflow options
+    :param collection: the AIRC image collection name
+    :param dest: the destination directory
+    :param subject_dirs: the AIRC source subject directories to stage
+    :param opts: additional workflow options
     """
     
     qip = QIPipeline(collection)
@@ -48,7 +48,7 @@ class QIPipeline(object):
     
     def __init__(self, collection):
         """
-        @param collection: the AIRC image collection name
+        :param collection: the AIRC image collection name
         """
         self.collection = collection
     
@@ -67,11 +67,11 @@ class QIPipeline(object):
         
         The resliced XNAT (subject, session, reconstruction) designator tuples
         
-        @param subject_dirs: the AIRC source subject directories to stage
-        @param opts: the pipeline options
-        @keyword dest: the CTP staging destination directory (default current working directory)
-        @keyword work: the pipeline execution work area (default a new temp directory)
-        @return: the pipeline result
+        :param subject_dirs: the AIRC source subject directories to stage
+        :param opts: the pipeline options
+        :keyword dest: the CTP staging destination directory (default current working directory)
+        :keyword work: the pipeline execution work area (default a new temp directory)
+        :return: the pipeline result
         """
         # The work option is the pipeline parent directory.
         work_dir = opts.pop('work', None) or tempfile.mkdtemp()

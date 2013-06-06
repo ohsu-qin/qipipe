@@ -6,9 +6,9 @@ def read_image_hierarchy(*files):
     """
     Returns the ImageHierarchy for the DICOM files in the given locations.
 
-    @param files: the files or directories to walk for DICOM files
-    @return: the image hierarchy
-    @rtype: ImageHierarchy
+    :param files: the files or directories to walk for DICOM files
+    :return: the image hierarchy
+    :rtype: ImageHierarchy
     """
     # Build the hierarchy dictionary.
     h = ImageHierarchy()
@@ -31,7 +31,7 @@ class ImageHierarchy(DictionaryHierarchy):
         """
         Adds the subject-study-series-image hierarchy entries from the given DICOM dataset.
 
-        @param ds: the DICOM dataset
+        :param ds: the DICOM dataset
         """
         # build the image hierarchy
         tdict = select_dicom_tags(ds, *ImageHierarchy.TAGS)

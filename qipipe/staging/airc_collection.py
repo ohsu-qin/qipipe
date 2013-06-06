@@ -7,8 +7,8 @@ EXTENT = {}
 
 def collection_with_name(name):
     """
-    @param name: the OHSU QIN collection name
-    @return: the corresponding AIRC collection
+    :param name: the OHSU QIN collection name
+    :return: the corresponding AIRC collection
     """
     return EXTENT[name]
 
@@ -18,10 +18,10 @@ class AIRCCollection(object):
 
     def __init__(self, name, subject_pattern, session_pattern, dicom_pattern):
         """
-        @param name: the collection name
-        @param subject_pattern: the subject directory name match regular expression pattern
-        @param session_pattern: the session directory name match regular expression pattern
-        @param dicom_pattern: the DICOM directory name match glob pattern
+        :param name: the collection name
+        :param subject_pattern: the subject directory name match regular expression pattern
+        :param session_pattern: the session directory name match regular expression pattern
+        :param dicom_pattern: the DICOM directory name match glob pattern
         """
         self.name = name
         self.subject_pattern = subject_pattern
@@ -31,9 +31,9 @@ class AIRCCollection(object):
     
     def path2subject_number(self, path):
         """
-        @param path: the directory path
-        @return: the subject number
-        @raise StagingError: if the path does not match the collection subject pattern
+        :param path: the directory path
+        :return: the subject number
+        :raise StagingError: if the path does not match the collection subject pattern
         """
         match = re.search(self.subject_pattern, path)
         if not match:
@@ -43,9 +43,9 @@ class AIRCCollection(object):
     
     def path2session_number(self, path):
         """
-        @param path: the directory path
-        @return: the session number
-        @raise StagingError: if the path does not match the collection session pattern
+        :param path: the directory path
+        :return: the session number
+        :raise StagingError: if the path does not match the collection session pattern
         """
         match = re.search(self.session_pattern, path)
         if not match:

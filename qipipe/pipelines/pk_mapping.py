@@ -28,9 +28,9 @@ def run(*session_specs, **opts):
     
     The registration applies an affine followed by a symmetric normalization transform.
     
-    @param session_specs: the XNAT (subject, session) name tuples to register
-    @param opts: the workflow options
-    @return: the resliced XNAT (subject, session, reconstruction) designator tuples
+    :param session_specs: the XNAT (subject, session) name tuples to register
+    :param opts: the workflow options
+    :return: the resliced XNAT (subject, session, reconstruction) designator tuples
     """
 
     # The work directory.

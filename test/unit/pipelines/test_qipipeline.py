@@ -69,8 +69,8 @@ class TestQIPipeline:
         Run the pipeline on the given collection and verify the following:
             - scans are created in XNAT
         
-        @param collection: the AIRC collection name
-        @param fixture: the test input
+        :param collection: the AIRC collection name
+        :param fixture: the test input
         """
         logger.debug("Testing the QIN pipeline on %s..." % fixture)
 

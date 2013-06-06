@@ -7,8 +7,8 @@ def ants_environ():
     """
     Makes the minimal environment variable dictionary for executing an ANTS script.
     
-    @return: the environment dictionary
-    @raise ANTSError: if the ANTSPATH environment variable is not set
+    :return: the environment dictionary
+    :raise ANTSError: if the ANTSPATH environment variable is not set
     """
     # Lazy initializer.
     global _environ

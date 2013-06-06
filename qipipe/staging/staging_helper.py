@@ -20,9 +20,9 @@ def subject_for_directory(collection, path):
     """
     Infers the XNAT subject names from the given directory name.
     
-    @param collection: the AIRC collection name
-    @return: the corresponding XNAT subject label
-    @raise StagingError: if the name does not match the collection subject pattern
+    :param collection: the AIRC collection name
+    :return: the corresponding XNAT subject label
+    :raise StagingError: if the name does not match the collection subject pattern
     """
     airc_coll = airc.collection_with_name(collection)
     sbj_nbr = airc_coll.path2subject_number(path)
@@ -36,11 +36,11 @@ def get_subjects(collection, source, pattern=None):
     subject number. The subject name is the collection name followed
     by the subject number, e.g. C{Breast004}.
     
-    @param collection: the AIRC collection name
-    @param source: the input parent directory
-    @param pattern: the subject directory name match pattern
+    :param collection: the AIRC collection name
+    :param source: the input parent directory
+    :param pattern: the subject directory name match pattern
         (default L{airc.AIRCCollection.subject_pattern})
-    @return: the subject name => directory dictionary
+    :return: the subject name => directory dictionary
     """
     airc_coll = airc.collection_with_name(collection)
     pat = pattern or airc_coll.subject_pattern
@@ -62,16 +62,19 @@ def iter_new_visits(collection, *subject_dirs):
     Iterates over the visits in the given subject directories which are not in XNAT.
     Each iteration item is a (subject, session, dicom_file_iterator) tuple, formed
     as follows:
+    
     - The subject is the XNAT subject ID formatted by L{SUBJECT_FMT}
+    
     - The session is the XNAT experiment name formatted by L{SESSION_FMT}
-    _ The DICOM files iterator iterates over the files which match the
+    
+    - The DICOM files iterator iterates over the files which match the
       L{qipipe.staging.airc_collection} DICOM file include pattern
     
     The supported AIRC collections are defined L{qipipe.staging.airc_collection}.
     
-    @param collection: the AIRC image collection name
-    @param subject_dirs: the subject directories over which to iterate
-    @return: the new visit (subject, session, dicom_file_iterator) tuples
+    :param collection: the AIRC image collection name
+    :param subject_dirs: the subject directories over which to iterate
+    :return: the new visit (subject, session, dicom_file_iterator) tuples
     """
     return NewVisitIterator(collection, *subject_dirs)
 
@@ -80,8 +83,8 @@ def group_dicom_files_by_series(*dicom_files):
     Groups the given DICOM files by series. Subtraction images, indicated by a C{SUB}
     DICOM Image Type, are ignored.
     
-    @param dicom_files: the DICOM files or directories
-    @return: a series number => DICOM file names dictionary
+    :param dicom_files: the DICOM files or directories
+    :return: a series number => DICOM file names dictionary
     """
     ser_files_dict = {}    
     for ds in iter_dicom_headers(*dicom_files):
@@ -97,8 +100,8 @@ class NewVisitIterator(object):
 
     def __init__(self, collection, *subject_dirs):
         """
-        @param collection: the AIRC image collection name
-        @param subject_dirs: the subject directories over which to iterate
+        :param collection: the AIRC image collection name
+        :param subject_dirs: the subject directories over which to iterate
         """
         # The AIRC collection with the given name.
         self.collection = airc.collection_with_name(collection)

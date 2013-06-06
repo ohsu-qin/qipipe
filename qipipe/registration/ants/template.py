@@ -11,11 +11,11 @@ def create_template(files, dimension=2, cores=4, metric=None):
     """
     Builds a template from the given image files.
     
-    @param files: the image files
-    @param dimension: the image dimension - 2 (default), 3, or 4
-    @param cores: the number of CPU cores (default 4)
-    @param metric: the similarity metric (default probability mapping)
-    @return: the template file name
+    :param files: the image files
+    :param dimension: the image dimension - 2 (default), 3, or 4
+    :param cores: the number of CPU cores (default 4)
+    :param metric: the similarity metric (default probability mapping)
+    :return: the template file name
     """
     CMD = "buildtemplateparallel.sh -c 2 {opts} -o {output} {files}"
     PREFIX = 'reg_'

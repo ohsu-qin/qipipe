@@ -32,9 +32,9 @@ class Move(BaseInterface):
         """
         Moves the given file.
     
-        @param in_file: the path of the file to move
+        :param in_file: the path of the file to move
         @parma dest: the destination directory path
-        @return: the moved file path
+        :return: the moved file path
         """
         dest = os.path.abspath(dest)
         if not os.path.exists(dest):

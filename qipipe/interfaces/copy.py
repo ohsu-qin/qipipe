@@ -32,9 +32,9 @@ class Copy(BaseInterface):
         """
         Copys the given file.
     
-        @param in_file: the path of the file to copy
+        :param in_file: the path of the file to copy
         @parma dest: the destination directory path
-        @return: the copyd file path
+        :return: the copyd file path
         """
         dest = os.path.abspath(dest)
         if not os.path.exists(dest):

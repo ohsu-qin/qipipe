@@ -9,8 +9,8 @@ def generate_file_name(ext=None):
     """
     Makes a valid file name which is unique to within one millisecond of calling this function.
     
-    @param: the optional file extension, with leading period delimiter
-    @return: the file name
+    :param ext: the optional file extension, with leading period delimiter
+    :return: the file name
     """
     # A starting time prior to now.
     start = time.mktime(calendar.datetime.date(2013,01,01).timetuple())
@@ -35,7 +35,7 @@ class FileIterator(object):
 
     def __init__(self, *filespecs):
         """
-        @param filespecs: the files, directories or file generators over which to iterate
+        :param filespecs: the files, directories or file generators over which to iterate
         """
         self._filespecs = filespecs
     

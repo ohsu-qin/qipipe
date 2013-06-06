@@ -16,10 +16,10 @@ def run(collection, *subject_dirs, **opts):
     """
     Builds and runs the staging workflow.
     
-    @param collection: the AIRC image collection name 
-    @param subject_dirs: the AIRC source subject directories to stage
-    @param opts: the workflow options
-    @return: the new XNAT (subject, session) name tuples
+    :param collection: the AIRC image collection name 
+    :param subject_dirs: the AIRC source subject directories to stage
+    :param opts: the workflow options
+    :return: the new XNAT (subject, session) name tuples
     """
 
     # If the force option is set, then delete existing subjects.
@@ -60,11 +60,11 @@ def run(collection, *subject_dirs, **opts):
 
 def _create_workflow(collection, *series_specs, **opts):
     """
-    @param collection: the AIRC image collection name 
-    @param series_specs: the (subject, session, scan, dicom_files) tuples to stage
-    @param opts: the workflow options
-    @keyword dest: the destination directory (default current working directory)
-    @return: the staging workflow, or None if there are no new images
+    :param collection: the AIRC image collection name 
+    :param series_specs: the (subject, session, scan, dicom_files) tuples to stage
+    :param opts: the workflow options
+    :keyword dest: the destination directory (default current working directory)
+    :return: the staging workflow, or None if there are no new images
     """
     msg = 'Creating the staging workflow'
     if opts:
@@ -143,8 +143,8 @@ def _group_sessions_by_series(*session_specs):
     """
     Creates the series specifications for the new images in the given sessions.
 
-    @param session_specs: the (subject, session, dicom_files) tuples to group
-    @return: the series (subject, session, series, dicom_files) tuples
+    :param session_specs: the (subject, session, dicom_files) tuples to group
+    :return: the series (subject, session, series, dicom_files) tuples
     """
 
     # The (subject, session, series, dicom files) inputs.
@@ -163,7 +163,7 @@ def _group_sessions_by_series(*session_specs):
 
 def _ctp_series_directory(dest, subject, session, series):
     """
-    @return: the dest/subject/session/series directory path
+    :return: the dest/subject/session/series directory path
     """
     import os
     return os.path.join(dest, subject, session, str(series))

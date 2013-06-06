@@ -55,7 +55,7 @@ class TestRegistrationPipeline:
         Run the registration workflow and verify that the registered images are
         created in XNAT.
         
-        @param collection: the collection name
+        :param collection: the collection name
         """
         fixture = os.path.join(FIXTURES, collection.lower())
         logger.debug("Testing the registration pipeline on %s..." % fixture)
@@ -103,9 +103,9 @@ class TestRegistrationPipeline:
         """
         Uploads the test files in the given session directory.
         
-        @param subject: the test subject label
-        @param session_dir: the session directory
-        @return: the XNAT (session, files) labels
+        :param subject: the test subject label
+        :param session_dir: the session directory
+        :return: the XNAT (session, files) labels
         """
         _, dname = os.path.split(session_dir)
         with xnat_helper.connection() as xnat:
@@ -117,9 +117,9 @@ class TestRegistrationPipeline:
     
     def _upload_file(self, session_obj, path):
         """
-        @param session_obj: the XNAT session object
-        @param path: the file path
-        @return: the XNAT file object label
+        :param session_obj: the XNAT session object
+        :param path: the file path
+        :return: the XNAT file object label
         """
         _, fname = os.path.split(path)
         scan = re.match('series(\d{3}).nii.gz', fname).group(1)

@@ -16,10 +16,10 @@ def edit_dicom_headers(dest, *dicom_files, **tag_values):
     """
     Sets the tags of the given DICOM files.
     
-    @param dest: the directory in which to write the modified DICOM files
-    @param dicom_files: the files or directories containing the input DICOM files
-    @param tag_values: the DICOM header (I{name}, I{value}) tag values to set
-    @return: the files which were created
+    :param dest: the directory in which to write the modified DICOM files
+    :param dicom_files: the files or directories containing the input DICOM files
+    :param tag_values: the DICOM header (I{name}, I{value}) tag values to set
+    :return: the files which were created
     """
     dest = os.path.abspath(dest)
     if not os.path.exists(dest):
