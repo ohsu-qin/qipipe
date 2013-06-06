@@ -2,7 +2,7 @@
 
 Synopsis
 --------
-qipipe processes the `OHSU QIN`_ study images.
+qipipe processes the OHSU QIN study images.
 
 Feature List
 ------------
@@ -17,18 +17,6 @@ Feature List
 5. Pharmokinetic mapping.
 
 6. Import of the input scans and processing results into the OSHU `QIN XNAT`_ instance.
-
-Content
--------
-The main qipipe modules include the following:
-
-* `helpers` : Common utilities
-
-* `interfaces` : Nipype workflow interfaces
-
-* `pipelines` : Image staging, registration and pharmokinetic mapping workflow 
-
-* `staging` : Prepare the image files
 
 Installing
 ----------
@@ -56,7 +44,7 @@ Run the following command for the pipeline options::
 
      qipipeline --help
 
-The `OHSU QIN`_ `TCIA Upload Procedure`_ document describes how to import the staged QIN images into TCIA.
+The `OHSU QIN Sharepoint`_ `TCIA Upload Procedure`_ document describes how to import the staged QIN images into TCIA.
 
 Copyright
 ---------
@@ -73,7 +61,7 @@ qipipe is confidential and may not be distributed in any form without authorizat
 
 .. _OHSU QIN Git administrator: loneyf@ohsu.edu
 
-.. _OHSU QIN: https://bridge.ohsu.edu/research/knight/projects/qin/SitePages/Home.aspx
+.. _OHSU QIN Sharepoint: https://bridge.ohsu.edu/research/knight/projects/qin/SitePages/Home.aspx
 
 .. _pip: https://pypi.python.org/pypi/pip
 
