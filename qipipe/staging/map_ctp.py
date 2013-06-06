@@ -26,8 +26,8 @@ def property_filename(collection):
     
 class CTPPatientIdMap(dict):
     """
-    CTPPatientIdMap is a dictionary augmented with a L{map_subjects} input method
-    to build the map and a L{write} output method to print the CTP map properties.
+    CTPPatientIdMap is a dictionary augmented with a :meth:`map_subjects` input method
+    to build the map and a :meth:`write` output method to print the CTP map properties.
     """
     
     AIRC_PAT = re.compile("""
@@ -35,7 +35,7 @@ class CTPPatientIdMap(dict):
         _?              # An optional underscore delimiter
         (\d+)$          # The patient number
     """, re.VERBOSE)
-    """The input Patient ID pattern is the study name followed by a number, e.g. C{Breast010}."""
+    """The input Patient ID pattern is the study name followed by a number, e.g. ``Breast010``."""
     
     CTP_FMT = '%s-%04d'
     """The CTP Patient ID format with arguments (CTP collection name, input Patient ID number)."""

@@ -9,16 +9,16 @@ logger = logging.getLogger(__name__)
 def fix_dicom_headers(collection, subject, *dicom_files, **opts):
     """
     Fix the given input OHSU QIN AIRC DICOM files as follows:
-        - Replace the C{Patient ID} value with the subject number, e.g. C{Sarcoma001}
-        - Add the C{Body Part Examined} tag
+        - Replace the ``Patient ID`` value with the subject number, e.g. ``Sarcoma001``
+        - Add the ``Body Part Examined`` tag
         - Standardize the file name
         
     The output file name is standardized as follows:
         - The file name is lower-case
-        - The file extension is C{.dcm}
+        - The file extension is ``.dcm``
         - Each non-word character is replaced by an underscore
 
-    The supported collection names are defined in the C{COLLECTIONS} set.
+    The supported collection names are defined in the ``COLLECTIONS`` set.
     
     :param collection: the collection name
     :param subject: the input subject name

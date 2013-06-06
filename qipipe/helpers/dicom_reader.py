@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 def read_dicom_file(fp, *args):
     """
-    Reads the given DICOM file. If the file extension ends in C{.gz}, then the
+    Reads the given DICOM file. If the file extension ends in ``.gz``, then the
     content is uncompressed before reading.
     
     :param fp: the file pathname or stream

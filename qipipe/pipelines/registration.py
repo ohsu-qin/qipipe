@@ -32,7 +32,7 @@ def run(*session_specs, **opts):
     - Upload the mask and the resliced images
     
     The NiFTI scan images for each session are downloaded from XNAT into the
-    C{scans} subdirectory of the C{base_dir} specified in the options
+    ``scans`` subdirectory of the ``base_dir`` specified in the options
     (default is the current directory).
     
     The average is taken on the middle half of the NiFTI scan images.
@@ -40,13 +40,13 @@ def run(*session_specs, **opts):
 
     The options include the Pyxnat Workflow initialization options, as well as
     the following options:
-    - C{config}: an optional configuration file
+    - ``config``: an optional configuration file
     
     The configuration file can contain the following sections:
-    - C{FSLMriVolCluster}: the FSL C{MriVolCluster} interface options
-    - C{ANTSAverage}: the ANTS C{Average} interface options
-    - C{ANTSRegistration}: the ANTS C{Registration} interface options
-    - C{ANTSApplyTransforms}: the ANTS C{ApplyTransforms} interface options
+    - ``FSLMriVolCluster``: the FSL ``MriVolCluster`` interface options
+    - ``ANTSAverage``: the ANTS ``Average`` interface options
+    - ``ANTSRegistration``: the ANTS ``Registration`` interface options
+    - ``ANTSApplyTransforms``: the ANTS ``ApplyTransforms`` interface options
     
     The default registration applies an affine followed by a symmetric normalization
     transform.

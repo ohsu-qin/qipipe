@@ -34,12 +34,12 @@ def get_subjects(collection, source, pattern=None):
     The source directory contains subject subdirectories.
     The match pattern matches on the subdirectories and captures the
     subject number. The subject name is the collection name followed
-    by the subject number, e.g. C{Breast004}.
+    by the subject number, e.g. ``Breast004``.
     
     :param collection: the AIRC collection name
     :param source: the input parent directory
     :param pattern: the subject directory name match pattern
-        (default L{airc.AIRCCollection.subject_pattern})
+        (default :class:`airc.AIRCCollection`.subject_pattern`)
     :return: the subject name => directory dictionary
     """
     airc_coll = airc.collection_with_name(collection)
@@ -63,14 +63,14 @@ def iter_new_visits(collection, *subject_dirs):
     Each iteration item is a (subject, session, dicom_file_iterator) tuple, formed
     as follows:
     
-    - The subject is the XNAT subject ID formatted by L{SUBJECT_FMT}
+    - The subject is the XNAT subject ID formatted by `SUBJECT_FMT`
     
-    - The session is the XNAT experiment name formatted by L{SESSION_FMT}
+    - The session is the XNAT experiment name formatted by `SESSION_FMT`
     
     - The DICOM files iterator iterates over the files which match the
-      L{qipipe.staging.airc_collection} DICOM file include pattern
+      :mod:`qipipe.staging.airc_collection` DICOM file include pattern
     
-    The supported AIRC collections are defined L{qipipe.staging.airc_collection}.
+    The supported AIRC collections are defined by :mod:`qipipe.staging.airc_collection`.
     
     :param collection: the AIRC image collection name
     :param subject_dirs: the subject directories over which to iterate
@@ -80,7 +80,7 @@ def iter_new_visits(collection, *subject_dirs):
 
 def group_dicom_files_by_series(*dicom_files):
     """
-    Groups the given DICOM files by series. Subtraction images, indicated by a C{SUB}
+    Groups the given DICOM files by series. Subtraction images, indicated by a ``SUB``
     DICOM Image Type, are ignored.
     
     :param dicom_files: the DICOM files or directories
@@ -113,7 +113,7 @@ class NewVisitIterator(object):
     def next(self):
         """
         Iterates over the visits in the subject directories as described in
-        L{iter_new_visits}.
+        :meth:`iter_new_visits`.
         """
         # The visit subdirectory match pattern.
         vpat = self.collection.session_pattern

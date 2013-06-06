@@ -29,8 +29,6 @@ class WarpTransform:
         :param fixed: the file name of the reference image
         :param metric: the similarity metric (default cross-correlation)
         :param iterations: the number of iterations in each resolution
-        :return: the new transform
-        :rtype: WarpTransform
         """
         MAP = "ANTS 2 -m {metric} -i {iterations} -r Gauss[3,0] -t SyN[0.25] -o {output}"
         FIELD = "{output}Warp.nii.gz"

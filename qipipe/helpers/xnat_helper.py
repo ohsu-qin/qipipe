@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 @contextmanager
 def connection():
     """
-    Returns the sole L{XNAT} connection. The connection is closed
+    Returns the sole :class:`XNAT` connection. The connection is closed
     when the outermost connection block finishes.
     
     Example:
@@ -20,7 +20,7 @@ def connection():
         >>> with xnat_helper.connection() as xnat:
         >>>    sbj = xnat.get_subject(PROJECT, 'Breast003')
 
-    :return a L{XNAT} instance
+    :return a :class:`XNAT` instance
     """
     if hasattr(connection, 'xnat'):
         yield connection.xnat
@@ -59,12 +59,13 @@ class XNAT(object):
     """The supported XNAT resource container types."""
     
     ASSESSOR_SYNONYMS = ['analysis', 'assessment']
-    """Alternative designations for the XNAT C{assessor} container type."""
+    """Alternative designations for the XNAT ``assessor`` container type."""
     
     def __init__(self, config_or_interface=None):
         """
+        
         :param config_or_interface: the configuration file, pyxnat Interface,
-            or None to connect with the L{default_configuration}
+            or None to connect with the :meth:`default_configuration`
         """
         if isinstance(config_or_interface, pyxnat.Interface):
             self.interface = config_or_interface
@@ -109,7 +110,7 @@ class XNAT(object):
         """
         Returns the XNAT scan object for the given XNAT lineage.
         
-        @see: L{get_session}
+        @see: :meth:`get_session`
         :param project: the XNAT project id
         :param subject: the XNAT subject label
         :param session: the XNAT experiment label
@@ -124,7 +125,7 @@ class XNAT(object):
         The session and reconstruction name is qualified by the session name prefix,
         if necessary.
         
-        @see: L{get_session}
+        @see: :meth:`get_session`
         :param project: the XNAT project id
         :param subject: the XNAT subject label
         :param session: the XNAT experiment label
@@ -158,9 +159,9 @@ class XNAT(object):
         
         The keyword options include the format and session child container.
         The session child container option can be set to a specific resource container,
-        e.g. C{scan=1}, as described in L{XNAT.upload}, or all resources of a given
-        container type. In the latter case, the C{container_type} parameter is set.
-        The permissible container types are described in L{XNAT.upload}.
+        e.g. ``scan=1``, as described in :meth:`XNAT.upload`, or all resources of a given
+        container type. In the latter case, the ``container_type`` parameter is set.
+        The permissible container types are described in :meth:`XNAT.upload`.
         
         A reconstruction option value is qualified by the session label, if necessary.
         
@@ -168,12 +169,12 @@ class XNAT(object):
         :param subject: the XNAT subject label
         :param session: the XNAT experiment label
         :param opts: the resource selection options
-        :keyword format: the image file format (C{NIFTI} or C{DICOM})
+        :keyword format: the image file format (``NIFTI`` or ``DICOM``)
         :keyword scan: the scan number
         :keyword reconstruction: the reconstruction name
         :keyword analysis: the analysis name
         :keyword container_type: the container type, if no specific container is specified
-        :keyword inout: :param inout: the C{in}/C{out} reconstruction resource qualifier
+        :keyword inout: the ``in``/``out`` reconstruction resource qualifier
         :keyword dest: the optional download location (default current directory)
         """
         # The XNAT experiment, which must exist.
@@ -217,24 +218,24 @@ class XNAT(object):
             /project/PROJECT/subject/SUBJECT/experiment/SESSION/I{container}/CONTAINER/resource/FORMAT
     
         where:
-        -  the XNAT experiment name is the C{session} parameter
-        -  I{container} is the experiment child type, e.g. C{scan}
-        -  the XNAT resource name is the file format, e.g. C{NIFTI} or C{DICOM}
+        -  the XNAT experiment name is the ``session`` parameter
+        -  I{container} is the experiment child type, e.g. ``scan``
+        -  the XNAT resource name is the file format, e.g. ``NIFTI`` or ``DICOM``
         
-        The keyword options include the session child container, scan C{modality} and file C{format}.
+        The keyword options include the session child container, scan ``modality`` and file ``format``.
         The required container keyword argument associates the container type to the container name,
-        e.g. C{scan=1}. The container type is C{scan}, C{reconstruction} or C{analysis}.
-        The C{analysis} container type value corresponds to the XNAT C{assessor} Image Assessment type.
-        C{analysis}, C{assessment} and C{assessor} are synonymous.
+        e.g. ``scan=1``. The container type is ``scan``, ``reconstruction`` or ``analysis``.
+        The ``analysis`` container type value corresponds to the XNAT ``assessor`` Image Assessment type.
+        ``analysis``, ``assessment`` and ``assessor`` are synonymous.
         The container name can be a string or integer, e.g. the series number.
         
-        If the XNAT file extension is C{.nii} or C{dcm}, then the default XNAT image format
-        is inferred from the extension. Otherwise, the C{format} keyword option is required.
+        If the XNAT file extension is ``.nii`` or ``dcm``, then the default XNAT image format
+        is inferred from the extension. Otherwise, the ``format`` keyword option is required.
         
         If the session does not yet exist as a XNAT experiment, then the modality keyword argument
-        is required. The modality is any supported XNAT modality, e.g. C{MR} or  or C{CT}. A capitalized
-        modality value is a synonym for the XNAT session data type, e.g. C{MR} is a synonym for
-        C{xnat:mrSessionData}.
+        is required. The modality is any supported XNAT modality, e.g. ``MR`` or  or ``CT``. A capitalized
+        modality value is a synonym for the XNAT session data type, e.g. ``MR`` is a synonym for
+        ``xnat:mrSessionData``.
         
         Example:
     
@@ -316,7 +317,7 @@ class XNAT(object):
         Infers the resource container item from the given options.
         
         :param experiment: the XNAT experiment object
-        :param opts: the L{XNAT.download} options
+        :param opts: the :meth:`XNAT.download` options
         :return: the container (type, value) tuple
         """
         # The image format.
@@ -367,12 +368,12 @@ class XNAT(object):
         Return the resource parent for the given experiment and container type.
         The resource parent is the experiment child with the given container type,
         e.g a MR session scan or reconstruction. If there is a name, then the parent
-        is the object with that name, e.g. C{reconstruction('reg_1')}. Otherwise,
-        the parent is a container group, e.g. C{reconstructions}.
+        is the object with that name, e.g. ``reconstruction('reg_1')``. Otherwise,
+        the parent is a container group, e.g. ``reconstructions``.
         
         :param experiment: the XNAT experiment
         :param container_type: the container type in L{XNAT.CONTAINER_TYPES}
-        :param name: the optional container name, e.g. C{NIFTI}
+        :param name: the optional container name, e.g. ``NIFTI``
         :return: the XNAT resource parent object
         """
         if name:
@@ -402,8 +403,8 @@ class XNAT(object):
     def _xnat_child_resource(self, parent, name=None, inout=None):
         """
         :param parent: the XNAT resource parent object
-        :param name: the resource name, e.g. C{NIFTI}
-        :param inout: the reconstruction in/out option described in L{XNAT.download}
+        :param name: the resource name, e.g. ``NIFTI``
+        :param inout: the reconstruction in/out option described in :meth:`XNAT.download`
         :return: the XNAT resource object
         :raise XNATError: if the inout option is invalid
         """

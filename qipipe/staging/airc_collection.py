@@ -18,15 +18,23 @@ class AIRCCollection(object):
 
     def __init__(self, name, subject_pattern, session_pattern, dicom_pattern):
         """
-        :param name: the collection name
-        :param subject_pattern: the subject directory name match regular expression pattern
-        :param session_pattern: the session directory name match regular expression pattern
-        :param dicom_pattern: the DICOM directory name match glob pattern
+        :param name: `self.name`
+        :param subject_pattern: `self.subject_pattern`
+        :param session_pattern: `self.session_pattern`
+        :param dicom_pattern: `self.dicom_pattern`
         """
         self.name = name
+        """The collection name."""
+        
         self.subject_pattern = subject_pattern
+        """The subject directory name match regular expression pattern."""
+        
         self.session_pattern = session_pattern
+        """The session directory name match regular expression pattern."""
+        
         self.dicom_pattern = dicom_pattern
+        """The DICOM directory name match glob pattern."""
+        
         EXTENT[name] = self
     
     def path2subject_number(self, path):

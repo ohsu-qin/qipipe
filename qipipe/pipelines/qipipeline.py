@@ -1,4 +1,4 @@
-"""The qipipeline L{run} function is the OHSU QIN pipeline facade."""
+"""The qipipeline :meth:`run` function is the OHSU QIN pipeline facade."""
 
 import os, tempfile
 from ..helpers import xnat_helper
@@ -26,10 +26,10 @@ def run(collection, *subject_dirs, **opts):
     - Performs a parameteric mapping on both the scanned and resampled images.
     - Uploads the parameteric mappings into XNAT.
     
-    The supported AIRC collections are defined L{qipipe.staging.airc_collection}.
+    The supported AIRC collections are defined :mod:`qipipe.staging.airc_collection`.
     
     The options include the workflows to run, as well as any additional
-    L{QIPipeline.run} options.
+    :meth:`QIPipeline.run` options.
     
     The destination directory is populated with the CTP import staging files.
     
@@ -61,9 +61,9 @@ class QIPipeline(object):
         - PK mapping: Calculate the PK parameters
         
         The default options for each of these constituent workflows can be overridden
-        by setting the C{staging}, C{registration} or C{pk_mapping} option, resp.
-        If the C{registration} option is set to false, then only staging is performed.
-        If the C{pk_mapping} option is set to false, then PK mapping is not performed.
+        by setting the ``staging``, ``registration`` or ``pk_mapping`` option, resp.
+        If the ``registration`` option is set to false, then only staging is performed.
+        If the ``pk_mapping`` option is set to false, then PK mapping is not performed.
         
         The resliced XNAT (subject, session, reconstruction) designator tuples
         

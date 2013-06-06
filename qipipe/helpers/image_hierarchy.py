@@ -8,7 +8,7 @@ def read_image_hierarchy(*files):
 
     :param files: the files or directories to walk for DICOM files
     :return: the image hierarchy
-    :rtype: ImageHierarchy
+    :rtype: :class:`ImageHierarchy`
     """
     # Build the hierarchy dictionary.
     h = ImageHierarchy()

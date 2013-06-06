@@ -35,10 +35,10 @@ class TestQIPipeline:
     
     @attention: a precondition for running this test is that the following environment
         variables are set:
-            - C{QIN_BREAST_INPUT}: the input AIRC test Breast fixture parent directory to test
-            - C{QIN_SARCOMA_INPUT}: the input AIRC test Sarcoma fixture parent directory to test
+            - ``QIN_BREAST_INPUT``: the input AIRC test Breast fixture parent directory to test
+            - ``QIN_SARCOMA_INPUT``: the input AIRC test Sarcoma fixture parent directory to test
         The test directories must conform to the subject/visit/dicom directory patterns
-        defined in L{airc}.
+        defined in :meth:`airc`.
     
     The recommended test input is three series for one visit from each collection.
     The pipeline is run serially, and takes app. two hours per visit on this input.
