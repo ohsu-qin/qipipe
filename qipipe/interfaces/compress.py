@@ -32,7 +32,7 @@ class Compress(BaseInterface):
         Compresses the given file.
     
         :param in_file: the path of the file to compress
-        @parma dest: the destination (default is the working directory)
+        :param dest: the destination (default is the working directory)
         :return: the compressed file path
         """
         if not dest:
