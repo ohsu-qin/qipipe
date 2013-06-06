@@ -6,11 +6,11 @@ from ..interfaces import XNATDownload, XNATUpload, Fastfit
 def run(*session_specs, **opts):
     """
     Calculates the PK mapping parameters for the given registered images as follows:
-        - Download the NiFTI mask and images from XNAT
-        - Convert the DCE time series to a R1 map series
-        - Get the pharmacokinetic mapping parameters
-        - Perform the pharmacokinetic mapping
-        - Upload the PK mapping result to XNAT
+    - Download the NiFTI mask and images from XNAT
+    - Convert the DCE time series to a R1 map series
+    - Get the pharmacokinetic mapping parameters
+    - Perform the pharmacokinetic mapping
+    - Upload the PK mapping result to XNAT
     
     The NiFTI scan images for each session are downloaded from XNAT into the
     C{scans} subdirectory of the C{base_dir} specified in the options
@@ -21,10 +21,10 @@ def run(*session_specs, **opts):
 
     The options include the Pyxnat Workflow initialization options, as well as
     the following key => dictionary options:
-        - C{mask}: the FSL C{mri_volcluster} interface options
-        - C{average}: the ANTS C{Average} interface options
-        - C{register}: the ANTS C{Registration} interface options
-        - C{reslice}: the ANTS C{ApplyTransforms} interface options
+    - C{mask}: the FSL C{mri_volcluster} interface options
+    - C{average}: the ANTS C{Average} interface options
+    - C{register}: the ANTS C{Registration} interface options
+    - C{reslice}: the ANTS C{ApplyTransforms} interface options
     
     The registration applies an affine followed by a symmetric normalization transform.
     

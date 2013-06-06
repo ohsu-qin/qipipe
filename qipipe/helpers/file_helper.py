@@ -45,11 +45,14 @@ class FileIterator(object):
     def next(self):
         """
         Yields the next file as follows:
-            - If the current file specification is a file, then yield that file.
-            - If the current file specification is a directory, then yield each file
-              contained in that directory.
-            - If the current file specification is a generator, then yield each
-              generated item 
+        
+        - If the current file specification is a file, then yield that file.
+        
+        - If the current file specification is a directory, then yield each file
+          contained in that directory.
+        
+        - If the current file specification is a generator, then yield each
+          generated item 
         """
         for spec in self._filespecs:
             if isinstance(spec, file):

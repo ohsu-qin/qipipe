@@ -6,9 +6,12 @@ def default_configuration():
     """
     Returns the XNAT configuration file location determined as the first file found
     in the following precedence order:
-        1. C{xnat.cfg} in the home C{.xnat} subdirectory
-        2. C{xnat.cfg} in the home directory
-        3. C{xnat.cfg} in the C{/etc} directory
+    
+    1. C{xnat.cfg} in the home C{.xnat} subdirectory
+    
+    2. C{xnat.cfg} in the home directory
+    
+    3. C{xnat.cfg} in the C{/etc} directory
 
     @return: the configuration location, if any
     """

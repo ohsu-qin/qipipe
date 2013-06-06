@@ -86,9 +86,10 @@ class ANTS(object):
             self.reference = None
     
     def register(self, *in_files):
-        """Registers the given images using a symmetric diffeomorphic deformation.
+        """
+        Registers the given images using a symmetric diffeomorphic deformation.
 
-        @param *in_files: the images to register
+        @param in_files: the images to register
         @return: the source => registered file name dictionary
         """
         

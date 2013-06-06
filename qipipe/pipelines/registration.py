@@ -23,13 +23,13 @@ REG_PREFIX = 'reg'
 def run(*session_specs, **opts):
     """
     Registers the scan NiFTI images for the given sessions as follows:
-        - Download the NiFTI scans from XNAT
-        - Make a mask to subtract extraneous tissue
-        - Mask each input scan
-        - Make a template by averaging the masked images
-        - Create an affine and non-rigid transform for each image
-        - Reslice the masked image with the transforms
-        - Upload the mask and the resliced images
+    - Download the NiFTI scans from XNAT
+    - Make a mask to subtract extraneous tissue
+    - Mask each input scan
+    - Make a template by averaging the masked images
+    - Create an affine and non-rigid transform for each image
+    - Reslice the masked image with the transforms
+    - Upload the mask and the resliced images
     
     The NiFTI scan images for each session are downloaded from XNAT into the
     C{scans} subdirectory of the C{base_dir} specified in the options
@@ -40,13 +40,13 @@ def run(*session_specs, **opts):
 
     The options include the Pyxnat Workflow initialization options, as well as
     the following options:
-        - C{config}: an optional configuration file
+    - C{config}: an optional configuration file
     
     The configuration file can contain the following sections:
-        - C{FSLMriVolCluster}: the FSL C{MriVolCluster} interface options
-        - C{ANTSAverage}: the ANTS C{Average} interface options
-        - C{ANTSRegistration}: the ANTS C{Registration} interface options
-        - C{ANTSApplyTransforms}: the ANTS C{ApplyTransforms} interface options
+    - C{FSLMriVolCluster}: the FSL C{MriVolCluster} interface options
+    - C{ANTSAverage}: the ANTS C{Average} interface options
+    - C{ANTSRegistration}: the ANTS C{Registration} interface options
+    - C{ANTSApplyTransforms}: the ANTS C{ApplyTransforms} interface options
     
     The default registration applies an affine followed by a symmetric normalization
     transform.

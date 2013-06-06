@@ -216,9 +216,9 @@ class XNAT(object):
             /project/PROJECT/subject/SUBJECT/experiment/SESSION/I{container}/CONTAINER/resource/FORMAT
     
         where:
-            -  the XNAT experiment name is the C{session} parameter
-            -  I{container} is the experiment child type, e.g. C{scan}
-            -  the XNAT resource name is the file format, e.g. C{NIFTI} or C{DICOM}
+        -  the XNAT experiment name is the C{session} parameter
+        -  I{container} is the experiment child type, e.g. C{scan}
+        -  the XNAT resource name is the file format, e.g. C{NIFTI} or C{DICOM}
         
         The keyword options include the session child container, scan C{modality} and file C{format}.
         The required container keyword argument associates the container type to the container name,

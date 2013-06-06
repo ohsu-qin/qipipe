@@ -6,13 +6,12 @@
 qipipe: OHSU QIN Pipeline
 =========================
 
-.. include README.rst
-
-API
+Contents
 
 .. toctree::
    :maxdepth: 4
 
+   overview
    qipipe
 
 Indices and tables

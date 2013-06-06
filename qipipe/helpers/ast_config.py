@@ -42,11 +42,11 @@ class ASTConfig(Config):
         threshold = 4.0
     
     then:
-        
+    
     >> cfg = ASTConfig('tuning.cfg')
     >> cfg['Tuning']
     {'method': u'FFT', 'parameters' = [(1,), (2, 3)], 'iterations': [[1, 2], 5],
-     'two_tailed': False, 'threshold': 4.0}
+    'two_tailed': False, 'threshold': 4.0}
     
     @param in_file: the input configuration file path
     @return: the L{ASTConfig}

@@ -1,5 +1,5 @@
-qipipe Package
-==============
+API
+===
 
 :mod:`qipipe` Package
 ---------------------

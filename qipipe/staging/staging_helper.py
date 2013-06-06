@@ -62,10 +62,10 @@ def iter_new_visits(collection, *subject_dirs):
     Iterates over the visits in the given subject directories which are not in XNAT.
     Each iteration item is a (subject, session, dicom_file_iterator) tuple, formed
     as follows:
-        - The subject is the XNAT subject ID formatted by L{SUBJECT_FMT}
-        - The session is the XNAT experiment name formatted by L{SESSION_FMT}
-        _ The DICOM files iterator iterates over the files which match the
-          L{qipipe.staging.airc_collection} DICOM file include pattern
+    - The subject is the XNAT subject ID formatted by L{SUBJECT_FMT}
+    - The session is the XNAT experiment name formatted by L{SESSION_FMT}
+    _ The DICOM files iterator iterates over the files which match the
+      L{qipipe.staging.airc_collection} DICOM file include pattern
     
     The supported AIRC collections are defined L{qipipe.staging.airc_collection}.
     

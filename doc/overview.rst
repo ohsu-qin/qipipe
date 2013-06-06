@@ -1,23 +1,22 @@
-qipipe: OHSU Quantitative Imaging Pipeline
-==========================================
-**Home**:         [https://bridge.ohsu.edu/research/knight/projects/qin/SitePages/Home.aspx](https://bridge.ohsu.edu/research/knight/projects/qin/SitePages/Home.aspx)    
-**Git**:          [http://quip1.ohsu.edu/git/qipipe](http://quip1.ohsu.edu/git/qipipe)       
-**Author**:       OHSU Knight Cancer Institute    
-**Copyright**:    2012    
-**License**:      Proprietary    
+.. include:: <isonum.txt>
 
 Synopsis
 --------
-qipipe processes the OHSU [QIN](https://bridge.ohsu.edu/research/knight/projects/qin/SitePages/Home.aspx) study images.
+qipipe processes the `OHSU QIN`_ study images.
 
 Feature List
 ------------
-1. Image import into the OSHU QIN [XNAT](http://quip1.ohsu.edu/) instance.
+1. Recognition of new AIRC QIN study images.
 
-1. Motion correction.
+2. Staging for submission to `The Cancer Imaging Archive`_ (TCIA) `QIN collection`_.
 
-2. Submission to [The Cancer Imaging Archive](http://cancerimagingarchive.net) (TCIA)
-[QIN collection](https://wiki.cancerimagingarchive.net/display/Public/Quantitative+Imaging+Network+Collections).
+3. Masking to subtract extraneous image content.
+
+4. Motion correction.
+
+5. Pharmokinetic mapping.
+
+6. Import of the input scans and processing results into the OSHU `QIN XNAT`_ instance.
 
 Content
 -------
@@ -27,23 +26,23 @@ The main qipipe modules include the following:
 
 * `interfaces` : Nipype workflow interfaces
 
-* `pipelines` : Image staging, registration and PK mapping workflow 
+* `pipelines` : Image staging, registration and pharmokinetic mapping workflow 
 
 * `staging` : Prepare the image files
 
 Installing
 ----------
-1. Install [Git](http://git-scm.com) on your workstation.
+1. Install Git_ on your workstation.
 
-2. Contact the qipipe [Git administrator](mail:loneyf@ohsu.edu) to get permission to access the qipipe Git
+2. Contact the qipipe `OHSU QIN Git administrator`_ to get permission to access the qipipe Git
    repository.
 
-3. Clone this qipipe repository::
+3. Clone the `qipipe repository`_::
 
        cd ~/workspace
        git clone git@quip1:qipipe
    
-4. Install the [Python](http://www.python.org) [pip](https://pypi.python.org/pypi/pip) package on
+4. Install the Python_ pip_ package on
    your workstation.
 
 5. Install the qipipe package::
@@ -57,11 +56,36 @@ Run the following command for the pipeline options::
 
      qipipeline --help
 
-The OHSU QIN Sharepoint
-[TCIA Upload Procedure](https://bridge.ohsu.edu/research/knight/projects/qin/_layouts/WordViewer.aspx?id=/research/knight/projects/qin/Shared%20Documents/TCIA%20upload%20procedure.docx&Source=https%3A%2F%2Fbridge%2Eohsu%2Eedu%2Fresearch%2Fknight%2Fprojects%2Fqin%2FSitePages%2FHome%2Easpx&DefaultItemOpen=1&DefaultItemOpen=1)
-document describes how to import new QIN images into TCIA.
+The `OHSU QIN`_ `TCIA Upload Procedure`_ document describes how to import the staged QIN images into TCIA.
 
 Copyright
 ---------
-qipipe &copy; 2012 by [Oregon Health & Science University](http://www.ohsu.edu/xd/health/services/cancer).
+|copy| 2013, Oregon Health & Science University `Knight Cancer Institute`_.
 qipipe is confidential and may not be distributed in any form without authorization.
+
+.. Targets:
+
+.. _Advanced Imaging Research Center: http://www.ohsu.edu/xd/research/centers-institutes/airc/
+
+.. _Git: http://git-scm.com
+
+.. _Knight Cancer Institute: http://www.ohsu.edu/xd/health/services/cancer
+
+.. _OHSU QIN Git administrator: loneyf@ohsu.edu
+
+.. _OHSU QIN: https://bridge.ohsu.edu/research/knight/projects/qin/SitePages/Home.aspx
+
+.. _pip: https://pypi.python.org/pypi/pip
+
+.. _Python: http://www.python.org
+
+.. _QIN XNAT: http:quip5.ohsu.edu:8080/xnat
+
+.. _QIN collection: https://wiki.cancerimagingarchive.net/display/Public/Quantitative+Imaging+Network+Collections
+
+.. _qipipe repository: http:quip1.ohsu.edu:6060/qipipe
+
+.. _TCIA Upload Procedure: https://bridge.ohsu.edu/research/knight/projects/qin/_layouts/WordViewer.aspx?id=/research/knight/projects/qin/Shared%20Documents/TCIA%20upload%20procedure.docx&Source=https%3A%2F%2Fbridge%2Eohsu%2Eedu%2Fresearch%2Fknight%2Fprojects%2Fqin%2FSitePages%2FHome%2Easpx&DefaultItemOpen=1&DefaultItemOpen=1
+
+.. _The Cancer Imaging Archive: http://cancerimagingarchive.net
+
