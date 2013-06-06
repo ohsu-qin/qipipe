@@ -13,6 +13,15 @@
 
 import sys, os
 
+def skip(app, what, name, obj, skip, options):
+    """Document the __init__ methods."""
+    if name == "__init__":
+        return False
+    return skip
+
+def setup(app):
+    app.connect("autodoc-skip-member", skip)
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
