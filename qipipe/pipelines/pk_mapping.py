@@ -15,19 +15,7 @@ def run(*session_specs, **opts):
     The NiFTI scan images for each session are downloaded from XNAT into the
     ``scans`` subdirectory of the ``base_dir`` specified in the options
     (default is the current directory).
-    
-    The average is taken on the middle half of the NiFTI scan images.
-    These images are averaged into a fixed reference template image.
 
-    The options include the Pyxnat Workflow initialization options, as well as
-    the following key => dictionary options:
-    - ``mask``: the FSL ``mri_volcluster`` interface options
-    - ``average``: the ANTS ``Average`` interface options
-    - ``register``: the ANTS ``Registration`` interface options
-    - ``reslice``: the ANTS ``ApplyTransforms`` interface options
-    
-    The registration applies an affine followed by a symmetric normalization transform.
-    
     :param session_specs: the XNAT (subject, session) name tuples to register
     :param opts: the workflow options
     :return: the resliced XNAT (subject, session, reconstruction) designator tuples
