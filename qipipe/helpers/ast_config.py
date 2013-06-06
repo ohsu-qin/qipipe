@@ -9,9 +9,9 @@ def read_config(*filenames):
     """
     Reads and parses the given configuration file.
     
-    @see ASTConfig
     :param filenames: the input configuration file names
-    :return: the L{ASTConfig}
+    :return: the configuration
+    :rtype: :class:`ASTConfig`
     :raise ValueError: if none of the files could not be read
     """
     cfg = ASTConfig()
@@ -29,10 +29,10 @@ class ASTConfig(Config):
     ASTConfig parses a configuration option values as AST objects.
     Strings are quoted, if necessary.
     A bracked value is parsed as a list.
-    A case-insensitive match on C{true} or C{false} is parsed
-    as C{True}, resp. C{False}.
+    A case-insensitive match on ``true`` or ``false`` is parsed
+    as ``True``, resp. ``False``.
     
-    For example, given the configuration file C{tuning.cfg} with content:
+    For example, given the configuration file ``tuning.cfg`` with content::
         
         [Tuning]
         method = FFT
@@ -43,13 +43,10 @@ class ASTConfig(Config):
     
     then:
     
-    >> cfg = ASTConfig('tuning.cfg')
-    >> cfg['Tuning']
+    >>> cfg = ASTConfig('tuning.cfg')
+    >>> cfg['Tuning']
     {'method': u'FFT', 'parameters' = [(1,), (2, 3)], 'iterations': [[1, 2], 5],
     'two_tailed': False, 'threshold': 4.0}
-    
-    :param in_file: the input configuration file path
-    :return: the L{ASTConfig}
     """
 
     LIST_PAT = re.compile("""
@@ -101,7 +98,7 @@ class ASTConfig(Config):
     
     def next(self):
         """
-        :return the next (section, {item: value}) tuple
+        :yield: the next (section, {item: value} dictionary) tuple
         """
         for s in self.sections():
             yield (s, self[s])
