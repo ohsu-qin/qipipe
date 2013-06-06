@@ -15,6 +15,8 @@ def run(*session_specs, **opts):
     The NiFTI scan images for each session are downloaded from XNAT into the
     ``scans`` subdirectory of the ``base_dir`` specified in the options
     (default is the current directory).
+    
+    The PK mapping result is stored in an XNAT analysis object.
 
     :param session_specs: the XNAT (subject, session) name tuples to register
     :param opts: the workflow options
