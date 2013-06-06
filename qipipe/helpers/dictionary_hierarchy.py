@@ -61,15 +61,18 @@ class DictionaryHierarchy(object):
         def next(self):
             """
             Returns the next root-to-leaf path, determined as follows:
-                - The first path member is the the current key in the wrapped root (key, value) iteration.
-                - If the value is a dictionary, then recursively iterate over path tails given by that
-                  dictionary's hierarchy.
-                - Otherwise, if the value is a non-string iterable, then recursively iterate over
-                  path tails given by that value's iteration.
-                - Otherwise, the last member in the path is the value.
+            
+            - The first path member is the the current key in the wrapped root (key, value) iteration.
+            
+            - If the value is a dictionary, then recursively iterate over path tails given by that
+              dictionary's hierarchy.
+            
+            - Otherwise, if the value is a non-string iterable, then recursively iterate over
+              path tails given by that value's iteration.
+            
+            - Otherwise, the last member in the path is the value.
         
-            :return: the next path
-            :rtype: list 
+            :yield: the next path list
             """
             if self.child:
                 try:

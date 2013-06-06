@@ -44,7 +44,7 @@ class FileIterator(object):
         
     def next(self):
         """
-        Yields the next file as follows:
+        Iterates over the files as follows:
         
         - If the current file specification is a file, then yield that file.
         
@@ -52,7 +52,9 @@ class FileIterator(object):
           contained in that directory.
         
         - If the current file specification is a generator, then yield each
-          generated item 
+          generated item
+        
+        :yield: the next file path
         """
         for spec in self._filespecs:
             if isinstance(spec, file):

@@ -94,12 +94,17 @@ class DicomIterator(FileIterator):
     """
 
     def __init__(self, *dicom_files):
+        """
+        :param dicom_files: the DICOM files to include
+        """
         super(DicomIterator, self).__init__(*dicom_files)
         self.args = []
     
     def next(self):
         """
         Iterates over each DICOM data set.
+        
+        :yield: the next pydicom dicom object
         """
         for f in super(DicomIterator, self).next():
             try:
