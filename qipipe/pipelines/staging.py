@@ -16,17 +16,17 @@ def run(collection, *subject_dirs, **opts):
     """
     Builds and runs the staging workflow.
     
-    :param collection: the AIRC image collection name 
+    :param collection: the AIRC image collection name
     :param subject_dirs: the AIRC source subject directories to stage
     :param opts: the workflow options
     :return: the new XNAT (subject, session) name tuples
     """
-
+    
     # If the force option is set, then delete existing subjects.
     if opts.pop('force', False):
         subjects = [subject_for_directory(collection, d) for d in subject_dirs]
         xnat_helper.delete_subjects(*subjects)
-
+    
     # Collect the new AIRC visits into (subject, session, dicom_files)
     # tuples.
     new_visits = list(iter_new_visits(collection, *subject_dirs))
@@ -38,7 +38,7 @@ def run(collection, *subject_dirs, **opts):
     
     # Group the DICOM files by series.
     series_specs = _group_sessions_by_series(*new_visits)
-
+    
     # Make the staging workflow.
     workflow = _create_workflow(collection, *series_specs, **opts)
     
@@ -60,7 +60,7 @@ def run(collection, *subject_dirs, **opts):
 
 def _create_workflow(collection, *series_specs, **opts):
     """
-    :param collection: the AIRC image collection name 
+    :param collection: the AIRC image collection name
     :param series_specs: the (subject, session, scan, dicom_files) tuples to stage
     :param opts: the workflow options
     :keyword dest: the destination directory (default current working directory)
@@ -70,34 +70,34 @@ def _create_workflow(collection, *series_specs, **opts):
     if opts:
         msg = msg + ' with options %s...' % opts
     logger.debug("%s...", msg)
-
+    
     # The staging location.
     dest = os.path.abspath(opts.pop('dest', None) or os.getcwd())
-
+    
     # The workflow.
     workflow = pe.Workflow(name='staging', **opts)
     
     # The subjects with new sessions.
     subjects = {sbj for sbj, _, _, _ in series_specs}
-
+    
     # The workflow subject inputs.
     subject_spec = pe.Node(IdentityInterface(fields=['collection', 'dest', 'subjects']),
         name='subject_spec')
     subject_spec.inputs.collection = collection
     subject_spec.inputs.dest = dest
     subject_spec.inputs.subjects = subjects
-
+    
     # The iterable series inputs.
     series_spec_xf = Unpack(input_name='series_spec', output_names=['subject', 'session', 'scan', 'dicom_files'])
     series_spec = pe.Node(series_spec_xf, name='series_spec')
     series_spec.iterables = ('series_spec', series_specs)
-
+    
     # Map each QIN Patient ID to a CTP Patient ID.
     map_ctp = pe.Node(MapCTP(), name='map_ctp')
     workflow.connect(subject_spec, 'collection', map_ctp, 'collection')
     workflow.connect(subject_spec, 'subjects', map_ctp, 'patient_ids')
     workflow.connect(subject_spec, 'dest', map_ctp, 'dest')
-
+    
     # The CTP staging directory factory.
     ctp_dir_func = Function(input_names=['dest', 'subject', 'session', 'series'], dest=dest,
         output_names=['out_dir'], function=_ctp_series_directory)
@@ -106,25 +106,25 @@ def _create_workflow(collection, *series_specs, **opts):
     workflow.connect(series_spec, 'subject', ctp_dir, 'subject')
     workflow.connect(series_spec, 'session', ctp_dir, 'session')
     workflow.connect(series_spec, 'scan', ctp_dir, 'series')
-
+    
     # Fix the AIRC DICOM tags.
     fix_dicom = pe.Node(FixDicom(collection=collection), name='fix_dicom')
     workflow.connect(series_spec, 'subject', fix_dicom, 'subject')
     workflow.connect(series_spec, 'dicom_files', fix_dicom, 'in_files')
-
+    
     # Compress each fixed DICOM file for a given series.
     # The result is a list of the compressed files for the series.
     compress_dicom = pe.MapNode(Compress(), iterfield='in_file', name='compress_dicom')
     workflow.connect(fix_dicom, 'out_files', compress_dicom, 'in_file')
     workflow.connect(ctp_dir, 'out_dir', compress_dicom, 'dest')
-
+    
     # Store the compressed scan DICOM files in XNAT.
     upload_dicom = pe.Node(XNATUpload(project=PROJECT, format='DICOM'), name='upload_dicom')
     workflow.connect(series_spec, 'subject', upload_dicom, 'subject')
     workflow.connect(series_spec, 'session', upload_dicom, 'session')
     workflow.connect(series_spec, 'scan', upload_dicom, 'scan')
     workflow.connect(compress_dicom, 'out_file', upload_dicom, 'in_files')
-
+    
     # Stack the scan.
     stack = pe.Node(DcmStack(embed_meta=True, out_format="series%(SeriesNumber)03d"),
         name='stack')
@@ -142,11 +142,11 @@ def _create_workflow(collection, *series_specs, **opts):
 def _group_sessions_by_series(*session_specs):
     """
     Creates the series specifications for the new images in the given sessions.
-
+    
     :param session_specs: the (subject, session, dicom_files) tuples to group
     :return: the series (subject, session, series, dicom_files) tuples
     """
-
+    
     # The (subject, session, series, dicom files) inputs.
     ser_specs = []
     for sbj, sess, dcm_file_iter in session_specs:
@@ -158,7 +158,7 @@ def _group_sessions_by_series(*session_specs):
         for ser, dcm in ser_dcm_dict.iteritems():
             logger.debug("The staging workflow will iterate over subject %s session %s series %s." % (sbj, sess, ser))
             ser_specs.append((sbj, sess, ser, dcm))
-
+    
     return ser_specs
 
 def _ctp_series_directory(dest, subject, session, series):
