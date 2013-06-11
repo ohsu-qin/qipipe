@@ -164,18 +164,12 @@ def _create_workflow(subject, session, recon, images, **opts):
     crop_back = pe.Node(fsl.ImageMaths(), name='crop_back')
     workflow.connect(dce_mean, 'out_file', crop_back, 'in_file')
     workflow.connect(find_cog, ('out_stat', _gen_crop_op_string), crop_back, 'op_string')
-    # crop_back = pe.Node(Function(input_names=['image', 'cog'],
-    #                              output_names=['cropped'],
-    #                              function=_crop_posterior), 
-    #                     name='crop_back')
-    # workflow.connect(dce_mean, 'out_file', crop_back, 'image')
-    # workflow.connect(find_cog, 'out_stat', crop_back, 'cog')
 
     # Find large clusters of empty space on the cropped image.
     cluster_mask = pe.Node(MriVolCluster(**mask_opts), name='cluster_mask')
     workflow.connect(crop_back, 'out_file', cluster_mask, 'in_file')
 
-    # Convert the cluster labels to binary mask.
+    # Convert the cluster labels to a binary mask.
     binarize = pe.Node(fsl.BinaryMaths(), name='binarize')
     binarize.inputs.operation = 'min'
     binarize.inputs.operand_value = 1
@@ -194,11 +188,6 @@ def _create_workflow(subject, session, recon, images, **opts):
     upload_mask.inputs.session = session
     workflow.connect(inv_mask, 'out_file', upload_mask, 'in_files')
     
-    # Apply the mask.
-    apply_mask = pe.Node(fsl.ApplyMask(), name='apply_mask')
-    workflow.connect(inv_mask, 'out_file', apply_mask, 'mask_file')
-    workflow.connect(input_spec, 'image', apply_mask, 'in_file')
-    
     # Make the ANTS template.
     average = pe.Node(AverageImages(**avg_opts), name='average')
     # Use the middle half of the images.
@@ -207,13 +196,15 @@ def _create_workflow(subject, session, recon, images, **opts):
 
     # Register the images to create the warp and affine transformations.
     register = pe.Node(Registration(**reg_opts), name='register')
-    workflow.connect(apply_mask, 'out_file', register, 'moving_image')
+    workflow.connect(input_spec, 'image', register, 'moving_image')
     workflow.connect(average, 'output_average_image', register, 'fixed_image')
+    workflow.connect(inv_mask, 'out_file', register, 'fixed_image_mask')
+    workflow.connect(inv_mask, 'out_file', register, 'moving_image_mask')
     
     # Apply the transforms to the input image.
     reslice = pe.Node(ApplyTransforms(**reslice_opts), name='reslice')
+    workflow.connect(input_spec, 'image', reslice, 'input_image')
     workflow.connect(input_spec, ('image', _gen_reslice_filename), reslice, 'output_image')
-    workflow.connect(apply_mask, 'out_file', reslice, 'input_image')
     workflow.connect(average, 'output_average_image', reslice, 'reference_image')
     workflow.connect(register, 'forward_transforms', reslice, 'transforms')
     
