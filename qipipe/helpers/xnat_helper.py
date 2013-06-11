@@ -110,7 +110,8 @@ class XNAT(object):
         """
         Returns the XNAT scan object for the given XNAT lineage.
         
-        @see: :meth:`get_session`
+        See :meth:`get_session`
+        
         :param project: the XNAT project id
         :param subject: the XNAT subject label
         :param session: the XNAT experiment label
@@ -125,7 +126,8 @@ class XNAT(object):
         The session and reconstruction name is qualified by the session name prefix,
         if necessary.
         
-        @see: :meth:`get_session`
+        See :meth:`get_session`
+        
         :param project: the XNAT project id
         :param subject: the XNAT subject label
         :param session: the XNAT experiment label

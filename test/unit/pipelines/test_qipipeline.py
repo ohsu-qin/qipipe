@@ -17,7 +17,7 @@ from qipipe.helpers.ast_config import read_config
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
 
-REG_CONF = os.path.join(ROOT, 'conf', 'register.cfg')
+REG_CONF = os.path.join(ROOT, 'conf', 'registration.cfg')
 """The test registration configuration."""
 
 RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'qipipeline')
@@ -33,12 +33,12 @@ class TestQIPipeline:
     """
     QIN Pipeline unit tests.
     
-    @attention: a precondition for running this test is that the following environment
-        variables are set:
-            - ``QIN_BREAST_INPUT``: the input AIRC test Breast fixture parent directory to test
-            - ``QIN_SARCOMA_INPUT``: the input AIRC test Sarcoma fixture parent directory to test
-        The test directories must conform to the subject/visit/dicom directory patterns
-        defined in :meth:`airc`.
+    Note:: a precondition for running this test is that the following environment
+    variables are set:
+    - ``QIN_BREAST_INPUT``: the input AIRC test Breast fixture parent directory to test
+    - ``QIN_SARCOMA_INPUT``: the input AIRC test Sarcoma fixture parent directory to test
+    The test directories must conform to the subject/visit/dicom directory patterns
+    defined in :meth:`airc`.
     
     The recommended test input is three series for one visit from each collection.
     The pipeline is run serially, and takes app. two hours per visit on this input.
@@ -67,7 +67,7 @@ class TestQIPipeline:
     def _test_collection(self, collection, fixture):
         """
         Run the pipeline on the given collection and verify the following:
-            - scans are created in XNAT
+        - scans are created in XNAT
         
         :param collection: the AIRC collection name
         :param fixture: the test input

@@ -45,11 +45,12 @@ class TestStagingWorkflow:
         """
         Run the staging pipeline on the given collection and verify that
         the sessions are created in XNAT.
+
+        Note:: This test does not verify the CTP staging area nor that the
+        image files are correctly uploaded. These features should be
+        verified manually.
         
         :param collection: the AIRC collection name
-        @attention: This test does not verify the CTP staging area nor that the
-            image files are correctly uploaded. These features should be
-            verified manually.
         """
         fixture = os.path.join(FIXTURES, collection.lower())
         logger.debug("Testing the staging pipeline on %s..." % fixture)
