@@ -1,2 +1,0 @@
-class ANTSError(Exception):
-    pass
