@@ -1,4 +1,4 @@
-import os, sys, shutil
+import os, sys, shutil, distutils
 from nose.tools import *
 
 import logging
@@ -40,6 +40,9 @@ class TestQIPipeline:
     The test directories must conform to the subject/visit/dicom directory patterns
     defined in :meth:`airc`.
     
+    Note:: the PK mapping workflow is only executed if the ``fastfit`` executable is
+    found.
+    
     The recommended test input is three series for one visit from each collection.
     The pipeline is run serially, and takes app. two hours per visit on this input.
     """
@@ -80,6 +83,13 @@ class TestQIPipeline:
         
         # The test registration configuration.
         reg_opts = dict(read_config(REG_CONF))
+        
+        # The pipeline options.
+        opts = dict(registration=reg_opts)
+        
+        # Check whether the PK mapping workflow is executable.
+        if not distutils.spawn.find_executable('fastfit'):
+            opts['pk_mapping'] = False
 
         # The test subject => directory dictionary.
         sbj_dir_dict = get_subjects(collection, fixture)
@@ -94,8 +104,7 @@ class TestQIPipeline:
 
             # Run the staging and registration workflows, but not the PK mapping.
             logger.debug("Executing the QIN pipeline...")
-            reg_specs = qip.run(collection, *sources, dest=dest, work=work,
-                registration=reg_opts)
+            reg_specs = qip.run(collection, *sources, dest=dest, work=work, **opts)
 
             # Verify the result.
             for sbj, sess, recon in reg_specs:
