@@ -19,7 +19,7 @@ setup(
     description = __doc__.split('.', 1)[0],
     long_description = __doc__,
     classifiers = [
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Topic :: Scientific/Engineering :: Bio-Informatics',
         'Environment :: Console',
         'Intended Audience :: Science/Research',
