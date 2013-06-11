@@ -1,3 +1,4 @@
+import os
 import nipype.pipeline.engine as pe
 from nipype.interfaces.dcmstack import DcmStack, MergeNifti, CopyMeta
 from nipype.interfaces.utility import IdentityInterface, Function
