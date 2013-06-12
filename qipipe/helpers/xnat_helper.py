@@ -43,6 +43,19 @@ def delete_subjects(project, *subject_names):
             if sbj.exists():
                 sbj.delete()
                 logger.debug("Deleted the XNAT test subject %s." % sbj_lbl)
+    
+def canonical_session_label(subject, session):
+    """
+    Returns the XNAT session name, qualified by the subject name prefix if necessary.
+    
+    :param subject: the XNAT subject label
+    :param session: the XNAT experiment label
+    :return: the corresponding XNAT session label
+    """
+    if session.startswith(subject):
+        return session
+    else:
+        return "%s_%s" % (subject, session)
 
 
 class XNATError(Exception):
@@ -102,7 +115,7 @@ class XNAT(object):
         :param session: the XNAT experiment label
         :return: the corresponding XNAT session (which may not exist)
         """
-        sess_lbl = self._canonical_session_label(subject, session)
+        sess_lbl = canonical_session_label(subject, session)
         
         return self.get_subject(project, subject).experiment(sess_lbl)
     
@@ -134,7 +147,7 @@ class XNAT(object):
         :param recon: the unique XNAT reconstruction name
         :return: the corresponding XNAT reconstruction object (which may not exist)
         """
-        sess_lbl = self._canonical_session_label(subject, session)
+        sess_lbl = canonical_session_label(subject, session)
         if recon.startswith(sess_lbl):
             recon_lbl = recon
         else:
@@ -142,42 +155,38 @@ class XNAT(object):
         
         return self.get_session(project, subject, session).reconstruction(recon_lbl)
     
-    def _canonical_session_label(self, subject, session):
-        """
-        Returns the XNAT session name, qualified by the subject name prefix if necessary.
-        
-        :param subject: the XNAT subject label
-        :param session: the XNAT experiment label
-        :return: the corresponding XNAT session label
-        """
-        if session.startswith(subject):
-            return session
-        else:
-            return "%s_%s" % (subject, session)
-    
     def download(self, project, subject, session, **opts):
         """
         Downloads the files for the specfied XNAT session.
         
         The keyword options include the format and session child container.
         The session child container option can be set to a specific resource container,
-        e.g. ``scan=1``, as described in :meth:`XNAT.upload`, or all resources of a given
+        e.g. ``scan=1``, as described in :meth:`XNAT.upload` or all resources of a given
         container type. In the latter case, the ``container_type`` parameter is set.
         The permissible container types are described in :meth:`XNAT.upload`.
         
-        A reconstruction option value is qualified by the session label, if necessary.
+        The session value is qualified by the subject, if necessary.
+        A reconstruction or analysis option value is qualified by the session label,
+        if necessary. For example::
+            
+            download('QIN', 'Breast001', 'Session03', reconstruction=>'reg_jA4K')
+        
+        downloads the NiFTI files for the XNAT session with label ``Breast001_Session03``
+        and reconstruction label ``Breast001_Session03_reg_jA4K``.
         
         :param project: the XNAT project id
         :param subject: the XNAT subject label
         :param session: the XNAT experiment label
-        :param opts: the resource selection options
-        :keyword format: the image file format (``NIFTI`` or ``DICOM``)
+        :param opts: the resource selection option
+        :keyword format: the image file format (``NIFTI`` or ``DICOM``, default ``NIFTI``)
         :keyword scan: the scan number
         :keyword reconstruction: the reconstruction name
         :keyword analysis: the analysis name
         :keyword container_type: the container type, if no specific container is specified
         :keyword inout: the ``in``/``out`` reconstruction resource qualifier
+            (default ``out``)
         :keyword dest: the optional download location (default current directory)
+        :return: the downloaded file names
         """
         # The XNAT experiment, which must exist.
         exp = self.get_session(project, subject, session)
@@ -193,7 +202,6 @@ class XNAT(object):
 
         # The resource.
         rsc = self._infer_xnat_resource(exp, opts)
-        format = opts['format']
         
         # Download the files.
         return [self._download_file(f, dest) for f in rsc.files()]
@@ -320,12 +328,11 @@ class XNAT(object):
         
         :param experiment: the XNAT experiment object
         :param opts: the :meth:`XNAT.download` options
+        :keyword format: the image file format (``NIFTI`` or ``DICOM``, default ``NIFTI``)
         :return: the container (type, value) tuple
         """
         # The image format.
-        if not opts.has_key('format'):
-            raise XNATError("XNAT upload is missing the image format for session: %s" % experiment.label())
-        format = opts['format']
+        format = opts.get('format') or 'NIFTI'
 
         # The resource parent type and name.
         ctr_type, ctr_name = self._infer_resource_container(opts)
@@ -333,14 +340,21 @@ class XNAT(object):
         rsc_parent = self._xnat_resource_parent(experiment, ctr_type, ctr_name)
         
         # The resource.
-        return self._xnat_child_resource(rsc_parent, opts['format'], opts.get('inout'))
+        return self._xnat_child_resource(rsc_parent, format, opts.get('inout'))
     
     def _infer_resource_container(self, opts):
         """
-        Finds and removes the resource container item from the given options.
+        Determines the resource container item from the given options as follows:
+        - If there is a ``container_type`` option, then that type is returned without a value.
+        - Otherwise, if the options include a container type in :object:`XNAT.CONTAINER_TYPES`,
+          then the option type and value are returned.
+        - Otherwise, if the options include a container type in :object:`XNAT.ASSESSOR_SYNONYMS`,
+          then the ``assessor`` container type and the option value are returned.
+        - Otherwise, an exception is thrown
         
         :param opts: the options to check
-        :return: the container (type, value) tuple, or (None, None) if not found
+        :return: the container (type, value) tuple
+        :raise XNATError: if the resource container could not be inferred
         """
         if opts.has_key('container_type'):
             return (opts['container_type'], None)
@@ -367,15 +381,15 @@ class XNAT(object):
     
     def _xnat_resource_parent(self, experiment, container_type, name=None):
         """
-        Return the resource parent for the given experiment and container type.
+        Returns the resource parent for the given experiment and container type.
         The resource parent is the experiment child with the given container type,
-        e.g a MR session scan or reconstruction. If there is a name, then the parent
-        is the object with that name, e.g. ``reconstruction('reg_1')``. Otherwise,
-        the parent is a container group, e.g. ``reconstructions``.
+        e.g a MR session scan or registration reconstruction. If there is a name,
+        then the parent is the object with that name, e.g. ``reconstruction('reg_1')``.
+        Otherwise, the parent is a container group, e.g. ``reconstructions``.
         
         :param experiment: the XNAT experiment
         :param container_type: the container type in L{XNAT.CONTAINER_TYPES}
-        :param name: the optional container name, e.g. ``NIFTI``
+        :param name: the optional container name
         :return: the XNAT resource parent object
         """
         if name:
