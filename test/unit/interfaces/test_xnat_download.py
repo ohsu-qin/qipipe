@@ -26,6 +26,12 @@ SUBJECT = generate_subject_name(__name__)
 SESSION = "%s_%s" % (SUBJECT, 'Session01')
 """The test session name."""
 
+SCAN = 9
+"""The test scan number."""
+
+FORMAT = 'DICOM'
+"""The test format."""
+
 from nipype import config
 cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
     execution=dict(crashdump_dir=RESULTS, create_report=False))
@@ -49,9 +55,9 @@ class TestXNATDownload:
                     for f in glob.glob(scan_dir + '/*.dcm.gz'):
                         _, fname = os.path.split(f)
                         self._file_names.add(fname)
-                        file_obj = sbj.experiment(SESSION).scan('9').resource('DICOM').file(fname)
+                        file_obj = sbj.experiment(SESSION).scan(str(SCAN)).resource(FORMAT).file(fname)
                         # Upload the file.
-                        file_obj.insert(f, experiments='xnat:MRSessionData', format='DICOM')
+                        file_obj.insert(f, experiments='xnat:MRSessionData', format=FORMAT)
         logger.debug("Uploaded the test %s files %s." % (SESSION, list(self._file_names)))
     
     def tearDown(self):
@@ -62,7 +68,7 @@ class TestXNATDownload:
         logger.debug("Testing the XNATDownload interface on %s..." % SUBJECT)
         # Download the file.
         download = XNATDownload(project=PROJECT, subject=SUBJECT, session=SESSION,
-            container_type='scan', format='DICOM', dest=RESULTS)
+            scan=9, format=FORMAT, dest=RESULTS)
         result = download.run()
         
         # Verify the result
