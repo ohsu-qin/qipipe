@@ -40,7 +40,7 @@ def run(collection, *subject_dirs, **opts):
     series_specs = _group_sessions_by_series(*new_visits)
     
     # Make the staging workflow.
-    workflow = _create_workflow(collection, *series_specs, **opts)
+    workflow = create_workflow(collection, *series_specs, **opts)
     
     # If debug is set, then diagram the staging workflow graph.
     if logger.level <= logging.DEBUG:
@@ -58,7 +58,7 @@ def run(collection, *subject_dirs, **opts):
     # Return the new XNAT (subject, session) tuples.
     return [(sbj, sess) for sbj, sess, _ in new_visits]
 
-def _create_workflow(collection, *series_specs, **opts):
+def create_workflow(collection, *series_specs, **opts):
     """
     :param collection: the AIRC image collection name
     :param series_specs: the (subject, session, scan, dicom_files) tuples to stage
