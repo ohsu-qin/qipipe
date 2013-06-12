@@ -85,7 +85,7 @@ def _register(subject, session, dest, **opts):
     recon = _generate_name(REG_PREFIX)
     
     # Make the workflow
-    workflow = _create_workflow(subject, session, recon, images, **opts)
+    workflow = create_workflow(subject, session, recon, images, **opts)
     # Execute the workflow
     workflow.run()
     
@@ -105,16 +105,16 @@ def _download_scans(subject, session, dest):
     with xnat_helper.connection() as xnat:
         return xnat.download(PROJECT, subject, session, dest=dest, container_type='scan', format='NIFTI')
 
-def _create_workflow(subject, session, recon, images, **opts):
+def create_workflow(subject, session, recon, images, **opts):
     """
-    Creates the Pyxnat Workflow for the given session images.
+    Creates the nipype workflow for the given session images.
     
     :param subject: the XNAT subject label
     :param session: the XNAT session label
     :param recon: the XNAT registration reconstruction label
     :param images: the input session scan NiFTI stacks
     :param opts: the workflow options
-    :return: the registration workflow
+    :return: the registration Workflow object
     """
     msg = 'Creating the %s %s registration workflow' % (subject, session)
     if opts:
@@ -150,6 +150,13 @@ def _create_workflow(subject, session, recon, images, **opts):
     dce_merge = pe.Node(MergeNifti(), name='dce_merge')
     dce_merge.inputs.out_format = 'dce_series'
     dce_merge.inputs.in_files = images
+    
+    # Upload the 4D image to XNAT.
+    upload_4d = pe.Node(XNATUpload(project=PROJECT, reconstruction='4d', format='NIFTI'),
+        name='upload_4d')
+    upload_4d.inputs.subject = subject
+    upload_4d.inputs.session = session
+    workflow.connect(dce_merge, 'out_file', upload_4d, 'in_files')
 
     # Get a mean image from the DCE data.
     dce_mean = pe.Node(fsl.MeanImage(), name='dce_mean')
