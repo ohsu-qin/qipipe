@@ -15,9 +15,9 @@ class XNATUploadInputSpec(BaseInterfaceInputSpec):
 
     scan = traits.Either(traits.Int, traits.Str, desc='The XNAT scan name')
 
-    reconstruction = traits.Either(traits.Int, traits.Str, desc='The XNAT reconstruction name')
+    reconstruction = traits.Str(desc='The XNAT reconstruction name')
 
-    assessor = traits.Either(traits.Int, traits.Str, desc='The XNAT assessor name')
+    analysis = traits.Str(desc='The (XNAT assessor) name')
 
     in_files = InputMultiPath(File(exists=True), mandatory=True, desc='The files to upload')
 
@@ -32,9 +32,10 @@ class XNATUpload(BaseInterface):
             opts['scan'] = self.inputs.scan
         elif self.inputs.reconstruction:
             opts['reconstruction'] = self.inputs.reconstruction
-        elif self.inputs.assessor:
-            opts['assessor'] = self.inputs.assessor
+        elif self.inputs.analysis:
+            opts['analysis'] = self.inputs.analysis
         with xnat_helper.connection() as xnat:
             xnat.upload(self.inputs.project, self.inputs.subject, self.inputs.session,
                 *self.inputs.in_files, **opts)
+        
         return runtime
