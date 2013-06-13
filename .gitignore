@@ -15,5 +15,4 @@ ext
 *.pyc
 *.tar*
 **log
-/doc/_build
 /test/results
