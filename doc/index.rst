@@ -11,7 +11,6 @@ Contents
 .. toctree::
    :maxdepth: 4
 
-   overview
    qipipe
 
 Indices and tables
