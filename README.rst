@@ -1,13 +1,12 @@
-######
-qipipe
-######
+qipipe - OHSU QIN pipeline
+==========================
 
 ********
 Synopsis
 ********
 qipipe processes the OHSU QIN study images.
 
-:Git: git@quip1:qipipe (`Browse <http://quip1.ohsu.edu:6060/qipipe>`__)
+:Git: git\@quip1.ohsu.edu:qipipe (`Browse <http://quip1.ohsu.edu:6060/qipipe>`__)
 
 :API: http://quip1.ohsu.edu:8080/qipipe
 
