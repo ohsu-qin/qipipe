@@ -1,3 +1,27 @@
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinx.ext.todo']
+autoclass_content = "both"
+templates_path = ['_templates']
+source_suffix = '.rst'
+master_doc = 'index'
+project = u'qipipe'
+copyright = u'2013, Mitch Garnaat'
+version = qipipe.__version__
+exclude_trees = []
+pygments_style = 'sphinx'
+html_theme = 'boto_theme'
+html_theme_path = ["."]
+html_static_path = ['_static']
+htmlhelp_basename = 'botodoc'
+latex_documents = [
+  ('index', 'boto.tex', u'boto Documentation',
+   u'Mitch Garnaat', 'manual'),
+]
+intersphinx_mapping = {'http://docs.python.org/': None}
+github_project_url = 'https://github.com/boto/boto/'
+
+html_title = "qipipe v%s" % version
+
+
 # -*- coding: utf-8 -*-
 #
 # qipipe documentation build configuration file, created by
