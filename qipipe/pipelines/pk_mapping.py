@@ -226,7 +226,8 @@ def create_workflow(**opts):
         workflow.connect(get_r1_0, 'r1_0_map', output_spec, 'r1_0')
     
     # Upload the outputs to XNAT.
-    
+    for field in outputs:
+        pass # TODO
     
     return workflow
 
