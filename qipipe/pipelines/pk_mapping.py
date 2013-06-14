@@ -68,6 +68,8 @@ def create_workflow(**opts):
     Creates the Nipype workflow.
     
     .. |H2O| replace:: H\ :sub:`2`\ O
+    .. |Ktrans| replace:: K\ :sup:`trans`
+    .. |ve| replace:: v\ :sub:`e`
     .. |R10| replace:: R1\ :sub:`0`
     
     The workflow calculates the PK mapping parameters for the input as follows:
@@ -90,7 +92,7 @@ def create_workflow(**opts):
     ``input`` subdirectory of the ``base_dir`` specified in the options
     (default is the current directory).
     
-    If the R1:sub:`0` option is not set, then it is computed from
+    If the |R10| option is not set, then it is computed from
     the proton density weighted scans and DCE series baseline image.
     
     The outputs are collected in the ``output_spec`` node with the following
@@ -100,13 +102,13 @@ def create_workflow(**opts):
 
     - ``params_csv``: the AIF and R1 parameter CSV file
 
-    - ``k_trans``: the K\ :sup:`trans` extra/intravasation transfer rate
+    - ``k_trans``: the |Ktrans| extra/intravasation transfer rate
 
-    - ``v_e``: the v\ :sub:`e` interstitial volume fraction
+    - ``v_e``: the |ve| interstitial volume fraction
 
     - ``tau_i``: the intracellular |H2O| mean lifetime
     
-    In addition, if R1:sub:`0` is computed, then the output includes the
+    In addition, if |R10| is computed, then the output includes the
     following fields:
 
     - ``pdw_image``: the proton density weighted image
@@ -120,7 +122,7 @@ def create_workflow(**opts):
     :param opts: the optional workflow inputs
     :keyword r1_0_val: the optional |R10| value
     :keyword pd_dir: the proton density weighted scan directory,
-        if the R1:sub:`0` option is not set 
+        if the |R10| option is not set 
     :keyword max_r1_0: the maximum computed |R10| value,
         if the |R10| option is not set
     :keyword in_files: the input images
