@@ -1,40 +1,41 @@
-pipelines Package
-=================
+=========
+pipelines
+=========
 
-:mod:`pipeline_error` Module
-----------------------------
+:mod:`pipeline_error`
+---------------------
 
 .. automodule:: qipipe.pipelines.pipeline_error
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`pk_mapping` Module
-------------------------
+:mod:`pk_mapping`
+-----------------
 
 .. automodule:: qipipe.pipelines.pk_mapping
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`qipipeline` Module
-------------------------
+:mod:`qipipeline`
+-----------------
 
 .. automodule:: qipipe.pipelines.qipipeline
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`registration` Module
---------------------------
+:mod:`registration`
+-------------------
 
 .. automodule:: qipipe.pipelines.registration
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`staging` Module
----------------------
+:mod:`staging`
+--------------
 
 .. automodule:: qipipe.pipelines.staging
     :members:
