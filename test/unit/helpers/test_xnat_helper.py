@@ -2,7 +2,7 @@ from nose.tools import *
 import sys, os, shutil
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from qipipe import PROJECT
+from qipipe.helpers.xnat_helper import PROJECT
 from qipipe.helpers import xnat_helper
 from qipipe.helpers.xnat_helper import delete_subjects
 from test.helpers.xnat_test_helper import generate_subject_name

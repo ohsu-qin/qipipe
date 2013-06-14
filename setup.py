@@ -1,23 +1,25 @@
 import glob
 from setuptools import setup, find_packages
 
-__version__ = open('version.txt').read()
-
-__doc__ = 'qipipe processes the OHSU QIN images. See the README file for more information.'
+from qipipe import __version__
 
 requires = ['pydicom', 'dcmstack', 'nose', 'numpy', 'traits', 'distutils']
+
+def readme():
+    with open("README.rst") as f:
+        return f.read()
 
 setup(
     name = 'qipipe',
     version = __version__,
-    author = 'Fred Loney',
+    author = 'OHSU Knight Cancer Institute',
     author_email = 'loneyf@ohsu.edu',
     packages = find_packages(),
     data_files=[('config', glob.glob('conf/*.cfg'))],
     scripts = glob.glob('bin/*'),
-    url = 'http://quip1.ohsu.edu/git/qipipe',
-    description = __doc__.split('.', 1)[0],
-    long_description = __doc__,
+    url = 'http://quip1.ohsu.edu/8080/qipipe',
+    description = 'qipipe processes the OHSU QIN images.',
+    long_description = readme(),
     classifiers = [
         'Development Status :: 5 - Production/Stable',
         'Topic :: Scientific/Engineering :: Bio-Informatics',

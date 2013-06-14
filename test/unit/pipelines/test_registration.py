@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from qipipe import PROJECT
+from qipipe.helpers.xnat_helper import PROJECT
 from qipipe.pipelines import registration as reg
 from qipipe.helpers import xnat_helper
 from qipipe.helpers.xnat_helper import delete_subjects

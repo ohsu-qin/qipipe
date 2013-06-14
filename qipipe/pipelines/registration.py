@@ -7,7 +7,7 @@ from nipype.interfaces.dcmstack import CopyMeta
 from nipype.interfaces import fsl
 from nipype.interfaces.dcmstack import DcmStack, MergeNifti, CopyMeta
 from nipype.interfaces.utility import Select, IdentityInterface, Function
-from .. import PROJECT
+from ..helpers.xnat_helper import PROJECT
 from ..interfaces import XNATDownload, XNATUpload, MriVolCluster
 from ..helpers import xnat_helper, file_helper
 from ..helpers.ast_config import read_config

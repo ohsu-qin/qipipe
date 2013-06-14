@@ -3,11 +3,13 @@ from contextlib import contextmanager, closing
 import pyxnat
 from pyxnat.core.resources import Reconstruction, Reconstructions
 from pyxnat.core.errors import DatabaseError
-from .. import PROJECT
 from .xnat_config import default_configuration
 
 import logging
 logger = logging.getLogger(__name__)
+
+PROJECT = 'QIN'
+"""The XNAT project id."""
 
 @contextmanager
 def connection():
