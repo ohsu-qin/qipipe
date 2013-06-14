@@ -347,12 +347,16 @@ class XNAT(object):
     def _infer_resource_container(self, opts):
         """
         Determines the resource container item from the given options as follows:
+
         - If there is a ``container_type`` option, then that type is returned without a value.
+
         - Otherwise, if the options include a container type in :object:`XNAT.CONTAINER_TYPES`,
           then the option type and value are returned.
+
         - Otherwise, if the options include a container type in :object:`XNAT.ASSESSOR_SYNONYMS`,
           then the ``assessor`` container type and the option value are returned.
-        - Otherwise, an exception is thrown
+
+        - Otherwise, an exception is thrown.
         
         :param opts: the options to check
         :return: the container (type, value) tuple

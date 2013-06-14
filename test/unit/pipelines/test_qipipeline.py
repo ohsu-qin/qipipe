@@ -35,7 +35,9 @@ class TestQIPipeline:
     
     Note:: a precondition for running this test is that the following environment
     variables are set:
+
     - ``QIN_BREAST_INPUT``: the input AIRC test Breast fixture parent directory to test
+
     - ``QIN_SARCOMA_INPUT``: the input AIRC test Sarcoma fixture parent directory to test
     The test directories must conform to the subject/visit/dicom directory patterns
     defined in :meth:`airc`.
@@ -70,6 +72,7 @@ class TestQIPipeline:
     def _test_collection(self, collection, fixture):
         """
         Run the pipeline on the given collection and verify the following:
+
         - scans are created in XNAT
         
         :param collection: the AIRC collection name

@@ -14,16 +14,27 @@ logger = logging.getLogger(__name__)
 def run(collection, *subject_dirs, **opts):
     """
     Runs the OHSU QIN pipeline on the the given AIRC subject directories as follows:
+
     - Detects which AIRC visits have not yet been stored into XNAT
+
     - Groups the input DICOM images into series.
+
     - Fixes each input DICOM header for import into CTP.
+
     - Uploads the fixed DICOM file into XNAT.
+
     - Makes the CTP subject id map.
+
     - Stacks each new series as a NiFTI file using DcmStack.
+
     - Uploads each new series stack into XNAT.
+
     - Masks, registers and reslices each new visit.
+
     - Uploads the resampled images into XNAT.
+
     - Performs a parameteric mapping on both the scanned and resampled images.
+
     - Uploads the parameteric mappings into XNAT.
     
     The supported AIRC collections are defined :mod:`qipipe.staging.airc_collection`.
@@ -56,8 +67,11 @@ class QIPipeline(object):
         """
         Runs this pipeline on the the given AIRC subject directories.
         The OHSU QIN pipeline consists of three workflows:
+
         - staging: Prepare the new AIRC DICOM visit
+
         - registration: Mask, register and reslice the staged images
+
         - PK mapping: Calculate the PK parameters
         
         The default options for each of these constituent workflows can be overridden

@@ -67,11 +67,19 @@ def create_workflow(**opts):
     """
     Creates the Nipype workflow.
     
+    .. |H2O| replace:: H\ :sub:`2`\ O
+    .. |R10| replace:: R1\ :sub:`0`
+    
     The workflow calculates the PK mapping parameters for the input as follows:
-    - Compute the R1:sub:`0` value, if it is not given in the options
+
+    - Compute the |R10| value, if it is not given in the options
+
     - Convert the DCE time series to a R1 map series
+    
     - Determine the AIF and R1 fit parameters from the time series
+
     - Perform the BOLERO model pharmacokinetic mapping
+
     - Upload the PK mapping result to XNAT
     
     The workflow inputs are defined in the ``input_spec`` node.
@@ -87,26 +95,34 @@ def create_workflow(**opts):
     
     The outputs are collected in the ``output_spec`` node with the following
     fields:
+
     - ``r1_series``: the R1 series files
+
     - ``params_csv``: the AIF and R1 parameter CSV file
-    - ``k_trans``: the K:sup:`trans` extra/intravasation transfer rate
-    - ``v_e``: the v:sub:`e` interstitial volume fraction
-    - ``tau_i``: the intracellular H:sub:`2`\O mean lifetime
+
+    - ``k_trans``: the K\ :sup:`trans` extra/intravasation transfer rate
+
+    - ``v_e``: the v\ :sub:`e` interstitial volume fraction
+
+    - ``tau_i``: the intracellular |H2O| mean lifetime
     
     In addition, if R1:sub:`0` is computed, then the output includes the
     following fields:
+
     - ``pdw_image``: the proton density weighted image
+
     - ``dce_baseline``: the DCE series baseline image
-    - ``r1_0``: the computed R1:sub:`0` value
+
+    - ``r1_0``: the computed |R10| value
     
     This workflow is adapted from https://everett.ohsu.edu/hg/qin_dce.
     
     :param opts: the optional workflow inputs
-    :keyword r1_0_val: the optional R1:sub:`0` value
+    :keyword r1_0_val: the optional |R10| value
     :keyword pd_dir: the proton density weighted scan directory,
         if the R1:sub:`0` option is not set 
-    :keyword max_r1_0: the maximum computed R1:sub:`0` value,
-        if the R1:sub:`0` option is not set
+    :keyword max_r1_0: the maximum computed |R10| value,
+        if the |R10| option is not set
     :keyword in_files: the input images
     :keyword mask_file: the constraining mask file
     :keyword baseline_end_idx: the number of images to merge into a baseline image
