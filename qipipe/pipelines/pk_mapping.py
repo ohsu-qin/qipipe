@@ -91,7 +91,7 @@ def create_workflow(**opts):
     - ``params_csv``: the AIF and R1 parameter CSV file
     - ``k_trans``: the K:sup:`trans` extra/intravasation transfer rate
     - ``v_e``: the v:sub:`e` interstitial volume fraction
-    - ``tau_i``: the intracellular H:sub:`2`O mean lifetime
+    - ``tau_i``: the intracellular H:sub:`2`\O mean lifetime
     
     In addition, if R1:sub:`0` is computed, then the output includes the
     following fields:
