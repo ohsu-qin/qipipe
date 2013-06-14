@@ -10,7 +10,8 @@ def run(*input_specs, **opts):
 
     Each input specification identifies an XNAT resource container. The
     specification is a (subject, session, container type, container name)
-    tuple, where the container type is a :meth:`XNATDownload.download`
+    tuple, where the container type is a
+    :meth:`qipipe.helpers.xnat_helper.XNAT.download`
     container type and the container name is a XNAT resource container
     label. There is one resource per session.
     
@@ -83,14 +84,6 @@ def create_workflow(**opts):
     - Perform the BOLERO model pharmacokinetic mapping
 
     - Upload the PK mapping result to XNAT
-    
-    The workflow inputs are defined in the ``input_spec`` node.
-    image specification identifies an XNAT resource. The
-    specification is a *(subject, session, resource)* tuple, where
-    *resource* is a :meth:`XNATDownload.download`
-    The NiFTI images are downloaded from XNAT into the
-    ``input`` subdirectory of the ``base_dir`` specified in the options
-    (default is the current directory).
     
     If the |R10| option is not set, then it is computed from
     the proton density weighted scans and DCE series baseline image.
