@@ -289,7 +289,7 @@ class XNAT(object):
                 modality = 'xnat:' + modality
             opts['experiments'] = modality
             logger.debug("Creating the XNAT %s experiment..." % session)
-            exp.create()
+            exp.insert()
             logger.debug("Created the XNAT experiment %s." % session)
 
         # Make the resource parent container, if necessary.
@@ -297,7 +297,7 @@ class XNAT(object):
         ctr = self._xnat_resource_parent(exp, ctr_type, ctr_id)
         if not ctr.exists():
             logger.debug("Creating the XNAT %s resource parent container %s..." % (session, ctr_id))
-            ctr.create()
+            ctr.insert()
             logger.debug("Created the XNAT %s resource parent container with id %s." % (session, ctr.id()))
 
         format = opts['format']
@@ -314,7 +314,7 @@ class XNAT(object):
         # Make the resource, if necessary.
         if not rsc.exists():
             logger.debug("Creating the XNAT %s %s %s resource..." % (session, ctr_id, format))
-            rsc.create()
+            rsc.insert()
             logger.debug("Created the XNAT %s %s resource with name %s and id %s." % (session, ctr_id, rsc.label(), rsc.id()))
         
         # Upload each file.
