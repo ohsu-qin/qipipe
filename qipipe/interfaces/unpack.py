@@ -19,14 +19,14 @@ class Unpack(IOBase):
     
     output_spec = DynamicTraitedSpec
 
-    def __init__(self, input_name, output_names, mandatory_inputs=True, **kwargs):
+    def __init__(self, input_name, output_names, mandatory_inputs=True, **inputs):
         """
         :param input_name: the input list field name
         :param output_names: the output field names
         :param mandatory_inputs: a flag indicating whether every input field is required
-        :param kwargs: the input field name => value bindings
+        :param inputs: the input field name => value bindings
         """
-        super(Unpack, self).__init__(**kwargs)
+        super(Unpack, self).__init__(**inputs)
         if not input_name:
             raise Exception('Unpack input field name is missing')
         if not output_names:
@@ -38,7 +38,7 @@ class Unpack(IOBase):
         # Adding any traits wipes out all input values set in superclass initialization,
         # even it the trait is not in the add_traits argument. The work-around is to reset
         # the values after adding the traits.
-        self.inputs.set(**kwargs)
+        self.inputs.set(**inputs)
         
     def _add_output_traits(self, base):
         return add_traits(base, self.output_names)
