@@ -94,7 +94,7 @@ def _register(subject, session, dest, **opts):
     
     # Make a unique registration reconstruction name. This permits more than one
     # registration to be stored for each input image without a name conflict.
-    recon = _generate_name(REG_PREFIX)
+    recon = "%s_%s" % (REG_PREFIX, file_helper.generate_file_name())
     
     # Make the workflow
     workflow = create_workflow(subject, session, recon, images, **opts)
@@ -260,16 +260,6 @@ def _run_workflow(workflow):
     
     # Run the workflow.
     workflow.run()
-
-def _generate_name(prefix):
-    """
-    :param: the name prefix
-    :return: a unique name which starts with the given prefix
-    """
-    # The name suffix.
-    suffix = file_helper.generate_file_name()
-    
-    return "%s_%s" % (prefix, suffix)
 
 def _gen_reslice_filename(in_file):
     """
