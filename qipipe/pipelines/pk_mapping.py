@@ -3,6 +3,9 @@ import nipype.pipeline.engine as pe
 from nipype.interfaces.dcmstack import DcmStack, MergeNifti, CopyMeta
 from nipype.interfaces.utility import IdentityInterface, Function
 from ..interfaces import XNATDownload, XNATUpload, Fastfit
+from ..helpers import file_helper
+
+PK_PREFIX = 'pk'
 
 def run(*input_specs, **opts):
     """
@@ -27,21 +30,16 @@ def run(*input_specs, **opts):
     :param opts: the workflow options
     :return: the PK mapping XNAT (subject, session, analysis) tuples
     """
-
-    # The work directory.
-    base_dir = opts.get('base_dir') or os.getcwd()
-    # The image download location.
-    work = os.path.join(base_dir, 'input')
-    
     # Run the workflow on each session.
-    outputs = {spec: _analyze_session_images(*spec, work=work, **opts)
+    outputs = {spec: _analyze_session_images(*spec, base_dir=None)
         for spec in input_specs}
     
     return outputs
 
-def _analyze_session_images(subject, session, ctr_type, ctr_name, work, **opts):
-    # The work directory.
-    base_dir = opts.get('base_dir') or os.getcwd()
+def _analyze_session_images(subject, session, ctr_type, ctr_name, base_dir=None):
+    # The default work directory directory.
+    if not base_dir:
+        base_dir = os.getcwd()
     # The image download location.
     dest = os.path.join(base_dir, 'data', subject, session)
     
@@ -56,15 +54,19 @@ def _analyze_session_images(subject, session, ctr_type, ctr_name, work, **opts):
         dest=dest, **ctr_opt)
     images = dl_images.run().result.outputs.out_files
     
+    # Make a unique analysis reconstruction name. This permits more than one
+    # PK mapping to be stored for each input series without a name conflict.
+    analysis = "%s_%s" % (REG_PREFIX, file_helper.generate_file_name())
+    
     # Make the workflow.
-    wf = create_workflow(in_files=images)
+    wf = create_workflow(base_dir=base_dir, subject=subject, session=session, in_files=images)
     
     # Execute the workflow.
     result = wf.run()
     
     return result.outputs.output_spec.get()
     
-def create_workflow(**opts):
+def create_workflow(base_dir=base_dir, **inputs):
     """
     Creates the Nipype workflow.
     
@@ -73,7 +75,8 @@ def create_workflow(**opts):
     .. |ve| replace:: v\ :sub:`e`
     .. |R10| replace:: R1\ :sub:`0`
     
-    The workflow calculates the PK mapping parameters for the input as follows:
+    The workflow calculates the PK mapping parameters for the given input
+    images as follows:
 
     - Compute the |R10| value, if it is not given in the options
 
@@ -112,25 +115,28 @@ def create_workflow(**opts):
     
     This workflow is adapted from https://everett.ohsu.edu/hg/qin_dce.
     
-    :param opts: the optional workflow inputs
+    :param inputs: the workflow inputs
+    :keyword subject: the XNAT subject label
+    :keyword session: the XNAT session label
+    :keyword in_files: the input session scan NiFTI stacks
+    :keyword mask_file: the constraining mask file
+    :keyword baseline_end_idx: the number of images to merge into a baseline image
     :keyword r1_0_val: the optional |R10| value
     :keyword pd_dir: the proton density weighted scan directory,
         if the |R10| option is not set 
     :keyword max_r1_0: the maximum computed |R10| value,
         if the |R10| option is not set
-    :keyword in_files: the input images
-    :keyword mask_file: the constraining mask file
-    :keyword baseline_end_idx: the number of images to merge into a baseline image
+    :return: the pyxnat Workflow
     """
     workflow = pe.Workflow(name='pk_mapping')
     
     # Set up the input node.
-    inputs = ['in_files', 'mask_file', 'baseline_end_idx']
-    if opts.get(use_fixed_r1_0):
-        inputs += ['r1_0_val']
+    in_fields = ['subject', 'session', 'in_files', 'mask_file', 'baseline_end_idx']
+    if opts.get('r1_0_val'):
+        in_fields += ['r1_0_val']
     else:
-        inputs += ['pd_dir', 'max_r1_0']
-    input_spec = pe.Node(IdentityInterface(fields=inputs),
+        in_fields += ['pd_dir', 'max_r1_0']
+    input_spec = pe.Node(IdentityInterface(fields=in_fields, **inputs),
                         name='input_spec')
     
     # Merge the DCE data to 4D.
@@ -197,12 +203,22 @@ def create_workflow(**opts):
     workflow.connect(dce_merge, 'out_file', copy_meta, 'src_file')
     workflow.connect(get_r1_series, 'r1_series', copy_meta, 'dest_file')
     
+    # Upload the R1 series to XNAT.
+    upload_r1 = pe.Node(XNATUpload(project=PROJECT, resource='r1_series', format='NIFTI'),
+        name='upload_r1')
+    workflow.connect(input_spec, 'subject', upload_r1, 'subject')
+    workflow.connect(input_spec, 'session', upload_r1, 'session')
+    workflow.connect(input_spec, 'analysis', upload_r1, 'analysis')
+    workflow.connect(copy_meta, 'dest_file', upload_r1, 'in_files')
+    
     # Get the pharmacokinetic mapping parameters.
     get_params = pe.Node(Function(input_names=['time_series'],
                                   output_names=['params_csv'],
                                   function=_get_fit_params),
                          name='get_params')
     workflow.connect(dce_merge, 'out_file', get_params, 'time_series')
+    
+    # TODO - upload remaining outputs
     
     # Perform the pharmacokinetic mapping.
     pk_map = pe.Node(Fastfit(), name='pk_map')
@@ -236,9 +252,9 @@ def create_workflow(**opts):
                          output_spec, 'dce_baseline')
         workflow.connect(get_r1_0, 'r1_0_map', output_spec, 'r1_0')
     
-    # Upload the outputs to XNAT.
-    for field in outputs:
-        pass # TODO
+    # Make a unique registration reconstruction name. This permits more than one
+    # registration to be stored for each input image without a name conflict.
+    analysis = "%s_%s" % (PK_PREFIX, file_helper.generate_file_name())
     
     return workflow
 
