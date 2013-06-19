@@ -68,7 +68,7 @@ def _analyze_session_images(subject, session, ctr_type, ctr_name, base_dir=None)
     
 def create_workflow(base_dir=base_dir, **inputs):
     """
-    Creates the Nipype workflow.
+    Creates the Nipype pharmacokinetic mapping workflow.
     
     .. |H2O| replace:: H\ :sub:`2`\ O
     .. |Ktrans| replace:: K\ :sup:`trans`
@@ -84,7 +84,7 @@ def create_workflow(base_dir=base_dir, **inputs):
     
     - Determine the AIF and R1 fit parameters from the time series
 
-    - Perform the BOLERO model pharmacokinetic mapping
+    - Optimize the BOLERO pharmacokinetic model
 
     - Upload the PK mapping result to XNAT
     
@@ -114,6 +114,11 @@ def create_workflow(base_dir=base_dir, **inputs):
     - ``r1_0``: the computed |R10| value
     
     This workflow is adapted from https://everett.ohsu.edu/hg/qin_dce.
+    
+    :Note: this workflow uses proprietary OHSU AIRC software, notably the BOLERO implementation
+    of the `shutter speed model`_.
+    
+    .. _`shutter speed model` http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2582583/?tool=pubmed
     
     :param inputs: the workflow inputs
     :keyword subject: the XNAT subject label
@@ -220,7 +225,7 @@ def create_workflow(base_dir=base_dir, **inputs):
     
     # TODO - upload remaining outputs
     
-    # Perform the pharmacokinetic mapping.
+    # Optimize the pharmacokinetic model.
     pk_map = pe.Node(Fastfit(), name='pk_map')
     pk_map.inputs.model_name = 'bolero'
     workflow.connect(copy_meta, 'dest_file',

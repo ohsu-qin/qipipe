@@ -1,3 +1,7 @@
+"""
+This module wraps the proprietary OHSU AIRC ``fastfit`` software.
+``fastfit`` optimizes the input pharmacokinetic model.
+"""
 import os
 from os import path
 from glob import glob
