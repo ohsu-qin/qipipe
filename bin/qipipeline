@@ -32,8 +32,8 @@ def main(argv=sys.argv):
         opts['staging'] = args.staging
     if args.registration != None:
         opts['registration'] = args.registration
-    if args.pk_mapping != None:
-        opts['pk_mapping'] = args.pk_mapping
+    if args.modeling != None:
+        opts['modeling'] = args.modeling
     if args.force:
         opts['force'] = True
     
@@ -81,11 +81,11 @@ def _parse_arguments():
         metavar='FILE', dest='registration')
     reg_grp.add_argument('--no-registration', help='only perform the staging workflow',
         dest='registration', action='store_false')
-    pk_mapping_grp = parser.add_mutually_exclusive_group()
-    pk_mapping_grp.add_argument('--pk-mapping', help="the PK mapping configuration file",
-        metavar='FILE', dest='pk_mapping')
-    pk_mapping_grp.add_argument('--no-pk-mapping', help="don't perform the PK mapping workflow",
-        dest='pk_mapping', action='store_false')
+    modeling_grp = parser.add_mutually_exclusive_group()
+    modeling_grp.add_argument('--modeling', help="the modeling configuration file",
+        metavar='FILE', dest='modeling')
+    modeling_grp.add_argument('--no-modeling', help="don't perform the modeling workflow",
+        dest='modeling', action='store_false')
     
     # The input subject directories to process.
     parser.add_argument('subject_dirs', help='the input AIRC DICOM subject directories',

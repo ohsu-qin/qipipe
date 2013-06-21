@@ -42,7 +42,7 @@ class TestQIPipeline:
     The test directories must conform to the subject/visit/dicom directory patterns
     defined in :meth:`airc`.
     
-    Note:: the PK mapping workflow is only executed if the ``fastfit`` executable is
+    Note:: the modeling workflow is only executed if the ``fastfit`` executable is
     found.
     
     The recommended test input is three series for one visit from each collection.
@@ -90,9 +90,9 @@ class TestQIPipeline:
         # The pipeline options.
         opts = dict(registration=reg_opts)
         
-        # Check whether the PK mapping workflow is executable.
+        # Check whether the modeling workflow is executable.
         if not distutils.spawn.find_executable('fastfit'):
-            opts['pk_mapping'] = False
+            opts['modeling'] = False
 
         # The test subject => directory dictionary.
         sbj_dir_dict = get_subjects(collection, fixture)
@@ -105,7 +105,7 @@ class TestQIPipeline:
             # Delete any existing test subjects.
             delete_subjects(PROJECT, *subjects)
 
-            # Run the staging and registration workflows, but not the PK mapping.
+            # Run the staging and registration workflows, but not the modeling.
             logger.debug("Executing the QIN pipeline...")
             reg_specs = qip.run(collection, *sources, dest=dest, work=work, **opts)
 

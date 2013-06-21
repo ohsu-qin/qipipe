@@ -9,7 +9,7 @@ PK_PREFIX = 'pk'
 
 def run(*input_specs, **opts):
     """
-    Executes the PK mapping workflow built in :meth:`create_workflow`.
+    Executes the modeling workflow built in :meth:`create_workflow`.
 
     Each input specification identifies an XNAT resource container. The
     specification is a (subject, session, container type, container name)
@@ -22,13 +22,13 @@ def run(*input_specs, **opts):
     into the ``input`` subdirectory of the ``base_dir`` option value
     (default is the current directory).
     
-    The PK mapping workflow is then built as described in
+    The modeling workflow is then built as described in
     :meth:`create_workflow` and executed. The result is uploaded to an XNAT
     analysis resource.
 
     :param input_specs: the XNAT (subject, session, resource) image tuples
     :param opts: the workflow options
-    :return: the PK mapping XNAT (subject, session, analysis) tuples
+    :return: the modeling XNAT (subject, session, analysis) tuples
     """
     # Run the workflow on each session.
     outputs = {spec: _analyze_session_images(*spec, base_dir=None)
@@ -55,7 +55,7 @@ def _analyze_session_images(subject, session, ctr_type, ctr_name, base_dir=None)
     images = dl_images.run().result.outputs.out_files
     
     # Make a unique analysis reconstruction name. This permits more than one
-    # PK mapping to be stored for each input series without a name conflict.
+    # modeling to be stored for each input series without a name conflict.
     analysis = "%s_%s" % (REG_PREFIX, file_helper.generate_file_name())
     
     # Make the workflow.
@@ -75,7 +75,7 @@ def create_workflow(base_dir=base_dir, **inputs):
     .. |ve| replace:: v\ :sub:`e`
     .. |R10| replace:: R1\ :sub:`0`
     
-    The workflow calculates the PK mapping parameters for the given input
+    The workflow calculates the modeling parameters for the given input
     images as follows:
 
     - Compute the |R10| value, if it is not given in the options
@@ -86,7 +86,7 @@ def create_workflow(base_dir=base_dir, **inputs):
 
     - Optimize the BOLERO pharmacokinetic model
 
-    - Upload the PK mapping result to XNAT
+    - Upload the modeling result to XNAT
     
     If the |R10| option is not set, then it is computed from
     the proton density weighted scans and DCE series baseline image.
@@ -133,7 +133,7 @@ def create_workflow(base_dir=base_dir, **inputs):
         if the |R10| option is not set
     :return: the pyxnat Workflow
     """
-    workflow = pe.Workflow(name='pk_mapping')
+    workflow = pe.Workflow(name='modeling')
     
     # Set up the input node.
     in_fields = ['subject', 'session', 'in_files', 'mask_file', 'baseline_end_idx']

@@ -4,8 +4,8 @@ import os, tempfile
 from ..helpers import xnat_helper
 from .pipeline_error import PipelineError
 from . import staging
-from . import registration as reg
-from . import pk_mapping as pk
+from . import registration
+from . import modeling
 
 import logging
 logger = logging.getLogger(__name__)
@@ -72,12 +72,12 @@ class QIPipeline(object):
 
         - registration: Mask, register and reslice the staged images
 
-        - PK mapping: Calculate the PK parameters
+        - modeling: Calculate the PK parameters
         
         The default options for each of these constituent workflows can be overridden
-        by setting the ``staging``, ``registration`` or ``pk_mapping`` option, resp.
+        by setting the ``staging``, ``registration`` or ``modeling`` option, resp.
         If the ``registration`` option is set to false, then only staging is performed.
-        If the ``pk_mapping`` option is set to false, then PK mapping is not performed.
+        If the ``modeling`` option is set to false, then modeling is not performed.
         
         The resliced XNAT (subject, session, reconstruction) designator tuples
         
@@ -106,12 +106,12 @@ class QIPipeline(object):
                 return session_specs
             
             reg_dir = os.path.join(work_dir, 'register')
-            reg_specs = reg.run(*session_specs, base_dir=reg_dir, **opts)
+            reg_specs = registration.run(*session_specs, base_dir=reg_dir, **opts)
             
-            # If the pk_mapping flag is set to False, then return the registered XNAT reconstructions.
-            if opts.get('pk_mapping') == False:
-                logger.debug("Skipping PK mapping since the pk_mapping option is set to False.")
+            # If the modeling flag is set to False, then return the registered XNAT reconstructions.
+            if opts.get('modeling') == False:
+                logger.debug("Skipping modeling since the modeling option is set to False.")
                 return reg_specs
             
-            pk_dir = os.path.join(work_dir, 'pk_mapping')
-            return pk.run(*reg_specs, base_dir=pk_dir, **opts)
+            mdl_dir = os.path.join(work_dir, 'modeling')
+            return modeling.run(*reg_specs, base_dir=mdl_dir, **opts)

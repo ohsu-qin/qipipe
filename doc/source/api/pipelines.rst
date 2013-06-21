@@ -10,10 +10,10 @@ pipelines
     :undoc-members:
     :show-inheritance:
 
-:mod:`pk_mapping`
+:mod:`modeling`
 -----------------
 
-.. automodule:: qipipe.pipelines.pk_mapping
+.. automodule:: qipipe.pipelines.modeling
     :members:
     :undoc-members:
     :show-inheritance:
