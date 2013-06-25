@@ -15,7 +15,7 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
 
 FIXTURE = os.path.join(ROOT, 'fixtures', 'interfaces', 'xnat', 'Sarcoma001', 'Session01')
-"""The test fixture parent directory."""
+"""The test fixture directory."""
 
 RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'xnat')
 """The test results directory."""
@@ -66,7 +66,7 @@ class TestXNATDownload:
     
     def test_download(self):
         logger.debug("Testing the XNATDownload interface on %s..." % SUBJECT)
-        # Download the file.
+        # Download the files.
         download = XNATDownload(project=PROJECT, subject=SUBJECT, session=SESSION,
             scan=9, format=FORMAT, dest=RESULTS)
         result = download.run()
