@@ -23,7 +23,9 @@ class XNATDownloadInputSpec(BaseInterfaceInputSpec):
 
 
 class XNATDownloadOutputSpec(TraitedSpec):
-    out_files = OutputMultiPath(File(exists=True), desc='The downloaded files')
+    out_files = traits.List(File(exists=True), desc='The downloaded files')
+    out_file = File(exists=True,
+        desc='The downloaded file, if exactly one file was downloaded')
 
 
 class XNATDownload(BaseInterface):
@@ -51,5 +53,7 @@ class XNATDownload(BaseInterface):
     def _list_outputs(self):
         outputs = self._outputs().get()
         outputs['out_files'] = self._out_files
+        if len(self._out_files) == 1
+            outputs['out_file'] = self._out_files[0]
         
         return outputs
