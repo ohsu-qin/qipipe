@@ -1,7 +1,7 @@
 """Pipeline utility functions."""
 
 import os, re, glob
-from ..helpers.xnat_helper import PROJECT
+from ..helpers.globals import PROJECT
 from ..helpers import xnat_helper
 from ..helpers.dicom_helper import iter_dicom_headers
 from .staging_error import StagingError

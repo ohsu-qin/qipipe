@@ -1,13 +1,12 @@
 import os
 import nipype.pipeline.engine as pe
-from nipype.interfaces.utility import IdentityInterface, Function
+from nipype.interfaces.utility import IdentityInterface
 from nipype.interfaces.ants.registration import Registration
 from nipype.interfaces.ants import AverageImages, ApplyTransforms
 from nipype.interfaces.dcmstack import CopyMeta
 from nipype.interfaces import fsl
 from nipype.interfaces.dcmstack import DcmStack, MergeNifti, CopyMeta
-from nipype.interfaces.utility import Select, IdentityInterface, Function
-from ..helpers.xnat_helper import PROJECT
+from ..helpers.globals import PROJECT
 from ..interfaces import XNATDownload, XNATUpload, MriVolCluster
 from ..helpers import xnat_helper, file_helper
 from ..helpers.ast_config import read_config
@@ -22,46 +21,13 @@ REG_PREFIX = 'reg'
 
 def run(*session_specs, **opts):
     """
-    Registers the scan NiFTI images for the given sessions as follows:
-
-    - Download the NiFTI scans from XNAT
-
-    - Make a mask to subtract extraneous tissue
-
-    - Mask each input scan
-
-    - Make a template by averaging the masked images
-
-    - Create an affine and non-rigid transform for each image
-
-    - Reslice the masked image with the transforms
-
-    - Upload the mask and the resliced images
-    
+    Builds the modeling workflow described in :meth:`create_workflow`
+    and executes it on the given inputs.
+   
     The NiFTI scan images for each session are downloaded from XNAT into the
     ``scans`` subdirectory of the ``base_dir`` specified in the options
-    (default is the current directory).
-    
-    The average is taken on the middle half of the NiFTI scan images.
-    These images are averaged into a fixed reference template image.
-
-    The options include the Pyxnat Workflow initialization options, as well as
-    the following options:
-
-    - ``config``: an optional configuration file
-    
-    The configuration file can contain the following sections:
-
-    - ``FSLMriVolCluster``: the FSL ``MriVolCluster`` interface options
-
-    - ``ANTSAverage``: the ANTS ``Average`` interface options
-
-    - ``ANTSRegistration``: the ANTS ``Registration`` interface options
-
-    - ``ANTSApplyTransforms``: the ANTS ``ApplyTransforms`` interface options
-    
-    The default registration applies an affine followed by a symmetric normalization
-    transform.
+    (default is the current directory). The workflow is run on these images,
+    resulting in a new session XNAT reconstruction object.
     
     :param session_specs: the XNAT (subject, session) name tuples to register
     :param opts: the workflow options
@@ -86,15 +52,11 @@ def _register(subject, session, dest, **opts):
     :param session: the XNAT session label
     :param dest: the scan download directory
     :param opts: the workflow options
-    :return: the warpd XNAT (subject, session, reconstruction) designator tuple
+    :return: the resliced XNAT (subject, session, reconstruction) designator tuple
     """
     # Download the scan images.
     tgt = os.path.join(dest, subject, session)
     images = _download_scans(subject, session, tgt)
-    
-    # Make a unique registration reconstruction name. This permits more than one
-    # registration to be stored for each input image without a name conflict.
-    recon = "%s_%s" % (REG_PREFIX, file_helper.generate_file_name())
     
     # Make the workflow
     workflow = create_workflow(subject, session, recon, images, **opts)
@@ -117,15 +79,58 @@ def _download_scans(subject, session, dest):
     with xnat_helper.connection() as xnat:
         return xnat.download(PROJECT, subject, session, dest=dest, container_type='scan', format='NIFTI')
 
-def create_workflow(subject, session, recon, images, **opts):
+def create_workflow(subject, session, *images, **opts):
     """
-    Creates the nipype workflow for the given session images.
+    Creates the registration workflow for the given session images.
+    
+    The workflow registers the images as follows:
+
+    - Download the NiFTI scans from XNAT
+
+    - Make a mask to subtract extraneous tissue
+
+    - Mask each input scan
+
+    - Make a template by averaging the masked images
+
+    - Create an affine and non-rigid transform for each image
+
+    - Reslice the masked image with the transforms
+
+    - Upload the mask and the resliced images
+    
+    The NiFTI scan images for each session are downloaded from XNAT into the
+    ``scans`` subdirectory of the ``base_dir`` specified in the options
+    (default is the current directory).
+    
+    The average is taken on the middle half of the NiFTI scan images.
+    These images are averaged into a fixed reference template image.
+
+    The optional workflow inputs configuration file can contain the
+    following sections:
+
+    - ``FSLMriVolCluster``: the FSL ``MriVolCluster`` interface options
+
+    - ``ANTSAverage``: the ANTS ``Average`` interface options
+
+    - ``ANTSRegistration``: the ANTS ``Registration`` interface options
+
+    - ``ANTSApplyTransforms``: the ANTS ``ApplyTransforms`` interface options
+    
+    The default registration applies an affine followed by a symmetric normalization
+    transform.
+    
+    :Note: this workflow cannot be embedded in another workflow, since the
+    workflow iterates over each image. A Nipype iterator is defined when the
+    workflow is built, and cannot be set dynamically during execution.
+    Consequently, the subject, session and images inputs are wired into the workflow
+    and cannot be set dynamically from the output of a parent execution workflow.
     
     :param subject: the XNAT subject label
     :param session: the XNAT session label
-    :param recon: the XNAT registration reconstruction label
     :param images: the input session scan NiFTI stacks
-    :param opts: the workflow options
+    :param base_dir: the workflow execution directory 
+    :param config: the workflow inputs configuration file 
     :return: the registration Workflow object
     """
     msg = 'Creating the %s %s registration workflow' % (subject, session)
@@ -149,13 +154,19 @@ def create_workflow(subject, session, recon, images, **opts):
     reg_opts = cfg_opts.get('ANTSRegistration', {})
     # The reslice step options.
     reslice_opts = cfg_opts.get('ANTSApplyTransforms', {})
+    
+    # Make a unique registration reconstruction name. This permits more than one
+    # registration to be stored for each input image without a name conflict.
+    recon = "%s_%s" % (REG_PREFIX, file_helper.generate_file_name())
 
     workflow = pe.Workflow(name='register', **opts)
 
     # The workflow input image iterator.
-    input_spec = pe.Node(IdentityInterface(fields=['image']), name='input_spec')
+    in_fields = ['subject', 'session', 'image', 'reconstruction']
+    input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
     input_spec.inputs.subject = subject
     input_spec.inputs.session = session
+    input_spec.inputs.reconstruction = recon
     input_spec.iterables = dict(image=images).items()
     
     # Merge the DCE data to 4D.
@@ -239,6 +250,13 @@ def create_workflow(subject, session, recon, images, **opts):
     upload_reg.inputs.session = session
     upload_reg.inputs.reconstruction = recon
     workflow.connect(copy_meta, 'dest_file', upload_reg, 'in_files')
+    workflow.connect(input_spec, 'reconstruction', upload_reg, 'reconstruction')
+    
+    # Collect the outputs.
+    out_fields = in_fields
+    output_spec = pe.Node(IdentityInterface(fields=out_fields), name='output_spec')
+    for field in in_fields:
+        workflow.connect(input_spec, field, output_spec, field)
     
     return workflow
 

@@ -6,8 +6,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from qipipe.helpers.xnat_helper import PROJECT
-from qipipe.pipelines import registration as reg
+from qipipe.helpers.globals import PROJECT
+from qipipe.pipelines import registration
 from qipipe.helpers import xnat_helper
 from qipipe.helpers.xnat_helper import delete_subjects
 from qipipe.helpers.ast_config import read_config
@@ -92,7 +92,7 @@ class TestRegistrationWorkflow(object):
         return sess_files_dict
         
     def _run_workflow(self, *session_specs, **opts):
-        return reg.run(*session_specs, config=REG_CONF, **opts)
+        return registration.run(*session_specs, config=REG_CONF, **opts)
     
     def _verify_result(self, xnat, sess_files_dict, *recon_specs):
         sess_recon_dict = {(sbj, sess): recon for sbj, sess, recon in recon_specs}

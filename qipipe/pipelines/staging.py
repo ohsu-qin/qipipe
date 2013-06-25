@@ -2,7 +2,7 @@ import os
 import nipype.pipeline.engine as pe
 from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.dcmstack import DcmStack
-from ..helpers.xnat_helper import PROJECT
+from ..helpers.globals import PROJECT
 from ..interfaces import Unpack, FixDicom, Compress, MapCTP, XNATUpload
 from ..staging.staging_error import StagingError
 from ..staging.staging_helper import subject_for_directory, iter_new_visits, group_dicom_files_by_series

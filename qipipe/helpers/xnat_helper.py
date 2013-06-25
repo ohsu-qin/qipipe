@@ -8,9 +8,6 @@ from .xnat_config import default_configuration
 import logging
 logger = logging.getLogger(__name__)
 
-PROJECT = 'QIN'
-"""The XNAT project id."""
-
 @contextmanager
 def connection():
     """
