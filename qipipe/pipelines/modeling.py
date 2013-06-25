@@ -1,82 +1,119 @@
 import os
+from collections import defaultdict
 import nipype.pipeline.engine as pe
 from nipype.interfaces.dcmstack import DcmStack, MergeNifti, CopyMeta
 from nipype.interfaces.utility import IdentityInterface, Function
 from ..interfaces import XNATDownload, XNATUpload, Fastfit
 from ..helpers import file_helper
+from ..helpers.globals import PROJECT
 
 PK_PREFIX = 'pk'
+"""The XNAT modeling assessment object label prefix."""
 
-def run(*input_specs, **opts):
+DISTRIBUTABLE = not not distutils.spawn.find_executable('qsub')
+"""Flag indicating whether the workflow can be distributed over a cluster."""
+
+def run(*inputs, **opts):
     """
-    Executes the modeling workflow built in :meth:`create_workflow`.
+    Builds the modeling workflow described in :meth:`create_workflow`
+    and executes it on the given inputs.
 
-    Each input specification identifies an XNAT resource container. The
-    specification is a (subject, session, container type, container name)
-    tuple, where the container type is a
-    :meth:`qipipe.helpers.xnat_helper.XNAT.download`
-    container type and the container name is a XNAT resource container
-    label. There is one resource per session.
+    Each input identifies an XNAT reconstruction or scan. A reconstruction
+    input is a dictionary with keys ``subject``, ``session`` and
+    ``reconstruction``. A scan input is a dictionary with keys ``subject``,
+    ``session`` and ``scan``. The input dictionary values are the XNAT
+    labels for the respective XNAT objects.
     
-    The NiFTI session mask and resource files are downloaded from XNAT
-    into the ``input`` subdirectory of the ``base_dir`` option value
-    (default is the current directory).
+    The NiFTI session mask and input image files are downloaded from XNAT
+    into the ``input`` subdirectory of the execution working directory.
     
-    The modeling workflow is then built as described in
-    :meth:`create_workflow` and executed. The result is uploaded to an XNAT
-    analysis resource.
+    The modeling workflow is then built as described in :meth:create_workflow
+    and executed. The result is uploaded to an XNAT analysis resource.
+    
+    If the ``qsub`` executable is found in the execution environment, then the
+    execution is distributed on the cluster using the Sun Grid Engine.
 
-    :param input_specs: the XNAT (subject, session, resource) image tuples
-    :param opts: the workflow options
+    :param inputs: the XNAT input reconstruction or scan XNAT inputs
+    :param base_dir: the execution working directory (default is the current directory)
+    :param opts: the optional workflow inputs described in :meth:create_workflow 
     :return: the modeling XNAT (subject, session, analysis) tuples
     """
-    # Run the workflow on each session.
-    outputs = {spec: _analyze_session_images(*spec, base_dir=None)
-        for spec in input_specs}
-    
-    return outputs
-
-def _analyze_session_images(subject, session, ctr_type, ctr_name, base_dir=None):
-    # The default work directory directory.
-    if not base_dir:
-        base_dir = os.getcwd()
+    # The workflow directory.
+    base_dir = opts.pop('base_dir', os.getcwd())
+    # The reusable workflow.
+    reusable_wf = create_workflow(base_dir=base_dir, **opts)
     # The image download location.
-    dest = os.path.join(base_dir, 'data', subject, session)
+    dest = os.path.join(base_dir, 'data')
+    
+    # Make the execution workflow.
+    exec_wf = pe.Workflow(name='_'.join(reusable_wf.name(), 'exec'))
+    
+    # The execution workflow inputs.
+    input_list_dict = defaultdict(list)
+    for spec in input_specs:
+        for k, v in spec.iteritems():
+            input_list_dict[k].append(v)
+    in_fields = input_list_dict.keys()
+    input_spec = pe.Node(IdentityInterface(fields=in_fields))
+    input_spec.iterables = input_list_dict
     
     # Download the mask.
-    dl_mask = XNATDownload(project='QIN', subject=subject, session=session,
-        reconstruction='mask', dest=dest)
-    mask = dl_mask.run().result.outputs.out_files[0]
+    dl_mask = XNATDownload(project='QIN', reconstruction='mask', dest=dest)
+    exec_wf.connect(input_spec, 'subject', dl_mask, 'subject')
+    exec_wf.connect(input_spec, 'session', dl_mask, 'session')
     
     # Download the images.
-    ctr_opt = {ctr_type: ctr_name}
-    dl_images = XNATDownload(project='QIN', subject=subject, session=session,
-        dest=dest, **ctr_opt)
-    images = dl_images.run().result.outputs.out_files
+    dl_images = XNATDownload(project='QIN', dest=dest)
+    for field in in_fields:
+        exec_wf.connect(input_spec, field, dl_images, field)
+
+    # Model the images.
+    exec_wf.connect(input_spec, 'subject', reusable_wf, 'input_spec.subject')
+    exec_wf.connect(input_spec, 'session', reusable_wf, 'input_spec.session')
+    exec_wf.connect(dl_mask, 'out_file', reusable_wf, 'input_spec.mask_file')
+    exec_wf.connect(dl_images, 'out_files', reusable_wf, 'input_spec.in_files')
     
-    # Make a unique analysis reconstruction name. This permits more than one
-    # modeling to be stored for each input series without a name conflict.
-    analysis = "%s_%s" % (REG_PREFIX, file_helper.generate_file_name())
+    # Upload the R1 series to XNAT.
+    upload_r1 = pe.Node(XNATUpload(project=PROJECT, resource='r1_series', format='NIFTI'),
+        name='upload_r1')
+    exec_wf.connect(input_spec, 'subject', upload_r1, 'subject')
+    exec_wf.connect(input_spec, 'session', upload_r1, 'session')
+    exec_wf.connect(input_spec, 'analysis', upload_r1, 'analysis')
+    exec_wf.connect(reusable_wf, 'output_spec.r1_series', upload_r1, 'in_files')
     
-    # Make the workflow.
-    wf = create_workflow(base_dir=base_dir, subject=subject, session=session, in_files=images)
+    # TODO - Upload the remaining outputs to XNAT.
+
+    # Collect the workflow output fields.
+    out_fields = ['subject', 'session', 'analysis']
+    output_spec = pe.Node(IdentityInterface(fields=out_fields))
+    for field in out_fields:
+        exec_wf.connect(input_spec, field, output_spec, field)
+
+    # Check whether the workflow can be distributed.
+    if DISTRIBUTABLE:
+        exec_wf.config['execution'] = {'job_finished_timeout': 60.0}
+        args = dict(plugin='SGE',
+                    plugin_args={'qsub_args' : '-l h_rt=1:00:00,mf=3G,h_vmem=3.5G -b n'})
+    else:
+        args = {}
     
-    # Execute the workflow.
-    result = wf.run()
+    # Run the workflow.
+    result = exec_wf.run(**args)
+
+    # Return the (subject, session, analysis) tuples.
+    return tuple([getattr(result.outputs.output_spec, field) for field in out_fields]) 
     
-    return result.outputs.output_spec.get()
-    
-def create_workflow(base_dir=base_dir, **inputs):
+def create_workflow(base_dir=None, **inputs):
     """
     Creates the Nipype pharmacokinetic mapping workflow.
     
+    .. reST substitutions:
     .. |H2O| replace:: H\ :sub:`2`\ O
     .. |Ktrans| replace:: K\ :sup:`trans`
     .. |ve| replace:: v\ :sub:`e`
     .. |R10| replace:: R1\ :sub:`0`
     
-    The workflow calculates the modeling parameters for the given input
-    images as follows:
+    The workflow calculates the modeling parameters for input images as follows:
 
     - Compute the |R10| value, if it is not given in the options
 
@@ -120,27 +157,32 @@ def create_workflow(base_dir=base_dir, **inputs):
     
     .. _`shutter speed model` http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2582583/?tool=pubmed
     
-    :param inputs: the workflow inputs
-    :keyword subject: the XNAT subject label
-    :keyword session: the XNAT session label
-    :keyword in_files: the input session scan NiFTI stacks
-    :keyword mask_file: the constraining mask file
-    :keyword baseline_end_idx: the number of images to merge into a baseline image
-    :keyword r1_0_val: the optional |R10| value
-    :keyword pd_dir: the proton density weighted scan directory,
-        if the |R10| option is not set 
-    :keyword max_r1_0: the maximum computed |R10| value,
-        if the |R10| option is not set
+    :param inputs: the optional workflow ``input_spec`` node inputs listed below
+    :keyword r1_0_val: the optional fixed |R10| value
+    :keyword baseline_end_idx: the number of images to merge into a R1 series baseline image
+        (default is 1)
+    :keyword max_r1_0: the maximum computed |R10| value, if |R10| is not fixed
     :return: the pyxnat Workflow
     """
     workflow = pe.Workflow(name='modeling')
     
+    # Make the default XNAT assessment object label, if necessary. The label is unique, which
+    # permits more than one modeling to be stored for each input series without a name conflict.
+    if 'analysis' not in inputs:
+        inputs['analysis'] = "%s_%s" % (PK_PREFIX, file_helper.generate_file_name())
+    
+    # The default baseline image count.
+    if 'baseline_end_idx' not in inputs:
+        inputs['baseline_end_idx'] = 1
+    
     # Set up the input node.
-    in_fields = ['subject', 'session', 'in_files', 'mask_file', 'baseline_end_idx']
+    in_fields = ['subject', 'session', 'analysis', 'in_files', 'mask_file', 'baseline_end_idx']
     if opts.get('r1_0_val'):
         in_fields += ['r1_0_val']
+        use_fixed_r1_0 = True
     else:
         in_fields += ['pd_dir', 'max_r1_0']
+        use_fixed_r1_0 = False
     input_spec = pe.Node(IdentityInterface(fields=in_fields, **inputs),
                         name='input_spec')
     
@@ -183,7 +225,7 @@ def create_workflow(base_dir=base_dir, **inputs):
         workflow.connect(input_spec, 'max_r1_0', get_r1_0, 'max_r1_0')
         workflow.connect(input_spec, 'mask_file', get_r1_0, 'mask_file')
     
-    # Convert DCE time series to series of R1 maps.
+    # Convert the DCE time series to R1 maps.
     get_r1_series = pe.Node(Function(input_names=['time_series',
                                                   'r1_0',
                                                   'baseline_end',
@@ -202,19 +244,11 @@ def create_workflow(base_dir=base_dir, **inputs):
     else:
         workflow.connect(get_r1_0, 'r1_0_map', get_r1_series, 'r1_0')
     
-    # Copy meta data to the R1 series.
+    # Copy the time series meta-data to the R1 series.
     copy_meta = pe.Node(CopyMeta(), name='copy_meta')
     copy_meta.inputs.include_classes = [('global', 'const'), ('time', 'samples')]
     workflow.connect(dce_merge, 'out_file', copy_meta, 'src_file')
     workflow.connect(get_r1_series, 'r1_series', copy_meta, 'dest_file')
-    
-    # Upload the R1 series to XNAT.
-    upload_r1 = pe.Node(XNATUpload(project=PROJECT, resource='r1_series', format='NIFTI'),
-        name='upload_r1')
-    workflow.connect(input_spec, 'subject', upload_r1, 'subject')
-    workflow.connect(input_spec, 'session', upload_r1, 'session')
-    workflow.connect(input_spec, 'analysis', upload_r1, 'analysis')
-    workflow.connect(copy_meta, 'dest_file', upload_r1, 'in_files')
     
     # Get the pharmacokinetic mapping parameters.
     get_params = pe.Node(Function(input_names=['time_series'],
@@ -222,8 +256,6 @@ def create_workflow(base_dir=base_dir, **inputs):
                                   function=_get_fit_params),
                          name='get_params')
     workflow.connect(dce_merge, 'out_file', get_params, 'time_series')
-    
-    # TODO - upload remaining outputs
     
     # Optimize the pharmacokinetic model.
     pk_map = pe.Node(Fastfit(), name='pk_map')
@@ -234,6 +266,12 @@ def create_workflow(base_dir=base_dir, **inputs):
                      pk_map, 'mask')
     workflow.connect(get_params, 'params_csv',
                      pk_map, 'params_csv')
+    
+    if DISTRIBUTABLE:
+        pk_map.inputs.use_mpi = True
+        pk_map.plugin_args = {'qsub_args': '-pe mpi 48-120 -l h_rt=4:00:00,mf=750M,h_vmem=3G -b n', 
+                               'overwrite' : True
+                              }
     
     # Set up the outputs.
     outputs = ['r1_series', 
@@ -256,10 +294,6 @@ def create_workflow(base_dir=base_dir, **inputs):
         workflow.connect(make_base, 'baseline_nii', 
                          output_spec, 'dce_baseline')
         workflow.connect(get_r1_0, 'r1_0_map', output_spec, 'r1_0')
-    
-    # Make a unique registration reconstruction name. This permits more than one
-    # registration to be stored for each input image without a name conflict.
-    analysis = "%s_%s" % (PK_PREFIX, file_helper.generate_file_name())
     
     return workflow
 
