@@ -26,8 +26,8 @@ cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_fi
     execution=dict(crashdump_dir=RESULTS, create_report=False, keep_inputs=True))
 config.update_config(cfg)
 
-class TestStagingWorkflow:
-    """Staging pipeline unit tests."""
+class TestStagingWorkflow(object):
+    """Staging workflow unit tests."""
     
     def setUp(self):
         shutil.rmtree(RESULTS, True)
@@ -43,7 +43,7 @@ class TestStagingWorkflow:
     
     def _test_collection(self, collection):
         """
-        Run the staging pipeline on the given collection and verify that
+        Run the staging workflow on the given collection and verify that
         the sessions are created in XNAT.
 
         Note:: This test does not verify the CTP staging area nor that the
@@ -53,7 +53,7 @@ class TestStagingWorkflow:
         :param collection: the AIRC collection name
         """
         fixture = os.path.join(FIXTURES, collection.lower())
-        logger.debug("Testing the staging pipeline on %s..." % fixture)
+        logger.debug("Testing the staging workflow on %s..." % fixture)
 
         # The staging destination and work area.
         dest = os.path.join(RESULTS, 'data')

@@ -30,11 +30,11 @@ cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_fi
 config.update_config(cfg)
 
 
-class TestRegistrationPipeline:
+class TestRegistrationWorkflow(object):
     """
-    Registration pipeline unit tests.
+    Registration workflow unit tests.
     
-    This test exercises the registration pipeline on three series of one visit in each of the
+    This test exercises the registration workflow on three series of one visit in each of the
     Breast and Sarcoma studies.
     """
     
@@ -58,47 +58,56 @@ class TestRegistrationPipeline:
         :param collection: the collection name
         """
         fixture = os.path.join(FIXTURES, collection.lower())
-        logger.debug("Testing the registration pipeline on %s..." % fixture)
+        logger.debug("Testing the registration workflow on %s..." % fixture)
 
         # The workflow base directory.
         base_dir = os.path.join(RESULTS, collection.lower(), 'work')
         
-        # The (subject, session) => scan files dictionary.
-        sess_files_dict = {}
-        # The test subjects.
-        subjects = set()
         with xnat_helper.connection() as xnat:
             # Seed XNAT with the test files.
-            for sbj_dir in glob.glob(fixture + '/' + collection + '*'):
-                _, sbj = os.path.split(sbj_dir)
-                subjects.add(sbj)
-                # Delete a stale test XNAT subject, if necessary.
-                delete_subjects(PROJECT, sbj)
-                # Populate the test XNAT subject from the test fixture.
-                for sess_dir in glob.glob(sbj_dir + '/Session*'):
-                    sess, in_files = self._upload_session_files(sbj, sess_dir)
-                    sess_files_dict[(sbj, sess)] = in_files
-            
+            sess_files_dict = self._seed_xnat(fixture, collection)
             # Run the workflow.
-            recon_specs = reg.run(*sess_files_dict.iterkeys(), base_dir=base_dir, config=REG_CONF)
-            
+            recon_specs = self._run_workflow(*sess_files_dict.iterkeys(), base_dir=base_dir)
             # Verify the result.
-            sess_recon_dict = {(sbj, sess): recon for sbj, sess, recon in recon_specs}
-            for spec, in_files in sess_files_dict.iteritems():
-                assert_in(spec, sess_recon_dict, "The session %s %s was not registered" % spec)
-                recon = sess_recon_dict[spec]
-                sbj, sess = spec
-                recon_obj = xnat.get_reconstruction(PROJECT, sbj, sess, recon)
-                assert_true(recon_obj.exists(),
-                    "The %s %s %s reconstruction was not created" % (sbj, sess, recon))
-                recon_files = recon_obj.out_resource('NIFTI').files().get()
-                assert_equals(len(in_files), len(recon_files),
-                    "The registered %s %s file count is incorrect - expected: %d, found: %d" %
-                    (sbj, sess, len(in_files), len(recon_files)))
+            self._verify_result(xnat, sess_files_dict, recon_specs)
             
             # Clean up.
+            subjects = 
             delete_subjects(PROJECT, *subjects)
     
+    def _seed_xnat(self, fixture, collection):
+        """
+        Seed XNAT with the test files.
+        
+        :return: the (subject, session) => scan files dictionary
+        """
+        for sbj_dir in glob.glob(fixture + '/' + collection + '*'):
+            _, sbj = os.path.split(sbj_dir)
+            # Delete a stale test XNAT subject, if necessary.
+            delete_subjects(PROJECT, sbj)
+            # Populate the test XNAT subject from the test fixture.
+            for sess_dir in glob.glob(sbj_dir + '/Session*'):
+                sess, in_files = self._upload_session_files(sbj, sess_dir)
+                sess_files_dict[(sbj, sess)] = in_files
+        return sess_files_dict
+        
+    def _run_workflow(self, *session_specs, **opts):
+        return reg.run(*session_specs, config=REG_CONF, **opts)
+    
+    def _verify_result(self, xnat, sess_files_dict, *recon_specs):
+        sess_recon_dict = {(sbj, sess): recon for sbj, sess, recon in recon_specs}
+        for spec, in_files in sess_files_dict.iteritems():
+            assert_in(spec, sess_recon_dict, "The session %s %s was not registered" % spec)
+            recon = sess_recon_dict[spec]
+            sbj, sess = spec
+            recon_obj = xnat.get_reconstruction(PROJECT, sbj, sess, recon)
+            assert_true(recon_obj.exists(),
+                "The %s %s %s XNAT reconstruction object was not created" % (sbj, sess, recon))
+            recon_files = recon_obj.out_resource('NIFTI').files().get()
+            assert_equals(len(in_files), len(recon_files),
+                "The registered %s %s file count is incorrect - expected: %d, found: %d" %
+                (sbj, sess, len(in_files), len(recon_files)))
+           
     def _upload_session_files(self, subject, session_dir):
         """
         Uploads the test files in the given session directory.
