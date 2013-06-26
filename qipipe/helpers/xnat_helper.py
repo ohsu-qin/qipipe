@@ -43,18 +43,32 @@ def delete_subjects(project, *subject_names):
                 sbj.delete()
                 logger.debug("Deleted the XNAT test subject %s." % sbj_lbl)
     
-def canonical_session_label(subject, session):
+def canonical_label(*names):
     """
-    Returns the XNAT session name, qualified by the subject name prefix if necessary.
+    Returns the XNAT label for the given hierarchical name, qualified by
+    a prefix if necessary.
     
-    :param subject: the XNAT subject label
-    :param session: the XNAT experiment label
-    :return: the corresponding XNAT session label
+    Example:
+    
+    >>> from qipipe.helpers.xnat_helper import canonical_label
+    ... canonical_label('QIN', 'Breast003', 'Session01')
+    'QIN_Breast003_Session01'
+    ... canonical_label('QIN', 'Breast003', 'QIN_Breast003_Session01')
+    'QIN_Breast003_Session01'
+    
+    :param names: the object names
+    :return: the corresponding XNAT label
     """
-    if session.startswith(subject):
-        return session
+    names = list(names)
+    last = names.pop()
+    if names:
+        prefix = canonical_label(*names)
+        if last.startswith(prefix):
+            return last
+        else:
+            return "%s_%s" % (prefix, last)
     else:
-        return "%s_%s" % (subject, session)
+        return last
 
 
 class XNATError(Exception):
@@ -95,13 +109,17 @@ class XNAT(object):
     def get_subject(self, project, subject):
         """
         Returns the XNAT subject object for the given XNAT lineage.
+        The subject name is qualified by the project id prefix, if necessary.
         
         :param project: the XNAT project id
-        :param subject: the XNAT subject label
+        :param subject: the XNAT subject name
         :return: the corresponding XNAT subject (which may not exist)
         """
+        # The canonical subject label.
+        label = canonical_label(project, subject)
         # The query path.
-        qpath = XNAT.SUBJECT_QUERY_FMT % (project, subject)
+        qpath = XNAT.SUBJECT_QUERY_FMT % (project, label)
+        
         return self.interface.select(qpath)
     
     def get_session(self, project, subject, session):
@@ -114,9 +132,9 @@ class XNAT(object):
         :param session: the XNAT experiment label
         :return: the corresponding XNAT session (which may not exist)
         """
-        sess_lbl = canonical_session_label(subject, session)
+        label = canonical_label(project, subject, session)
         
-        return self.get_subject(project, subject).experiment(sess_lbl)
+        return self.get_subject(project, subject).experiment(label)
     
     def get_scan(self, project, subject, session, scan):
         """
@@ -135,24 +153,36 @@ class XNAT(object):
     def get_reconstruction(self, project, subject, session, recon):
         """
         Returns the XNAT reconstruction object for the given XNAT lineage.
-        The session and reconstruction name is qualified by the session name prefix,
-        if necessary.
+        The lineage names are qualified by a prefix, if necessary.
         
         See :meth:`get_session`
         
         :param project: the XNAT project id
-        :param subject: the XNAT subject label
-        :param session: the XNAT experiment label
-        :param recon: the unique XNAT reconstruction name
+        :param subject: the subject name
+        :param session: the session name
+        :param recon: the XNAT reconstruction name
         :return: the corresponding XNAT reconstruction object (which may not exist)
         """
-        sess_lbl = canonical_session_label(subject, session)
-        if recon.startswith(sess_lbl):
-            recon_lbl = recon
-        else:
-            recon_lbl = "%s_%s" % (sess_lbl, recon)
+        label = canonical_label(project, subject, session, recon)
         
-        return self.get_session(project, subject, session).reconstruction(recon_lbl)
+        return self.get_session(project, subject, session).reconstruction(label)
+      
+    def get_assessor(self, project, subject, session, analysis):
+        """
+        Returns the XNAT assessor object for the given XNAT lineage.
+        The lineage names are qualified by a prefix, if necessary.
+        
+        See :meth:`get_session`
+        
+        :param project: the XNAT project id
+        :param subject: the subject name
+        :param session: the session name
+        :param analysis: the analysis name
+        :return: the corresponding XNAT assessor object (which may not exist)
+        """
+        label = canonical_label(project, subject, session, recon)
+        
+        return self.get_session(project, subject, session).assessor(label)
     
     def download(self, project, subject, session, **opts):
         """
@@ -402,15 +432,13 @@ class XNAT(object):
             if container_type == 'scan':
                 return experiment.scan(name)
             elif container_type == 'reconstruction':
-                # The recon id is qualified by the experiment label.
-                prefix = experiment.label()
-                if name.startswith(prefix):
-                   recon_id = name
-                else:
-                    recon_id = "%s_%s" % (prefix, name)
-                return experiment.reconstruction(recon_id)
+                # The recon label is prefixed by the experiment label.
+                label = canonical_label(experiment.label(), name)
+                return experiment.reconstruction(label)
             elif container_type == 'assessor':
-                return experiment.assessor(name)
+                # The assessor label is prefixed by the experiment label.
+                label = canonical_label(experiment.label(), name)
+                return experiment.assessor(label)
         elif container_type == 'scan':
             return experiment.scans()
         elif container_type == 'reconstruction':

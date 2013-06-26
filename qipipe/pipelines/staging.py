@@ -18,7 +18,7 @@ def run(collection, *subject_dirs, **opts):
     
     :param collection: the AIRC image collection name
     :param subject_dirs: the AIRC source subject directories to stage
-    :param opts: the workflow options
+    :param opts: the :meth:create_workflow options
     :return: the new XNAT (subject, session) name tuples
     """
     
@@ -62,8 +62,11 @@ def create_workflow(collection, *series_specs, **opts):
     """
     :param collection: the AIRC image collection name
     :param series_specs: the (subject, session, scan, dicom_files) tuples to stage
-    :param opts: the workflow options
-    :keyword dest: the destination directory (default current working directory)
+    :param opts: the workflow options described below
+    :keyword base_dir: the workflow execution directory (default current directory)
+    :keyword config: the workflow inputs configuration file 
+    :keyword dest: the destination directory
+        (default is workflow execution ``data`` subdirectory)
     :return: the staging workflow, or None if there are no new images
     """
     msg = 'Creating the staging workflow'
@@ -71,16 +74,18 @@ def create_workflow(collection, *series_specs, **opts):
         msg = msg + ' with options %s...' % opts
     logger.debug("%s...", msg)
     
+    base_dir = opts.get('base_dir', None) or os.getcwd()
+    
     # The staging location.
-    dest = os.path.abspath(opts.pop('dest', None) or os.getcwd())
+    dest = os.path.abspath(opts.pop('dest', None) or os.path.join(base_dir, 'data'))
     
     # The workflow.
-    workflow = pe.Workflow(name='staging', **opts)
+    workflow = pe.Workflow(name='staging', base_dir=base_dir)
     
     # The subjects with new sessions.
     subjects = {sbj for sbj, _, _, _ in series_specs}
     
-    # The workflow subject inputs.
+    # The workflow (collection, directory, subjects) input.
     subject_spec = pe.Node(IdentityInterface(fields=['collection', 'dest', 'subjects']),
         name='subject_spec')
     subject_spec.inputs.collection = collection

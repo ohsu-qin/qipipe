@@ -15,7 +15,7 @@ class XNATDownloadInputSpec(BaseInterfaceInputSpec):
     
     reconstruction = traits.Str(desc='The XNAT reconstruction resource container name')
     
-    analysis = traits.Str(desc='The XNAT assessment resource container name')
+    analysis = traits.Str(desc='The XNAT assessor resource container name')
     
     format = traits.Enum('NIFTI', 'DICOM', desc='The XNAT image format (default NIFTI)')
     

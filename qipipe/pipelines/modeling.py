@@ -8,7 +8,7 @@ from ..helpers import file_helper
 from ..helpers.globals import PROJECT
 
 PK_PREFIX = 'pk'
-"""The XNAT modeling assessment object label prefix."""
+"""The XNAT modeling assessor object label prefix."""
 
 DISTRIBUTABLE = not not distutils.spawn.find_executable('qsub')
 """Flag indicating whether the workflow can be distributed over a cluster."""

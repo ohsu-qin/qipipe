@@ -129,8 +129,9 @@ def create_workflow(subject, session, *images, **opts):
     :param subject: the XNAT subject label
     :param session: the XNAT session label
     :param images: the input session scan NiFTI stacks
-    :param base_dir: the workflow execution directory 
-    :param config: the workflow inputs configuration file 
+    :param opts: the workflow options described below
+    :keyword base_dir: the workflow execution directory (default current directory)
+    :keyword config: the workflow inputs configuration file 
     :return: the registration Workflow object
     """
     msg = 'Creating the %s %s registration workflow' % (subject, session)
