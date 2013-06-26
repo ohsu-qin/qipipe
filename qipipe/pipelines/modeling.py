@@ -1,4 +1,4 @@
-import os
+import os, distutils
 from collections import defaultdict
 import nipype.pipeline.engine as pe
 from nipype.interfaces.dcmstack import DcmStack, MergeNifti, CopyMeta
