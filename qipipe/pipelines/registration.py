@@ -121,10 +121,10 @@ def create_workflow(subject, session, *images, **opts):
     transform.
     
     :Note: this workflow cannot be embedded in another workflow, since the
-    workflow iterates over each image. A Nipype iterator is defined when the
-    workflow is built, and cannot be set dynamically during execution.
-    Consequently, the subject, session and images inputs are wired into the workflow
-    and cannot be set dynamically from the output of a parent execution workflow.
+        workflow iterates over each image. A Nipype iterator is defined when the
+        workflow is built, and cannot be set dynamically during execution.
+        Consequently, the subject, session and images inputs are wired into the workflow
+        and cannot be set dynamically from the output of a parent execution workflow.
     
     :param subject: the XNAT subject label
     :param session: the XNAT session label
