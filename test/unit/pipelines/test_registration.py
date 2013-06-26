@@ -72,7 +72,7 @@ class TestRegistrationWorkflow(object):
             self._verify_result(xnat, sess_files_dict, recon_specs)
             
             # Clean up.
-            subjects = 
+            subjects = {sbj for sbj, _ in sess_files_dict.iterkeys()}
             delete_subjects(PROJECT, *subjects)
     
     def _seed_xnat(self, fixture, collection):
