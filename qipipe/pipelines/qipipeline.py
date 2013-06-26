@@ -31,9 +31,9 @@ def run(collection, *subject_dirs, **opts):
 
     - Masks, registers and reslices each new visit.
 
-    - Uploads the resampled images into XNAT.
+    - Uploads the resliced images into XNAT.
 
-    - Performs a parameteric mapping on both the scanned and resampled images.
+    - Performs a parameteric mapping on both the scanned and resliced images.
 
     - Uploads the parameteric mappings into XNAT.
     
