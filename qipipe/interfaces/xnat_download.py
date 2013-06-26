@@ -53,7 +53,7 @@ class XNATDownload(BaseInterface):
     def _list_outputs(self):
         outputs = self._outputs().get()
         outputs['out_files'] = self._out_files
-        if len(self._out_files) == 1
+        if len(self._out_files) == 1:
             outputs['out_file'] = self._out_files[0]
         
         return outputs
