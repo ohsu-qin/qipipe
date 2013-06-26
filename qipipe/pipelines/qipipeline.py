@@ -114,5 +114,5 @@ class QIPipeline(object):
                 return reg_specs
             
             mdl_dir = os.path.join(work_dir, 'modeling')
-            mdl_inputs = [(dict(subject=sbj, session=sess, reconstruction=recon) for sbj, sess, recon in reg_specs]
+            mdl_inputs = [dict(subject=sbj, session=sess, reconstruction=recon) for sbj, sess, recon in reg_specs]
             return modeling.run(*mdl_inputs, base_dir=mdl_dir, **opts)
