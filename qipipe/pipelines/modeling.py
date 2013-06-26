@@ -155,7 +155,7 @@ def create_workflow(base_dir=None, **inputs):
     :Note: this workflow uses proprietary OHSU AIRC software, notably the BOLERO implementation
         of the `shutter speed model`_.
     
-    .. _`shutter speed model` http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2582583
+    .. _shutter speed model: http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2582583
     
     :param inputs: the optional workflow ``input_spec`` node inputs listed below
     :keyword r1_0_val: the optional fixed |R10| value
