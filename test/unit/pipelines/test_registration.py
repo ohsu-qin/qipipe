@@ -37,6 +37,9 @@ class TestRegistrationWorkflow(object):
     This test exercises the registration workflow on three series of one visit in each of the
     Breast and Sarcoma studies.
     """
+    def __init__(self):
+        """Sets the ``_logger`` instance variable."""
+        self._logger = logger
     
     def setUp(self):
         shutil.rmtree(RESULTS, True)
@@ -58,7 +61,7 @@ class TestRegistrationWorkflow(object):
         :param collection: the collection name
         """
         fixture = os.path.join(FIXTURES, collection.lower())
-        logger.debug("Testing the registration workflow on %s..." % fixture)
+        self._logger.debug("Testing the workflow on %s..." % fixture)
 
         # The workflow base directory.
         base_dir = os.path.join(RESULTS, collection.lower(), 'work')
@@ -74,7 +77,7 @@ class TestRegistrationWorkflow(object):
             # Clean up.
             subjects = {sbj for sbj, _ in sess_files_dict.iterkeys()}
             delete_subjects(PROJECT, *subjects)
-    
+
     def _seed_xnat(self, fixture, collection):
         """
         Seed XNAT with the test files.
@@ -120,7 +123,7 @@ class TestRegistrationWorkflow(object):
         with xnat_helper.connection() as xnat:
             sess_obj = xnat.get_session(PROJECT, subject, dname)
             fnames = [self._upload_file(sess_obj, f) for f in glob.glob(session_dir + '/series*.nii.gz')]
-            logger.debug("%s uploaded the %s test files %s." % (self.__class__, sess_obj.label(), fnames))
+            self._logger.debug("%s uploaded the %s test files %s." % (self.__class__, sess_obj.label(), fnames))
         
         return (sess_obj.label(), fnames)
     

@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from qipipe.helpers.globals import PROJECT
+from test.helpers.globals import PROJECT
 from qipipe.pipelines import staging
 from qipipe.helpers import xnat_helper
 from qipipe.helpers.xnat_helper import delete_subjects
@@ -71,7 +71,7 @@ class TestStagingWorkflow(object):
             delete_subjects(PROJECT, *subjects)
 
             # Run the pipeline.
-            session_specs = staging.run(collection, *sources, dest=dest, work=work)
+            session_specs = staging.run(collection, *sources, base_dir=dest)
 
             # Verify the result.
             for sbj, sess in session_specs:
@@ -79,7 +79,7 @@ class TestStagingWorkflow(object):
                 assert_true(sess_obj.exists(), "The %s %s session was not created in XNAT" % (sbj, sess))
         
             # Delete the test subjects.
-            delete_subjects(PROJECT, *subjects)
+            #delete_subjects(PROJECT, *subjects)
 
 
 if __name__ == "__main__":

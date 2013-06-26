@@ -23,7 +23,7 @@ RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'xnat')
 SUBJECT = generate_subject_name(__name__)
 """The test subject name."""
 
-SESSION = "%s_%s" % (SUBJECT, 'Session01')
+SESSION = 'Session01'
 """The test session name."""
 
 SCAN = 9
@@ -55,10 +55,11 @@ class TestXNATDownload:
                     for f in glob.glob(scan_dir + '/*.dcm.gz'):
                         _, fname = os.path.split(f)
                         self._file_names.add(fname)
-                        file_obj = sbj.experiment(SESSION).scan(str(SCAN)).resource(FORMAT).file(fname)
+                        scan_obj = xnat.get_scan(PROJECT, SUBJECT, SESSION, SCAN)
+                        file_obj = scan_obj.resource(FORMAT).file(fname)
                         # Upload the file.
                         file_obj.insert(f, experiments='xnat:MRSessionData', format=FORMAT)
-        logger.debug("Uploaded the test %s files %s." % (SESSION, list(self._file_names)))
+        logger.debug("Uploaded the test %s %s files %s." % (SUBJECT, SESSION, list(self._file_names)))
     
     def tearDown(self):
         delete_subjects(PROJECT, SUBJECT)

@@ -27,6 +27,10 @@ class TestModelingWorkflow(TestRegistrationWorkflow):
     Breast and Sarcoma studies.
     """
 
+    def __init__(self):
+        """Sets the ``_logger`` instance variable."""
+        self._logger = logger
+    
     def _run_workflow(self, *session_specs, **opts):
         return modeling.run(*session_specs, config=REG_CONF, **opts)
     

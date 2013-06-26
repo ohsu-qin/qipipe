@@ -16,6 +16,12 @@ from test.helpers.xnat_test_helper import generate_subject_name
 SUBJECT = generate_subject_name(__name__)
 """The test subject name."""
 
+SESSION = 'MR1'
+"""The test session name."""
+
+SCAN = 1
+"""The test scan number."""
+
 from nipype import config
 cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
     execution=dict(crashdump_dir=RESULTS, create_report=False))
@@ -34,19 +40,18 @@ class TestXNATUpload:
     
     def test_upload(self):
         logger.debug("Testing the XNATUpload interface on %s..." % SUBJECT)
-        # The XNAT experiment name.
-        sess = "%s_%s" % (SUBJECT, 'MR1')
         # Upload the file.
-        upload = XNATUpload(project=PROJECT, subject=SUBJECT, session=sess, scan=1, in_files=FIXTURE)
+        upload = XNATUpload(project=PROJECT, subject=SUBJECT, session=SESSION, scan=1, in_files=FIXTURE)
         result = upload.run()
         
         # Verify the result.
         with xnat_helper.connection() as xnat:
-            sbj = xnat.interface.select('/project/QIN').subject(SUBJECT)
-            assert_true(sbj.exists(), "Upload did not create the subject: %s" % SUBJECT)
+            scan_obj = xnat.get_scan(PROJECT, SUBJECT, SESSION, SCAN)
+            assert_true(scan_obj.exists(), "Upload did not create the scan: %s" % SUBJECT)
             _, fname = os.path.split(FIXTURE)
-            file_obj = sbj.experiment(sess).scan('1').resource('NIFTI').file(fname)
-            assert_true(file_obj.exists(), "Upload did not upload the %s file: %s" % (SUBJECT, fname))
+            file_obj = scan_obj.resource('NIFTI').file(fname)
+            assert_true(file_obj.exists(),
+                "Upload did not upload the %s %s file: %s" % (SUBJECT, SESSION, fname))
 
 
 if __name__ == "__main__":
