@@ -153,7 +153,7 @@ def create_workflow(base_dir=None, **inputs):
     This workflow is adapted from https://everett.ohsu.edu/hg/qin_dce.
     
     :Note: this workflow uses proprietary OHSU AIRC software, notably the BOLERO implementation
-    of the `shutter speed model`_.
+        of the `shutter speed model`_.
     
     .. _`shutter speed model` http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2582583/?tool=pubmed
     
