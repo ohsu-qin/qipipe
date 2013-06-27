@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from qipipe.helpers.globals import PROJECT
+from test.helpers.project import project
 from qipipe.pipelines import modeling
 from .test_registration import ROOT, FIXTURES, TestRegistrationWorkflow
 
@@ -40,7 +40,7 @@ class TestModelingWorkflow(TestRegistrationWorkflow):
             assert_in(spec, sess_anl_dict, "The session %s %s was not modeled" % spec)
             anl = sess_anl_dict[spec]
             sbj, sess = spec
-            anl_obj = xnat.get_analysis(PROJECT, sbj, sess, anl)
+            anl_obj = xnat.get_analysis(project(), sbj, sess, anl)
             assert_true(anl_obj.exists(),
                 "The %s %s %s XNAT analysis object was not created" % (sbj, sess, anl))
 

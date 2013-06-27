@@ -5,7 +5,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from qipipe.helpers.globals import PROJECT
+from test.helpers.project import project
 from qipipe.interfaces import XNATUpload
 from qipipe.helpers import xnat_helper
 from qipipe.helpers import xnat_helper
@@ -32,21 +32,21 @@ class TestXNATUpload:
     """The XNAT upload interface unit tests."""
     
     def setUp(self):
-        delete_subjects(PROJECT, SUBJECT)
+        delete_subjects(project(), SUBJECT)
         
     def tearDown(self):
-        delete_subjects(PROJECT, SUBJECT)
+        delete_subjects(project(), SUBJECT)
         shutil.rmtree(RESULTS, True)
     
     def test_upload(self):
         logger.debug("Testing the XNATUpload interface on %s..." % SUBJECT)
         # Upload the file.
-        upload = XNATUpload(project=PROJECT, subject=SUBJECT, session=SESSION, scan=1, in_files=FIXTURE)
+        upload = XNATUpload(project=project(), subject=SUBJECT, session=SESSION, scan=1, in_files=FIXTURE)
         result = upload.run()
         
         # Verify the result.
         with xnat_helper.connection() as xnat:
-            scan_obj = xnat.get_scan(PROJECT, SUBJECT, SESSION, SCAN)
+            scan_obj = xnat.get_scan(project(), SUBJECT, SESSION, SCAN)
             assert_true(scan_obj.exists(), "Upload did not create the scan: %s" % SUBJECT)
             _, fname = os.path.split(FIXTURE)
             file_obj = scan_obj.resource('NIFTI').file(fname)

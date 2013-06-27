@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from test.helpers.globals import PROJECT
+from test.helpers.project import project
 from qipipe.pipelines import staging
 from qipipe.helpers import xnat_helper
 from qipipe.helpers.xnat_helper import delete_subjects
@@ -51,7 +51,7 @@ class TestStagingWorkflow(object):
         verified manually.
         
         :param collection: the AIRC collection name
-        """
+        """       
         fixture = os.path.join(FIXTURES, collection.lower())
         logger.debug("Testing the staging workflow on %s..." % fixture)
 
@@ -68,18 +68,18 @@ class TestStagingWorkflow(object):
         
         with xnat_helper.connection() as xnat:
             # Delete any existing test subjects.
-            delete_subjects(PROJECT, *subjects)
+            delete_subjects(project(), *subjects)
 
             # Run the pipeline.
             session_specs = staging.run(collection, *sources, base_dir=dest)
 
             # Verify the result.
             for sbj, sess in session_specs:
-                sess_obj = xnat.get_session(PROJECT, sbj, sess)
+                sess_obj = xnat.get_session(project(), sbj, sess)
                 assert_true(sess_obj.exists(), "The %s %s session was not created in XNAT" % (sbj, sess))
         
             # Delete the test subjects.
-            #delete_subjects(PROJECT, *subjects)
+            delete_subjects(project(), *subjects)
 
 
 if __name__ == "__main__":

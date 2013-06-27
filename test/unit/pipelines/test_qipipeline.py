@@ -5,7 +5,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from qipipe.helpers.globals import PROJECT
+from test.helpers.project import project
 from qipipe.pipelines import qipipeline as qip
 from qipipe.helpers.dicom_helper import iter_dicom
 from qipipe.helpers import xnat_helper
@@ -103,7 +103,7 @@ class TestQIPipeline:
         
         with xnat_helper.connection() as xnat:
             # Delete any existing test subjects.
-            delete_subjects(PROJECT, *subjects)
+            delete_subjects(project(), *subjects)
 
             # Run the staging and registration workflows, but not the modeling.
             logger.debug("Executing the QIN pipeline...")
@@ -111,11 +111,11 @@ class TestQIPipeline:
 
             # Verify the result.
             for sbj, sess, recon in reg_specs:
-                reg_obj = xnat.get_reconstruction(PROJECT, sbj, sess, recon)
+                reg_obj = xnat.get_reconstruction(project(), sbj, sess, recon)
                 assert_true(reg_obj.exists(), "The %s %s reconstruction %s was not created in XNAT" % (sbj, sess, recon))
             
             # Delete the test subjects.
-            delete_subjects(PROJECT, *subjects)
+            delete_subjects(project(), *subjects)
 
 
 if __name__ == "__main__":

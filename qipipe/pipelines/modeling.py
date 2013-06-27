@@ -5,7 +5,7 @@ from nipype.interfaces.dcmstack import DcmStack, MergeNifti, CopyMeta
 from nipype.interfaces.utility import IdentityInterface, Function
 from ..interfaces import XNATDownload, XNATUpload, Fastfit
 from ..helpers import file_helper
-from ..helpers.globals import PROJECT
+from ..helpers.project import project
 
 PK_PREFIX = 'pk'
 """The XNAT modeling assessor object label prefix."""
@@ -58,12 +58,12 @@ def run(*inputs, **opts):
     input_spec.iterables = input_list_dict
     
     # Download the mask.
-    dl_mask = XNATDownload(project='QIN', reconstruction='mask', dest=dest)
+    dl_mask = XNATDownload(project=project(), reconstruction='mask', dest=dest)
     exec_wf.connect(input_spec, 'subject', dl_mask, 'subject')
     exec_wf.connect(input_spec, 'session', dl_mask, 'session')
     
     # Download the images.
-    dl_images = XNATDownload(project='QIN', dest=dest)
+    dl_images = XNATDownload(project=project(), dest=dest)
     for field in in_fields:
         exec_wf.connect(input_spec, field, dl_images, field)
 
@@ -74,7 +74,7 @@ def run(*inputs, **opts):
     exec_wf.connect(dl_images, 'out_files', reusable_wf, 'input_spec.in_files')
     
     # Upload the R1 series to XNAT.
-    upload_r1 = pe.Node(XNATUpload(project=PROJECT, resource='r1_series', format='NIFTI'),
+    upload_r1 = pe.Node(XNATUpload(project=project(), resource='r1_series', format='NIFTI'),
         name='upload_r1')
     exec_wf.connect(input_spec, 'subject', upload_r1, 'subject')
     exec_wf.connect(input_spec, 'session', upload_r1, 'session')

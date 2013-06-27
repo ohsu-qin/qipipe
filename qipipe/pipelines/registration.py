@@ -6,7 +6,7 @@ from nipype.interfaces.ants import AverageImages, ApplyTransforms
 from nipype.interfaces.dcmstack import CopyMeta
 from nipype.interfaces import fsl
 from nipype.interfaces.dcmstack import DcmStack, MergeNifti, CopyMeta
-from ..helpers.globals import PROJECT
+from ..helpers.project import project
 from ..interfaces import XNATDownload, XNATUpload, MriVolCluster
 from ..helpers import xnat_helper, file_helper
 from ..helpers.ast_config import read_config
@@ -77,7 +77,7 @@ def _download_scans(subject, session, dest):
     """
 
     with xnat_helper.connection() as xnat:
-        return xnat.download(PROJECT, subject, session, dest=dest, container_type='scan', format='NIFTI')
+        return xnat.download(project(), subject, session, dest=dest, container_type='scan', format='NIFTI')
 
 def create_workflow(subject, session, *images, **opts):
     """
@@ -176,7 +176,7 @@ def create_workflow(subject, session, *images, **opts):
     dce_merge.inputs.in_files = images
     
     # Upload the 4D image to XNAT.
-    upload_4d = pe.Node(XNATUpload(project=PROJECT, reconstruction='4d', format='NIFTI'),
+    upload_4d = pe.Node(XNATUpload(project=project(), reconstruction='4d', format='NIFTI'),
         name='upload_4d')
     upload_4d.inputs.subject = subject
     upload_4d.inputs.session = session
@@ -213,7 +213,7 @@ def create_workflow(subject, session, *images, **opts):
     workflow.connect(binarize, 'out_file', inv_mask, 'in_file')
     
     # Upload the mask to XNAT.
-    upload_mask = pe.Node(XNATUpload(project=PROJECT, reconstruction='mask', format='NIFTI'),
+    upload_mask = pe.Node(XNATUpload(project=project(), reconstruction='mask', format='NIFTI'),
         name='upload_mask')
     upload_mask.inputs.subject = subject
     upload_mask.inputs.session = session
@@ -245,7 +245,7 @@ def create_workflow(subject, session, *images, **opts):
     workflow.connect(reslice, 'output_image', copy_meta, 'dest_file')
     
     # Upload the resliced image to XNAT.
-    upload_reg = pe.Node(XNATUpload(project=PROJECT, format='NIFTI'),
+    upload_reg = pe.Node(XNATUpload(project=project(), format='NIFTI'),
         name='upload_reg')
     upload_reg.inputs.subject = subject
     upload_reg.inputs.session = session

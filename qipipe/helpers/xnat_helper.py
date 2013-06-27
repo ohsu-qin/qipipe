@@ -17,7 +17,7 @@ def connection():
     Example:
         >>> from qipipe.helpers import xnat_helper
         >>> with xnat_helper.connection() as xnat:
-        >>>    sbj = xnat.get_subject(PROJECT, 'Breast003')
+        ...    sbj = xnat.get_subject(project(), 'Breast003')
 
     :return a :class:`XNAT` instance
     """
@@ -51,9 +51,9 @@ def canonical_label(*names):
     Example:
     
     >>> from qipipe.helpers.xnat_helper import canonical_label
-    ... canonical_label('QIN', 'Breast003', 'Session01')
+    >>> canonical_label('QIN', 'Breast003', 'Session01')
     'QIN_Breast003_Session01'
-    ... canonical_label('QIN', 'Breast003', 'QIN_Breast003_Session01')
+    >>> canonical_label('QIN', 'Breast003', 'QIN_Breast003_Session01')
     'QIN_Breast003_Session01'
     
     :param names: the object names
@@ -254,7 +254,7 @@ class XNAT(object):
         """
         Imports the given files into the XNAT resource with the following hierarchy:
     
-            /project/PROJECT/subject/SUBJECT/experiment/SESSION/I{container}/CONTAINER/resource/FORMAT
+            /project/project()/subject/SUBJECT/experiment/SESSION/I{container}/CONTAINER/resource/FORMAT
     
         where:
         -  the XNAT experiment name is the ``session`` parameter
@@ -280,7 +280,7 @@ class XNAT(object):
     
         >>> from qipipe.helpers import xnat_helper
         >>> xnat = xnat_helper.facade()
-        >>> xnat.upload(PROJECT, 'Sarcoma003', 'Sarcoma003_Session01', scan=4, modality='MR',
+        >>> xnat.upload(project(), 'Sarcoma003', 'Sarcoma003_Session01', scan=4, modality='MR',
         >>>    format='NIFTI', *in_files)
 
         :param project: the XNAT project id

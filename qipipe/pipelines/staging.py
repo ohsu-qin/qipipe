@@ -2,7 +2,7 @@ import os
 import nipype.pipeline.engine as pe
 from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.dcmstack import DcmStack
-from ..helpers.globals import PROJECT
+from ..helpers.project import project
 from ..interfaces import Unpack, FixDicom, Compress, MapCTP, XNATUpload
 from ..staging.staging_error import StagingError
 from ..staging.staging_helper import subject_for_directory, iter_new_visits, group_dicom_files_by_series
@@ -124,7 +124,7 @@ def create_workflow(collection, *series_specs, **opts):
     workflow.connect(ctp_dir, 'out_dir', compress_dicom, 'dest')
     
     # Store the compressed scan DICOM files in XNAT.
-    upload_dicom = pe.Node(XNATUpload(project=PROJECT, format='DICOM'), name='upload_dicom')
+    upload_dicom = pe.Node(XNATUpload(project=project(), format='DICOM'), name='upload_dicom')
     workflow.connect(series_spec, 'subject', upload_dicom, 'subject')
     workflow.connect(series_spec, 'session', upload_dicom, 'session')
     workflow.connect(series_spec, 'scan', upload_dicom, 'scan')
@@ -136,7 +136,7 @@ def create_workflow(collection, *series_specs, **opts):
     workflow.connect(fix_dicom, 'out_files', stack, 'dicom_files')
     
     # Store the stack files in XNAT.
-    upload_stack = pe.Node(XNATUpload(project=PROJECT, format='NIFTI'), name='upload_stack')
+    upload_stack = pe.Node(XNATUpload(project=project(), format='NIFTI'), name='upload_stack')
     workflow.connect(series_spec, 'subject', upload_stack, 'subject')
     workflow.connect(series_spec, 'session', upload_stack, 'session')
     workflow.connect(series_spec, 'scan', upload_stack, 'scan')

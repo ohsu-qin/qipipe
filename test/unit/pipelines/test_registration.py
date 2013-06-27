@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from qipipe.helpers.globals import PROJECT
+from test.helpers.project import project
 from qipipe.pipelines import registration
 from qipipe.helpers import xnat_helper
 from qipipe.helpers.xnat_helper import delete_subjects
@@ -76,7 +76,7 @@ class TestRegistrationWorkflow(object):
             
             # Clean up.
             subjects = {sbj for sbj, _ in sess_files_dict.iterkeys()}
-            delete_subjects(PROJECT, *subjects)
+            delete_subjects(project(), *subjects)
 
     def _seed_xnat(self, fixture, collection):
         """
@@ -87,7 +87,7 @@ class TestRegistrationWorkflow(object):
         for sbj_dir in glob.glob(fixture + '/' + collection + '*'):
             _, sbj = os.path.split(sbj_dir)
             # Delete a stale test XNAT subject, if necessary.
-            delete_subjects(PROJECT, sbj)
+            delete_subjects(project(), sbj)
             # Populate the test XNAT subject from the test fixture.
             for sess_dir in glob.glob(sbj_dir + '/Session*'):
                 sess, in_files = self._upload_session_files(sbj, sess_dir)
@@ -103,7 +103,7 @@ class TestRegistrationWorkflow(object):
             assert_in(spec, sess_recon_dict, "The session %s %s was not registered" % spec)
             recon = sess_recon_dict[spec]
             sbj, sess = spec
-            recon_obj = xnat.get_reconstruction(PROJECT, sbj, sess, recon)
+            recon_obj = xnat.get_reconstruction(project(), sbj, sess, recon)
             assert_true(recon_obj.exists(),
                 "The %s %s %s XNAT reconstruction object was not created" % (sbj, sess, recon))
             recon_files = recon_obj.out_resource('NIFTI').files().get()
@@ -121,7 +121,7 @@ class TestRegistrationWorkflow(object):
         """
         _, dname = os.path.split(session_dir)
         with xnat_helper.connection() as xnat:
-            sess_obj = xnat.get_session(PROJECT, subject, dname)
+            sess_obj = xnat.get_session(project(), subject, dname)
             fnames = [self._upload_file(sess_obj, f) for f in glob.glob(session_dir + '/series*.nii.gz')]
             self._logger.debug("%s uploaded the %s test files %s." % (self.__class__, sess_obj.label(), fnames))
         

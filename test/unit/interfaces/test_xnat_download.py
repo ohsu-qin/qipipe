@@ -5,7 +5,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from qipipe.helpers.globals import PROJECT
+from test.helpers.project import project
 from qipipe.interfaces import XNATDownload
 from qipipe.helpers import xnat_helper
 from qipipe.helpers.xnat_helper import delete_subjects
@@ -42,7 +42,7 @@ class TestXNATDownload:
     """The  XNAT download interface unit tests."""
     
     def setUp(self):
-        delete_subjects(PROJECT, SUBJECT)
+        delete_subjects(project(), SUBJECT)
         shutil.rmtree(RESULTS, True)
         
         with xnat_helper.connection() as xnat:
@@ -55,20 +55,20 @@ class TestXNATDownload:
                     for f in glob.glob(scan_dir + '/*.dcm.gz'):
                         _, fname = os.path.split(f)
                         self._file_names.add(fname)
-                        scan_obj = xnat.get_scan(PROJECT, SUBJECT, SESSION, SCAN)
+                        scan_obj = xnat.get_scan(project(), SUBJECT, SESSION, SCAN)
                         file_obj = scan_obj.resource(FORMAT).file(fname)
                         # Upload the file.
                         file_obj.insert(f, experiments='xnat:MRSessionData', format=FORMAT)
         logger.debug("Uploaded the test %s %s files %s." % (SUBJECT, SESSION, list(self._file_names)))
     
     def tearDown(self):
-        delete_subjects(PROJECT, SUBJECT)
+        delete_subjects(project(), SUBJECT)
         shutil.rmtree(RESULTS, True)
     
     def test_download(self):
         logger.debug("Testing the XNATDownload interface on %s..." % SUBJECT)
         # Download the files.
-        download = XNATDownload(project=PROJECT, subject=SUBJECT, session=SESSION,
+        download = XNATDownload(project=project(), subject=SUBJECT, session=SESSION,
             scan=9, format=FORMAT, dest=RESULTS)
         result = download.run()
         

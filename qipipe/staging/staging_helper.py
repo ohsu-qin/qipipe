@@ -1,7 +1,7 @@
 """Pipeline utility functions."""
 
 import os, re, glob
-from ..helpers.globals import PROJECT
+from ..helpers.project import project
 from ..helpers import xnat_helper
 from ..helpers.dicom_helper import iter_dicom_headers
 from .staging_error import StagingError
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 SUBJECT_FMT = '%s%03d'
 """The QIN subject name format with arguments (collection, subject number)."""
 
-SESSION_FMT = '%s_Session%02d'
+SESSION_FMT = 'Session%02d'
 """The QIN series name format with arguments (subject, series number)."""
 
 def subject_for_directory(collection, path):
@@ -136,10 +136,11 @@ class NewVisitIterator(object):
                         # The visit (session) number.
                         sess_nbr = self.collection.path2session_number(v)
                         # The XNAT session name.
-                        sess = SESSION_FMT % (sbj, sess_nbr)
+                        sess = SESSION_FMT % sess_nbr
                         # If the session is not yet in XNAT, then yield the session and its files.
-                        if xnat.get_session(PROJECT, sbj, sess).exists():
-                            logger.debug("Skipping session %s since it has already been loaded to XNAT." % sess)
+                        if xnat.get_session(project(), sbj, sess).exists():
+                            logger.debug("Skipping the %s %s %s session"
+                                " since it has already been loaded to XNAT." % (project(), sbj, sess))
                         else:
                             # The DICOM file match pattern.
                             dpat = os.path.join(visit_dir, self.collection.dicom_pattern)
