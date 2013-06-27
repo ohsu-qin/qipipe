@@ -177,7 +177,7 @@ def create_workflow(base_dir=None, **inputs):
     
     # Set up the input node.
     in_fields = ['subject', 'session', 'analysis', 'in_files', 'mask_file', 'baseline_end_idx']
-    if opts.get('r1_0_val'):
+    if 'r1_0_val' in inputs:
         in_fields += ['r1_0_val']
         use_fixed_r1_0 = True
     else:
