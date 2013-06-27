@@ -84,6 +84,7 @@ class TestRegistrationWorkflow(object):
         
         :return: the (subject, session) => scan files dictionary
         """
+        sess_files_dict = {}
         for sbj_dir in glob.glob(fixture + '/' + collection + '*'):
             _, sbj = os.path.split(sbj_dir)
             # Delete a stale test XNAT subject, if necessary.
