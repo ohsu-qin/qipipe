@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from test.helpers.project import project
 from qipipe.pipelines import modeling
-from .test_registration import ROOT, FIXTURES, TestRegistrationWorkflow
+from test.unit.pipelines.test_registration import ROOT, FIXTURES, TestRegistrationWorkflow
 
 RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'analysis')
 """The test results directory."""
