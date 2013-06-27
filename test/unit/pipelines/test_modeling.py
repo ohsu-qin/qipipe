@@ -32,7 +32,7 @@ class TestModelingWorkflow(TestRegistrationWorkflow):
         self._logger = logger
     
     def _run_workflow(self, *session_specs, **opts):
-        return modeling.run(*session_specs, config=REG_CONF, **opts)
+        return modeling.run(*session_specs, **opts)
     
     def _verify_result(self, xnat, sess_files_dict, *analysis_specs):
         sess_anl_dict = {(sbj, sess): anl for sbj, sess, anl in analysis_specs}
