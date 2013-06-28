@@ -78,12 +78,15 @@ def run(*inputs, **opts):
     exec_wf.connect(dl_mask, 'out_file', reusable_wf, 'input_spec.mask_file')
     exec_wf.connect(dl_images, 'out_files', reusable_wf, 'input_spec.in_files')
     
+    # Make the default XNAT assessment object label, if necessary. The label is unique, which
+    # permits more than one modeling to be stored for each input series without a name conflict.
+    analysis = "%s_%s" % (PK_PREFIX, file_helper.generate_file_name())
+    
     # Upload the R1 series to XNAT.
-    upload_r1 = pe.Node(XNATUpload(project=project(), resource='r1_series', format='NIFTI'),
-        name='upload_r1')
+    upload_r1 = pe.Node(XNATUpload(project=project(), analysis=analysis,
+        resource='r1_series', format='NIFTI'), name='upload_r1')
     exec_wf.connect(input_spec, 'subject', upload_r1, 'subject')
     exec_wf.connect(input_spec, 'session', upload_r1, 'session')
-    exec_wf.connect(input_spec, 'analysis', upload_r1, 'analysis')
     exec_wf.connect(reusable_wf, 'output_spec.r1_series', upload_r1, 'in_files')
     
     # TODO - Upload the remaining outputs to XNAT.
@@ -171,17 +174,12 @@ def create_workflow(base_dir=None, **inputs):
     """
     workflow = pe.Workflow(name='modeling')
     
-    # Make the default XNAT assessment object label, if necessary. The label is unique, which
-    # permits more than one modeling to be stored for each input series without a name conflict.
-    if 'analysis' not in inputs:
-        inputs['analysis'] = "%s_%s" % (PK_PREFIX, file_helper.generate_file_name())
-    
     # The default baseline image count.
     if 'baseline_end_idx' not in inputs:
         inputs['baseline_end_idx'] = 1
     
     # Set up the input node.
-    in_fields = ['subject', 'session', 'analysis', 'in_files', 'mask_file', 'baseline_end_idx']
+    in_fields = ['subject', 'session', 'in_files', 'mask_file', 'baseline_end_idx']
     if 'r1_0_val' in inputs:
         in_fields += ['r1_0_val']
         use_fixed_r1_0 = True
