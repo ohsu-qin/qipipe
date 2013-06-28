@@ -51,7 +51,7 @@ def run(*inputs, **opts):
     # The execution workflow input {field name: values} dictionary.
     iterables = defaultdict(list)
     for spec in inputs:
-        for k, v in list(spec).iteritems():
+        for k, v in spec.iteritems():
             iterables[k].append(v)
     # The input field names.
     in_fields = iterables.keys()

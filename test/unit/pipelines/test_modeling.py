@@ -6,8 +6,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from test.helpers.project import project
 from qipipe.pipelines import modeling
+from qipipe.helpers import xnat_helper
+from test.helpers.project import project
 from test.unit.pipelines.test_registration import ROOT, FIXTURES, TestRegistrationWorkflow
 
 RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'analysis')
@@ -32,7 +33,18 @@ class TestModelingWorkflow(TestRegistrationWorkflow):
         self._logger = logger
     
     def _run_workflow(self, *session_specs, **opts):
-        return modeling.run(*session_specs, **opts)
+        # Collect all session scans as dictionaries. Each dictionary has
+        # subject, session and scan key => value items.
+        scan_dicts = []
+        with xnat_helper.connection() as xnat:
+            sbj, sess = session_spec
+            sess_obj = xnat.get_session(subject=sbj, session=sess)
+            for scan_obj in sess_obj.scans():
+                scan_dict = dict(subject=sbj, session=sess, scan=scan_obj.label())
+                scan_dicts.append(scan_dict)
+        
+        # Run the workflow.
+        return modeling.run(*scan_dicts, **opts)
     
     def _verify_result(self, xnat, sess_files_dict, *analysis_specs):
         sess_anl_dict = {(sbj, sess): anl for sbj, sess, anl in analysis_specs}
