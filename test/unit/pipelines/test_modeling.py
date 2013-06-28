@@ -37,11 +37,11 @@ class TestModelingWorkflow(TestRegistrationWorkflow):
         # subject, session and scan key => value items.
         scan_dicts = []
         with xnat_helper.connection() as xnat:
-            sbj, sess = session_spec
-            sess_obj = xnat.get_session(subject=sbj, session=sess)
-            for scan_obj in sess_obj.scans():
-                scan_dict = dict(subject=sbj, session=sess, scan=scan_obj.label())
-                scan_dicts.append(scan_dict)
+            for sbj, sess in session_specs:
+                sess_obj = xnat.get_session(subject=sbj, session=sess)
+                for scan_obj in sess_obj.scans():
+                    scan_dict = dict(subject=sbj, session=sess, scan=scan_obj.label())
+                    scan_dicts.append(scan_dict)
         
         # Run the workflow.
         return modeling.run(*scan_dicts, **opts)
