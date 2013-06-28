@@ -63,7 +63,7 @@ def run(*inputs, **opts):
     input_spec.iterables = iterables
     
     # Download the mask.
-    dl_mask = pe.Node(XNATDownload(project=project(), reconstruction='mask', dest=dest, name='dl_mask')
+    dl_mask = pe.Node(XNATDownload(project=project(), reconstruction='mask', dest=dest), name='dl_mask')
     exec_wf.connect(input_spec, 'subject', dl_mask, 'subject')
     exec_wf.connect(input_spec, 'session', dl_mask, 'session')
     
