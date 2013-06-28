@@ -2,6 +2,14 @@
 pipelines
 =========
 
+:mod:`pipelines` Package
+------------------------
+
+.. automodule:: qipipe.pipelines
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :mod:`pipeline_error`
 ---------------------
 
