@@ -46,7 +46,7 @@ def run(*inputs, **opts):
     dest = os.path.join(base_dir, 'data')
     
     # Make the execution workflow.
-    exec_wf = pe.Workflow(name='_'.join(reusable_wf.name, 'exec'))
+    exec_wf = pe.Workflow(name=reusable_wf.name+'_exec')
     
     # The execution workflow inputs.
     input_list_dict = defaultdict(list)
