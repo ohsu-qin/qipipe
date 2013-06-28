@@ -14,4 +14,4 @@ def generate_subject_name(name):
     :param name: the test name
     :return: the test subject name
     """
-    return 'Test_' + encode(name).strip('=')
+    return encode(name).strip('=')

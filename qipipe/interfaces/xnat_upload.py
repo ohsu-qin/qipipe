@@ -11,6 +11,8 @@ class XNATUploadInputSpec(BaseInterfaceInputSpec):
 
     session = traits.Str(mandatory=True, desc='The XNAT session name')
     
+    resource = traits.Str(desc='The XNAT resource name')
+    
     format = traits.Str(desc='The XNAT image format')
 
     scan = traits.Either(traits.Int, traits.Str, desc='The XNAT scan name')
@@ -26,14 +28,23 @@ class XNATUpload(BaseInterface):
     input_spec = XNATUploadInputSpec
 
     def _run_interface(self, runtime):
-        opts = dict(modality='MR', format=self.inputs.format)
+        # The upload options.
+        opts = {}
+        if self.inputs.format:
+            opts['format'] = self.inputs.format
+        if self.inputs.resource:
+            opts['resource'] = self.inputs.resource
+        
         # The resource parent.
         if self.inputs.scan:
+            opts['modality'] = 'MR'
             opts['scan'] = self.inputs.scan
         elif self.inputs.reconstruction:
             opts['reconstruction'] = self.inputs.reconstruction
         elif self.inputs.analysis:
             opts['analysis'] = self.inputs.analysis
+        
+        # Upload the files.
         with xnat_helper.connection() as xnat:
             xnat.upload(self.inputs.project, self.inputs.subject, self.inputs.session,
                 *self.inputs.in_files, **opts)
