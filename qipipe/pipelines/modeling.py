@@ -56,19 +56,19 @@ def run(*inputs, **opts):
     # The input field names.
     in_fields = iterables.keys()
     # The input node.
-    input_spec = pe.Node(IdentityInterface(fields=in_fields))
+    input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
     # The workflow will iterate over the inputs. Due to a Nipype constraint,
     # the iterables are set when the workflow is built, and cannot be set
     # dynamically when the workflow is run.
     input_spec.iterables = iterables
     
     # Download the mask.
-    dl_mask = XNATDownload(project=project(), reconstruction='mask', dest=dest)
+    dl_mask = pe.Node(XNATDownload(project=project(), reconstruction='mask', dest=dest, name='dl_mask')
     exec_wf.connect(input_spec, 'subject', dl_mask, 'subject')
     exec_wf.connect(input_spec, 'session', dl_mask, 'session')
     
     # Download the images.
-    dl_images = XNATDownload(project=project(), dest=dest)
+    dl_images = pe.Node(XNATDownload(project=project(), dest=dest), name='dl_impages')
     for field in in_fields:
         exec_wf.connect(input_spec, field, dl_images, field)
 
@@ -90,7 +90,7 @@ def run(*inputs, **opts):
 
     # Collect the workflow output fields.
     out_fields = ['subject', 'session', 'analysis']
-    output_spec = pe.Node(IdentityInterface(fields=out_fields))
+    output_spec = pe.Node(IdentityInterface(fields=out_fields), name='output_spec')
     for field in out_fields:
         exec_wf.connect(input_spec, field, output_spec, field)
 
