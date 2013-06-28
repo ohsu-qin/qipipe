@@ -38,7 +38,7 @@ class TestModelingWorkflow(TestRegistrationWorkflow):
         scan_dicts = []
         with xnat_helper.connection() as xnat:
             for sbj, sess in session_specs:
-                sess_obj = xnat.get_session(subject=sbj, session=sess)
+                sess_obj = xnat.get_session(project=project(), subject=sbj, session=sess)
                 for scan_obj in sess_obj.scans():
                     scan_dict = dict(subject=sbj, session=sess, scan=scan_obj.label())
                     scan_dicts.append(scan_dict)
