@@ -1,5 +1,5 @@
 """
-This module resets the :meth:project from ``QIN`` to ``QIN_Test``.
+This module resets the :meth:`(\w+)` from ``QIN`` to ``QIN_Test``.
 """
 
 from qipipe.helpers.project import project

@@ -27,7 +27,7 @@ def run(*inputs, **opts):
     The NiFTI session mask and input image files are downloaded from XNAT
     into the ``input`` subdirectory of the execution working directory.
     
-    The modeling workflow is then built as described in :meth:create_workflow
+    The modeling workflow is then built as described in :meth:`(\w+)`
     and executed. The result is uploaded to an XNAT analysis resource.
     
     If the ``qsub`` executable is found in the execution environment, then the
@@ -35,7 +35,7 @@ def run(*inputs, **opts):
 
     :param inputs: the XNAT input reconstruction or scan XNAT inputs
     :param base_dir: the execution working directory (default is the current directory)
-    :param opts: the optional workflow inputs described in :meth:create_workflow 
+    :param opts: the optional workflow inputs described in :meth:`(\w+)` 
     :return: the modeling XNAT (subject, session, analysis) tuples
     """
     # The workflow directory.

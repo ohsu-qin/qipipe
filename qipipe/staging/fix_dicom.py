@@ -10,21 +10,25 @@ def fix_dicom_headers(collection, subject, *dicom_files, **opts):
     """
     Fix the given input OHSU QIN AIRC DICOM files as follows:
 
-        - Replace the ``Patient ID`` value with the subject number, e.g. ``Sarcoma001``
+    - Replace the ``Patient ID`` value with the subject number, e.g. ``Sarcoma001``
 
-        - Add the ``Body Part Examined`` tag
+    - Add the ``Body Part Examined`` tag
 
-        - Standardize the file name
+    - Standardize the file name
+
+    The ``Body Part Examined`` is set as follows:
+
+    - If the collection is ``Sarcoma``, then the body part is the :meth:`sarcoma_location`.
+    
+    - Otherwise, the body part is the capitalized collection name, e.g. ``BREAST``.
         
     The output file name is standardized as follows:
 
-        - The file name is lower-case
+    - The file name is lower-case
 
-        - The file extension is ``.dcm``
+    - The file extension is ``.dcm``
 
-        - Each non-word character is replaced by an underscore
-
-    The supported collection names are defined in the ``COLLECTIONS`` set.
+    - Each non-word character is replaced by an underscore
     
     :param collection: the collection name
     :param subject: the input subject name

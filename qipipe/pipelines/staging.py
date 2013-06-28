@@ -18,7 +18,7 @@ def run(collection, *subject_dirs, **opts):
     
     :param collection: the AIRC image collection name
     :param subject_dirs: the AIRC source subject directories to stage
-    :param opts: the :meth:create_workflow options
+    :param opts: the :meth:`create_workflow` options
     :return: the new XNAT (subject, session) name tuples
     """
     
