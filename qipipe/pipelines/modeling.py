@@ -93,8 +93,9 @@ def run(*inputs, **opts):
 
     # Collect the workflow output fields.
     out_fields = ['subject', 'session', 'analysis']
-    output_spec = pe.Node(IdentityInterface(fields=out_fields), name='output_spec')
-    for field in out_fields:
+    output_spec = pe.Node(IdentityInterface(fields=out_fields, analysis=analysis),
+        name='output_spec')
+    for field in ['subject', 'session']:
         exec_wf.connect(input_spec, field, output_spec, field)
 
     # Check whether the workflow can be distributed.
