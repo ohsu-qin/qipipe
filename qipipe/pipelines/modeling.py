@@ -49,18 +49,18 @@ def run(*inputs, **opts):
     exec_wf = pe.Workflow(name=reusable_wf.name+'_exec')
     
     # The execution workflow input {field name: values} dictionary.
-    iterables = defaultdict(list)
+    iter_dict = defaultdict(list)
     for spec in inputs:
         for k, v in spec.iteritems():
-            iterables[k].append(v)
+            iter_dict[k].append(v)
     # The input field names.
-    in_fields = iterables.keys()
+    in_fields = iter_dict.keys()
     # The input node.
     input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
     # The workflow will iterate over the inputs. Due to a Nipype constraint,
     # the iterables are set when the workflow is built, and cannot be set
     # dynamically when the workflow is run.
-    input_spec.iterables = iterables
+    input_spec.iterables = iter_dict.items()
     
     # Download the mask.
     dl_mask = pe.Node(XNATDownload(project=project(), reconstruction='mask', dest=dest), name='dl_mask')
