@@ -16,17 +16,17 @@ qipipe processes the OHSU QIN study images.
 ************
 Feature List
 ************
-1. Recognition of new AIRC QIN study images.
+1. Recognizes new AIRC QIN study images.
 
-2. Staging for submission to `The Cancer Imaging Archive`_ (TCIA) `QIN collection`_.
+2. Stages new images for submission to `The Cancer Imaging Archive`_ (TCIA) `QIN collection`_.
 
-3. Masking to subtract extraneous image content.
+3. Masks images to subtract extraneous image content.
 
-4. Motion correction.
+4. Corrects motion artifacts.
 
-5. Pharmokinetic modeling.
+5. Performs pharmokinetic modeling.
 
-6. Import of the input scans and processing results into the OSHU `QIN XNAT`_ instance.
+6. Imports the input scans and processing results into the OSHU `QIN XNAT`_ instance.
 
 **********
 Installing
