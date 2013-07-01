@@ -24,7 +24,7 @@ Feature List
 
 4. Motion correction.
 
-5. Pharmokinetic mapping.
+5. Pharmokinetic modeling.
 
 6. Import of the input scans and processing results into the OSHU `QIN XNAT`_ instance.
 
