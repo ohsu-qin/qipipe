@@ -18,7 +18,7 @@ Feature List
 ************
 1. Recognizes new AIRC QIN study images.
 
-2. Stages new images for submission to `The Cancer Imaging Archive`_ (TCIA) `QIN collection`_.
+2. Stages images for submission to `The Cancer Imaging Archive`_ (TCIA) `QIN collection`_.
 
 3. Masks images to subtract extraneous image content.
 
@@ -56,7 +56,8 @@ Run the following command for the pipeline options::
 
      qipipeline --help
 
-The `OHSU QIN Sharepoint`_ `TCIA Upload Procedure`_ document describes how to import the staged QIN images into TCIA.
+The `OHSU QIN Sharepoint`_ `TCIA Upload Procedure`_ document describes how to import the staged QIN
+images into TCIA.
 
 ---------
 
