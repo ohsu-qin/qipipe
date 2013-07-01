@@ -37,7 +37,7 @@ def run(collection, *subject_dirs, **opts):
 
     - Uploads the parameteric mappings into XNAT.
     
-    The supported AIRC collections are defined :mod:`qipipe.staging.airc_collection`.
+    The supported AIRC collections are defined in :mod:`qipipe.staging.airc_collection`.
     
     The options include the workflows to run, as well as any additional
     :meth:`QIPipeline.run` options.

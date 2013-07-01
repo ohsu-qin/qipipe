@@ -2,7 +2,7 @@ import re
 from .staging_error import StagingError
 
 EXTENT = {}
-"""A name => collection dictionary for all supported AIRC collections."""
+"""A {name: collection} dictionary for all supported AIRC collections."""
 
 
 def collection_with_name(name):

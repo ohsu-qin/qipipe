@@ -109,13 +109,20 @@ def create_workflow(subject, session, *images, **opts):
     The optional workflow inputs configuration file can contain the
     following sections:
 
-    - ``FSLMriVolCluster``: the FSL ``MriVolCluster`` interface options
+    - ``FSLMriVolCluster``: the :class:`qipipe.interfaces.mri_volcluster.MriVolCluster` interface options
 
-    - ``ANTSAverage``: the ANTS ``Average`` interface options
+    - ``ANTSAverage``: the ANTS Average_ interface options
 
-    - ``ANTSRegistration``: the ANTS ``Registration`` interface options
+    - ``ANTSRegistration``: the ANTS Registration_ interface options
 
-    - ``ANTSApplyTransforms``: the ANTS ``ApplyTransforms`` interface options
+    - ``ANTSApplyTransforms``: the ANTS ApplyTransform_ interface options
+
+    - ``FSLFNIRT``: the FSL FNIRT_ interface options
+    
+    .. _Average: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.ants.utils.html
+    .. _Registration: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.ants.registration.html
+    .. _ApplyTransform: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.ants.resampling.html
+    .. _FNIRT: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.fsl.preprocess.html
     
     The default registration applies an affine followed by a symmetric normalization
     transform.
@@ -124,7 +131,7 @@ def create_workflow(subject, session, *images, **opts):
         workflow iterates over each image. A Nipype iterator is defined when the
         workflow is built, and cannot be set dynamically during execution.
         Consequently, the subject, session and images inputs are wired into the workflow
-        and cannot be set dynamically from the output of a parent execution workflow.
+        and cannot be set dynamically from the output of a parent execution workflow node.
     
     :param subject: the XNAT subject label
     :param session: the XNAT session label
@@ -147,14 +154,16 @@ def create_workflow(subject, session, *images, **opts):
         cfg = read_config(DEF_CONFIG_FILE)
     cfg_opts = dict(cfg)
     
-    # The mask step options.
+    # The mask options.
     mask_opts = cfg_opts.get('FSLMriVolCluster', {})
-    # The average step options.
+    # The average options.
     avg_opts = cfg_opts.get('ANTSAverage', {})
-    # The registration step options.
-    reg_opts = cfg_opts.get('ANTSRegistration', {})
-    # The reslice step options.
+    # The ANTS registration options.
+    ants_reg_opts = cfg_opts.get('ANTSRegistration', {})
+    # The ANTS reslice options.
     reslice_opts = cfg_opts.get('ANTSApplyTransforms', {})
+    # The FNIRT registration options.
+    fnirt_reg_opts = cfg_opts.get('FSLFNIRT', {})
     
     # Make a unique registration reconstruction name. This permits more than one
     # registration to be stored for each input image without a name conflict.
@@ -226,7 +235,7 @@ def create_workflow(subject, session, *images, **opts):
     average.inputs.images = sorted(images)[offset:len(images)-offset]
 
     # Register the images to create the warp and affine transformations.
-    register = pe.Node(Registration(**reg_opts), name='register')
+    register = pe.Node(Registration(**ants_reg_opts), name='register')
     workflow.connect(input_spec, 'image', register, 'moving_image')
     workflow.connect(average, 'output_average_image', register, 'fixed_image')
     workflow.connect(inv_mask, 'out_file', register, 'fixed_image_mask')

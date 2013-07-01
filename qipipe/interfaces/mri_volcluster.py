@@ -36,6 +36,12 @@ class MriVolClusterOutputSpec(TraitedSpec):
     out_masked_file = traits.File(desc="Input image masked by clusters")
 
 class MriVolCluster(CommandLine):
+    """
+    MriVolCluster encapsulates the FSL mri_volcluster_ command.
+    
+    .. _mri_volcluster: http://ftp.nmr.mgh.harvard.edu/fswiki/mri_volcluster
+    """
+    
     input_spec = MriVolClusterInputSpec
     output_spec = MriVolClusterOutputSpec
     cmd = 'mri_volcluster'
