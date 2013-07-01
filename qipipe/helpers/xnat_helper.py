@@ -151,7 +151,7 @@ class XNAT(object):
         :return: the corresponding XNAT scan object (which may not exist)
         """
         return self.get_session(project, subject, session).scan(str(scan))
-      
+    
     def get_reconstruction(self, project, subject, session, recon):
         """
         Returns the XNAT reconstruction object for the given XNAT lineage.
@@ -185,6 +185,10 @@ class XNAT(object):
         label = canonical_label(project, subject, session, analysis)
         
         return self.get_session(project, subject, session).assessor(label)
+    
+    # Define the get_assessor function aliases.
+    get_assessment = get_assessor
+    get_analysis = get_assessor
     
     def download(self, project, subject, session, **opts):
         """
@@ -247,6 +251,7 @@ class XNAT(object):
         if not fname:
             raise XNATError("XNAT file object does not have a name: %s" % file_obj)
         tgt = os.path.join(dest, fname)
+        logger.debug("Downloading the XNAT file %s to %s..." % (fname, dest))
         file_obj.get(tgt)
         logger.debug("Downloaded the XNAT file %s." % tgt)
         
