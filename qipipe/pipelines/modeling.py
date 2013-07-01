@@ -41,7 +41,7 @@ def run(*inputs, **opts):
     # The workflow directory.
     base_dir = opts.pop('base_dir', os.getcwd())
     # The reusable workflow.
-    # reusable_wf = create_workflow(base_dir=base_dir, **opts)
+    reusable_wf = create_workflow(base_dir=base_dir, **opts)
     
     # Make the execution workflow.
     exec_wf = pe.Workflow(name= "pk_exec", base_dir=base_dir) #reusable_wf.name+'_exec')
@@ -71,21 +71,21 @@ def run(*inputs, **opts):
         exec_wf.connect(input_spec, field, dl_images, field)
 
     # Model the images.
-    # exec_wf.connect(input_spec, 'subject', reusable_wf, 'input_spec.subject')
-    # exec_wf.connect(input_spec, 'session', reusable_wf, 'input_spec.session')
-    # exec_wf.connect(dl_mask, 'out_file', reusable_wf, 'input_spec.mask_file')
-    # exec_wf.connect(dl_images, 'out_files', reusable_wf, 'input_spec.in_files')
+    exec_wf.connect(input_spec, 'subject', reusable_wf, 'input_spec.subject')
+    exec_wf.connect(input_spec, 'session', reusable_wf, 'input_spec.session')
+    exec_wf.connect(dl_mask, 'out_file', reusable_wf, 'input_spec.mask_file')
+    exec_wf.connect(dl_images, 'out_files', reusable_wf, 'input_spec.in_files')
     
     # Make the default XNAT assessment object label, if necessary. The label is unique, which
     # permits more than one modeling to be stored for each input series without a name conflict.
     analysis = "%s_%s" % (PK_PREFIX, file_helper.generate_file_name())
-    # 
-    # # Upload the R1 series to XNAT.
-    # upload_r1 = pe.Node(XNATUpload(project=project(), analysis=analysis,
-    #     resource='r1_series', format='NIFTI'), name='upload_r1')
-    # exec_wf.connect(input_spec, 'subject', upload_r1, 'subject')
-    # exec_wf.connect(input_spec, 'session', upload_r1, 'session')
-    # exec_wf.connect(reusable_wf, 'output_spec.r1_series', upload_r1, 'in_files')
+    
+    # Upload the R1 series to XNAT.
+    upload_r1 = pe.Node(XNATUpload(project=project(), analysis=analysis,
+        resource='r1_series', format='NIFTI'), name='upload_r1')
+    exec_wf.connect(input_spec, 'subject', upload_r1, 'subject')
+    exec_wf.connect(input_spec, 'session', upload_r1, 'session')
+    exec_wf.connect(reusable_wf, 'output_spec.r1_series', upload_r1, 'in_files')
     
     # TODO - Upload the remaining outputs to XNAT.
 
