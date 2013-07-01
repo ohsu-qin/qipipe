@@ -68,7 +68,7 @@ def run(*inputs, **opts):
     exec_wf.connect(input_spec, 'session', dl_mask, 'session')
     
     # Download the images.
-    dl_images = pe.Node(XNATDownload(project=project(), dest=dest), name='dl_impages')
+    dl_images = pe.Node(XNATDownload(project=project(), dest=dest), name='dl_images')
     for field in in_fields:
         exec_wf.connect(input_spec, field, dl_images, field)
 
