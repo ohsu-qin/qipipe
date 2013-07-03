@@ -15,4 +15,5 @@ ext
 *.pyc
 *.tar*
 **log
+/test/fixtures/modeling
 /test/results
