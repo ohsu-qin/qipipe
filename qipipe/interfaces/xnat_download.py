@@ -11,13 +11,16 @@ class XNATDownloadInputSpec(BaseInterfaceInputSpec):
 
     session = traits.Str(mandatory=True, desc='The XNAT session name')
     
-    scan = traits.Either(traits.Str, traits.Int, desc='The XNAT scan resource container name')
+    scan = traits.Either(traits.Str, traits.Int, desc='The XNAT scan label or number')
     
-    reconstruction = traits.Str(desc='The XNAT reconstruction resource container name')
+    reconstruction = traits.Str(desc='The XNAT reconstruction name')
     
-    analysis = traits.Str(desc='The XNAT assessor resource container name')
+    assessor = traits.Str(desc='The XNAT assessor name')
     
-    format = traits.Enum('NIFTI', 'DICOM', desc='The XNAT image format (default NIFTI)')
+    format = traits.Str(desc='The XNAT image format (scan default is NIFTI')
+    
+    container_type = traits.Enum('scan', 'reconstruction', 'assessor',
+        desc='The XNAT resource container type')
     
     dest = Directory(desc='The download location')
 
@@ -29,13 +32,18 @@ class XNATDownloadOutputSpec(TraitedSpec):
 
 
 class XNATDownload(BaseInterface):
+    """
+    The ``XNATDownload`` Nipype interface wraps the
+    :meth:`qipipe.helpers.xnat_helper.download` method.
+    """
+    
     input_spec = XNATDownloadInputSpec
     
     output_spec = XNATDownloadOutputSpec
 
     def _run_interface(self, runtime):
         opts = {}
-        for ctr_type in ['scan', 'reconstruction', 'analysis']:
+        for ctr_type in ['container_type', 'scan', 'reconstruction', 'assessor']:
             ctr_name = getattr(self.inputs, ctr_type)
             if ctr_name:
                 opts[ctr_type] = ctr_name
