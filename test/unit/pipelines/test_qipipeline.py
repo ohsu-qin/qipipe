@@ -28,25 +28,17 @@ cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_fi
     execution=dict(crashdump_dir=RESULTS, create_report=False))
 config.update_config(cfg)
 
-
 class TestQIPipeline:
     """
     QIN Pipeline unit tests.
     
-    Note:: a precondition for running this test is that the following environment
-    variables are set:
-
-    - ``QIN_BREAST_INPUT``: the input AIRC test Breast fixture parent directory to test
-
-    - ``QIN_SARCOMA_INPUT``: the input AIRC test Sarcoma fixture parent directory to test
-    The test directories must conform to the subject/visit/dicom directory patterns
-    defined in :meth:`airc`.
+    Note:: a precondition for running this test is that the environment variable
+    ``QIN_DATA`` is set to the AIRC ``HUANG_LAB`` mount point, e.g.::
+    
+        QIN_DATA=/Volumes/HUANG_LAB
     
     Note:: the modeling workflow is only executed if the ``fastfit`` executable is
     found.
-    
-    The recommended test input is three series for one visit from each collection.
-    The pipeline is run serially, and takes app. two hours per visit on this input.
     """
     
     def setUp(self):
@@ -56,24 +48,32 @@ class TestQIPipeline:
         shutil.rmtree(RESULTS, True)
     
     def test_breast(self):
-        fixture = os.getenv('QIN_BREAST_INPUT')
-        if fixture:
+        data = os.getenv('QIN_DATA')
+        if data:
+            fixture = os.path.join(RESULT, 'data', 'breast', 'BreastChemo3')
+            os.makedirs(fixture)
+            src = os.path.join(data, 'Breast_Chemo_Study', 'BreastChemo3', 'Visit1')
+            dest = os.path.join(fixture, 'Visit1')
+            os.symlink(src, dest)
             self._test_collection('Breast', fixture)
         else:
-            logger.info("Skipping the QIN pipeline unit Breast test, since the QIN_BREAST_INPUT environment variable is not set.")
+            logger.info("Skipping the QIN pipeline unit Breast test, since the QIN_DATA environment variable is not set.")
     
     def test_sarcoma(self):
-        fixture = os.getenv('QIN_SARCOMA_INPUT')
-        if fixture:
+        data = os.getenv('QIN_DATA')
+        if data:
+            fixture = os.path.join(RESULT, 'data', 'sarcoma', 'Subj_1')
+            os.makedirs(fixture)
+            src = os.path.join(data, 'Sarcoma', 'Subj_1', 'Visit1')
+            dest = os.path.join(fixture, 'Visit1')
+            os.symlink(src, dest)
             self._test_collection('Sarcoma', fixture)
         else:
-            logger.info("Skipping the QIN pipeline unit Sarcoma test, since the QIN_SARCOMA_INPUT environment variable is not set.")
+            logger.info("Skipping the QIN pipeline unit Sarcoma test, since the QIN_DATA environment variable is not set.")
     
     def _test_collection(self, collection, fixture):
         """
-        Run the pipeline on the given collection and verify the following:
-
-        - scans are created in XNAT
+        Run the pipeline on the given collection and verify that scans are created in XNAT.
         
         :param collection: the AIRC collection name
         :param fixture: the test input
