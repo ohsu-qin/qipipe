@@ -7,6 +7,9 @@ from ..interfaces import XNATDownload, XNATUpload, Fastfit
 from ..helpers import file_helper
 from ..helpers.project import project
 
+import logging
+logger = logging.getLogger(__name__)
+
 PK_PREFIX = 'pk'
 """The XNAT modeling assessor object label prefix."""
 
@@ -18,58 +21,90 @@ def run(*inputs, **opts):
     Builds the modeling workflow described in :meth:`create_workflow`
     and executes it on the given inputs.
 
-    Each input identifies an XNAT reconstruction or scan. A reconstruction
-    input is a dictionary with keys ``subject``, ``session`` and
-    ``reconstruction``. A scan input is a dictionary with keys ``subject``,
-    ``session`` and ``scan``. The input dictionary values are the XNAT
-    labels for the respective XNAT objects.
+    Each input is a (subject, session) tuple.
+    The options include the following:
     
-    The NiFTI session mask and input image files are downloaded from XNAT
-    into the ``input`` subdirectory of the execution working directory.
+    - the workflow ``base_dir``
     
-    The modeling workflow is then built as described in :meth:`(\w+)`
-    and executed. The result is uploaded to an XNAT analysis resource.
+    - the :meth:`create_workflow` options
+    
+    - the :class:`qipipe.interfaces.xnat_download.XNATDownload`
+        image download input
+    
+    The image download input is a XNAT image download specification as described in
+    the :meth:`qipipe.helpers.xnat_helper.download` ``opts`` parameter, e.g.:
+    
+        modeling.run(('Breast003', 'Session02'), container_type='scan'))
+    
+    or:
+        
+        inputs = [('Sarcoma001', 'Session01'), ('Sarcoma001', 'Session02')]
+        modeling.run(inputs, reconstruction='reg_Z4aUp8')
+    
+    This ``run`` method builds an execution workflow that downloads the XNAT
+    inputs and connects them to the reusable modeling workflow inputs
+    described in :meth:`create_workflow`. The modeling workflow outputs are
+    connected to an execution workflow XNAT upload. The execution workflow
+    is then executed, resulting in a new uploaded XNAT analysis resource
+    for each input session. This method returns the uploaded XNAT
+    (subject, session, analysis) label tuples.
     
     If the ``qsub`` executable is found in the execution environment, then the
-    execution is distributed on the cluster using the Sun Grid Engine.
+    execution is distributed using the `AIRC Grid Engine`_.
+    
+    .. _AIRC Grid Engine: https://everett.ohsu.edu/wiki/GridEngine
 
     :param inputs: the XNAT input reconstruction or scan XNAT inputs
     :param base_dir: the execution working directory (default is the current directory)
-    :param opts: the optional workflow inputs described in :meth:`(\w+)` 
+    :param opts: the workflow options
     :return: the modeling XNAT (subject, session, analysis) tuples
     """
     # The workflow directory.
     base_dir = opts.pop('base_dir', os.getcwd())
+    
+    # The image download node. This node is defined before the workflow,
+    # since the opts parameter includes both download options and workflow
+    # options. The download options are removed the opts parameter before
+    # creating the workflow.
+    dl_images = pe.Node(XNATDownload(project=project()), name='dl_images')
+    # The possible download field names.
+    dl_traits = dl_images.inputs.copyable_trait_names()
+    # The shared download inputs.
+    dl_shared_dict = {field: opts.pop(field) for field in dl_traits
+        if field in opts}
+
+    logger.debug("Building the modeling execution workflow with shared input"
+        " fields %s and workflow options %s..." % (dl_shared_dict, opts)) 
     # The reusable workflow.
     reusable_wf = create_workflow(base_dir=base_dir, **opts)
+    # The execution workflow.
+    wf_name = reusable_wf.name + '_exec'
+    exec_wf = pe.Workflow(name=wf_name, base_dir=base_dir)
     
-    # Make the execution workflow.
-    exec_wf = pe.Workflow(name= "pk_exec", base_dir=base_dir) #reusable_wf.name+'_exec')
-    
-    # The execution workflow input {field name: values} dictionary.
+    # The execution workflow iterates over the inputs.
     iter_dict = defaultdict(list)
-    for spec in inputs:
-        for k, v in spec.iteritems():
-            iter_dict[k].append(v)
+    for sbj, sess in inputs:
+        iter_dict['subject'].append(sbj)
+        iter_dict['session'].append(sess)
     # The input field names.
-    in_fields = iter_dict.keys()
+    in_fields = iter_dict.keys() + dl_shared_dict.keys()
     # The input node.
-    input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
-    # The workflow will iterate over the inputs. Due to a Nipype constraint,
-    # the iterables are set when the workflow is built, and cannot be set
-    # dynamically when the workflow is run.
+    input_spec = pe.Node(IdentityInterface(fields=in_fields, **dl_shared_dict),
+        name='input_spec')
+    # The workflow will iterate over the input sessions. Due to a Nipype
+    # constraint, the iterables are set when the workflow is built, and
+    # cannot be set dynamically when the workflow is run.
     input_spec.iterables = iter_dict.items()
-    
+
+    # Connect the inputs to the image download node.
+    for field in in_fields:
+        exec_wf.connect(input_spec, field, dl_images, field)
+
     # Download the mask.
     dl_mask = pe.Node(XNATDownload(project=project(), reconstruction='mask'), name='dl_mask')
     exec_wf.connect(input_spec, 'subject', dl_mask, 'subject')
     exec_wf.connect(input_spec, 'session', dl_mask, 'session')
     
-    # Download the images.
-    dl_images = pe.Node(XNATDownload(project=project()), name='dl_images')
-    for field in in_fields:
-        exec_wf.connect(input_spec, field, dl_images, field)
-
     # Model the images.
     exec_wf.connect(input_spec, 'subject', reusable_wf, 'input_spec.subject')
     exec_wf.connect(input_spec, 'session', reusable_wf, 'input_spec.session')
@@ -80,18 +115,19 @@ def run(*inputs, **opts):
     # permits more than one modeling to be stored for each input series without a name conflict.
     analysis = "%s_%s" % (PK_PREFIX, file_helper.generate_file_name())
     
-    # Upload the R1 series to XNAT.
-    upload_r1 = pe.Node(XNATUpload(project=project(), analysis=analysis,
-        resource='r1_series', format='NIFTI'), name='upload_r1')
-    exec_wf.connect(input_spec, 'subject', upload_r1, 'subject')
-    exec_wf.connect(input_spec, 'session', upload_r1, 'session')
-    exec_wf.connect(reusable_wf, 'output_spec.r1_series', upload_r1, 'in_files')
-    
-    # TODO - Upload the remaining outputs to XNAT.
+    # The upload nodes.
+    reusable_out_fields = ['pk_params'] # reusable_wf.get_node('output_spec').outputs.copyable_trait_names()
+    upload_node_dict = {field: _create_output_upload_node(analysis, field)
+        for field in reusable_out_fields}
+    for field, node in upload_node_dict.iteritems():
+        exec_wf.connect(input_spec, 'subject', node, 'subject')
+        exec_wf.connect(input_spec, 'session', node, 'session')
+        reusable_field = 'output_spec.' + field
+        exec_wf.connect(reusable_wf, reusable_field, node, 'in_files')
 
-    # Collect the workflow output fields.
-    out_fields = ['subject', 'session', 'analysis']
-    output_spec = pe.Node(IdentityInterface(fields=out_fields, analysis=analysis),
+    # Collect the execution workflow output fields.
+    exec_out_fields = ['subject', 'session', 'analysis']
+    output_spec = pe.Node(IdentityInterface(fields=exec_out_fields, analysis=analysis),
         name='output_spec')
     for field in ['subject', 'session']:
         exec_wf.connect(input_spec, field, output_spec, field)
@@ -108,8 +144,12 @@ def run(*inputs, **opts):
     exec_wf.run(**args)
 
     # Return the (subject, session, analysis) tuples.
-    specs = {(spec['subject'], spec['session']) for spec in inputs}
-    return [(sbj, sess, analysis) for sbj, sess in specs]
+    return [(sbj, sess, analysis) for sbj, sess in inputs]
+
+def _create_output_upload_node(analysis, resource):
+    name = 'upload_' + resource
+    return pe.Node(XNATUpload(project=project(), assessor=analysis, resource=resource),
+        name=name)
     
 def create_workflow(base_dir=None, **inputs):
     """
@@ -141,7 +181,7 @@ def create_workflow(base_dir=None, **inputs):
 
     - ``r1_series``: the R1 series files
 
-    - ``params_csv``: the AIF and R1 parameter CSV file
+    - ``pk_params``: the AIF and R1 parameter CSV file
 
     - ``k_trans``: the |Ktrans| extra/intravasation transfer rate
 
@@ -278,7 +318,7 @@ def create_workflow(base_dir=None, **inputs):
     
     # Set up the outputs.
     outputs = ['r1_series', 
-               'params_csv',
+               'pk_params',
                'k_trans',
                'v_e',
                'tau_i'
@@ -287,7 +327,7 @@ def create_workflow(base_dir=None, **inputs):
         outputs += ['pdw_image', 'dce_baseline', 'r1_0']
     output_spec = pe.Node(IdentityInterface(fields=outputs), name='output_spec')
     workflow.connect(copy_meta, 'dest_file', output_spec, 'r1_series')
-    workflow.connect(get_params, 'params_csv', output_spec, 'params_csv')
+    workflow.connect(get_params, 'params_csv', output_spec, 'pk_params')
     workflow.connect(pk_map, 'k_trans', output_spec, 'k_trans')
     workflow.connect(pk_map, 'v_e', output_spec, 'v_e')
     workflow.connect(pk_map, 'tau_i', output_spec, 'tau_i')

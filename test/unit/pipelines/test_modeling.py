@@ -33,24 +33,23 @@ class TestModelingWorkflow(XNATScanTestBase):
     def __init__(self):
         super(TestModelingWorkflow, self).__init__(FIXTURES, RESULTS)
     
-    def _run_workflow(self, fixture, *session_specs, **opts):
-        # Collect all session scans as dictionaries. Each dictionary has
-        # subject, session and scan key => value items.
-        scan_dicts = []
-        with xnat_helper.connection() as xnat:
-            for sbj, sess in session_specs:
-                sess_obj = xnat.get_session(project=project(), subject=sbj, session=sess)
-                for scan_obj in sess_obj.scans():
-                    scan_dict = dict(subject=sbj, session=sess, scan=scan_obj.label())
-                    scan_dicts.append(scan_dict)
+    def _run_workflow(self, xnat, fixture, *inputs, **opts):
+        """
+        Executes :meth:`qipipe.pipelines.modeling.run` on the input session scans.
         
-        # Run the workflow.
+        :param xnat: the :class:`qipipe.helpers.xnat_helpers.XNAT` connection
+        :param fixture: the test fixture directory
+        :param inputs: the (subject, session) tuples
+        :param opts: the :meth:`qipipe.pipelines.modeling.run` options
+        :return: the :meth:`qipipe.pipelines.modeling.run` result
+        """
         logger.debug("Testing the modeling workflow on %s..." % fixture)
-        return modeling.run(*scan_dicts, **opts)
+        # Run the workflow.
+        return modeling.run(*inputs, container_type='scan', **opts)
     
-    def _verify_result(self, xnat, sess_files_dict, analysis_specs):
-        sess_anl_dict = {(sbj, sess): anl for sbj, sess, anl in analysis_specs}
-        for spec, in_files in sess_files_dict.iteritems():
+    def _verify_result(self, xnat, inputs, result):
+        sess_anl_dict = {(sbj, sess): anl for sbj, sess, anl in result}
+        for spec in inputs:
             assert_in(spec, sess_anl_dict, "The session %s %s was not modeled" % spec)
             anl = sess_anl_dict[spec]
             sbj, sess = spec
