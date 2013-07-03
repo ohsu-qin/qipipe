@@ -333,11 +333,11 @@ class XNAT(object):
         ctr_type, ctr_id = self._infer_resource_container(opts)
         ctr = self._xnat_resource_parent(exp, ctr_type, ctr_id)
         if not ctr.exists():
-            logger.debug("Creating the XNAT %s resource parent container %s..."
-                % (session, ctr_id))
+            logger.debug("Creating the XNAT %s resource %s parent container %s..." %
+                (session, ctr_type, ctr_id))
             ctr.insert()
-            logger.debug("Created the XNAT %s resource parent container with id %s."
-                % (session, ctr.id()))
+            logger.debug("Created the XNAT %s resource %s parent container with id %s." %
+                (session, ctr_type, ctr.id()))
 
         format = opts.get('format')
         # Infer the format, if necessary.
@@ -356,8 +356,8 @@ class XNAT(object):
         if not rsc_obj.exists():
             logger.debug("Creating the XNAT %s %s %s resource..." % (session, ctr_id, rsc))
             rsc_obj.insert()
-            logger.debug("Created the XNAT %s %s resource with name %s and id %s."
-                % (session, ctr_id, rsc_obj.label(), rsc_obj.id()))
+            logger.debug("Created the XNAT %s %s resource with name %s and id %s." %
+                (session, ctr_id, rsc_obj.label(), rsc_obj.id()))
         
         # Upload each file.
         logger.debug("Uploading the %s files to XNAT..." % session)
