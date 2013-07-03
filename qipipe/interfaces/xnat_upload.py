@@ -19,12 +19,17 @@ class XNATUploadInputSpec(BaseInterfaceInputSpec):
 
     reconstruction = traits.Str(desc='The XNAT reconstruction name')
 
-    analysis = traits.Str(desc='The (XNAT assessor) name')
+    assessor = traits.Str(desc='The XNAT assessor name')
 
     in_files = InputMultiPath(File(exists=True), mandatory=True, desc='The files to upload')
 
 
 class XNATUpload(BaseInterface):
+    """
+    The ``XNATUpload`` Nipype interface wraps the
+    :meth:`qipipe.helpers.xnat_helper.upload` method.
+    """
+    
     input_spec = XNATUploadInputSpec
 
     def _run_interface(self, runtime):
@@ -41,8 +46,8 @@ class XNATUpload(BaseInterface):
             opts['scan'] = self.inputs.scan
         elif self.inputs.reconstruction:
             opts['reconstruction'] = self.inputs.reconstruction
-        elif self.inputs.analysis:
-            opts['analysis'] = self.inputs.analysis
+        elif self.inputs.assessor:
+            opts['assessor'] = self.inputs.assessor
         
         # Upload the files.
         with xnat_helper.connection() as xnat:
