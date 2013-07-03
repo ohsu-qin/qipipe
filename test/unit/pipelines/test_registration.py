@@ -40,14 +40,24 @@ class TestRegistrationWorkflow(XNATScanTestBase):
     
     def __init__(self):
         super(TestRegistrationWorkflow, self).__init__(FIXTURES, RESULTS)
-        
-    def _run_workflow(self, *session_specs, **opts):
-        return registration.run(*session_specs, config=REG_CONF, **opts)
     
-    def _verify_result(self, xnat, sess_files_dict, recon_specs):
-        sess_recon_dict = {(sbj, sess): recon for sbj, sess, recon in recon_specs}
-        for spec, in_files in sess_files_dict.iteritems():
-            assert_in(spec, sess_recon_dict, "The session %s %s was not registered" % spec)
+    def _run_workflow(self, xnat, fixture, *inputs, **opts):
+        """
+        Executes :meth:`qipipe.pipelines.registration.run` on the input sessions.
+        
+        :param xnat: the :class:`qipipe.helpers.xnat_helpers.XNAT` connection
+        :param fixture: the test fixture directory
+        :param inputs: the (subject, session) tuples
+        :param opts: the :meth:`qipipe.pipelines.modeling.run` options
+        :return: the :meth:`qipipe.pipelines.modeling.run` result
+        """
+        logger.debug("Testing the registration workflow on %s..." % fixture)
+        return registration.run(*inputs, config=REG_CONF, **opts)
+    
+    def _verify_result(self, xnat, inputs, result):
+        sess_recon_dict = {(sbj, sess): recon for sbj, sess, recon in result}
+        for spec, in_files in inputs.iteritems():
+            assert_in(spec, result, "The session %s %s was not registered" % spec)
             recon = sess_recon_dict[spec]
             sbj, sess = spec
             recon_obj = xnat.get_reconstruction(project(), sbj, sess, recon)

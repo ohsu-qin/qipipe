@@ -65,12 +65,12 @@ class XNATScanTestBase(object):
             # Seed XNAT with the test files.
             sess_files_dict = self._seed_xnat(fixture, collection)
             # Run the workflow.
-            result = self._run_workflow(fixture, *sess_files_dict.iterkeys(), base_dir=base_dir)
+            result = self._run_workflow(xnat, fixture, *sess_files_dict.iterkeys(), base_dir=base_dir)
             # Verify the result.
             self._verify_result(xnat, sess_files_dict, result)
             # Clean up.
             subjects = {sbj for sbj, _ in sess_files_dict.iterkeys()}
-            delete_subjects(project(), *subjects)
+            #delete_subjects(project(), *subjects)
 
     def _seed_xnat(self, fixture, collection):
         """
@@ -89,10 +89,35 @@ class XNATScanTestBase(object):
                 sess_files_dict[(sbj, sess)] = in_files
         return sess_files_dict
         
-    def _run_workflow(self, *session_specs, **opts):
+    def _run_workflow(self, xnat, *inputs, **opts):
+        """
+        This method is implemented by subclasses to execute the subclass
+        target workflow on the given session inputs.
+        
+        :param xnat: the :class:`qipipe.helpers.xnat_helpers.XNAT` connection
+        :param fixture: the test fixture directory
+        :param inputs: the (subject, session) tuples
+        :param opts: the target workflow options
+        :return: the :meth:`qipipe.pipelines.modeling.run` result
+        :raise: if the class:`XNATScanTestBase` subclass does not implement
+            this method
+        """
         raise NotImplementedError("_run_workflow is a subclass responsibility")
     
-    def _verify_result(self, xnat, sess_files_dict, *recon_specs):
+    def _verify_result(self, xnat, inputs, result):
+        """
+        This method is implemented by subclasses to verify the workflow
+        execution result against the given session file inputs. The session
+        file inputs parameter is a {(subject, session): *files* dictionary},
+        where *files* is a list consisting of the session image files found
+        in the test fixture directory.
+        
+        :param xnat: the :class:`qipipe.helpers.xnat_helpers.XNAT` connection
+        :param inputs: the session file inputs dictionary
+        :param result: the workflow execution result
+        :raise: if the class:`XNATScanTestBase` subclass does not implement
+            this method
+        """
         raise NotImplementedError("_verify_result is a subclass responsibility")
            
     def _upload_session_files(self, subject, session_dir):
@@ -107,7 +132,8 @@ class XNATScanTestBase(object):
         with xnat_helper.connection() as xnat:
             sess_obj = xnat.get_session(project(), subject, sess)
             fnames = [self._upload_file(sess_obj, f) for f in glob.glob(session_dir + '/series*.nii.gz')]
-            logger.debug("%s uploaded the %s test files %s." % (self.__class__, sess_obj.label(), fnames))
+            logger.debug("%s uploaded the %s test files %s." %
+                (self.__class__.__name__, sess_obj.label(), fnames))
         
         return (sess, fnames)
     
