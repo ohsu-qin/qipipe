@@ -10,10 +10,11 @@ from qipipe.pipelines import modeling
 from qipipe.helpers import xnat_helper
 from qipipe.helpers.xnat_helper import delete_subjects
 from test.helpers.project import project
-from test.unit.pipelines.xnat_scan_test_base import XNATScanTestBase
-from test.unit.pipelines.test_registration import ROOT, FIXTURES
+from test.unit.pipelines.xnat_scan_test_base import XNATScanTestBase, ROOT
 
-RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'analysis')
+FIXTURES = os.path.join(ROOT, 'fixtures', 'pipelines', 'modeling')
+
+RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'modeling')
 """The test results directory."""
 
 from nipype import config
@@ -25,9 +26,26 @@ config.update_config(cfg)
 class TestModelingWorkflow(XNATScanTestBase):
     """
     Modeling workflow unit tests.
+    This test exercises the modeling workflow on the QIN Breast and Sarcoma study
+    visits in the ``test/fixtures/pipelines/modeling`` test fixture directory.
     
-    This test exercises the modeling workflow on three series of one visit in each of the
-    Breast and Sarcoma studies.
+    Note:: a precondition for running this test is that the test fixture directory
+    contains the series stack test data in collection/subject/session format, e.g.::
+    
+        breast
+            Breast003
+                Session01
+                    series009.nii.gz
+                    series023.nii.gz
+                     ...
+        sarcoma
+            Sarcoma001
+                Session01
+                    series011.nii.gz
+                    series013.nii.gz
+                     ...
+    
+    The fixture is not included in the Git source repository due to storage constraints.
     """
     
     def __init__(self):
