@@ -53,14 +53,14 @@ class ASTConfig(Config):
         \[      # The left bracket
         (.*)    # The list items
         \]$     # The right bracket
-    """, re.VERBOSE)
+        """, re.VERBOSE)
     """A list string pattern."""
 
     TUPLE_PAT = re.compile("""
         \(      # The left paren
         (.*)    # The tuple items
         \)$     # The right paren
-    """, re.VERBOSE)
+        """, re.VERBOSE)
     """A tuple string pattern."""
     
     EMBEDDED_LIST_PAT = re.compile("""
@@ -68,7 +68,7 @@ class ASTConfig(Config):
         (\[.*\])?   # The embedded list
         ([^]]*)     # A suffix without the ']' character
         $           # The end of the value
-    """, re.VERBOSE)
+        """, re.VERBOSE)
     """A (prefix)(list)(suffix) recognition pattern."""
     
     EMBEDDED_TUPLE_PAT = re.compile("""
@@ -76,7 +76,7 @@ class ASTConfig(Config):
         (\(.*\))?   # The embedded tuple
         ([^)]*)     # A suffix without the ')' character
         $           # The end of the value
-    """, re.VERBOSE)
+        """, re.VERBOSE)
     """A (prefix)(tuple)(suffix) recognition pattern."""
     
     PARSEABLE_ITEM_PAT = re.compile("""
