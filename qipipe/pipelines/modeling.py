@@ -131,6 +131,9 @@ def run(*inputs, **opts):
         exec_wf.connect(input_spec, field, output_spec, field)
 
     # Check whether the workflow can be distributed.
+    #
+    # TODO - refactor into a class with a config like registration.
+    #
     if DISTRIBUTABLE:
         exec_wf.config['execution'] = {'job_finished_timeout': 60.0}
         args = dict(plugin='SGE',

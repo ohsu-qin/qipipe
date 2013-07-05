@@ -8,6 +8,7 @@ from ..staging.staging_error import StagingError
 from ..staging.staging_helper import subject_for_directory, iter_new_visits, group_dicom_files_by_series
 from ..helpers import xnat_helper
 from .pipeline_error import PipelineError
+from ..distributable import DISTRIBUTABLE
 
 import logging
 logger = logging.getLogger(__name__)
@@ -18,7 +19,8 @@ def run(collection, *subject_dirs, **opts):
     
     :param collection: the AIRC image collection name
     :param subject_dirs: the AIRC source subject directories to stage
-    :param opts: the :meth:`create_workflow` options
+    :param opts: the :meth:`create_workflow` options as well as the following:
+    :keyword force: flag indicating whether to replace existing XNAT subjects
     :return: the new XNAT (subject, session) name tuples
     """
     
@@ -50,10 +52,21 @@ def run(collection, *subject_dirs, **opts):
             grf = 'staging.dot'
         workflow.write_graph(dotfilename=grf)
         logger.debug("The staging workflow graph is depicted at %s.png." % grf)
+
+    # Check whether the workflow can be distributed.
+    #
+    # TODO - refactor into a class with a config like registration.
+    #
+    if DISTRIBUTABLE:
+        exec_wf.config['execution'] = {'job_finished_timeout': 60.0}
+        args = dict(plugin='SGE',
+                    plugin_args={'qsub_args' : '-l h_rt=1:00:00,mf=3G,h_vmem=3.5G -b n'})
+    else:
+        args = {}
     
     # Run the staging workflow.
     with xnat_helper.connection():
-        workflow.run()
+        workflow.run(**args)
     
     # Return the new XNAT (subject, session) tuples.
     return [(sbj, sess) for sbj, sess, _ in new_visits]
