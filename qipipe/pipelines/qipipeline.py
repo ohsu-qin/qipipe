@@ -10,7 +10,6 @@ from . import modeling
 import logging
 logger = logging.getLogger(__name__)
 
-
 def run(collection, *subject_dirs, **opts):
     """
     Runs the OHSU QIN pipeline on the the given AIRC subject directories as follows:
@@ -91,20 +90,23 @@ class QIPipeline(object):
         work_dir = opts.pop('work', None) or tempfile.mkdtemp()
         
         with xnat_helper.connection():
-            # Stage the input AIRC files.
             stg_dir = os.path.join(work_dir, 'stage')
-            session_specs = staging.run(self.collection, *subject_dirs, base_dir=stg_dir, **opts)
+            stg_opts = dict(base_dir=stg_dir)
+            # The dest and force options are only used for staging.
+            if 'dest' in opts:
+                stg_opts['opts'] = opts.pop('dest')
+            if 'force' in opts:
+                stg_opts['force'] = opts.pop('force')
+            # Stage the input AIRC files.
+            session_specs = staging.run(self.collection, *subject_dirs, **stg_opts)
             if not session_specs:
                 return []
             
-            # The dest option is only used for staging.
-            opts.pop('dest', None)
-            
-            # If the register flag is set to False, then return the staged XNAT sessions.
+            # If the registration flag is set to False, then return the staged XNAT sessions.
             if opts.get('registration') == False:
                 logger.debug("Skipping registration since the registration option is set to False.")
                 return session_specs
-            
+            # Register the images.
             reg_dir = os.path.join(work_dir, 'register')
             reg_specs = registration.run(*session_specs, base_dir=reg_dir, **opts)
             
@@ -112,7 +114,7 @@ class QIPipeline(object):
             if opts.get('modeling') == False:
                 logger.debug("Skipping modeling since the modeling option is set to False.")
                 return reg_specs
-            
+            # Perform PK modeling.
             mdl_dir = os.path.join(work_dir, 'modeling')
             mdl_inputs = [dict(subject=sbj, session=sess, reconstruction=recon) for sbj, sess, recon in reg_specs]
             return modeling.run(*mdl_inputs, base_dir=mdl_dir, **opts)
