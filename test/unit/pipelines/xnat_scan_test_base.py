@@ -70,16 +70,30 @@ class XNATScanTestBase(object):
             self._verify_result(xnat, sess_files_dict, result)
             # Clean up.
             subjects = {sbj for sbj, _ in sess_files_dict.iterkeys()}
-            #delete_subjects(project(), *subjects)
+            delete_subjects(project(), *subjects)
 
     def _seed_xnat(self, fixture, collection):
         """
-        Seed XNAT with the test files.
+        Seed XNAT with the test files in the given text fixture.
+        The fixture is a parent directory which contains a
+        collection/subject/session/images hierarchy. e.g.::
         
-        :return: the (subject, session) => scan files dictionary
+            breast/
+                Breast003/
+                    Session01/
+                        series09.nii.gz
+                        series23.nii.gz
+                         ...
+        
+        :param fixture: the input data parent directory
+        :param collection: the input collection name
+        :return: the (subject, session) => files dictionary
         """
         sess_files_dict = {}
-        for sbj_dir in glob.glob(fixture + '/' + collection + '*'):
+        # The input files are in the collection subdirectory.
+        data_dir = os.path.join(fixture, collection.lower())
+        # Upload the files in each subject subdirectory.
+        for sbj_dir in glob.glob(data_dir + '/*'):
             _, sbj = os.path.split(sbj_dir)
             # Delete a stale test XNAT subject, if necessary.
             delete_subjects(project(), sbj)
@@ -88,7 +102,24 @@ class XNATScanTestBase(object):
                 sess, in_files = self._upload_session_files(sbj, sess_dir)
                 sess_files_dict[(sbj, sess)] = in_files
         return sess_files_dict
+    
+    def _upload_session_files(self, subject, session_dir):
+        """
+        Uploads the images in the given session directories.
         
+        :param subject: the test subject label
+        :param session_dir: the session directory
+        :return: the (session, files) tuples
+        """
+        _, sess = os.path.split(session_dir)
+        with xnat_helper.connection() as xnat:
+            sess_obj = xnat.get_session(project(), subject, sess)
+            fnames = [self._upload_file(sess_obj, f) for f in glob.glob(session_dir + '/series*.nii.gz')]
+            logger.debug("%s uploaded the %s test files %s." %
+                (self.__class__.__name__, sess_obj.label(), fnames))
+        
+        return (sess, fnames)
+    
     def _run_workflow(self, xnat, *inputs, **opts):
         """
         This method is implemented by subclasses to execute the subclass
@@ -99,8 +130,8 @@ class XNATScanTestBase(object):
         :param inputs: the (subject, session) tuples
         :param opts: the target workflow options
         :return: the :meth:`qipipe.pipelines.modeling.run` result
-        :raise: if the class:`XNATScanTestBase` subclass does not implement
-            this method
+        :raise NotImplementedError: if the class:`XNATScanTestBase` subclass does
+            not implement this method
         """
         raise NotImplementedError("_run_workflow is a subclass responsibility")
     
@@ -113,29 +144,12 @@ class XNATScanTestBase(object):
         in the test fixture directory.
         
         :param xnat: the :class:`qipipe.helpers.xnat_helpers.XNAT` connection
-        :param inputs: the session file inputs dictionary
+        :param inputs: the {(subject, session): files} inputs
         :param result: the workflow execution result
-        :raise: if the class:`XNATScanTestBase` subclass does not implement
-            this method
+        :raise NotImplementedError: if the class:`XNATScanTestBase` subclass does
+            not implement this method
         """
         raise NotImplementedError("_verify_result is a subclass responsibility")
-           
-    def _upload_session_files(self, subject, session_dir):
-        """
-        Uploads the test files in the given session directory.
-        
-        :param subject: the test subject label
-        :param session_dir: the session directory
-        :return: the XNAT (session, files) labels
-        """
-        _, sess = os.path.split(session_dir)
-        with xnat_helper.connection() as xnat:
-            sess_obj = xnat.get_session(project(), subject, sess)
-            fnames = [self._upload_file(sess_obj, f) for f in glob.glob(session_dir + '/series*.nii.gz')]
-            logger.debug("%s uploaded the %s test files %s." %
-                (self.__class__.__name__, sess_obj.label(), fnames))
-        
-        return (sess, fnames)
     
     def _upload_file(self, session_obj, path):
         """
