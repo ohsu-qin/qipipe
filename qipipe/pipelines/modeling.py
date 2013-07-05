@@ -1,4 +1,4 @@
-import os, distutils
+import os
 from collections import defaultdict
 import nipype.pipeline.engine as pe
 from nipype.interfaces.dcmstack import DcmStack, MergeNifti, CopyMeta
@@ -6,15 +6,13 @@ from nipype.interfaces.utility import IdentityInterface, Function
 from ..interfaces import XNATDownload, XNATUpload, Fastfit
 from ..helpers import file_helper
 from ..helpers.project import project
+from .distributable import DISTRIBUTABLE
 
 import logging
 logger = logging.getLogger(__name__)
 
 PK_PREFIX = 'pk'
 """The XNAT modeling assessor object label prefix."""
-
-DISTRIBUTABLE = not not distutils.spawn.find_executable('qsub')
-"""Flag indicating whether the workflow can be distributed over a cluster."""
 
 def run(*inputs, **opts):
     """
@@ -116,7 +114,7 @@ def run(*inputs, **opts):
     analysis = "%s_%s" % (PK_PREFIX, file_helper.generate_file_name())
     
     # The upload nodes.
-    reusable_out_fields = ['pk_params'] # reusable_wf.get_node('output_spec').outputs.copyable_trait_names()
+    reusable_out_fields = reusable_wf.get_node('output_spec').outputs.copyable_trait_names()
     upload_node_dict = {field: _create_output_upload_node(analysis, field)
         for field in reusable_out_fields}
     for field, node in upload_node_dict.iteritems():
@@ -141,7 +139,8 @@ def run(*inputs, **opts):
         args = {}
     
     # Run the workflow.
-    exec_wf.run(**args)
+    with xnat_helper.connection():
+        exec_wf.run(**args)
 
     # Return the (subject, session, analysis) tuples.
     return [(sbj, sess, analysis) for sbj, sess in inputs]
