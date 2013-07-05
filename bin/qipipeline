@@ -62,7 +62,7 @@ def _parse_arguments():
     verbosity_grp.add_argument('-d', '--debug', help='print debug messages',
         dest='log_level', action='store_const', const=logging.DEBUG)
     
-    # The log, work and output options.
+    # The log, output and work options.
     parser.add_argument('-l', '--log', help='the log file', metavar='FILE')
     parser.add_argument('-o', '--output', help='the destination directory (default current directory)',
         metavar='DIR')
