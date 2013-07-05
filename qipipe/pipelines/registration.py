@@ -256,7 +256,7 @@ class RegistrationWorkflow(object):
     
     def _create_mask_workflow(self, base_dir=None):
         """
-        Creates the mask workflow for the given images.
+        Creates the mask workflow.
         
         :param subject: the subject name
         :param session: the session name
