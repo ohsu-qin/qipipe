@@ -28,6 +28,8 @@ def main(argv=sys.argv):
         opts['base_dir'] = args.work
     if args.configuration:
         opts['cfg_file'] = args.configuration
+    if args.technique:
+        opts['technique'] = args.technique
     
     # Convert the sessions into (subject, session) tuples based on the QIN
     # XNAT project_subject_session naming standard.
@@ -50,6 +52,13 @@ def _parse_arguments():
         dest='log_level', action='store_const', const=logging.INFO)
     verbosity_grp.add_argument('-d', '--debug', help='print debug messages',
         dest='log_level', action='store_const', const=logging.DEBUG)
+
+    # The registration technique.
+    tech_grp = parser.add_mutually_exclusive_group()
+    tech_grp.add_argument('--fnirt', help='use FSL FNIRT for registration',
+        dest='technique', action='store_const', const='FNIRT')
+    tech_grp.add_argument('--ants', help='use ANTS for registration',
+        dest='technique', action='store_const', const='ANTS')
 
     # The remaining options.
     parser.add_argument('-l', '--log', help='the log file', metavar='FILE')
