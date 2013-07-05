@@ -147,20 +147,11 @@ class RegistrationWorkflow(object):
         # step.
         images = self._download_scans(subject, session, dest)
         
-        # Check whether the workflow can be distributed.
-        if DISTRIBUTABLE:
-            if 'execution' in self.config:
-                exec_wf.config['execution'] = self.config['execution']
-            if 'SGE' in self.config:
-                args = dict(plugin='SGE', plugin_args=self.config['SGE'])
-        else:
-            args = {}
-        
         # Execute the workflow.
         self._set_input(subject, session, recon, images)
-        logger.debug("Executing the registration workflow on %s %s..." %
-            (subject, session))
-        self._run_workflow(self.workflow, **args)
+        logger.debug("Executing the %s workflow on %s %s..." %
+            (self.workflow.name, subject, session))
+        self._run_workflow()
         logger.debug("%s %s is registered as reconstruction %s." %
             (subject, session, recon))
     
@@ -207,7 +198,7 @@ class RegistrationWorkflow(object):
             base_dir = os.getcwd()
         
         # The execution workflow.
-        exec_wf = pe.Workflow(name='register', base_dir=base_dir)
+        exec_wf = pe.Workflow(name='registration', base_dir=base_dir)
         
         # The execution workflow input.
         in_fields = ['subject', 'session', 'reconstruction', 'images']
@@ -334,13 +325,13 @@ class RegistrationWorkflow(object):
     
     def _create_reslice_workflow(self, base_dir=None, technique='ANTS'):
         """
-        Creates the reusable workflow which registers and resamples images.
+        Creates the workflow which registers and resamples images.
         
         :param base_dir: the workflow execution directory (default is the current directory)
         :param technique: the registration technique (``ANTS`` or ``FNIRT``)
         :return: the Workflow object
         """
-        logger.debug('Creating the registration reusable workflow...')
+        logger.debug('Creating the reslice workflow...')
         
         workflow = pe.Workflow(name='reslice', base_dir=base_dir)
         
@@ -399,7 +390,8 @@ class RegistrationWorkflow(object):
     
     def _load_configuration(self, cfg_file=None):
         """
-        Loads the registration workflow configuration.
+        Loads the registration workflow configuration. If a configuration file is
+        specified, then the settings in that file override the default settings.
         
         :param cfg_file: the optional configuration file path
         :return: the configuration dictionary
@@ -420,9 +412,10 @@ class RegistrationWorkflow(object):
         :return: the download file paths
         """
         with xnat_helper.connection() as xnat:
-            return xnat.download(project(), subject, session, dest=dest, container_type='scan', format='NIFTI')
+            return xnat.download(project(), subject, session, dest=dest,
+                container_type='scan', format='NIFTI')
     
-    def _run_workflow(self, workflow):
+    def _run_workflow(self):
         """
         Executes the given workflow.
         
@@ -433,25 +426,37 @@ class RegistrationWorkflow(object):
         """
         # If debug is set, then diagram the workflow graph.
         if logger.level <= logging.DEBUG:
-            fname = "%s.dot" % workflow.name
-            if workflow.base_dir:
-                grf = os.path.join(workflow.base_dir, fname)
+            fname = "%s.dot" % self.workflow.name
+            if self.workflow.base_dir:
+                grf = os.path.join(self.workflow.base_dir, fname)
             else:
                 grf = fname
-            workflow.write_graph(dotfilename=grf)
-            logger.debug("The %s workflow graph is depicted at %s.png." % (workflow.name, grf))
+            self.workflow.write_graph(dotfilename=grf)
+            logger.debug("The %s workflow graph is depicted at %s.png." %
+                (self.workflow.name, grf))
         
+        # The workflow submission arguments.
+        args = {}
         # Check whether the workflow can be distributed.
         if DISTRIBUTABLE:
-            exec_wf.config['execution'] = {'job_finished_timeout': 60.0}
-            args = dict(plugin='SGE',
-                        plugin_args={'qsub_args' : '-l h_rt=1:00:00,mf=3G,h_vmem=3.5G -b n'})
-        else:
-            args = {}
+            # Distribution parameters collected for a debug message.
+            dist_params = {}
+            # The execution setting.
+            if 'execution' in self.config:
+                self.workflow.config['execution'] = self.config['execution']
+                dist_params.update(self.config['execution'])
+            # The Grid Engine setting.
+            if 'SGE' in self.config:
+                args = dict(plugin='SGE', plugin_args=self.config['SGE'])
+                dist_params.update(self.config['SGE'])
+            # Print a debug message.
+            if dist_params:
+                logger.debug("Submitting the %s workflow to the Grid Engine with parameters %d..." %
+                    (self.workflow.name, dist_params))
         
         # Run the workflow.
         with xnat_helper.connection():
-            workflow.run()
+            self.workflow.run(**args)
 
 ### Utility functions called by workflow nodes. ###
 
@@ -495,7 +500,7 @@ def _gen_mask_filename(subject, session):
 def _middle(items, proportion):
     """
     :param items: the list of items to subset
-    :param proportion: the fraction of the middle items to subset
+    :param proportion: the fraction of the middle items to select
     :return: the middle items
     """
     offset = int(len(items) * (proportion / 2))
