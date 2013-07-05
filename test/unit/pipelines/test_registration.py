@@ -45,15 +45,18 @@ class TestRegistrationWorkflow(XNATScanTestBase):
         :param xnat: the :class:`qipipe.helpers.xnat_helpers.XNAT` connection
         :param fixture: the test fixture directory
         :param inputs: the (subject, session) tuples
-        :param opts: the :meth:`qipipe.pipelines.modeling.run` options
+        :param opts: the following keyword options:
+        :keyword base_dir: the workflow exection directory
         :return: the :meth:`qipipe.pipelines.modeling.run` result
         """
         logger.debug("Testing the registration workflow on %s..." % fixture)
-        return registration.run(*inputs, config=REG_CONF, **opts)
+        return registration.run(*inputs, cfg_file=REG_CONF, **opts)
     
     def _verify_result(self, xnat, inputs, result):
-        sess_recon_dict = {(sbj, sess): recon for sbj, sess, recon in result}
+        # The return value is the reconstruction name.
+        recon = result
         for spec, in_files in inputs.iteritems():
+            sbj, sess = spec
             assert_in(spec, result, "The session %s %s was not registered" % spec)
             recon = sess_recon_dict[spec]
             sbj, sess = spec
