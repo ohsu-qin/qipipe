@@ -226,8 +226,8 @@ class RegistrationWorkflow(object):
         exec_wf.connect(input_spec, 'session', upload_mask, 'session')
         exec_wf.connect(mask_wf, 'output_spec.mask', upload_mask, 'in_files')
 
-        Averaging uses the middle half of the images.
-        avg_subset_func = Function(input_names=['items, proportion'], output_names=['middle'],
+        # Averaging uses the middle half of the images.
+        avg_subset_func = Function(input_names=['items', 'proportion'], output_names=['middle'],
             function=_middle)
         avg_subset = pe.Node(avg_subset_func, name='avg_subset')
         avg_subset.inputs.proportion = 0.5
