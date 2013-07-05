@@ -24,21 +24,17 @@ def main(argv=sys.argv):
     
     # The options.
     opts = {}
-    if args.output:
-        opts['dest'] = args.output
     if args.work:
-        opts['work'] = args.work
+        opts['base_dir'] = args.work
     if args.configuration:
-        opts['config'] = args.configuration
-    if args.force:
-        opts['force'] = True
+        opts['cfg_file'] = args.configuration
     
     # Convert the sessions into (subject, session) tuples based on the QIN
-    # XNAT session naming standard.
-    sess_specs = [tuple(sess.split('_')) for sess in args.sessions]
+    # XNAT project_subject_session naming standard.
+    sess_specs = [tuple(sess.split('_')[-2:]) for sess in args.sessions]
     
     # Run the registration workflow.
-    reg.run(args.collection, *sess_specs, **opts)
+    reg.run(*sess_specs, **opts)
     
     return 0
 
@@ -54,13 +50,11 @@ def _parse_arguments():
         dest='log_level', action='store_const', const=logging.INFO)
     verbosity_grp.add_argument('-d', '--debug', help='print debug messages',
         dest='log_level', action='store_const', const=logging.DEBUG)
-    
-    # The log, work and output options.
+
+    # The remaining options.
     parser.add_argument('-l', '--log', help='the log file', metavar='FILE')
     parser.add_argument('-w', '--work', help='the work directory (default a new temp directory)',
         metavar='DIR')
-    
-    # The workflow configuration.
     parser.add_argument('-c', '--configuration', help="the registration configuration file",
         metavar='FILE')
     
