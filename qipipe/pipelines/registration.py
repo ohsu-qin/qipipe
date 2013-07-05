@@ -258,9 +258,6 @@ class RegistrationWorkflow(object):
         """
         Creates the mask workflow.
         
-        :param subject: the subject name
-        :param session: the session name
-        :param images: the input images
         :param base_dir: the workflow execution directory
         :return: the Workflow object
         """
