@@ -8,7 +8,7 @@ from ..staging.staging_error import StagingError
 from ..staging.staging_helper import subject_for_directory, iter_new_visits, group_dicom_files_by_series
 from ..helpers import xnat_helper
 from .pipeline_error import PipelineError
-from ..distributable import DISTRIBUTABLE
+from .distributable import DISTRIBUTABLE
 
 import logging
 logger = logging.getLogger(__name__)
