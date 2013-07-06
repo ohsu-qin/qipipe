@@ -448,7 +448,7 @@ class RegistrationWorkflow(object):
                 dist_params.update(self.config['SGE'])
             # Print a debug message.
             if dist_params:
-                logger.debug("Submitting the %s workflow to the Grid Engine with parameters %d..." %
+                logger.debug("Submitting the %s workflow to the Grid Engine with parameters %s..." %
                     (self.workflow.name, dist_params))
         
         # Run the workflow.
