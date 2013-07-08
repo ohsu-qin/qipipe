@@ -365,7 +365,7 @@ class RegistrationWorkflow(object):
             apply_xfm = pe.Node(ApplyTransforms(**apply_opts), name='apply_xfm')
             workflow.connect(input_spec, 'fixed_image', apply_xfm, 'reference_image')
             workflow.connect(input_spec, 'moving_image', apply_xfm, 'input_image')
-            workflow.connect(apply_xfm_name, 'out_file', apply_xfm, 'output_image')
+            workflow.connect(reslice_name, 'out_file', apply_xfm, 'output_image')
             workflow.connect(register, 'forward_transforms', apply_xfm, 'transforms')
             # Copy the meta-data.
             workflow.connect(apply_xfm, 'output_image', copy_meta, 'dest_file')
@@ -378,6 +378,7 @@ class RegistrationWorkflow(object):
             workflow.connect(input_spec, 'moving_image', fnirt, 'in_file')
             workflow.connect(input_spec, 'mask', fnirt, 'inmask_file')
             workflow.connect(input_spec, 'mask', fnirt, 'refmask_file')
+            workflow.connect(reslice_name, 'out_file', fnirt, 'warped_file')
             # Copy the meta-data.
             workflow.connect(fnirt, 'warped_file', copy_meta, 'dest_file')
         else:
