@@ -88,7 +88,8 @@ class RegistrationWorkflow(object):
         :param opts: the following options
         :keyword base_dir: the workflow execution directory (default current directory)
         :keyword cfg_file: the optional workflow inputs configuration file
-        :keyword technique: the workflow technique (default ``ANTS``)
+        :keyword technique: the case-insensitive workflow technique
+            (``ANTS`` or ``FNIRT``, default ``ANTS``)
         """
         cfg_file = opts.pop('cfg_file', None)
         self.config = self._load_configuration(cfg_file)
@@ -344,7 +345,7 @@ class RegistrationWorkflow(object):
         workflow.connect(input_spec, 'reconstruction', reslice_name, 'reconstruction')
         workflow.connect(input_spec, 'moving_image', reslice_name, 'in_file')
         
-        if not technique or technique == 'ANTS':
+        if not technique or technique.lower() == 'ants':
             # The ANTS registration options.
             reg_opts = self.config.get('ANTSRegistration', {})
             # Register the images to create the warp and affine transformations.
@@ -361,15 +362,15 @@ class RegistrationWorkflow(object):
             workflow.connect(input_spec, 'moving_image', reslice, 'input_image')
             workflow.connect(reslice_name, 'out_file', reslice, 'output_image')
             workflow.connect(register, 'forward_transforms', reslice, 'transforms')
-        elif technique == 'FNIRT':
+        elif technique.lower() == 'fnirt':
             # The FNIRT registration options.
             fnirt_opts = self.config.get('FSLFNIRT', {})
             # Register the images to create the warp and affine transformations.
-            reslice = pe.Node(Registration(**fnirt_opts), name='reslice')
-            workflow.connect(input_spec, 'fixed_image', reslice, 'fixed_image')
-            workflow.connect(input_spec, 'moving_image', reslice, 'moving_image')
-            workflow.connect(input_spec, 'mask', reslice, 'fixed_image_mask')
-            workflow.connect(input_spec, 'mask', reslice, 'moving_image_mask')
+            reslice = pe.Node(fsl.FNIRT(**fnirt_opts), name='reslice')
+            workflow.connect(input_spec, 'fixed_image', reslice, 'ref_file')
+            workflow.connect(input_spec, 'moving_image', reslice, 'in_file')
+            workflow.connect(input_spec, 'refmask_file', reslice, 'fixed_image_mask')
+            workflow.connect(input_spec, 'inmask_file', reslice, 'moving_image_mask')
         else:
             raise PipelineError("Registration technique not recognized: %s" % technique)
         
