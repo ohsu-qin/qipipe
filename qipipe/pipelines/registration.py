@@ -345,6 +345,11 @@ class RegistrationWorkflow(object):
         workflow.connect(input_spec, 'reconstruction', reslice_name, 'reconstruction')
         workflow.connect(input_spec, 'moving_image', reslice_name, 'in_file')
         
+        # Copy the DICOM meta-data. The copy target is set by the technique
+        # node defined below.
+        copy_meta = pe.Node(CopyMeta(), name='copy_meta')
+        workflow.connect(input_spec, 'moving_image', copy_meta, 'src_file')
+        
         if not technique or technique.lower() == 'ants':
             # The ANTS registration options.
             reg_opts = self.config.get('ANTSRegistration', {})
@@ -357,27 +362,26 @@ class RegistrationWorkflow(object):
             # The ANTS reslice options.
             apply_opts = self.config.get('ANTSApplyTransforms', {})
             # Apply the transforms to the input image.
-            reslice = pe.Node(ApplyTransforms(**apply_opts), name='reslice')
-            workflow.connect(input_spec, 'fixed_image', reslice, 'reference_image')
-            workflow.connect(input_spec, 'moving_image', reslice, 'input_image')
-            workflow.connect(reslice_name, 'out_file', reslice, 'output_image')
-            workflow.connect(register, 'forward_transforms', reslice, 'transforms')
+            apply_xfm = pe.Node(ApplyTransforms(**apply_opts), name='apply_xfm')
+            workflow.connect(input_spec, 'fixed_image', apply_xfm, 'reference_image')
+            workflow.connect(input_spec, 'moving_image', apply_xfm, 'input_image')
+            workflow.connect(apply_xfm_name, 'out_file', apply_xfm, 'output_image')
+            workflow.connect(register, 'forward_transforms', apply_xfm, 'transforms')
+            # Copy the meta-data.
+            workflow.connect(apply_xfm, 'output_image', copy_meta, 'dest_file')
         elif technique.lower() == 'fnirt':
             # The FNIRT registration options.
             fnirt_opts = self.config.get('FSLFNIRT', {})
-            # Register the images to create the warp and affine transformations.
-            reslice = pe.Node(fsl.FNIRT(**fnirt_opts), name='reslice')
-            workflow.connect(input_spec, 'fixed_image', reslice, 'ref_file')
-            workflow.connect(input_spec, 'moving_image', reslice, 'in_file')
-            workflow.connect(input_spec, 'refmask_file', reslice, 'fixed_image_mask')
-            workflow.connect(input_spec, 'inmask_file', reslice, 'moving_image_mask')
+            # Register the images.
+            fnirt = pe.Node(fsl.FNIRT(**fnirt_opts), name='fnirt')
+            workflow.connect(input_spec, 'fixed_image', fnirt, 'ref_file')
+            workflow.connect(input_spec, 'moving_image', fnirt, 'in_file')
+            workflow.connect(input_spec, 'mask', fnirt, 'inmask_file')
+            workflow.connect(input_spec, 'mask', fnirt, 'refmask_file')
+            # Copy the meta-data.
+            workflow.connect(fnirt, 'warped_file', copy_meta, 'dest_file')
         else:
             raise PipelineError("Registration technique not recognized: %s" % technique)
-        
-        # Copy the DICOM meta-data.
-        copy_meta = pe.Node(CopyMeta(), name='copy_meta')
-        workflow.connect(input_spec, 'moving_image', copy_meta, 'src_file')
-        workflow.connect(reslice, 'output_image', copy_meta, 'dest_file')
         
         # Collect the outputs.
         out_fields = ['resliced']
