@@ -43,11 +43,11 @@ class XNATScanTestBase(object):
     def tearDown(self):
         shutil.rmtree(self._results, True)
     
-    def test_breast(self):
-        self._test_collection('Breast')
+    def _test_breast(self, **opts):
+        self._test_collection('Breast', **opts)
     
-    def test_sarcoma(self):
-        self._test_collection('Sarcoma')
+    def _test_sarcoma(self, **opts):
+        self._test_collection('Sarcoma', **opts)
     
     def _test_collection(self, collection, **opts):
         """
@@ -57,6 +57,7 @@ class XNATScanTestBase(object):
         :param collection: the collection name
         :param opts: additional workflow options
         """
+        # The fixture is the collection subdirectory.
         fixture = os.path.join(self._fixtures, collection.lower())
 
         # The default workflow base directory.
@@ -65,7 +66,7 @@ class XNATScanTestBase(object):
         
         with xnat_helper.connection() as xnat:
             # Seed XNAT with the test files.
-            sess_files_dict = self._seed_xnat(fixture, collection)
+            sess_files_dict = self._seed_xnat(fixture)
             # Run the workflow.
             result = self._run_workflow(xnat, fixture, *sess_files_dict.iterkeys(), **opts)
             # Verify the result.
@@ -74,28 +75,26 @@ class XNATScanTestBase(object):
             subjects = {sbj for sbj, _ in sess_files_dict.iterkeys()}
             delete_subjects(project(), *subjects)
 
-    def _seed_xnat(self, fixture, collection):
+    def _seed_xnat(self, fixture):
         """
         Seed XNAT with the test files in the given text fixture.
         The fixture is a parent directory which contains a
-        collection/subject/session/images hierarchy. e.g.::
+        subject/session/images hierarchy. e.g.::
         
-            breast/
-                Breast003/
-                    Session01/
-                        series09.nii.gz
-                        series23.nii.gz
-                         ...
+            Breast003/
+                Session01/
+                    series09.nii.gz
+                    series23.nii.gz
+                     ...
         
         :param fixture: the input data parent directory
         :param collection: the input collection name
         :return: the (subject, session) => files dictionary
         """
+        # The {(subject, session) => images} dictionary return value.
         sess_files_dict = {}
-        # The input files are in the collection subdirectory.
-        data_dir = os.path.join(fixture, collection.lower())
         # Upload the files in each subject subdirectory.
-        for sbj_dir in glob.glob(data_dir + '/*'):
+        for sbj_dir in glob.glob(fixture + '/*'):
             _, sbj = os.path.split(sbj_dir)
             # Delete a stale test XNAT subject, if necessary.
             delete_subjects(project(), sbj)

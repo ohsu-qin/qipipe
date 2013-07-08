@@ -38,6 +38,15 @@ class TestRegistrationWorkflow(XNATScanTestBase):
     def __init__(self):
         super(TestRegistrationWorkflow, self).__init__(FIXTURES, RESULTS)
     
+    def test_breast_with_ants(self, **opts):
+        self._test_breast()
+    
+    def test_sarcoma_with_ants(self, **opts):
+        self._test_sarcoma()
+    
+    def test_breast_with_fnirt(self, **opts):
+        self._test_breast(technique='fnirt')
+        
     def _run_workflow(self, xnat, fixture, *inputs, **opts):
         """
         Executes :meth:`qipipe.pipelines.registration.run` on the input sessions.
