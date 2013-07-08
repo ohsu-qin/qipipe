@@ -58,7 +58,7 @@ def run(collection, *subject_dirs, **opts):
     # TODO - refactor into a class with a config like registration.
     #
     if DISTRIBUTABLE:
-        exec_wf.config['execution'] = {'job_finished_timeout': 60.0}
+        workflow.config['execution'] = {'job_finished_timeout': 60.0}
         args = dict(plugin='SGE',
                     plugin_args={'qsub_args' : '-l h_rt=1:00:00,mf=3G,h_vmem=3.5G -b n'})
     else:
