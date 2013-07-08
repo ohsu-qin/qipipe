@@ -49,23 +49,25 @@ class XNATScanTestBase(object):
     def test_sarcoma(self):
         self._test_collection('Sarcoma')
     
-    def _test_collection(self, collection):
+    def _test_collection(self, collection, **opts):
         """
         Run the workflow and verify that the registered images are
         created in XNAT.
         
         :param collection: the collection name
+        :param opts: additional workflow options
         """
         fixture = os.path.join(self._fixtures, collection.lower())
 
-        # The workflow base directory.
-        base_dir = os.path.join(self._results, collection.lower(), 'work')
+        # The default workflow base directory.
+        if 'base_dir' not in opts:
+            opts['base_dir'] = os.path.join(self._results, collection.lower(), 'work')
         
         with xnat_helper.connection() as xnat:
             # Seed XNAT with the test files.
             sess_files_dict = self._seed_xnat(fixture, collection)
             # Run the workflow.
-            result = self._run_workflow(xnat, fixture, *sess_files_dict.iterkeys(), base_dir=base_dir)
+            result = self._run_workflow(xnat, fixture, *sess_files_dict.iterkeys(), **opts)
             # Verify the result.
             self._verify_result(xnat, sess_files_dict, result)
             # Clean up.
