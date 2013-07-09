@@ -305,6 +305,7 @@ class XNAT(object):
         :keyword modality: the session modality
         :keyword format: the image format
         :keyword resource: the resource name (default is the format)
+        :keyword overwrite: flag indicating whether to replace an existing file (default False)
         :return: the new XNAT file names
         :raise XNATError: if the project does not exist
         :raise XNATError: if the session child resource container type option is missing
@@ -552,7 +553,7 @@ class XNAT(object):
         # The resource parent container.
         rsc_ctr = resource.parent()
         # Check for an existing file.
-        if file_obj.exists():
+        if file_obj.exists() and not opts.get('overwrite'):
             raise XNATError("The XNAT file object %s already exists in the %s %s resource" %
                 (fname, rsc_ctr.id(), resource.label()))
         

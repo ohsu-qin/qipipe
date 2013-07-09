@@ -20,6 +20,8 @@ class XNATUploadInputSpec(BaseInterfaceInputSpec):
     reconstruction = traits.Str(desc='The XNAT reconstruction name')
 
     assessor = traits.Str(desc='The XNAT assessor name')
+    
+    overwrite = traits.Bool(desc='Flag indicating whether to replace an existing file')
 
     in_files = InputMultiPath(File(exists=True), mandatory=True, desc='The files to upload')
 
@@ -39,6 +41,8 @@ class XNATUpload(BaseInterface):
             opts['format'] = self.inputs.format
         if self.inputs.resource:
             opts['resource'] = self.inputs.resource
+        if self.inputs.overwrite:
+            opts['overwrite'] = True
         
         # The resource parent.
         if self.inputs.scan:
