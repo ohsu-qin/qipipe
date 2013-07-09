@@ -212,7 +212,8 @@ class RegistrationWorkflow(object):
         exec_wf.connect(input_spec, 'images', mask_wf, 'input_spec.images')
         
         # Upload the mask to XNAT.
-        upload_mask = pe.Node(XNATUpload(project=project(), reconstruction='mask', format='NIFTI'),
+        upload_mask = pe.Node(XNATUpload(project=project(), reconstruction='mask',
+            format='NIFTI', overwrite=True),
             name='upload_mask')
         exec_wf.connect(input_spec, 'subject', upload_mask, 'subject')
         exec_wf.connect(input_spec, 'session', upload_mask, 'session')
