@@ -117,13 +117,13 @@ def create_workflow(collection, *series_specs, **opts):
     workflow.connect(subject_spec, 'dest', map_ctp, 'dest')
     
     # The CTP staging directory factory.
-    ctp_dir_func = Function(input_names=['dest', 'subject', 'session', 'series'], dest=dest,
-        output_names=['out_dir'], function=_ctp_series_directory)
-    ctp_dir = pe.Node(ctp_dir_func, name='ctp_dir')
-    workflow.connect(subject_spec, 'dest', ctp_dir, 'dest')
-    workflow.connect(series_spec, 'subject', ctp_dir, 'subject')
-    workflow.connect(series_spec, 'session', ctp_dir, 'session')
-    workflow.connect(series_spec, 'scan', ctp_dir, 'series')
+    staging_dir_func = Function(input_names=['dest', 'subject', 'session', 'series'], dest=dest,
+        output_names=['out_dir'], function=_make_series_staging_directory)
+    staging_dir = pe.Node(staging_dir_func, name='staging_dir')
+    workflow.connect(subject_spec, 'dest', staging_dir, 'dest')
+    workflow.connect(series_spec, 'subject', staging_dir, 'subject')
+    workflow.connect(series_spec, 'session', staging_dir, 'session')
+    workflow.connect(series_spec, 'scan', staging_dir, 'series')
     
     # Fix the AIRC DICOM tags.
     fix_dicom = pe.Node(FixDicom(collection=collection), name='fix_dicom')
@@ -134,7 +134,7 @@ def create_workflow(collection, *series_specs, **opts):
     # The result is a list of the compressed files for the series.
     compress_dicom = pe.MapNode(Compress(), iterfield='in_file', name='compress_dicom')
     workflow.connect(fix_dicom, 'out_files', compress_dicom, 'in_file')
-    workflow.connect(ctp_dir, 'out_dir', compress_dicom, 'dest')
+    workflow.connect(staging_dir, 'out_dir', compress_dicom, 'dest')
     
     # Store the compressed scan DICOM files in XNAT.
     upload_dicom = pe.Node(XNATUpload(project=project(), format='DICOM'), name='upload_dicom')
@@ -179,9 +179,16 @@ def _group_sessions_by_series(*session_specs):
     
     return ser_specs
 
-def _ctp_series_directory(dest, subject, session, series):
+def _make_series_staging_directory(dest, subject, session, series):
     """
-    :return: the dest/subject/session/series directory path
+    Returns the dest/subject/session/series directory path in which to place
+    DICOM files for TCIA upload. Creates the directory, if necessary.
+    
+    :return: the target series directory path
     """
     import os
-    return os.path.join(dest, subject, session, str(series))
+    path = os.path.join(dest, subject, session, str(series))
+    if not os.path.exists(path):
+        os.makedirs(path)
+    
+    return path
