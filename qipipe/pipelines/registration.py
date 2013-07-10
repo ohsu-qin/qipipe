@@ -293,7 +293,7 @@ class RegistrationWorkflow(object):
         exec_wf.connect(avg_subset, 'middle', average, 'images')
         
         # Mask the reference image.
-        mask_avg = pe.Node(ApplyMask(), name='mask_avg')
+        mask_avg = pe.Node(fsl.maths.ApplyMask(output_type='NIFTI_GZ'), name='mask_avg')
         exec_wf.connect(average, 'output_average_image', mask_avg, 'in_file')
         exec_wf.connect(mask, 'mask', mask_avg, 'mask_file')
         
@@ -308,7 +308,7 @@ class RegistrationWorkflow(object):
         exec_wf.connect(input_spec, 'session', reslice_wf, 'input_spec.session')
         exec_wf.connect(input_spec, 'reconstruction', reslice_wf, 'input_spec.reconstruction')
         exec_wf.connect(image_iter, 'image', reslice_wf, 'input_spec.moving_image')
-        exec_wf.connect(mask, 'mask', reslice_wf, 'input_spec.mask')
+        exec_wf.connect(mask_avg, 'out_file', reslice_wf, 'input_spec.mask')
         exec_wf.connect(average, 'output_average_image', reslice_wf, 'input_spec.fixed_image')
         
         # Upload the resliced image to XNAT.
