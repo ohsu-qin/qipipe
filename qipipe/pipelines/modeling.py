@@ -57,9 +57,6 @@ def run(*inputs, **opts):
     :param opts: the workflow options
     :return: the modeling XNAT (subject, session, analysis) tuples
     """
-    # The workflow directory.
-    base_dir = opts.pop('base_dir', os.getcwd())
-    
     # The image download node. This node is defined before the workflow,
     # since the opts parameter includes both download options and workflow
     # options. The download options are removed the opts parameter before
@@ -214,7 +211,7 @@ def create_workflow(base_dir=None, **inputs):
     :keyword max_r1_0: the maximum computed |R10| value, if |R10| is not fixed
     :return: the pyxnat Workflow
     """
-    workflow = pe.Workflow(name='modeling')
+    workflow = pe.Workflow(name='modeling', base_dir=base_dir)
     
     # The default baseline image count.
     if 'baseline_end_idx' not in inputs:
