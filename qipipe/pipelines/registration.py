@@ -202,8 +202,7 @@ class RegistrationWorkflow(object):
             name='dl_mask')
         
         # The base registration workflow.
-        reg_wf = self._create_base_workflow(name='reg_existing_mask',
-            mask_node=dl_mask, mask_field='out_file', **opts)
+        reg_wf = self._create_base_workflow(name='reg_existing_mask',**opts)
         
         # Connect the mask download inputs.
         input_spec = reg_wf.get_node('input_spec')
@@ -225,8 +224,7 @@ class RegistrationWorkflow(object):
         mask_wf = self._create_mask_workflow(base_dir=opts.get('base_dir'))
         
         # The base registration workflow.
-        reg_wf = self._create_base_workflow(name='reg_nonexisting_mask',
-            mask_node=mask_wf, mask_field='output_spec.mask', **opts)
+        reg_wf = self._create_base_workflow(name='reg_nonexisting_mask', **opts)
         
         # Connect the mask workflow inputs.
         input_spec = reg_wf.get_node('input_spec')
@@ -277,7 +275,7 @@ class RegistrationWorkflow(object):
         input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
         
         # The mask is set by the execution workflow.
-        mask = pe.Node(IdentityInterface(fields='mask'), name='mask')
+        mask = pe.Node(IdentityInterface(fields=['mask']), name='mask')
         
         # Averaging uses the middle half of the images.
         avg_subset_func = Function(input_names=['items', 'proportion'],
@@ -330,7 +328,7 @@ class RegistrationWorkflow(object):
         """
         logger.debug('Creating the mask workflow...')
         
-        workflow = pe.Workflow(name='mask', base_dir=base_dir)
+        workflow = pe.Workflow(name='make_mask', base_dir=base_dir)
         
         # The workflow inputs.
         in_fields = ['subject', 'session', 'images']
@@ -370,7 +368,7 @@ class RegistrationWorkflow(object):
         mask_name_func = Function(input_names=['subject', 'session'],
             output_names=['out_file'],
             function=_gen_mask_filename)
-        mask_name= pe.Node(mask_name_func, name='mask_name')
+        mask_name = pe.Node(mask_name_func, name='mask_name')
         workflow.connect(input_spec, 'subject', mask_name, 'subject')
         workflow.connect(input_spec, 'session', mask_name, 'session')
         
