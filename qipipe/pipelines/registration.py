@@ -41,24 +41,28 @@ class RegistrationWorkflow(object):
     
     - Download the NiFTI scans from XNAT
     
-    - Make a mask to subtract extraneous tissue
+    - Obtain a mask to subtract extraneous tissue
     
-    - Mask each input scan
+    - Make a fixed reference image
     
-    - Make a template by averaging the masked images
+    - Register each image against the reference image
     
-    - Create an affine and non-rigid transform for each image
-    
-    - Reslice the masked image with the transforms
-    
-    - Upload the mask and the resliced images
-    
+    - Upload the registered images
+
     The NiFTI scan images for each session are downloaded from XNAT into the
     ``scans`` subdirectory of the ``base_dir`` specified in the initializer
     options (default is the current directory).
     
-    The average is taken on the middle half of the NiFTI scan images.
-    These images are averaged into a fixed reference template image.
+    The fixed reference image is the average of the middle half of the input
+    series images.
+    
+    Two registration techniques are supported:
+    
+    - ANTS_ SyN_ symmetric normalization diffeomorphic registration
+    
+    - FSL_ FNIRT_ non-linear registration
+    
+    The :meth:`run` option specifies which technique is used.
     
     The optional workflow inputs configuration file can contain the
     following sections:
@@ -66,21 +70,25 @@ class RegistrationWorkflow(object):
     - ``FSLMriVolCluster``: the :class:`qipipe.interfaces.mri_volcluster.MriVolCluster`
         interface options
     
-    - ``ANTSAverage``: the ANTS Average_ interface options
+    - ``ANTSAverage``: the ANTS `Average interface`_ options
     
-    - ``ANTSRegistration``: the ANTS Registration_ interface options
+    - ``ANTSRegistration``: the ANTS `Registration interface`_ options
     
-    - ``ANTSApplyTransforms``: the ANTS ApplyTransform_ interface options
+    - ``ANTSApplyTransforms``: the ANTS `ApplyTransform interface`_ options
     
-    - ``FSLFNIRT``: the FSL FNIRT_ interface options
+    - ``FSLFNIRT``: the FSL `FNIRT interface`_ options
     
-    The default registration applies an ANTS affine followed by a symmetric normalization
-    transform.
+    The default registration applies an ANTS affine followed by a symmetric
+    normalization transform.
     
-    .. _Average: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.ants.utils.html
-    .. _Registration: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.ants.registration.html
-    .. _ApplyTransform: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.ants.resampling.html
-    .. _FNIRT: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.fsl.preprocess.html
+    .. _ANTS: http://stnava.github.io/ANTs/
+    .. _ApplyTransform interface: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.ants.resampling.html
+    .. _Average interface: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.ants.utils.html
+    .. _FNIRT: http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FNIRT#Research_Overview
+    .. _FNIRT interface: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.fsl.preprocess.html
+    .. _FSL: http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FSL
+    .. _Registration interface: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.ants.registration.html
+    .. _SyN: http://www.ncbi.nlm.nih.gov/pubmed/17659998
     """
     
     def __init__(self, **opts):
@@ -99,7 +107,10 @@ class RegistrationWorkflow(object):
         """The registration configuration."""
         
         self._reg_mask_dl_wf = self._create_workflow_with_existing_mask(**opts)
+        """The registration workflow to use with a existing mask."""
+        
         self._reg_mask_cr_wf = self._create_workflow_with_nonexisting_mask(**opts)
+        """The registration workflow to use with a non-existing mask."""
     
     def run(self, *inputs):
         """
@@ -194,10 +205,14 @@ class RegistrationWorkflow(object):
         reg_wf = self._create_base_workflow(name='reg_existing_mask',
             mask_node=dl_mask, mask_field='out_file', **opts)
         
-        # Connect the mask workflow inputs.
+        # Connect the mask download inputs.
         input_spec = reg_wf.get_node('input_spec')
         reg_wf.connect(input_spec, 'subject', dl_mask, 'subject')
         reg_wf.connect(input_spec, 'session', dl_mask, 'session')
+        
+        # Connect the mask download output to the registration mask input.
+        mask = reg_wf.get_node('mask')
+        reg_wf.connect(dl_mask, 'out_file', mask, 'mask')
 
         logger.debug("Created the %s workflow." % reg_wf.name)
         
@@ -225,23 +240,27 @@ class RegistrationWorkflow(object):
         reg_wf.connect(input_spec, 'subject', upload_mask, 'subject')
         reg_wf.connect(input_spec, 'session', upload_mask, 'session')
         reg_wf.connect(mask_wf, 'output_spec.mask', upload_mask, 'in_files')
+        
+        # Connect the mask workflow output to the registration mask input.
+        mask = reg_wf.get_node('mask')
+        reg_wf.connect(mask_wf, 'output_spec.mask', mask, 'mask')
 
         logger.debug("Created the %s workflow." % reg_wf.name)
         
         return reg_wf
     
-    def _create_base_workflow(self, name, mask_node, mask_field, **opts):
+    def _create_base_workflow(self, name, **opts):
         """
         Creates the base registration workflow. The registration workflow performs the
         following steps:
         
         - Set the mask and reslice workflow inputs
+        
         - Run these workflows
+        
         - Upload the mask and reslice outputs to XNAT
         
         :param name: the workflow name
-        :param mask_node: the mask node
-        :param mask_field: the mask output field
         :param opts: the following workflow options
         :keyword base_dir: the workflow execution directory (default current directory)
         :keyword technique: the registration technique
@@ -257,6 +276,9 @@ class RegistrationWorkflow(object):
         in_fields = ['subject', 'session', 'reconstruction', 'images']
         input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
         
+        # The mask is set by the execution workflow.
+        mask = pe.Node(IdentityInterface(fields='mask'), name='mask')
+        
         # Averaging uses the middle half of the images.
         avg_subset_func = Function(input_names=['items', 'proportion'],
             output_names=['middle'], function=_middle)
@@ -266,9 +288,14 @@ class RegistrationWorkflow(object):
         
         # The average options.
         avg_opts = self.config.get('ANTSAverage', {})
-        # Make the ANTS template.
+        # Make the reference image.
         average = pe.Node(AverageImages(**avg_opts), name='average')
         exec_wf.connect(avg_subset, 'middle', average, 'images')
+        
+        # Mask the reference image.
+        mask_avg = pe.Node(ApplyMask(), name='mask_avg')
+        exec_wf.connect(average, 'output_average_image', mask_avg, 'in_file')
+        exec_wf.connect(mask, 'mask', mask_avg, 'mask_file')
         
         # The reslice image iterator.
         image_iter = pe.Node(IdentityInterface(fields=['image']), name='image_iter')
@@ -281,7 +308,7 @@ class RegistrationWorkflow(object):
         exec_wf.connect(input_spec, 'session', reslice_wf, 'input_spec.session')
         exec_wf.connect(input_spec, 'reconstruction', reslice_wf, 'input_spec.reconstruction')
         exec_wf.connect(image_iter, 'image', reslice_wf, 'input_spec.moving_image')
-        exec_wf.connect(mask_node, mask_field, reslice_wf, 'input_spec.mask')
+        exec_wf.connect(mask, 'mask', reslice_wf, 'input_spec.mask')
         exec_wf.connect(average, 'output_average_image', reslice_wf, 'input_spec.fixed_image')
         
         # Upload the resliced image to XNAT.
