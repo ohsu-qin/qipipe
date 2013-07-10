@@ -34,8 +34,8 @@ def main(argv=sys.argv):
         opts['registration'] = args.registration
     if args.modeling != None:
         opts['modeling'] = args.modeling
-    if args.force:
-        opts['force'] = True
+    if args.overwrite:
+        opts['overwrite'] = True
     
     # Run the QIN workflow.
     qip.run(args.collection, *args.subject_dirs, **opts)
@@ -69,8 +69,8 @@ def _parse_arguments():
     parser.add_argument('-w', '--work', help='the work directory (default a new temp directory)',
         metavar='DIR')
     
-    # The dangerous force option.
-    parser.add_argument('-f', '--force', help='reload existing XNAT subjects',
+    # The dangerous overwrite option.
+    parser.add_argument('--overwrite', help='replace existing XNAT subjects',
         action='store_true')
     
     # The workflow configurations.
