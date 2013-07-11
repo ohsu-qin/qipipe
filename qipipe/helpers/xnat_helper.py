@@ -233,13 +233,19 @@ class XNAT(object):
         if not os.path.exists(dest):
             os.makedirs(dest)
         
-        logger.debug("Downloading the %s files to %s..." % (session, dest))
+        logger.debug("Downloading the %s %s %s files to %s..." %
+            (subject, session, opts, dest))
 
         # The resource.
         rsc = self._infer_xnat_resource(exp, opts)
         
         # Download the files.
-        return [self._download_file(f, dest) for f in rsc.files()]
+        rsc_files = list(rsc.files())
+        if not rsc_files:
+            logger.debug("The %s %s %s resource does not contain any files." %
+                (subject, session, opts))
+        
+        return [self._download_file(f, dest) for f in rsc_files]
         
     def _download_file(self, file_obj, dest):
         """
