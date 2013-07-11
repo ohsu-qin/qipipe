@@ -53,7 +53,7 @@ class RegistrationWorkflow(object):
     ``scans`` subdirectory of the ``base_dir`` specified in the initializer
     options (default is the current directory).
     
-    The fixed reference image is the average of the middle half of the input
+    The fixed reference image is the average of the middle three input
     series images.
     
     Two registration techniques are supported:
@@ -153,6 +153,8 @@ class RegistrationWorkflow(object):
         # when the workflow is built rather than set dynamically by a download
         # step.
         images = self._download_scans(subject, session, dest)
+        # Sort the images by series number.
+        images.sort()
         
         # The workflow to run is determined by whether there is an existing mask.
         with xnat_helper.connection() as xnat:
@@ -276,18 +278,12 @@ class RegistrationWorkflow(object):
         # The mask is set by the execution workflow.
         mask = pe.Node(IdentityInterface(fields=['mask']), name='mask')
         
-        # Averaging uses the middle half of the images.
-        avg_subset_func = Function(input_names=['items', 'proportion'],
-            output_names=['middle'], function=_middle)
-        avg_subset = pe.Node(avg_subset_func, name='avg_subset')
-        avg_subset.inputs.proportion = 0.5
-        exec_wf.connect(input_spec, 'images', avg_subset, 'items')
-        
         # The average options.
         avg_opts = self.config.get('ANTSAverage', {})
         # Make the reference image.
         average = pe.Node(AverageImages(**avg_opts), name='average')
-        exec_wf.connect(avg_subset, 'middle', average, 'images')
+        # The average is taken over the middle three images.
+        exec_wf.connect(input_spec, ('images', _middle, 3), average, 'images')
         
         # Mask the reference image.
         mask_avg = pe.Node(fsl.maths.ApplyMask(output_type='NIFTI_GZ'), name='mask_avg')
@@ -563,13 +559,35 @@ def _gen_reslice_filename(reconstruction, in_file):
 def _gen_mask_filename(subject, session):
     return "%s_%s_mask.nii.gz" % (subject.lower(), session.lower())
 
-def _middle(items, proportion):
+def _middle(items, proportion_or_length):
     """
+    Returns a sublist of the given items determined as follows:
+    
+    - If ``proportion_or_length`` is a float, then the middle fraction
+        given by that parameter
+    
+    - If ``proportion_or_length`` is an integer, then the middle
+        items with length given by that parameter
+    
     :param items: the list of items to subset
-    :param proportion: the fraction of the middle items to select
+    :param proportion_or_length: the fraction or number of middle items
+        to select
     :return: the middle items
     """
-    offset = int(len(items) * (proportion / 2))
+    if proportion_or_length < 0:
+        raise ValueError("The _middle proportion_or_length parameter is not"
+            " a non-negative number: %s" % proportion_or_length)
+    elif isinstance(proportion_or_length, float):
+        if proportion_or_length > 1:
+            raise ValueError("The _middle proportion parameter cannot"
+                " exceed 1.0: %s" % proportion_or_length)
+        offset = int(len(items) * (proportion_or_length / 2))
+    elif isinstance(proportion_or_length, int):
+        offset = max(0, int(proportion_or_length / 2))
+    else:
+        raise ValueError("The _middle proportion_or_length parameter is not"
+            " a number: %s" % proportion_or_length)
+
     return sorted(items)[offset:len(items)-offset]
 
 def _gen_crop_op_string(cog):
