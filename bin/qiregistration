@@ -3,11 +3,14 @@
 Runs the QIN registration pipeline.
 """
 
-import sys, os
+import sys, os, re
 import argparse
 import logging
+from collections import defaultdict
 # Defer importing the application modules until the logging level has been set.
 
+SESSION_LBL_PAT = re.compile("^(\w+)_(\w+)_(\w+)$")
+"""The *project*``_``*subject*``_``*session* XNAT label matcher."""
 
 def main(argv=sys.argv):
     # Parse the command line arguments.
@@ -21,6 +24,7 @@ def main(argv=sys.argv):
     
     # Import the application now, after logging has been set.
     from qipipe.pipelines import registration as reg
+    from qipipe.helpers.project import project
     
     # The options.
     opts = {}
@@ -31,14 +35,47 @@ def main(argv=sys.argv):
     if args.technique:
         opts['technique'] = args.technique
     
-    # Convert the sessions into (subject, session) tuples based on the QIN
-    # XNAT project_subject_session naming standard.
-    sess_specs = [tuple(sess.split('_')[-2:]) for sess in args.sessions]
-    
-    # Run the registration workflow.
-    reg.run(*sess_specs, **opts)
+    # Parse the XNAT session label arguments.
+    prj_sess_dict = _parse_session_labels(args.sessions)
+    # Register the session images.
+    for prj, sessions in prj_sess_dict.iteritems():
+        # Set the project.
+        project(prj)
+        # Run the registration workflow.
+        reg.run(*sessions, **opts)
     
     return 0
+
+def _parse_session_labels(labels):
+    """
+    Parses the given XNAT session labels into (subject, session) tuples grouped
+    by project.
+    
+    :param labels: the labels to parse
+    :return: the {project: [(subject, session), ...]} dictionary
+    """
+    prj_sess_dict = defaultdict(list)
+    for label in labels:
+        prj, sbj, sess = _parse_session_label(label)
+        prj_sess_dict[prj].append(tuple([sbj, sess]))
+    
+    return prj_sess_dict
+
+def _parse_session_label(label):
+    """
+    Parses the given XNAT session label into project, subject and session based
+    on the ``qipipe`` naming standard.
+    
+    :param label: the label to parse
+    :return: the [project, subject, session] list
+    """
+    match = SESSION_LBL_PAT.match(label)
+    if not match:
+        raise ValueError("The XNAT session label argument is not in"
+            " project_subject_session format: %s" % label)
+    
+    return match.groups()
+    
 
 def _parse_arguments():
     """Parses the command line arguments."""
