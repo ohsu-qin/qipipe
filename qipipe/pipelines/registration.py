@@ -105,7 +105,7 @@ class RegistrationWorkflow(object):
         cfg_file = opts.pop('cfg_file', None)
         self.config = self._load_configuration(cfg_file)
         """The registration configuration."""
-        
+            
         self._reg_mask_dl_wf = self._create_workflow_with_existing_mask(**opts)
         """The registration workflow to use with a existing mask."""
         
@@ -144,10 +144,8 @@ class RegistrationWorkflow(object):
         :param session: the session name
         :param recon: the reconstruction name
         """
-        # The workflow to run on the given session.
-        reg_wf = self._reg_mask_cr_wf
         # The scan series stack download location.
-        base_dir = reg_wf.base_dir or os.getcwd()
+        base_dir = self._reg_mask_cr_wf.base_dir or os.getcwd()
         dest = os.path.join(base_dir, 'data', subject, session)
         
         # Download the scan images. This step cannot be done within the workflow,
@@ -160,9 +158,10 @@ class RegistrationWorkflow(object):
         with xnat_helper.connection() as xnat:
             mask = xnat.get_reconstruction(project(), subject, session, MASK_RECON)
             if mask.exists():
-                reg_wf = self._reg_mask_cr_wf
-            else:
+                logger.debug("The %s mask exisits." % mask.label())
                 reg_wf = self._reg_mask_dl_wf
+            else:
+                reg_wf = self._reg_mask_cr_wf
         
         # Execute the registration workflow.
         self._set_registration_input(reg_wf, subject, session, recon, images)
