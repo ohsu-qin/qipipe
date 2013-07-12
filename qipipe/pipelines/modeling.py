@@ -197,7 +197,7 @@ class ModelingWorkflow(WorkflowBase):
         # The download fields.
         dl_fields = ['subject', 'session', 'reconstruction', 'container_type']
         # The reusable workflow input fields.
-        reusable_fields = reusable_wf.get_node('input_spec')
+        reusable_fields = reusable_wf.get_node('input_spec').inputs.copyable_trait_names()
         in_fields = set(dl_fields).union(reusable_fields)
         # The input node.
         input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
