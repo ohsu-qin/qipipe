@@ -91,8 +91,15 @@ class ModelingWorkflow(WorkflowBase):
         :param opts: the following options
         :keyword cfg_file: the optional workflow inputs configuration file
         :keyword base_dir: the workflow execution directory (default current directory)
+        :keyword r1_0_val: the optional fixed |R10| value
+        :keyword max_r1_0: the maximum computed |R10| value, if the fixed |R10|
+            option is not set
+        :keyword pd_dir: the proton density files parent directory, if the fixed |R10|
+            option is not set
+        :keyword baseline_end_idx: the number of images to merge into a R1 series
+            baseline image (default is 1)
         """
-        super(ModelingWorkflow, self).__init__(logger, opts.pop('cfg_dir', None))
+        super(ModelingWorkflow, self).__init__(logger, opts.pop('cfg_file', None))
         
         self.workflow = self._create_workflow(**opts)
         """
@@ -136,10 +143,6 @@ class ModelingWorkflow(WorkflowBase):
         :param inputs: the (subject, scan) inputs
         :param opts: the following workflow options
         :keyword reconstruction: the XNAT reconstruction to model
-        :keyword r1_0_val: the optional fixed |R10| value
-        :keyword baseline_end_idx: the number of images to merge into a R1 series
-            baseline image (default is 1)
-        :keyword max_r1_0: the maximum computed |R10| value, if |R10| is not fixed
         :return: the modeling XNAT (subject, session, analysis) tuples
         """
         # The workflow input node
@@ -173,18 +176,19 @@ class ModelingWorkflow(WorkflowBase):
         # Return the (subject, session, analysis) tuples.
         return [(sbj, sess, analysis) for sbj, sess in inputs]
     
-    def _create_workflow(self, base_dir=None):
+    def _create_workflow(self, base_dir=None, **opts):
         """
         Builds the modeling executable workflow described in :class:`ModelingWorkflow`.
         
         :param base_dir: the execution working directory (default is the current directory)
-        :param inputs: the workflow inputs
+        :param opts: the additional reusable workflow options described in
+            :meth:`__init__`
         :return: the modeling XNAT (subject, session, analysis) tuples
         """
         logger.debug("Building the modeling execution workflow...")
         
         # The reusable workflow.
-        reusable_wf = self._create_reusable_workflow(base_dir=base_dir)
+        reusable_wf = self._create_reusable_workflow(base_dir=base_dir, **opts)
         
         # The execution workflow.
         wf_name = reusable_wf.name + '_exec'
@@ -204,7 +208,8 @@ class ModelingWorkflow(WorkflowBase):
             exec_wf.connect(input_spec, field, dl_images, field)
         
         # Download the mask.
-        dl_mask = pe.Node(XNATDownload(project=project(), reconstruction='mask'), name='dl_mask')
+        dl_mask = pe.Node(XNATDownload(project=project(), reconstruction='mask'),
+            name='dl_mask')
         exec_wf.connect(input_spec, 'subject', dl_mask, 'subject')
         exec_wf.connect(input_spec, 'session', dl_mask, 'session')
         
@@ -261,28 +266,69 @@ class ModelingWorkflow(WorkflowBase):
         return pe.Node(XNATUpload(project=project(), assessor=analysis, resource=resource),
             name=name)
     
-    def _create_reusable_workflow(self, base_dir=None):
+    def _create_reusable_workflow(self, base_dir=None, **opts):
         """
         Creates the modeling reusable workflow described in :class:`ModelingWorkflow`.
-
+        
+        :param base_dir: the workflow working directory
+        :param opts: the additional PK mapping parameters described in :meth:`__init__`
         :return: the pyxnat Workflow
         """
         workflow = pe.Workflow(name='modeling', base_dir=base_dir)
         
-        # The default baseline image count.
-        if 'baseline_end_idx' not in inputs:
-            inputs['baseline_end_idx'] = 1
+        # The parameters can be defined in either the options or the configuration.
+        config = self.configuration.get('Parameters', {})
+        
+        if  'baseline_end_idx' not in opts:
+            # Look for the the baseline parameter in the configuration.
+            if 'baseline_end_idx' in config:
+                opts['baseline_end_idx'] = config['baseline_end_idx']
+            else:
+                # The default baseline image count.
+                opts['baseline_end_idx'] = 1
+        
+        # The R1_0 computation fields.
+        r1_fields = ['pd_dir', 'max_r1_0']
+        # Mark the use_fixed_r1_0 variable as Unknown.
+        use_fixed_r1_0 = None
+        # Get the R1 parameter values.
+        if 'r1_0_val' in opts:
+            use_fixed_r1_0 = True
+        else:
+            for field in r1_fields:
+                if field in opts:
+                    use_fixed_r1_0 = False
+                elif field in config:
+                    opts[field] = config[field]
+            # If none of the R1 options are set in the options,
+            # then try the configuration.
+            if use_fixed_r1_0 == None:
+                if 'r1_0_val' in config:
+                    opts['r1_0_val'] = config['r1_0_val']
+                    use_fixed_r1_0 = True
+                else:
+                    for field in r1_fields:
+                        if field in config:
+                            use_fixed_r1_0 = False
+                            opts[field] = config[field]
+        
+        # Validate the R1 parameters.
+        if not use_fixed_r1_0:
+            for field in r1_fields:
+                if field not in opts:
+                    raise ValueError("Missing both the r1_0_val and the %s"
+                        " parameters." % field)
+        
+        logger.debug("The PK modeling parameters: %s" % opts)
         
         # Set up the input node.
         in_fields = ['subject', 'session', 'in_files', 'mask_file', 'baseline_end_idx']
-        if 'r1_0_val' in inputs:
+        if use_fixed_r1_0:
             in_fields += ['r1_0_val']
-            use_fixed_r1_0 = True
         else:
-            in_fields += ['pd_dir', 'max_r1_0']
-            use_fixed_r1_0 = False
-        input_spec = pe.Node(IdentityInterface(fields=in_fields, **inputs),
-                            name='input_spec')
+            in_fields += r1_fields
+        input_spec = pe.Node(IdentityInterface(fields=in_fields, **opts),
+            name='input_spec')
         
         # Merge the DCE data to 4D.
         dce_merge = pe.Node(MergeNifti(), name='dce_merge')
@@ -364,12 +410,12 @@ class ModelingWorkflow(WorkflowBase):
                          pk_map, 'mask')
         workflow.connect(get_params, 'params_csv',
                          pk_map, 'params_csv')
-        
+        # Set the distributable MPI parameters.
         if DISTRIBUTABLE:
             pk_map.inputs.use_mpi = True
-            pk_map.plugin_args = {'qsub_args': '-pe mpi 48-120 -l h_rt=4:00:00,mf=750M,h_vmem=3G -b n',
-                                   'overwrite' : True
-                                  }
+            if 'FastFit' in self.configuration:
+                qsub_args = self.configuration['FastFit'].get('qsub_args', {})
+                pk_map.plugin_args = dict(qsub_args=qsub_args, overwrite=True)
         
         # Set up the outputs.
         outputs = ['r1_series',
