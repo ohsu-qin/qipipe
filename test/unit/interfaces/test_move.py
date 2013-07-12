@@ -22,11 +22,6 @@ SOURCE = os.path.join(RESULTS, 'source', 'data')
 TARGET = os.path.join(RESULTS, 'target')
 """The test target area where the work data is moved."""
 
-from nipype import config
-cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
-    execution=dict(crashdump_dir=RESULTS, create_report=False))
-config.update_config(cfg)
-
 class TestMove:
     """Move interface unit tests."""
     
@@ -37,8 +32,7 @@ class TestMove:
         shutil.copy(FIXTURE, SOURCE)
     
     def tearDown(self):
-        # Clear the result area.
-        pass #shutil.rmtree(RESULTS, True)
+        shutil.rmtree(RESULTS, True)
         
     def test_move_file(self):
         # The source file.
