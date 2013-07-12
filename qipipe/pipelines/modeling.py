@@ -204,7 +204,7 @@ class ModelingWorkflow(WorkflowBase):
         
         # The image download node.
         dl_images = pe.Node(XNATDownload(project=project()), name='dl_images')
-        for field in in_fields:
+        for field in dl_fields:
             exec_wf.connect(input_spec, field, dl_images, field)
         
         # Download the mask.
