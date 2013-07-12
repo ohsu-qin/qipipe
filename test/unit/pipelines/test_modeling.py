@@ -76,14 +76,10 @@ class TestModelingWorkflow(XNATScanTestBase):
         return modeling.run(*inputs, **opts)
     
     def _verify_result(self, xnat, inputs, result):
-        sess_anl_dict = {(sbj, sess): anl for sbj, sess, anl in result}
-        for spec in inputs:
-            assert_in(spec, sess_anl_dict, "The session %s %s was not modeled" % spec)
-            anl = sess_anl_dict[spec]
-            sbj, sess = spec
-            anl_obj = xnat.get_analysis(project(), sbj, sess, anl)
+        for sbj, sess in inputs:
+            anl_obj = xnat.get_analysis(project(), sbj, sess, result)
             assert_true(anl_obj.exists(),
-                "The %s %s %s XNAT analysis object was not created" % (sbj, sess, anl))
+                "The %s %s %s XNAT analysis object was not created" % (sbj, sess, result))
 
 
 if __name__ == "__main__":

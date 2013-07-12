@@ -143,7 +143,7 @@ class ModelingWorkflow(WorkflowBase):
         :param inputs: the (subject, scan) inputs
         :param opts: the following workflow options
         :keyword reconstruction: the XNAT reconstruction to model
-        :return: the modeling XNAT (subject, session, analysis) tuples
+        :return: the modeling XNAT analysis name
         """
         # The workflow input node
         input_spec = self.workflow.get_node('input_spec')
@@ -163,18 +163,10 @@ class ModelingWorkflow(WorkflowBase):
             iter_dict['session'].append(sess)
         input_spec.iterables = iter_dict.items()
         
-        # Collect the execution workflow output fields.
-        exec_out_fields = ['subject', 'session', 'analysis']
-        output_spec = pe.Node(IdentityInterface(fields=exec_out_fields, analysis=analysis),
-            name='output_spec')
-        for field in ['subject', 'session']:
-            exec_wf.connect(input_spec, field, output_spec, field)
-        
         # Run the workflow.
-        self._run_workflow(workflow)
+        self._run_workflow(self.workflow)
         
-        # Return the (subject, session, analysis) tuples.
-        return [(sbj, sess, analysis) for sbj, sess in inputs]
+        return output_spec.outputs.analysis
     
     def _create_workflow(self, base_dir=None, **opts):
         """
