@@ -226,7 +226,7 @@ class ModelingWorkflow(WorkflowBase):
         
         # The upload nodes.
         reusable_out_fields = reusable_wf.get_node('output_spec').outputs.copyable_trait_names()
-        upload_node_dict = {field: _create_output_upload_node(analysis, field)
+        upload_node_dict = {field: self._create_output_upload_node(analysis, field)
             for field in reusable_out_fields}
         for field, node in upload_node_dict.iteritems():
             exec_wf.connect(input_spec, 'subject', node, 'subject')
