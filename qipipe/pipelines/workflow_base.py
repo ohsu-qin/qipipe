@@ -44,7 +44,7 @@ class WorkflowBase(object):
             raise NameError("The workflow wrapper class does not match the standard"
                 " workflow class name pattern: %s" % self.__class__.__name__)
         name = match.group(1)
-        fname = "%s.cfg" % name
+        fname = "%s.cfg" % name.lower()
         def_cfg_file = os.path.join(WorkflowBase.DEF_CONF_DIR, fname)
         
         # The configuration files to load.
