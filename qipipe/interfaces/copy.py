@@ -15,6 +15,7 @@ class CopyOutputSpec(TraitedSpec):
 
 
 class Copy(BaseInterface):
+    """The Copy interface copies a file to a destination directory."""
     input_spec = CopyInputSpec
     
     output_spec = CopyOutputSpec

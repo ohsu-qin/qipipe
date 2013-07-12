@@ -15,6 +15,7 @@ class MoveOutputSpec(TraitedSpec):
 
 
 class Move(BaseInterface):
+    """The Move interface moves a file to a destination directory."""
     input_spec = MoveInputSpec
     
     output_spec = MoveOutputSpec
