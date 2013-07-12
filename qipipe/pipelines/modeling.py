@@ -291,33 +291,41 @@ class ModelingWorkflow(WorkflowBase):
         r1_fields = ['pd_dir', 'max_r1_0']
         # Mark the use_fixed_r1_0 variable as Unknown.
         use_fixed_r1_0 = None
-        # Get the R1 parameter values.
+        # Get the R1_0 parameter values.
         if 'r1_0_val' in opts:
-            use_fixed_r1_0 = True
+            r1_0_val = opts.get('r1_0_val')    
+            if r1_0_val:
+                use_fixed_r1_0 = True
+            else:
+                use_fixed_r1_0 = False
         else:
             for field in r1_fields:
-                if field in opts:
+                value = opts.get(field)
+                if value:
                     use_fixed_r1_0 = False
-                elif field in config:
+        
+        # If none of the R1_0 options are set in the options,
+        # then try the configuration.
+        if use_fixed_r1_0 == None:
+            r1_0_val = config.get('r1_0_val')
+            if r1_0_val:
+                opts['r1_0_val'] = r1_0_val
+                use_fixed_r1_0 = True
+        
+        # If R1_0 is not fixed, then augment the R1_0 options
+        # from the configuration, if necessary.
+        if not use_fixed_r1_0:
+            for field in r1_fields:
+                if field not in opts and field in config:
+                    use_fixed_r1_0 = False
                     opts[field] = config[field]
-            # If none of the R1 options are set in the options,
-            # then try the configuration.
-            if use_fixed_r1_0 == None:
-                if 'r1_0_val' in config:
-                    opts['r1_0_val'] = config['r1_0_val']
-                    use_fixed_r1_0 = True
-                else:
-                    for field in r1_fields:
-                        if field in config:
-                            use_fixed_r1_0 = False
-                            opts[field] = config[field]
         
         # Validate the R1 parameters.
         if not use_fixed_r1_0:
             for field in r1_fields:
-                if field not in opts:
+                if not opts.get(field):
                     raise ValueError("Missing both the r1_0_val and the %s"
-                        " parameters." % field)
+                        " parameter." % field)
         
         logger.debug("The PK modeling parameters: %s" % opts)
         
@@ -411,11 +419,12 @@ class ModelingWorkflow(WorkflowBase):
         workflow.connect(get_params, 'params_csv',
                          pk_map, 'params_csv')
         # Set the distributable MPI parameters.
-        if DISTRIBUTABLE:
-            pk_map.inputs.use_mpi = True
-            if 'FastFit' in self.configuration:
-                qsub_args = self.configuration['FastFit'].get('qsub_args', {})
+        if DISTRIBUTABLE and 'FastFit' in config:
+            qsub_args = config['FastFit'].get('qsub_args', {})
+            if qsub_args:
+                pk_map.inputs.use_mpi = True
                 pk_map.plugin_args = dict(qsub_args=qsub_args, overwrite=True)
+                logger.debug("FastFit MPI parameters: %s" % qsub_args)
         
         # Set up the outputs.
         outputs = ['r1_series',
