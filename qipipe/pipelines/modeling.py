@@ -166,6 +166,8 @@ class ModelingWorkflow(WorkflowBase):
         # Run the workflow.
         self._run_workflow(self.workflow)
         
+        # Return the analysis name.
+        output_spec = self.workflow.get_node('output_spec')
         return output_spec.outputs.analysis
     
     def _create_workflow(self, base_dir=None, **opts):
