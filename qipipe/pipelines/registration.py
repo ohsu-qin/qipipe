@@ -10,12 +10,11 @@ from ..helpers.project import project
 from ..interfaces import XNATDownload, XNATUpload, MriVolCluster
 from ..helpers import xnat_helper, file_helper
 from ..helpers.ast_config import read_config
+from .workflow_base import WorkflowBase
 from .distributable import DISTRIBUTABLE
 
 import logging
 logger = logging.getLogger(__name__)
-
-DEF_CONFIG_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'conf', 'registration.cfg')
 
 REG_PREFIX = 'reg'
 """The XNAT registration reconstruction name prefix."""
@@ -33,7 +32,7 @@ def run(*inputs, **opts):
     """
     return RegistrationWorkflow(**opts).run(*inputs)
 
-class RegistrationWorkflow(object):
+class RegistrationWorkflow(WorkflowBase):
     """
     The RegistrationWorkflow class builds and executes the registration workflow.
     
@@ -48,7 +47,7 @@ class RegistrationWorkflow(object):
     - Register each image against the reference image
     
     - Upload the registered images
-
+    
     The NiFTI scan images for each session are downloaded from XNAT into the
     ``scans`` subdirectory of the ``base_dir`` specified in the initializer
     options (default is the current directory).
@@ -97,15 +96,13 @@ class RegistrationWorkflow(object):
         that file override the default settings.
         
         :param opts: the following options
-        :keyword base_dir: the workflow execution directory (default current directory)
         :keyword cfg_file: the optional workflow inputs configuration file
+        :keyword base_dir: the workflow execution directory (default current directory)
         :keyword technique: the case-insensitive workflow technique
             (``ANTS`` or ``FNIRT``, default ``ANTS``)
         """
-        cfg_file = opts.pop('cfg_file', None)
-        self.config = self._load_configuration(cfg_file)
-        """The registration configuration."""
-            
+        super(RegistrationWorkflow, self).__init__(logger, opts.pop('cfg_dir', None))
+        
         self._reg_mask_dl_wf = self._create_workflow_with_existing_mask(**opts)
         """The registration workflow to use with a existing mask."""
         
@@ -197,7 +194,7 @@ class RegistrationWorkflow(object):
     
     def _create_workflow_with_existing_mask(self, **opts):
         logger.debug("Creating the registration workflow to use with a existing mask...")
-
+        
         # Download the mask.
         dl_mask = pe.Node(XNATDownload(project=project(), reconstruction=MASK_RECON),
             name='dl_mask')
@@ -213,14 +210,25 @@ class RegistrationWorkflow(object):
         # Connect the mask download output to the registration mask input.
         mask = reg_wf.get_node('mask')
         reg_wf.connect(dl_mask, 'out_file', mask, 'mask')
-
+        
         logger.debug("Created the %s workflow." % reg_wf.name)
+        
+        # If debug is set, then diagram the workflow graph.
+        if logger.level <= logging.DEBUG:
+            fname = "%s.dot" % reg_wf.name
+            if reg_wf.base_dir:
+                grf = os.path.join(reg_wf.base_dir, fname)
+            else:
+                grf = fname
+            reg_wf.write_graph(dotfilename=grf)
+            logger.debug("The %s workflow graph is depicted at %s.png." %
+                (reg_wf.name, grf))
         
         return reg_wf
     
     def _create_workflow_with_nonexisting_mask(self, **opts):
         logger.debug("Creating the registration workflow to use with a non-existing mask...")
-
+        
         # The mask creation workflow.
         mask_wf = self._create_mask_workflow(base_dir=opts.get('base_dir'))
         
@@ -243,8 +251,18 @@ class RegistrationWorkflow(object):
         # Connect the mask workflow output to the registration mask input.
         mask = reg_wf.get_node('mask')
         reg_wf.connect(mask_wf, 'output_spec.mask', mask, 'mask')
-
+        
         logger.debug("Created the %s workflow." % reg_wf.name)
+        # If debug is set, then diagram the workflow graph.
+        if logger.level <= logging.DEBUG:
+            fname = "%s.dot" % reg_wf.name
+            if reg_wf.base_dir:
+                grf = os.path.join(reg_wf.base_dir, fname)
+            else:
+                grf = fname
+            reg_wf.write_graph(dotfilename=grf)
+            logger.debug("The %s workflow graph is depicted at %s.png." %
+                (reg_wf.name, grf))
         
         return reg_wf
     
@@ -286,9 +304,9 @@ class RegistrationWorkflow(object):
         exec_wf.connect(input_spec, ('images', _middle, 3), average, 'images')
         
         # Mask the reference image.
-        mask_avg = pe.Node(fsl.maths.ApplyMask(output_type='NIFTI_GZ'), name='mask_avg')
-        exec_wf.connect(average, 'output_average_image', mask_avg, 'in_file')
-        exec_wf.connect(mask, 'mask', mask_avg, 'mask_file')
+        mask_ref = pe.Node(fsl.maths.ApplyMask(output_type='NIFTI_GZ'), name='mask_ref')
+        exec_wf.connect(average, 'output_average_image', mask_ref, 'in_file')
+        exec_wf.connect(mask, 'mask', mask_ref, 'mask_file')
         
         # The reslice image iterator.
         image_iter = pe.Node(IdentityInterface(fields=['image']), name='image_iter')
@@ -301,7 +319,7 @@ class RegistrationWorkflow(object):
         exec_wf.connect(input_spec, 'session', reslice_wf, 'input_spec.session')
         exec_wf.connect(input_spec, 'reconstruction', reslice_wf, 'input_spec.reconstruction')
         exec_wf.connect(image_iter, 'image', reslice_wf, 'input_spec.moving_image')
-        exec_wf.connect(mask_avg, 'out_file', reslice_wf, 'input_spec.mask')
+        exec_wf.connect(mask_ref, 'out_file', reslice_wf, 'input_spec.mask')
         exec_wf.connect(average, 'output_average_image', reslice_wf, 'input_spec.fixed_image')
         
         # Upload the resliced image to XNAT.
@@ -450,20 +468,6 @@ class RegistrationWorkflow(object):
         
         return workflow
     
-    def _load_configuration(self, cfg_file=None):
-        """
-        Loads the registration workflow configuration. If a configuration file is
-        specified, then the settings in that file override the default settings.
-        
-        :param cfg_file: the optional configuration file path
-        :return: the configuration dictionary
-        """
-        if cfg_file:
-            cfg = read_config(DEF_CONFIG_FILE, cfg_file)
-        else:
-            cfg = read_config(DEF_CONFIG_FILE)
-        return dict(cfg)
-    
     def _download_scans(self, subject, session, dest):
         """
         Download the NIFTI scan files for the given session.
@@ -476,49 +480,7 @@ class RegistrationWorkflow(object):
         with xnat_helper.connection() as xnat:
             return xnat.download(project(), subject, session, dest=dest,
                 container_type='scan', format='NIFTI')
-    
-    def _run_workflow(self, workflow):
-        """
-        Executes the given workflow.
-        
-        If the logger level is set to debug, then workflow graph
-        is printed in the workflow base directory.
-        
-        :param workflow: the workflow to run
-        """
-        # If debug is set, then diagram the workflow graph.
-        if logger.level <= logging.DEBUG:
-            fname = "%s.dot" % workflow.name
-            if workflow.base_dir:
-                grf = os.path.join(workflow.base_dir, fname)
-            else:
-                grf = fname
-            workflow.write_graph(dotfilename=grf)
-            logger.debug("The %s workflow graph is depicted at %s.png." %
-                (workflow.name, grf))
-        
-        # The workflow submission arguments.
-        args = {}
-        # Check whether the workflow can be distributed.
-        if DISTRIBUTABLE:
-            # Distribution parameters collected for a debug message.
-            dist_params = {}
-            # The execution setting.
-            if 'execution' in self.config:
-                workflow.config['execution'] = self.config['execution']
-                dist_params.update(self.config['execution'])
-            # The Grid Engine setting.
-            if 'SGE' in self.config:
-                args = dict(plugin='SGE', plugin_args=self.config['SGE'])
-                dist_params.update(self.config['SGE'])
-            # Print a debug message.
-            if dist_params:
-                logger.debug("Submitting the %s workflow to the Grid Engine with parameters %s..." %
-                    (workflow.name, dist_params))
-        
-        # Run the workflow.
-        with xnat_helper.connection():
-            workflow.run(**args)
+
 
 ### Utility functions called by workflow nodes. ###
 
@@ -587,7 +549,7 @@ def _middle(items, proportion_or_length):
     else:
         raise ValueError("The _middle proportion_or_length parameter is not"
             " a number: %s" % proportion_or_length)
-
+    
     return sorted(items)[offset:len(items)-offset]
 
 def _gen_crop_op_string(cog):
