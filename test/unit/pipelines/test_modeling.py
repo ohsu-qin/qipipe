@@ -29,8 +29,9 @@ class TestModelingWorkflow(XNATScanTestBase):
     This test exercises the modeling workflow on the QIN Breast and Sarcoma study
     visits in the ``test/fixtures/pipelines/modeling`` test fixture directory.
     
-    Note:: a precondition for running this test is that the test fixture directory
-    contains the series stack test data in collection/subject/session format, e.g.::
+    Note:: a precondition for running this test is that the
+    ``test/fixtures/pipelines/modeling`` directory contains the series stack
+    test data in collection/subject/session format, e.g.::
     
         breast
             Breast003
@@ -69,7 +70,7 @@ class TestModelingWorkflow(XNATScanTestBase):
         """
         logger.debug("Testing the modeling workflow on %s..." % fixture)
         # Run the workflow.
-        return modeling.run(*inputs, container_type='scan', **opts)
+        return modeling.run(*inputs, **opts)
     
     def _verify_result(self, xnat, inputs, result):
         sess_anl_dict = {(sbj, sess): anl for sbj, sess, anl in result}
