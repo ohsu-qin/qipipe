@@ -26,8 +26,8 @@ class WorkflowBase(object):
         :param cfg_file: the optional workflow inputs configuration file
         """
         self.logger = logger
-        self.config = self._load_configuration(cfg_file)
-        """The registration configuration."""
+        self.configuration = self._load_configuration(cfg_file)
+        """The workflow configuration."""
     
     def _load_configuration(self, cfg_file=None):
         """
@@ -43,7 +43,7 @@ class WorkflowBase(object):
         if not match:
             raise NameError("The workflow wrapper class does not match the standard"
                 " workflow class name pattern: %s" % self.__class__.__name__)
-        name = match.group(0)
+        name = match.group(1)
         fname = "%s.cfg" % name
         def_cfg_file = os.path.join(WorkflowBase.DEF_CONF_DIR, fname)
         
@@ -59,7 +59,7 @@ class WorkflowBase(object):
             self.logger.debug("Loading the %s configuration files %s..." %
                 (name, cfg_files))
             cfg = read_config(*cfg_files)
-            return dict(cfgv)
+            return dict(cfg)
         else:
             return {}
     
@@ -87,13 +87,13 @@ class WorkflowBase(object):
             # Distribution parameters collected for a debug message.
             log_msg_params = {}
             # The execution setting.
-            if 'execution' in self.config:
-                workflow.config['execution'] = self.config['execution']
-                log_msg_params.update(self.config['execution'])
+            if 'execution' in self.configuration:
+                workflow.config['execution'] = self.configuration['execution']
+                log_msg_params.update(self.configuration['execution'])
             # The Grid Engine setting.
-            if 'SGE' in self.config:
-                args = dict(plugin='SGE', plugin_args=self.config['SGE'])
-                log_msg_params.update(self.config['SGE'])
+            if 'SGE' in self.configuration:
+                args = dict(plugin='SGE', plugin_args=self.configuration['SGE'])
+                log_msg_params.update(self.configuration['SGE'])
             # Print a debug message.
             if log_msg_params:
                 self.logger.debug("Submitting the %s workflow to the Grid Engine with parameters %s..." %

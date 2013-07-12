@@ -37,7 +37,7 @@ class StagingWorkflow(WorkflowBase):
         :keyword cfg_file: the optional workflow inputs configuration file
         :keyword base_dir: the workflow execution directory (default current directory)
         """
-        super(StagingWorkflow, self).__init__(logger, opts.pop('cfg_dir', None))
+        super(StagingWorkflow, self).__init__(logger, opts.pop('cfg_file', None))
         
         self.workflow = self._create_workflow(**opts)
         """
