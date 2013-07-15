@@ -10,10 +10,10 @@ pipelines
     :undoc-members:
     :show-inheritance:
 
-:mod:`pipeline_error`
+:mod:`distributable`
 ---------------------
 
-.. automodule:: qipipe.pipelines.pipeline_error
+.. automodule:: qipipe.pipelines.distributable
     :members:
     :undoc-members:
     :show-inheritance:
@@ -22,6 +22,14 @@ pipelines
 -----------------
 
 .. automodule:: qipipe.pipelines.modeling
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`pipeline_error`
+---------------------
+
+.. automodule:: qipipe.pipelines.pipeline_error
     :members:
     :undoc-members:
     :show-inheritance:

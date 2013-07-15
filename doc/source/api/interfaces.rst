@@ -66,6 +66,14 @@ interfaces
     :undoc-members:
     :show-inheritance:
 
+:mod:`touch`
+-----------------
+
+.. automodule:: qipipe.interfaces.touch
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :mod:`uncompress`
 -----------------
 

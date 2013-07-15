@@ -66,6 +66,22 @@ helpers
     :undoc-members:
     :show-inheritance:
 
+:mod:`project`
+----------------------
+
+.. automodule:: qipipe.helpers.project
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`which`
+----------------------
+
+.. automodule:: qipipe.helpers.which
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 :mod:`xnat_config`
 ------------------
 
