@@ -519,7 +519,7 @@ def _gen_reslice_filename(reconstruction, in_file):
     :param in_file: the input scan image filename
     :return: the registered image filename
     """
-    from qipipe.pipelines.registration import SPLITEXT_PAT
+    from qipipe.pipeline.registration import SPLITEXT_PAT
     
     groups = SPLITEXT_PAT.match(in_file).groups()
     base = groups[0]

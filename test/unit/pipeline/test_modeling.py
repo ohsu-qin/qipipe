@@ -6,15 +6,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from qipipe.pipelines import modeling
+from qipipe.pipeline import modeling
 from qipipe.helpers import xnat_helper
 from qipipe.helpers.xnat_helper import delete_subjects
 from test.helpers.project import project
-from test.unit.pipelines.xnat_scan_test_base import XNATScanTestBase, ROOT
+from test.unit.pipeline.xnat_scan_test_base import XNATScanTestBase, ROOT
 
-FIXTURES = os.path.join(ROOT, 'fixtures', 'pipelines', 'modeling')
+FIXTURES = os.path.join(ROOT, 'fixtures', 'pipeline', 'modeling')
 
-RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'modeling')
+RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'modeling')
 """The test results directory."""
 
 from nipype import config
@@ -27,10 +27,10 @@ class TestModelingWorkflow(XNATScanTestBase):
     """
     Modeling workflow unit tests.
     This test exercises the modeling workflow on the QIN Breast and Sarcoma study
-    visits in the ``test/fixtures/pipelines/modeling`` test fixture directory.
+    visits in the ``test/fixtures/pipeline/modeling`` test fixture directory.
     
     Note:: a precondition for running this test is that the
-        ``test/fixtures/pipelines/modeling`` directory contains the series stack
+        ``test/fixtures/pipeline/modeling`` directory contains the series stack
         test data in collection/subject/session format, e.g.::
     
             breast
@@ -63,13 +63,13 @@ class TestModelingWorkflow(XNATScanTestBase):
     
     def _run_workflow(self, xnat, fixture, *inputs, **opts):
         """
-        Executes :meth:`qipipe.pipelines.modeling.run` on the input session scans.
+        Executes :meth:`qipipe.pipeline.modeling.run` on the input session scans.
         
         :param xnat: the :class:`qipipe.helpers.xnat_helpers.XNAT` connection
         :param fixture: the test fixture directory
         :param inputs: the (subject, session) tuples
-        :param opts: the :meth:`qipipe.pipelines.modeling.run` options
-        :return: the :meth:`qipipe.pipelines.modeling.run` result
+        :param opts: the :meth:`qipipe.pipeline.modeling.run` options
+        :return: the :meth:`qipipe.pipeline.modeling.run` result
         """
         logger.debug("Testing the modeling workflow on %s..." % fixture)
         # Run the workflow.

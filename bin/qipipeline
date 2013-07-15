@@ -20,7 +20,7 @@ def main(argv=sys.argv):
         logging.getLogger().setLevel(args.log_level)
     
     # Import the application now, after logging has been set.
-    from qipipe.pipelines import qipipeline as qip
+    from qipipe.pipeline import qipipeline as qip
     from qipipe.helpers.project import project
     
     # Set the project.

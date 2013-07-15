@@ -66,7 +66,7 @@ class QIPipelineWorkflow(object):
         self.execution_workflow = self._create_execution_workflow(**opts)
         """
         The execution workflow. The execution workflow is executed by calling
-        the :meth:`qipipe.pipelines.modeling.QIPipelineWorkflow.run` method.
+        the :meth:`qipipe.pipeline.modeling.QIPipelineWorkflow.run` method.
         """
     
     def run(self, collection, *inputs, **opts):
@@ -86,7 +86,7 @@ class QIPipelineWorkflow(object):
         
         :param collection: the AIRC image collection name
         :param inputs: the AIRC source subject directories to stage
-        :param opts: the :meth:`qipipe.pipelines.staging.StagingWorkflow.run` options
+        :param opts: the :meth:`qipipe.pipeline.staging.StagingWorkflow.run` options
         :return: the pipeline result
         """
         # The staging location.

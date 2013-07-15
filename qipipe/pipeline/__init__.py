@@ -1,5 +1,5 @@
 """
-The ``pipelines`` module includes the following QIN pipelines:
+The ``pipeline`` module includes the following QIN pipeline:
 
 - :mod:`.qipipeline`: the soup-to-nuts pipeline to stage, register and model new images
 

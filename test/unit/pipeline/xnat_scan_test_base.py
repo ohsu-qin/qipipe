@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from test.helpers.project import project
-from qipipe.pipelines import registration
+from qipipe.pipeline import registration
 from qipipe.helpers import xnat_helper
 from qipipe.helpers.xnat_helper import delete_subjects
 
@@ -20,7 +20,7 @@ FIXTURES = os.path.join(ROOT, 'fixtures', 'registration')
 REG_CONF = os.path.join(ROOT, 'conf', 'registration.cfg')
 """The test registration configuration."""
 
-RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'registration')
+RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'registration')
 """The test results directory."""
 
 from nipype import config
@@ -130,7 +130,7 @@ class XNATScanTestBase(object):
         :param fixture: the test fixture directory
         :param inputs: the (subject, session) tuples
         :param opts: the target workflow options
-        :return: the :meth:`qipipe.pipelines.modeling.run` result
+        :return: the :meth:`qipipe.pipeline.modeling.run` result
         :raise NotImplementedError: if the class:`XNATScanTestBase` subclass does
             not implement this method
         """

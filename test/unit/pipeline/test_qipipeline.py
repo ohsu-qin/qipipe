@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from test.helpers.project import project
-from qipipe.pipelines import qipipeline as qip
+from qipipe.pipeline import qipipeline as qip
 from qipipe.helpers.dicom_helper import iter_dicom
 from qipipe.helpers import xnat_helper
 from qipipe.staging import airc_collection as airc
@@ -20,7 +20,7 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 REG_CONF = os.path.join(ROOT, 'conf', 'registration.cfg')
 """The test registration configuration."""
 
-RESULTS = os.path.join(ROOT, 'results', 'pipelines', 'qipipeline')
+RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'qipipeline')
 """The test results directory."""
 
 from nipype import config

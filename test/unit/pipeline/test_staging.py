@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from test.helpers.project import project
-from qipipe.pipelines import staging
+from qipipe.pipeline import staging
 from qipipe.helpers import xnat_helper
 from qipipe.helpers.xnat_helper import delete_subjects
 from qipipe.staging.staging_helper import get_subjects

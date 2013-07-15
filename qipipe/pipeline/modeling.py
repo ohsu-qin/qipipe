@@ -109,13 +109,13 @@ class ModelingWorkflow(WorkflowBase):
         self.execution_workflow = self._create_execution_workflow(**opts)
         """
         The execution workflow. The execution workflow is executed by calling
-        the :meth:`qipipe.pipelines.modeling.ModelingWorkflow.run` method.
+        the :meth:`qipipe.pipeline.modeling.ModelingWorkflow.run` method.
         """
     
     def run(self, *inputs, **opts):
         """
         Builds the modeling workflow described in
-        :class:`qipipe.pipelines.modeling.ModelingWorkflow`
+        :class:`qipipe.pipeline.modeling.ModelingWorkflow`
         and executes it on the given inputs.
         
         Each input is a (subject, session) tuple. The modeling input images
@@ -140,7 +140,7 @@ class ModelingWorkflow(WorkflowBase):
         method returns the uploaded XNAT (subject, session, analysis) name
         tuples.
         
-        If the :mod:`qipipe.pipelines.distributable ``DISTRIBUTABLE`` flag
+        If the :mod:`qipipe.pipeline.distributable ``DISTRIBUTABLE`` flag
         is set, then the execution is distributed using the `AIRC Grid Engine`_.
         
         .. _AIRC Grid Engine: https://everett.ohsu.edu/wiki/GridEngine
