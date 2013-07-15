@@ -22,7 +22,9 @@ class MapCTPOutputSpec(TraitedSpec):
 
 
 class MapCTP(BaseInterface):
-
+    """The MapCTP interface wraps the :class:`qipipe.interfaces.map_ctp.CTPPatientIdMap`
+    class."""
+    
     input_spec = MapCTPInputSpec
     
     output_spec = MapCTPOutputSpec

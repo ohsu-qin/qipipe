@@ -16,7 +16,11 @@ class FixDicomOutputSpec(TraitedSpec):
 
 
 class FixDicom(BaseInterface):
+    """The FixDicom interface wraps the :meth:`qipipe.staging.fix_dicom.fix_dicom_headers`
+    function."""
+    
     input_spec = FixDicomInputSpec
+    
     output_spec = FixDicomOutputSpec
     
     def _run_interface(self, runtime):

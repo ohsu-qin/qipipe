@@ -3,7 +3,7 @@ import os
 def which(program):
     """
     Returns whether the given program is executable.
-    This function is a system-independent Python equivalent of the *nix
+    This function is a system-independent Python equivalent of the \*nix
     ``which`` command.
     
     The implementation is stolen from
