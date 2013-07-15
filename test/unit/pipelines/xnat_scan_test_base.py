@@ -59,7 +59,7 @@ class XNATScanTestBase(object):
         """
         # The fixture is the collection subdirectory.
         fixture = os.path.join(self._fixtures, collection.lower())
-
+        
         # The default workflow base directory.
         if 'base_dir' not in opts:
             opts['base_dir'] = os.path.join(self._results, collection.lower(), 'work')
@@ -74,13 +74,13 @@ class XNATScanTestBase(object):
             # Clean up.
             subjects = {sbj for sbj, _ in sess_files_dict.iterkeys()}
             delete_subjects(project(), *subjects)
-
+    
     def _seed_xnat(self, fixture):
         """
         Seed XNAT with the test files in the given text fixture.
         The fixture is a parent directory which contains a
         subject/session/images hierarchy. e.g.::
-        
+            
             Breast003/
                 Session01/
                     series09.nii.gz
