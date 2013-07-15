@@ -64,18 +64,10 @@ class TestRegistrationWorkflow(XNATScanTestBase):
     def _verify_result(self, xnat, inputs, result):
         # The return value is the reconstruction name.
         recon = result
-        for spec, in_files in inputs.iteritems():
-            sbj, sess = spec
-            assert_in(spec, result, "The session %s %s was not registered" % spec)
-            recon = sess_recon_dict[spec]
-            sbj, sess = spec
+        for sbj, sess in inputs.iteritems():
             recon_obj = xnat.get_reconstruction(project(), sbj, sess, recon)
             assert_true(recon_obj.exists(),
                 "The %s %s %s XNAT reconstruction object was not created" % (sbj, sess, recon))
-            recon_files = recon_obj.out_resource('NIFTI').files().get()
-            assert_equals(len(in_files), len(recon_files),
-                "The registered %s %s file count is incorrect - expected: %d, found: %d" %
-                (sbj, sess, len(in_files), len(recon_files)))
 
 
 if __name__ == "__main__":

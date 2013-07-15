@@ -24,13 +24,12 @@ def run(*inputs, **opts):
     :param opts: the :class:`ModelingWorkflow` initializer and :meth:`ModelingWorkflow.run` options
     :return: the :meth:`ModelingWorkflow.run` result
     """
-    recon = opts.pop('reconstruction', None)
-    return ModelingWorkflow(**opts).run(*inputs, reconstruction=recon)
+    return ModelingWorkflow(**opts).run(*inputs)
 
 
 class ModelingWorkflow(WorkflowBase):
     """
-    ModelingWorkflow builds and executes the Nipype pharmacokinetic mapping workflow.
+    The ModelingWorkflow builds and executes the Nipype pharmacokinetic mapping workflow.
     
     The workflow calculates the modeling parameters for input images as follows:
     
@@ -71,8 +70,8 @@ class ModelingWorkflow(WorkflowBase):
     
     This workflow is adapted from https://everett.ohsu.edu/hg/qin_dce.
     
-    :Note: this workflow uses proprietary OHSU AIRC software, notably the BOLERO implementation
-        of the `shutter speed model`_.
+    :Note: This workflow uses proprietary OHSU AIRC software, notably the BOLERO
+        implementation of the `shutter speed model`_.
     
     .. reST substitutions:
     .. |H2O| replace:: H\ :sub:`2`\ O
@@ -101,23 +100,30 @@ class ModelingWorkflow(WorkflowBase):
         """
         super(ModelingWorkflow, self).__init__(logger, opts.pop('cfg_file', None))
         
-        self.workflow = self._create_workflow(**opts)
+        self.reusable_workflow = self._create_reusable_workflow(**opts)
         """
-        The execution workflow.
-        The workflow is executed by calling the :meth:`run` method.
+        The reusable workflow.
+        The reusable workflow can be embedded in an execution workflow.
+        """
+        
+        self.execution_workflow = self._create_execution_workflow(**opts)
+        """
+        The execution workflow. The execution workflow is executed by calling
+        the :meth:`qipipe.pipelines.modeling.ModelingWorkflow.run` method.
         """
     
     def run(self, *inputs, **opts):
         """
-        Builds the modeling workflow described in :meth:`create_workflow`
+        Builds the modeling workflow described in
+        :class:`qipipe.pipelines.modeling.ModelingWorkflow`
         and executes it on the given inputs.
         
         Each input is a (subject, session) tuple. The modeling input images
         to download are determined as follows:
         
         - If the ``reconstruction`` parameter is set, then the images for
-        that reconstruction are downloaded. The reconstruction is typically
-        a registration output.
+            that reconstruction are downloaded. The reconstruction is typically
+            a registration output.
         
         - Otherwise, the NiFTI scan series stack images are downloaded.
         
@@ -126,7 +132,7 @@ class ModelingWorkflow(WorkflowBase):
             modeling.run(('Breast003', 'Session02'))
             
             inputs = [('Sarcoma001', 'Session01'), ('Sarcoma001', 'Session02')]
-            modeling.run(inputs, reconstruction='reg_Z4aUp8')
+            modeling.run(*inputs, reconstruction='reg_Z4aU8')
         
         This ``run`` method connects the given inputs to the modeling execution
         workflow inputs. The execution workflow is then executed, resulting in
@@ -134,25 +140,27 @@ class ModelingWorkflow(WorkflowBase):
         method returns the uploaded XNAT (subject, session, analysis) name
         tuples.
         
-        If the :module:`qipipe.pipelines.distributable ``DISTRIBUTABLE`` flag
+        If the :mod:`qipipe.pipelines.distributable ``DISTRIBUTABLE`` flag
         is set, then the execution is distributed using the `AIRC Grid Engine`_.
         
-        .. |R10| replace:: R1\ :sub:`0`
         .. _AIRC Grid Engine: https://everett.ohsu.edu/wiki/GridEngine
         
-        :param inputs: the (subject, scan) inputs
+        :param inputs: the (subject, session) inputs
         :param opts: the following workflow options
         :keyword reconstruction: the XNAT reconstruction to model
         :return: the modeling XNAT analysis name
         """
-        # The workflow input node
-        input_spec = self.workflow.get_node('input_spec')
-        recon = opts.pop('reconstruction', None)
-        if recon:
-            input_spec.inputs.reconstruction = recon
-        else:
-            input_spec.inputs.container_type = 'scan'
-        # The remaining PK modeling input factors.
+        # If no inputs, then bail.
+        if not inputs:
+            logger.warn("The modeling workflow inputs are empty.")
+            return
+        # If there is no reconstruction name, then download the XNAT scan
+        # series stack NiFTI files.
+        if 'reconstruction' not in opts:
+            opts['container_type'] = 'scan'
+        # The workflow input node.
+        input_spec = self.execution_workflow.get_node('input_spec')
+        # Set the PK modeling input fields.
         for field, value in opts.iteritems():
             setattr(input_spec.inputs, field, value)
         
@@ -164,42 +172,48 @@ class ModelingWorkflow(WorkflowBase):
         input_spec.iterables = iter_dict.items()
         
         # Run the workflow.
-        self._run_workflow(self.workflow)
+        self._run_workflow(self.execution_workflow)
         
         # Return the analysis name.
-        output_spec = self.workflow.get_node('output_spec')
+        output_spec = self.execution_workflow.get_node('output_spec')
         return output_spec.outputs.analysis
     
-    def _create_workflow(self, base_dir=None, **opts):
+    def _create_execution_workflow(self, base_dir=None, **opts):
         """
-        Builds the modeling executable workflow described in :class:`ModelingWorkflow`.
+        Builds the modeling execution workflow. The execution workflow is a
+        reusable workflow facade that downloads the mask and input images from
+        XNAT. The execution workflow input is ``input_spec`` with input fields
+        consisting of the following:
         
-        :param base_dir: the execution working directory (default is the current directory)
-        :param opts: the additional reusable workflow options described in
-            :meth:`__init__`
-        :return: the modeling XNAT (subject, session, analysis) tuples
+        - the reusable workflow input fields, minus ``mask`` and ``image``
+        
+        - the download fields ``reconstruction`` and ``container_type``
+        
+        The execution workflow output is ``output_spec`` with the same output
+        fields as the reusable workflow outputs.
+        
+        :param base_dir: the execution working directory (default is the
+            current directory)
+        :param opts: the additional workflow options described in :meth:`__init__`
+        :return: the Nipype workflow
         """
         logger.debug("Building the modeling execution workflow...")
         
-        # The reusable workflow.
-        reusable_wf = self._create_reusable_workflow(base_dir=base_dir, **opts)
-        
         # The execution workflow.
-        wf_name = reusable_wf.name + '_exec'
-        exec_wf = pe.Workflow(name=wf_name, base_dir=base_dir)
+        exec_wf = pe.Workflow(name='modeling_exec', base_dir=base_dir)
         
-        # The download fields.
-        dl_fields = ['subject', 'session', 'reconstruction', 'container_type']
+        # The reusable workflow.
+        reusable_wf = self.reusable_workflow
+        
         # The reusable workflow input fields.
         reusable_fields = reusable_wf.get_node('input_spec').inputs.copyable_trait_names()
-        in_fields = set(dl_fields).union(reusable_fields)
+        # The input fields include the download inputs and reusable fields
+        # minus the download outputs.
+        in_fields = reusable_fields + ['reconstruction', 'container_type']
+        in_fields.remove('mask')
+        in_fields.remove('images')
         # The input node.
         input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
-        
-        # The image download node.
-        dl_images = pe.Node(XNATDownload(project=project()), name='dl_images')
-        for field in dl_fields:
-            exec_wf.connect(input_spec, field, dl_images, field)
         
         # Download the mask.
         dl_mask = pe.Node(XNATDownload(project=project(), reconstruction='mask'),
@@ -207,11 +221,61 @@ class ModelingWorkflow(WorkflowBase):
         exec_wf.connect(input_spec, 'subject', dl_mask, 'subject')
         exec_wf.connect(input_spec, 'session', dl_mask, 'session')
         
+        # The XNAT image parent fields.
+        dl_fields = ['subject', 'session', 'reconstruction', 'container_type']
+        # Download the images.
+        dl_images = pe.Node(XNATDownload(project=project()), name='dl_images')
+        for field in dl_fields:
+            exec_wf.connect(input_spec, field, dl_images, field)
+        
         # Model the images.
         exec_wf.connect(input_spec, 'subject', reusable_wf, 'input_spec.subject')
         exec_wf.connect(input_spec, 'session', reusable_wf, 'input_spec.session')
         exec_wf.connect(dl_mask, 'out_file', reusable_wf, 'input_spec.mask_file')
         exec_wf.connect(dl_images, 'out_files', reusable_wf, 'input_spec.in_files')
+        
+        # The execution workflow output is the reusable workflow output.
+        reusable_output = reusable_wf.get_node('output_spec')
+        out_fields = reusable_output.outputs.copyable_trait_names()
+        output_spec = pe.Node(IdentityInterface(fields=out_fields), name='output_spec')
+        for field in out_fields:
+            reusable_field = 'output_spec.' + field
+            exec_wf.connect(reusable_wf, reusable_field, output_spec, field)
+        
+        logger.debug("Created the %s workflow." % exec_wf.name)
+        # If debug is set, then diagram the workflow graph.
+        if logger.level <= logging.DEBUG:
+            self._depict_workflow(exec_wf)
+        
+        return exec_wf
+    
+    def _create_reusable_workflow(self, base_dir=None, **opts):
+        """
+        Builds the modeling reusable workflow described in :class:`ModelingWorkflow`.
+        
+        :param base_dir: the execution working directory (default is the current directory)
+        :param opts: the additional workflow options described in :meth:`__init__`
+        :return: the Nipype workflow
+        """
+        logger.debug("Building the modeling execution workflow...")
+        
+        # The execution workflow.
+        reusable_wf = pe.Workflow(name='modeling', base_dir=base_dir)
+        
+        # The base workflow.
+        base_wf = self._create_base_workflow(base_dir=base_dir, **opts)
+        
+        # The base workflow input fields.
+        base_fields = base_wf.get_node('input_spec').inputs.copyable_trait_names()
+        in_fields = base_fields + ['images', 'mask']
+        # The input node.
+        input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
+        
+        # Model the images.
+        reusable_wf.connect(input_spec, 'subject', base_wf, 'input_spec.subject')
+        reusable_wf.connect(input_spec, 'session', base_wf, 'input_spec.session')
+        reusable_wf.connect(input_spec, 'mask', base_wf, 'input_spec.mask_file')
+        reusable_wf.connect(input_spec, 'images', base_wf, 'input_spec.in_files')
         
         # Make the default XNAT assessment name. The name is unique, which permits
         # more than one model to be stored for each input series without a name
@@ -219,35 +283,28 @@ class ModelingWorkflow(WorkflowBase):
         analysis = "%s_%s" % (PK_PREFIX, file_helper.generate_file_name())
         
         # The upload nodes.
-        reusable_out_fields = reusable_wf.get_node('output_spec').outputs.copyable_trait_names()
+        base_out_fields = base_wf.get_node('output_spec').outputs.copyable_trait_names()
         upload_node_dict = {field: self._create_output_upload_node(analysis, field)
-            for field in reusable_out_fields}
+            for field in base_out_fields}
         for field, node in upload_node_dict.iteritems():
-            exec_wf.connect(input_spec, 'subject', node, 'subject')
-            exec_wf.connect(input_spec, 'session', node, 'session')
-            reusable_field = 'output_spec.' + field
-            exec_wf.connect(reusable_wf, reusable_field, node, 'in_files')
+            reusable_wf.connect(input_spec, 'subject', node, 'subject')
+            reusable_wf.connect(input_spec, 'session', node, 'session')
+            base_field = 'output_spec.' + field
+            reusable_wf.connect(base_wf, base_field, node, 'in_files')
         
-        # Collect the execution workflow output fields.
-        exec_out_fields = ['subject', 'session', 'analysis']
-        output_spec = pe.Node(IdentityInterface(fields=exec_out_fields, analysis=analysis),
+        # Collect the workflow output fields.
+        out_fields = ['subject', 'session', 'analysis']
+        output_spec = pe.Node(IdentityInterface(fields=out_fields, analysis=analysis),
             name='output_spec')
         for field in ['subject', 'session']:
-            exec_wf.connect(input_spec, field, output_spec, field)
+            reusable_wf.connect(input_spec, field, output_spec, field)
         
-        logger.debug("Created the %s workflow." % exec_wf.name)
+        logger.debug("Created the %s workflow." % reusable_wf.name)
         # If debug is set, then diagram the workflow graph.
         if logger.level <= logging.DEBUG:
-            fname = "%s.dot" % exec_wf.name
-            if exec_wf.base_dir:
-                grf = os.path.join(exec_wf.base_dir, fname)
-            else:
-                grf = fname
-            exec_wf.write_graph(dotfilename=grf)
-            logger.debug("The %s workflow graph is depicted at %s.png." %
-                (exec_wf.name, grf))
+            self._depict_workflow(reusable_wf)
         
-        return exec_wf
+        return reusable_wf
     
     def _create_output_upload_node(self, analysis, resource):
         """
@@ -260,15 +317,15 @@ class ModelingWorkflow(WorkflowBase):
         return pe.Node(XNATUpload(project=project(), assessor=analysis, resource=resource),
             name=name)
     
-    def _create_reusable_workflow(self, base_dir=None, **opts):
+    def _create_base_workflow(self, base_dir=None, **opts):
         """
-        Creates the modeling reusable workflow described in :class:`ModelingWorkflow`.
+        Creates the modeling base workflow described in :class:`ModelingWorkflow`.
         
         :param base_dir: the workflow working directory
         :param opts: the additional PK mapping parameters described in :meth:`__init__`
         :return: the pyxnat Workflow
         """
-        workflow = pe.Workflow(name='modeling', base_dir=base_dir)
+        workflow = pe.Workflow(name='modeling_base', base_dir=base_dir)
         
         # The parameters can be defined in either the options or the configuration.
         config = self.configuration.get('Parameters', {})
@@ -287,7 +344,7 @@ class ModelingWorkflow(WorkflowBase):
         use_fixed_r1_0 = None
         # Get the R1_0 parameter values.
         if 'r1_0_val' in opts:
-            r1_0_val = opts.get('r1_0_val')    
+            r1_0_val = opts.get('r1_0_val')
             if r1_0_val:
                 use_fixed_r1_0 = True
             else:
