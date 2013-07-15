@@ -64,15 +64,14 @@ class WorkflowBase(object):
             return {}
     
     def _depict_workflow(self, workflow):
-        # If debug is set, then diagram the staging workflow graph.
-        if self.logger.level <= logging.DEBUG:
-            if workflow.base_dir:
-                grf = os.path.join(workflow.base_dir, 'staging.dot')
-            else:
-                grf = 'staging.dot'
-            workflow.write_graph(dotfilename=grf)
-            self.logger.debug("The %s workflow graph is depicted at %s.png." %
-                (workflow.name, grf))
+        """Diagrams the given workflow graph."""
+        if workflow.base_dir:
+            grf = os.path.join(workflow.base_dir, 'staging.dot')
+        else:
+            grf = 'staging.dot'
+        workflow.write_graph(dotfilename=grf)
+        self.logger.debug("The %s workflow graph is depicted at %s.png." %
+            (workflow.name, grf))
         
     def _run_workflow(self, workflow):
         """
