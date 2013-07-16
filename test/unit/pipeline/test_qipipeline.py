@@ -28,13 +28,13 @@ cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_fi
     execution=dict(crashdump_dir=RESULTS, create_report=False))
 config.update_config(cfg)
 
-class TestQIPipeline:
+class TestQIPipeline(object):
     """
     QIN Pipeline unit tests.
     
     Note:: a precondition for running this test is that the environment variable
     ``QIN_DATA`` is set to the AIRC ``HUANG_LAB`` mount point, e.g.::
-    
+        
         QIN_DATA=/Volumes/HUANG_LAB
     
     Note:: the modeling workflow is only executed if the ``fastfit`` executable is
@@ -79,7 +79,7 @@ class TestQIPipeline:
         :param fixture: the test input
         """
         logger.debug("Testing the QIN pipeline on %s..." % fixture)
-
+        
         # The staging destination and work area.
         dest = os.path.join(RESULTS, 'data')
         work = os.path.join(RESULTS, 'work')
@@ -93,7 +93,7 @@ class TestQIPipeline:
         # Check whether the modeling workflow is executable.
         if not distutils.spawn.find_executable('fastfit'):
             opts['modeling'] = False
-
+        
         # The test subject => directory dictionary.
         sbj_dir_dict = get_subjects(collection, fixture)
         # The test subjects.
@@ -104,11 +104,11 @@ class TestQIPipeline:
         with xnat_helper.connection() as xnat:
             # Delete any existing test subjects.
             delete_subjects(project(), *subjects)
-
+            
             # Run the staging and registration workflows, but not the modeling.
             logger.debug("Executing the QIN pipeline...")
             reg_specs = qip.run(collection, *sources, dest=dest, work=work, **opts)
-
+            
             # Verify the result.
             for sbj, sess, recon in reg_specs:
                 reg_obj = xnat.get_reconstruction(project(), sbj, sess, recon)
