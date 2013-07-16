@@ -1,5 +1,5 @@
 import os
-import nipype.pipeline.engine as pe
+from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.dcmstack import DcmStack
 from ..helpers.project import project
@@ -89,7 +89,7 @@ class StagingWorkflow(WorkflowBase):
     
     - ``subjects``: the subjects to stage
     
-    - ``series_spec``: the iteratable (subject, session, series) staging input tuples
+    - ``iter_series``: the iteratable (subject, session, series) staging input tuples
     
     .. _CTP: https://wiki.cancerimagingarchive.net/display/Public/Image+Submitter+Site+User%27s+Guide
     .. _DcmStack: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.dcmstack.html
@@ -101,8 +101,8 @@ class StagingWorkflow(WorkflowBase):
         that file override the default settings.
         
         :param opts: the following options
+        :keyword base_dir: the workflow execution directory (default a new temp directory)
         :keyword cfg_file: the optional workflow inputs configuration file
-        :keyword base_dir: the workflow execution directory (default current directory)
         """
         super(StagingWorkflow, self).__init__(logger, opts.pop('cfg_file', None))
         
@@ -126,10 +126,10 @@ class StagingWorkflow(WorkflowBase):
         """
         # Group the new DICOM files by series.
         overwrite = opts.get('overwrite', False)
-        series_specs = detect_new_visits(collection, *inputs, overwrite=overwrite)
+        series_inputs = detect_new_visits(collection, *inputs, overwrite=overwrite)
         
         # The subjects with new sessions.
-        subjects = {sbj for sbj, _, _, _ in series_specs}
+        subjects = {sbj for sbj, _, _, _ in series_inputs}
         
         # The staging location.
         if opts.has_key('dest'):
@@ -144,8 +144,8 @@ class StagingWorkflow(WorkflowBase):
         input_spec.inputs.subjects = subjects
         
         # Set the iterable series inputs.
-        series_spec = self.workflow.get_node('series_spec')
-        series_spec.iterables = ('series_spec', series_specs)
+        iter_series = self.workflow.get_node('iter_series')
+        iter_series.iterables = ('iter_series', series_inputs)
         
         # Run the staging workflow.
         self._run_workflow(self.workflow)
@@ -172,13 +172,18 @@ class StagingWorkflow(WorkflowBase):
         workflow = pe.Workflow(name='staging', base_dir=base_dir)
         
         # The workflow (collection, directory, subjects) input.
-        input_spec = pe.Node(IdentityInterface(fields=['collection', 'dest', 'subjects']),
+        input_fields = ['collection', 'dest', 'subjects']
+        input_spec = pe.Node(IdentityInterface(fields=input_fields),
             name='input_spec')
+        logger.debug("The staging workflow non-iterable input is %s with fields %s" %
+            (input_spec.name, input_fields))
         
         # The iterable series inputs.
-        series_spec_xf = Unpack(input_name='series_spec',
+        iter_series_xf = Unpack(input_name='iter_series',
             output_names=['subject', 'session', 'scan', 'dicom_files'])
-        series_spec = pe.Node(series_spec_xf, name='series_spec')
+        iter_series = pe.Node(iter_series_xf, name='iter_series')
+        logger.debug("The staging workflow iterable input is %s with fields %s" %
+            (iter_series.name, iter_series.inputs.copyable_trait_names()))
         
         # Map each QIN Patient ID to a TCIA Patient ID for upload using CTP.
         map_ctp = pe.Node(MapCTP(), name='map_ctp')
@@ -191,15 +196,15 @@ class StagingWorkflow(WorkflowBase):
             output_names=['out_dir'], function=_make_series_staging_directory)
         staging_dir = pe.Node(staging_dir_func, name='staging_dir')
         workflow.connect(input_spec, 'dest', staging_dir, 'dest')
-        workflow.connect(series_spec, 'subject', staging_dir, 'subject')
-        workflow.connect(series_spec, 'session', staging_dir, 'session')
-        workflow.connect(series_spec, 'scan', staging_dir, 'series')
+        workflow.connect(iter_series, 'subject', staging_dir, 'subject')
+        workflow.connect(iter_series, 'session', staging_dir, 'session')
+        workflow.connect(iter_series, 'scan', staging_dir, 'series')
         
         # Fix the AIRC DICOM tags.
         fix_dicom = pe.Node(FixDicom(), name='fix_dicom')
         workflow.connect(input_spec, 'collection', fix_dicom, 'collection')
-        workflow.connect(series_spec, 'subject', fix_dicom, 'subject')
-        workflow.connect(series_spec, 'dicom_files', fix_dicom, 'in_files')
+        workflow.connect(iter_series, 'subject', fix_dicom, 'subject')
+        workflow.connect(iter_series, 'dicom_files', fix_dicom, 'in_files')
         
         # Compress each fixed DICOM file for a given series.
         # The result is a list of the compressed files for the series.
@@ -209,9 +214,9 @@ class StagingWorkflow(WorkflowBase):
         
         # Store the compressed scan DICOM files in XNAT.
         upload_dicom = pe.Node(XNATUpload(project=project(), format='DICOM'), name='upload_dicom')
-        workflow.connect(series_spec, 'subject', upload_dicom, 'subject')
-        workflow.connect(series_spec, 'session', upload_dicom, 'session')
-        workflow.connect(series_spec, 'scan', upload_dicom, 'scan')
+        workflow.connect(iter_series, 'subject', upload_dicom, 'subject')
+        workflow.connect(iter_series, 'session', upload_dicom, 'session')
+        workflow.connect(iter_series, 'scan', upload_dicom, 'scan')
         workflow.connect(compress_dicom, 'out_file', upload_dicom, 'in_files')
         
         # Stack the scan.
@@ -221,14 +226,14 @@ class StagingWorkflow(WorkflowBase):
         
         # Store the stack files in XNAT.
         upload_stack = pe.Node(XNATUpload(project=project(), format='NIFTI'), name='upload_stack')
-        workflow.connect(series_spec, 'subject', upload_stack, 'subject')
-        workflow.connect(series_spec, 'session', upload_stack, 'session')
-        workflow.connect(series_spec, 'scan', upload_stack, 'scan')
+        workflow.connect(iter_series, 'subject', upload_stack, 'subject')
+        workflow.connect(iter_series, 'session', upload_stack, 'session')
+        workflow.connect(iter_series, 'scan', upload_stack, 'scan')
         workflow.connect(stack, 'out_file', upload_stack, 'in_files')
         
         # The output is the series stack file.
         output_spec = pe.Node(IdentityInterface(fields=['out_file']),
-            name='subject_spec')
+            name='output_spec')
         workflow.connect(stack, 'out_file', output_spec, 'out_file')
         
         return workflow
