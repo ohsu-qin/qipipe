@@ -31,7 +31,7 @@ class QIPipelineWorkflow(object):
     - staging: Prepare the new AIRC DICOM visits, as described in
         :class:`qipipe.staging.StagingWorkflow`
     
-    - registration: Mask, register and reslice the staged images,
+    - registration: Mask, register and realign the staged images,
         as described in :class:`qipipe.staging.RegistrationWorkflow`
     
     - modeling: Perform PK modeling as described in
@@ -193,7 +193,7 @@ class QIPipelineWorkflow(object):
             exec_wf.connect(stg_wf, 'output_spec.out_file', reg_wf, 'image_iter.image')
         if mdl_wf:
             if reg_wf:
-                exec_wf.connect(reg_wf, 'output_spec.resliced', mdl_wf, 'image_iter.image')
+                exec_wf.connect(reg_wf, 'output_spec.realigned', mdl_wf, 'image_iter.image')
             else:
                 for field in mdl_input_fields:
                     mdl_field = '.'.join(mdl_input.name, field)

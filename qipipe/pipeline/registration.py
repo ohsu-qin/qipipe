@@ -118,7 +118,7 @@ class RegistrationWorkflow(WorkflowBase):
         ``scans`` subdirectory of the ``base_dir`` specified in the
         :class:`RegistrationWorkflow` initializer options (default is the current
         directory). The workflow is run on these images, resulting in a new XNAT
-        reconstruction object for each session which contains the resliced images.
+        reconstruction object for each session which contains the realigned images.
         
         :param inputs: the (subject, session) name tuples to register
         :return: the registration reconstruction name, unqualified by the
@@ -207,7 +207,7 @@ class RegistrationWorkflow(WorkflowBase):
         input_spec.inputs.reconstruction = recon
         input_spec.inputs.images = images
         
-        # The images are iterable in the reslice workflow.
+        # The images are iterable in the realign workflow.
         image_iter = workflow.get_node('image_iter')
         abs_images = [os.path.abspath(fname) for fname in images]
         image_iter.iterables = dict(image=abs_images).items()
@@ -275,11 +275,11 @@ class RegistrationWorkflow(WorkflowBase):
         Creates the base registration workflow. The registration workflow performs the
         following steps:
         
-        - Set the mask and reslice workflow inputs
+        - Set the mask and realign workflow inputs
         
         - Run these workflows
         
-        - Upload the mask and reslice outputs to XNAT
+        - Upload the mask and realign outputs to XNAT
         
         :param name: the workflow name
         :param opts: the following workflow options
@@ -312,35 +312,35 @@ class RegistrationWorkflow(WorkflowBase):
         base_wf.connect(average, 'output_average_image', mask_ref, 'in_file')
         base_wf.connect(mask, 'mask', mask_ref, 'mask_file')
         
-        # The reslice image iterator.
+        # The realign image iterator.
         image_iter = pe.Node(IdentityInterface(fields=['image']), name='image_iter')
         
-        # The reslice workflow.
-        reslice_wf = self._create_reslice_workflow(**opts)
+        # The realign workflow.
+        realign_wf = self._create_realign_workflow(**opts)
         
         # Register and resample the images.
-        base_wf.connect(input_spec, 'subject', reslice_wf, 'input_spec.subject')
-        base_wf.connect(input_spec, 'session', reslice_wf, 'input_spec.session')
-        base_wf.connect(input_spec, 'reconstruction', reslice_wf, 'input_spec.reconstruction')
-        base_wf.connect(image_iter, 'image', reslice_wf, 'input_spec.moving_image')
-        base_wf.connect(mask_ref, 'out_file', reslice_wf, 'input_spec.mask')
-        base_wf.connect(average, 'output_average_image', reslice_wf, 'input_spec.fixed_image')
+        base_wf.connect(input_spec, 'subject', realign_wf, 'input_spec.subject')
+        base_wf.connect(input_spec, 'session', realign_wf, 'input_spec.session')
+        base_wf.connect(input_spec, 'reconstruction', realign_wf, 'input_spec.reconstruction')
+        base_wf.connect(image_iter, 'image', realign_wf, 'input_spec.moving_image')
+        base_wf.connect(mask_ref, 'out_file', realign_wf, 'input_spec.mask')
+        base_wf.connect(average, 'output_average_image', realign_wf, 'input_spec.fixed_image')
         
-        # Upload the resliced image to XNAT.
+        # Upload the realigned image to XNAT.
         upload_reg = pe.Node(XNATUpload(project=project(), format='NIFTI'),
             name='upload_reg')
         base_wf.connect(input_spec, 'subject', upload_reg, 'subject')
         base_wf.connect(input_spec, 'session', upload_reg, 'session')
         base_wf.connect(input_spec, 'reconstruction', upload_reg, 'reconstruction')
-        base_wf.connect(reslice_wf, 'output_spec.resliced', upload_reg, 'in_files')
+        base_wf.connect(realign_wf, 'output_spec.realigned', upload_reg, 'in_files')
         
-        # The workflow output is the resliced image.
-        reslice_output = reslice_wf.get_node('output_spec')
-        out_fields = reslice_output.outputs.copyable_trait_names()
+        # The workflow output is the realigned image.
+        realign_output = realign_wf.get_node('output_spec')
+        out_fields = realign_output.outputs.copyable_trait_names()
         output_spec = pe.Node(IdentityInterface(fields=out_fields), name='output_spec')
         for field in out_fields:
-            reslice_field = 'output_spec.' + field
-            base_wf.connect(reslice_wf, reslice_field, output_spec, field)
+            realign_field = 'output_spec.' + field
+            base_wf.connect(realign_wf, realign_field, output_spec, field)
         
         return base_wf
     
@@ -410,7 +410,7 @@ class RegistrationWorkflow(WorkflowBase):
         
         return workflow
     
-    def _create_reslice_workflow(self, base_dir=None, technique='ANTS'):
+    def _create_realign_workflow(self, base_dir=None, technique='ANTS'):
         """
         Creates the workflow which registers and resamples images.
         
@@ -418,21 +418,21 @@ class RegistrationWorkflow(WorkflowBase):
         :param technique: the registration technique (``ANTS`` or ``FNIRT``)
         :return: the Workflow object
         """
-        logger.debug('Creating the reslice workflow...')
+        logger.debug('Creating the realign workflow...')
         
-        workflow = pe.Workflow(name='reslice', base_dir=base_dir)
+        workflow = pe.Workflow(name='realign', base_dir=base_dir)
         
         # The workflow input image iterator.
         in_fields = ['subject', 'session', 'mask', 'fixed_image', 'moving_image', 'reconstruction']
         input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
         
-        # Make the resliced image file name.
-        reslice_name_func = Function(input_names=['reconstruction', 'in_file'],
+        # Make the realigned image file name.
+        realign_name_func = Function(input_names=['reconstruction', 'in_file'],
             output_names=['out_file'],
-            function=_gen_reslice_filename)
-        reslice_name = pe.Node(reslice_name_func, name='reslice_name')
-        workflow.connect(input_spec, 'reconstruction', reslice_name, 'reconstruction')
-        workflow.connect(input_spec, 'moving_image', reslice_name, 'in_file')
+            function=_gen_realign_filename)
+        realign_name = pe.Node(realign_name_func, name='realign_name')
+        workflow.connect(input_spec, 'reconstruction', realign_name, 'reconstruction')
+        workflow.connect(input_spec, 'moving_image', realign_name, 'in_file')
         
         # Copy the DICOM meta-data. The copy target is set by the technique
         # node defined below.
@@ -448,13 +448,13 @@ class RegistrationWorkflow(WorkflowBase):
             workflow.connect(input_spec, 'moving_image', register, 'moving_image')
             workflow.connect(input_spec, 'mask', register, 'fixed_image_mask')
             workflow.connect(input_spec, 'mask', register, 'moving_image_mask')
-            # The ANTS reslice options.
+            # The ANTS realign options.
             apply_opts = self.configuration.get('ANTSApplyTransforms', {})
             # Apply the transforms to the input image.
             apply_xfm = pe.Node(ApplyTransforms(**apply_opts), name='apply_xfm')
             workflow.connect(input_spec, 'fixed_image', apply_xfm, 'reference_image')
             workflow.connect(input_spec, 'moving_image', apply_xfm, 'input_image')
-            workflow.connect(reslice_name, 'out_file', apply_xfm, 'output_image')
+            workflow.connect(realign_name, 'out_file', apply_xfm, 'output_image')
             workflow.connect(register, 'forward_transforms', apply_xfm, 'transforms')
             # Copy the meta-data.
             workflow.connect(apply_xfm, 'output_image', copy_meta, 'dest_file')
@@ -467,16 +467,16 @@ class RegistrationWorkflow(WorkflowBase):
             workflow.connect(input_spec, 'moving_image', fnirt, 'in_file')
             workflow.connect(input_spec, 'mask', fnirt, 'inmask_file')
             workflow.connect(input_spec, 'mask', fnirt, 'refmask_file')
-            workflow.connect(reslice_name, 'out_file', fnirt, 'warped_file')
+            workflow.connect(realign_name, 'out_file', fnirt, 'warped_file')
             # Copy the meta-data.
             workflow.connect(fnirt, 'warped_file', copy_meta, 'dest_file')
         else:
             raise PipelineError("Registration technique not recognized: %s" % technique)
         
-        # The output is the resliced images.
-        out_fields = ['resliced']
+        # The output is the realigned images.
+        out_fields = ['realigned']
         output_spec = pe.Node(IdentityInterface(fields=out_fields), name='output_spec')
-        workflow.connect(copy_meta, 'dest_file', output_spec, 'resliced')
+        workflow.connect(copy_meta, 'dest_file', output_spec, 'realigned')
         
         return workflow
     
@@ -513,7 +513,7 @@ Unlike ``os.path.splitext``, this pattern captures a composite extension, e.g.:
 ('/tmp/foo.3/bar', '.nii.gz')
 """
 
-def _gen_reslice_filename(reconstruction, in_file):
+def _gen_realign_filename(reconstruction, in_file):
     """
     :param reconstruction: the reconstruction name
     :param in_file: the input scan image filename
