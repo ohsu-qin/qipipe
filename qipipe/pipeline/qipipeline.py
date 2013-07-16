@@ -1,6 +1,6 @@
-"""The qipipeline :meth:`run` function is the OHSU QIN pipeline facade."""
-
 import os, tempfile
+from nipype.pipeline import engine as pe
+from nipype.interfaces.utility import IdentityInterface, Function
 from ..helpers import xnat_helper
 from .pipeline_error import PipelineError
 from .staging import detect_new_visits, StagingWorkflow
@@ -57,16 +57,11 @@ class QIPipelineWorkflow(object):
         :keyword modeling: the optional modeling configuration file, or
             False to skip modeling
         """
-        self.reusable_workflow = self._create_reusable_workflow(**opts)
+        self.workflow = self._create_workflow(**opts)
         """
-        The reusable workflow.
-        The reusable workflow can be embedded in an execution workflow.
-        """
-        
-        self.execution_workflow = self._create_execution_workflow(**opts)
-        """
-        The execution workflow. The execution workflow is executed by calling
-        the :meth:`qipipe.pipeline.modeling.QIPipelineWorkflow.run` method.
+        The pipeline execution workflow. The execution workflow is executed by
+        calling the :meth:`qipipe.pipeline.modeling.QIPipelineWorkflow.run`
+        method.
         """
     
     def run(self, collection, *inputs, **opts):
@@ -79,9 +74,9 @@ class QIPipelineWorkflow(object):
         
         - ``sessions``: the (subject, session) name tuples of the new sessions
           created in XNAT
-
+        
         - ``reconstruction``: the registration XNAT reconstruction name
-
+        
         - ``analysis``: the PK mapping XNAT analysis name
         
         :param collection: the AIRC image collection name
@@ -126,27 +121,99 @@ class QIPipelineWorkflow(object):
             mdl_inputs = [dict(subject=sbj, session=sess, reconstruction=recon) for sbj, sess, recon in reg_specs]
             return modeling.run(*mdl_inputs, base_dir=base_dir, **opts)
     
-    def _create_execution_workflow(self, base_dir=None, **opts):
+    def _create_workflow(self, **opts):
         """
         Builds the executable pipeline workflow described in :class:`QIPipeline`.
         
-        :param base_dir: the execution working directory (default is a new temp directory)
-        :param opts: the additional reusable workflow options described in
-            :meth:`__init__`
+        :param opts: the workflow options described in
+            :meth:`qipipe.pipeline.staging.StagingWorkflow.__init__`
         :return: the Nipype workflow
         """
         logger.debug("Building the QIN pipeline execution workflow...")
-
-        # The work directory used for all constituent workflows.
-        if not opts.get('base_dir', None):
-            base_dir = opts.pop('base_dir', None) or tempfile.mkdtemp()
         
-        # The reusable workflow.
-        reusable_wf = self._create_reusable_workflow(base_dir=base_dir, **opts)
+        # The work directory used for the master workflow and all constituent
+        # workflows.
+        base_dir = opts.get('base_dir', None) or tempfile.mkdtemp()
         
         # The execution workflow.
-        wf_name = reusable_wf.name + '_exec'
-        exec_wf = pe.Workflow(name=wf_name, base_dir=base_dir)
+        exec_wf = pe.Workflow(name='qin_exec', base_dir=base_dir)
+        
+        # The staging workflow.
+        stg_opt = opts.get('staging', None)
+        stg_wf = self._create_constituent_workflow(StagingWorkflow, base_dir, stg_opt)
+        
+        # The registration workflow.
+        reg_opt = opts.get('registration', None)
+        if reg_opt == False:
+            reg_wf = None
+        else:
+            reg_wf = self._create_constituent_workflow(RegistrationWorkflow, base_dir, reg_opt)
+        
+        # The modeling workflow.
+        mdl_opt = opts.get('modeling', None)
+        if mdl_opt == False:
+            mdl_wf = None
+        else:
+            mdl_wf = self._create_constituent_workflow(ModelingWorkflow, base_dir, mdl_opt)
+        
+        # The non-iterable workflow inputs.
+        stg_input = stg_wf.get_node('input_spec')
+        stg_input_fields = stg_input.inputs.copyable_trait_names()
+        input_fields = set(stg_input_fields)
+        if reg_wf:
+            reg_input = reg_wf.get_node('input_spec')
+            reg_input_fields = reg_input.inputs.copyable_trait_names()
+            input_fields.update(reg_input_fields)
+        if mdl_wf:
+            mdl_input = mdl_wf.get_node('input_spec')
+            mdl_input_fields = mdl_input.inputs.copyable_trait_names()
+            input_fields.update(mdl_input_fields)
+        input_spec = pe.Node(IdentityInterface(fields=input_fields),
+            name='input_spec')
+        logger.debug("The QIN pipeline non-iterable input is %s with fields %s" %
+            (input_spec.name, input_fields))
+
+        # The iterable workflow inputs.
+        stg_iter_series = stg_wf.get_node('iter_series')
+        iter_fields = stg_iter_series.inputs.copyable_trait_names()
+        iter_series = pe.Node(IdentityInterface(fields=iter_fields),
+            name='iter_series')
+        logger.debug("The QIN pipeline iterable input is %s with fields %s" %
+            (iter_series.name, iter_fields))
+        
+        
+        # Stitch together the workflows.
+        for field in stg_input_fields:
+            stg_field = '.'.join(stg_input.name, field)
+            exec_wf.connect(input_spec, field, stg_wf, stg_field)
+        if reg_wf:
+            for field in reg_input_fields:
+                reg_field = '.'.join(reg_input.name, field)
+                exec_wf.connect(input_spec, field, reg_wf, reg_field)
+            exec_wf.connect(stg_wf, 'output_spec.out_file', reg_wf, 'image_iter.image')
+        if mdl_wf:
+            if reg_wf:
+                exec_wf.connect(reg_wf, 'output_spec.resliced', mdl_wf, 'image_iter.image')
+            else:
+                for field in mdl_input_fields:
+                    mdl_field = '.'.join(mdl_input.name, field)
+                    exec_wf.connect(input_spec, field, mdl_wf, mdl_field)
+                # Model the input scans rather than registered images.
+                mdl_input.inputs.container_type = 'scan'
+                
+        
+        
+        # The workflow inputs.
+        self.input_nodes = [sess_spec]
+        input_spec = pe.Node(IdentityInterface(fields=['collection', 'dest', 'subjects']),
+            name='input_spec')
+        iter_series = pe.Node(IdentityInterface(fields=['subject', 'session', 'series', 'images']),
+            name='iter_series')
+        iter_image = pe.Node(IdentityInterface(fields=['image']),
+            name='iter_image')
+        
+        
+        
         
         # The download fields.
         dl_fields = ['subject', 'session', 'reconstruction', 'container_type']
@@ -202,15 +269,15 @@ class QIPipelineWorkflow(object):
         
         return exec_wf
 
-    
-    def _create_reusable_workflow(self, base_dir=None, **opts):
+    def _create_constituent_workflow(self, factory, base_dir, cfg_file=None):
         """
-        Builds the executable pipeline workflow described in :class:`QIPipeline`.
-        
-        :param base_dir: the execution working directory (default is a new temp directory)
-        :param opts: the additional reusable workflow options described in
-            :meth:`__init__`
-        :return: the Nipype workflow
+        :param factory: the workflow class
+        :param base_dir: the workflow base directory
+        :param cfg_file: the workflow configuration file
+        :return: the new workflow instance
         """
-        logger.debug("Building the QIN pipeline execution workflow...")
+        opts = dict(base_dir=base_dir)
+        if cfg_file:
+            opts['cfg_file'] = cfg_file
+        return factory(**opts)
     
