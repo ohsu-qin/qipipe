@@ -1,5 +1,5 @@
 import os, re
-import nipype.pipeline.engine as pe
+from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.ants.registration import Registration
 from nipype.interfaces.ants import AverageImages, ApplyTransforms
@@ -97,8 +97,8 @@ class RegistrationWorkflow(WorkflowBase):
         that file override the default settings.
         
         :param opts: the following options
+        :keyword base_dir: the workflow execution directory (default a new temp directory)
         :keyword cfg_file: the optional workflow inputs configuration file
-        :keyword base_dir: the workflow execution directory (default current directory)
         :keyword technique: the case-insensitive workflow technique
             (``ANTS`` or ``FNIRT``, default ``ANTS``)
         """
@@ -334,7 +334,7 @@ class RegistrationWorkflow(WorkflowBase):
         base_wf.connect(input_spec, 'reconstruction', upload_reg, 'reconstruction')
         base_wf.connect(reslice_wf, 'output_spec.resliced', upload_reg, 'in_files')
         
-        # The workflow output is the resliced images.
+        # The workflow output is the resliced image.
         reslice_output = reslice_wf.get_node('output_spec')
         out_fields = reslice_output.outputs.copyable_trait_names()
         output_spec = pe.Node(IdentityInterface(fields=out_fields), name='output_spec')

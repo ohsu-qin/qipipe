@@ -1,6 +1,6 @@
 import os
 from collections import defaultdict
-import nipype.pipeline.engine as pe
+from nipype.pipeline import engine as pe
 from nipype.interfaces.dcmstack import DcmStack, MergeNifti, CopyMeta
 from nipype.interfaces.utility import IdentityInterface, Function
 from ..interfaces import XNATDownload, XNATUpload, Fastfit
@@ -88,8 +88,8 @@ class ModelingWorkflow(WorkflowBase):
         that file override the default settings.
         
         :param opts: the following options
+        :keyword base_dir: the workflow execution directory (default a new temp directory)
         :keyword cfg_file: the optional workflow inputs configuration file
-        :keyword base_dir: the workflow execution directory (default current directory)
         :keyword r1_0_val: the optional fixed |R10| value
         :keyword max_r1_0: the maximum computed |R10| value, if the fixed |R10|
             option is not set
@@ -259,7 +259,7 @@ class ModelingWorkflow(WorkflowBase):
         """
         logger.debug("Building the modeling execution workflow...")
         
-        # The execution workflow.
+        # The reusable workflow.
         reusable_wf = pe.Workflow(name='modeling', base_dir=base_dir)
         
         # The base workflow.
