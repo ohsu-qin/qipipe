@@ -73,8 +73,6 @@ class QIPipelineWorkflow(object):
         the staged scans. If the ``modeling`` option is set to False, then
         PK modeling is not performed.
         
-        :param opts: the constituent workflow initialization options,
-            augmented by the following options
         :keyword staging: the optional staging configuration file
         :keyword mask: the optional mask configuration file, or False to
             halt after staging the files
@@ -156,8 +154,7 @@ class QIPipelineWorkflow(object):
         """
         Builds the executable pipeline workflow described in :class:`QIPipeline`.
         
-        :param opts: the workflow options described in
-            :meth:`qipipe.pipeline.staging.StagingWorkflow.__init__`
+        :param opts: the constituent workflow initializer options
         :return: the Nipype workflow
         """
         logger.debug("Building the QIN pipeline execution workflow...")

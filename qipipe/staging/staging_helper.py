@@ -61,21 +61,21 @@ def get_subjects(collection, source, pattern=None):
 def iter_new_visits(collection, *subject_dirs):
     """
     Iterates over the visits in the given subject directories which are not in XNAT.
-    Each iteration item is a (subject, session, dicom_file_iterator) tuple, formed
+    Each iteration item is a `(subject, session, files)` tuple, formed
     as follows:
     
-    - The subject is the XNAT subject ID formatted by `SUBJECT_FMT`
+    - The `subject` is the XNAT subject ID formatted by ``SUBJECT_FMT``
     
-    - The session is the XNAT experiment name formatted by `SESSION_FMT`
+    - The `session` is the XNAT experiment name formatted by ``SESSION_FMT``
     
-    - The DICOM files iterator iterates over the files which match the
+    - The `files` iterates over the files which match the
       :mod:`qipipe.staging.airc_collection` DICOM file include pattern
     
     The supported AIRC collections are defined by :mod:`qipipe.staging.airc_collection`.
     
     :param collection: the AIRC image collection name
     :param subject_dirs: the subject directories over which to iterate
-    :return: the new visit (subject, session, dicom_file_iterator) tuples
+    :return: the new visit `(subject, session, files)` tuples
     """
     return NewVisitIterator(collection, *subject_dirs)
 
@@ -96,7 +96,7 @@ def group_dicom_files_by_series(*dicom_files):
 
 class NewVisitIterator(object):
     """
-    NewVisitIterator is a generator class for detecting new AIRC visits.
+    **NewVisitIterator** is a generator class for detecting new AIRC visits.
     """
 
     def __init__(self, collection, *subject_dirs):

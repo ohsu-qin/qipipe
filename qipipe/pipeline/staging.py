@@ -24,7 +24,6 @@ def detect_new_visits(collection, *inputs, **opts):
     
     :param collection: the AIRC image collection name
     :param inputs: the AIRC source subject directories
-    :param opts: the following options
     :keyword overwrite: flag indicating whether to replace existing XNAT subjects
     :return: the new series (subject, session, series, dicom_files) tuples
     """
@@ -107,7 +106,6 @@ class StagingWorkflow(WorkflowBase):
         If the optional configuration file is specified, then the workflow settings in
         that file override the default settings.
         
-        :param opts: the following options
         :keyword base_dir: the workflow execution directory (default a new temp directory)
         :keyword cfg_file: the optional workflow inputs configuration file
         """

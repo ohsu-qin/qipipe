@@ -118,7 +118,6 @@ class RegistrationWorkflow(WorkflowBase):
         If the optional configuration file is specified, then the workflow settings in
         that file override the default settings.
         
-        :param opts: the following options
         :keyword base_dir: the workflow execution directory (default a new temp directory)
         :keyword cfg_file: the optional workflow inputs configuration file
         :keyword technique: the case-insensitive workflow technique
@@ -330,7 +329,7 @@ class RegistrationWorkflow(WorkflowBase):
         - Upload the mask and realign outputs to XNAT
         
         :param name: the workflow name
-        :param opts: the following workflow options
+        :param opts: the following workflow options:
         :keyword base_dir: the workflow execution directory (default current directory)
         :keyword technique: the registration technique
             ('``ANTS`` or ``FNIRT``, default ``ANTS``)

@@ -110,7 +110,6 @@ class ModelingWorkflow(WorkflowBase):
         If the optional configuration file is specified, then the workflow settings in
         that file override the default settings.
         
-        :param opts: the following options
         :keyword base_dir: the workflow execution directory (default a new temp directory)
         :keyword cfg_file: the optional workflow inputs configuration file
         :keyword r1_0_val: the optional fixed |R10| value
@@ -219,7 +218,7 @@ class ModelingWorkflow(WorkflowBase):
         
         :param base_dir: the execution working directory (default is the
             current directory)
-        :param opts: the additional workflow options described in :meth:`__init__`
+        :param opts: the additional workflow initializer options
         :return: the Nipype workflow
         """
         logger.debug("Building the modeling execution workflow...")
@@ -292,7 +291,7 @@ class ModelingWorkflow(WorkflowBase):
         
         :param base_dir: the execution working directory
             (default is the current directory)
-        :param opts: the additional workflow options described in :meth:`__init__`
+        :param opts: the additional workflow initialization options
         :return: the Nipype workflow
         """
         logger.debug("Building the modeling execution workflow...")
@@ -363,7 +362,7 @@ class ModelingWorkflow(WorkflowBase):
         Creates the modeling base workflow described in :class:`ModelingWorkflow`.
         
         :param base_dir: the workflow working directory
-        :param opts: the additional PK mapping parameters described in :meth:`__init__`
+        :param opts: the additional PK mapping initialization parameters
         :return: the pyxnat Workflow
         """
         workflow = pe.Workflow(name='modeling_base', base_dir=base_dir)

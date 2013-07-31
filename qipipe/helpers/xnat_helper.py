@@ -213,7 +213,6 @@ class XNAT(object):
         :param project: the XNAT project id
         :param subject: the XNAT subject label
         :param session: the XNAT experiment label
-        :param opts: the resource selection option
         :keyword format: the image file format (``NIFTI`` or ``DICOM``, default ``NIFTI``)
         :keyword scan: the scan number
         :keyword reconstruction: the reconstruction name
@@ -305,8 +304,8 @@ class XNAT(object):
         :param subject: the XNAT subject name
         :param session: the session (XNAT experiment) name
         :param in_files: the input files to upload
-        :param opts: the session child container, file format, scan modality and optional additional
-            XNAT file creation options
+        :param opts: the following session child container, file format, scan modality and optional
+            additional XNAT file creation options:
         :keyword scan: the scan number
         :keyword reconstruction: the reconstruction name
         :keyword analysis: the analysis name

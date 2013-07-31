@@ -13,13 +13,3 @@ html_theme = 'qipipe_theme'
 html_theme_path = ['.']
 htmlhelp_basename = 'qipipedoc'
 html_title = "qipipe v%s" % version
-
-
-def skip(app, what, name, obj, skip, options):
-    """Document the __init__ methods."""
-    if name == "__init__":
-        return False
-    return skip
-
-def setup(app):
-    app.connect("autodoc-skip-member", skip)
