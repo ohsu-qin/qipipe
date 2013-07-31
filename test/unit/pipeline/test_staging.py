@@ -69,15 +69,12 @@ class TestStagingWorkflow(object):
         with xnat_helper.connection() as xnat:
             # Delete any existing test subjects.
             delete_subjects(project(), *subjects)
-
             # Run the pipeline.
             session_specs = staging.run(collection, *sources, base_dir=dest)
-
             # Verify the result.
             for sbj, sess in session_specs:
                 sess_obj = xnat.get_session(project(), sbj, sess)
                 assert_true(sess_obj.exists(), "The %s %s session was not created in XNAT" % (sbj, sess))
-        
             # Delete the test subjects.
             delete_subjects(project(), *subjects)
 

@@ -6,7 +6,7 @@ API Documentation
 
 .. toctree::
 
-  pipelines
+  pipeline
   helpers
   staging
   interfaces

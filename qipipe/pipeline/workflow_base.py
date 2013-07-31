@@ -1,6 +1,7 @@
 import os, re
 import logging
 import nipype.pipeline.engine as pe
+from ..helpers.project import project
 from ..helpers import xnat_helper
 from ..helpers.ast_config import read_config
 from .distributable import DISTRIBUTABLE
@@ -62,6 +63,19 @@ class WorkflowBase(object):
             return dict(cfg)
         else:
             return {}
+
+    def _download_scans(self, xnat, subject, session, dest):
+        """
+        Download the NIFTI scan files for the given session.
+        
+        :param xnat: the :class:`qipipe.helpers.xnat_helper.XNAT` connection
+        :param subject: the XNAT subject label
+        :param session: the XNAT session label
+        :param dest: the destination directory path
+        :return: the download file paths
+        """
+        return xnat.download(project(), subject, session, dest=dest,
+            container_type='scan', format='NIFTI')
     
     def _depict_workflow(self, workflow):
         """Diagrams the given workflow graph."""

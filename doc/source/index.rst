@@ -98,5 +98,5 @@ qipipe is confidential and may not be distributed in any form without authorizat
   api/index
   api/helpers
   api/interfaces
-  api/pipelines
+  api/pipeline
   api/staging

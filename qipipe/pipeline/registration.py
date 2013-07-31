@@ -3,15 +3,13 @@ from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import IdentityInterface, Function
 from nipype.interfaces.ants.registration import Registration
 from nipype.interfaces.ants import AverageImages, ApplyTransforms
-from nipype.interfaces.dcmstack import CopyMeta
 from nipype.interfaces import fsl
-from nipype.interfaces.dcmstack import DcmStack, MergeNifti, CopyMeta
+from nipype.interfaces.dcmstack import DcmStack, CopyMeta
 from ..helpers.project import project
-from ..interfaces import XNATDownload, XNATUpload, MriVolCluster
+from ..interfaces import XNATDownload, XNATUpload
 from ..helpers import xnat_helper, file_helper
-from ..helpers.ast_config import read_config
 from .workflow_base import WorkflowBase
-from .distributable import DISTRIBUTABLE
+from .mask import MaskWorkflow
 
 import logging
 logger = logging.getLogger(__name__)
@@ -22,23 +20,27 @@ REG_PREFIX = 'reg'
 MASK_RECON = 'mask'
 """The XNAT mask reconstruction name."""
 
+
 def run(*inputs, **opts):
     """
-    Creates a :class:`RegistrationWorkflow` and runs its on the given inputs.
+    Creates a :class:`qipipe.pipeline.registration.RegistrationWorkflow`
+    and runs it on the given inputs.
     
-    :param inputs: the :meth:`RegistrationWorkflow.run` inputs
-    :param opts: the :class:`RegistrationWorkflow` initializer options
-    :return: the :meth:`RegistrationWorkflow.run` result
+    :param inputs: the :meth:`qipipe.pipeline.registrationRegistrationWorkflow.run`
+        inputs
+    :param opts: the :class:`qipipe.pipeline.registrationRegistrationWorkflow`
+        initializer options
+    :return: the :meth:`qipipe.pipeline.registrationRegistrationWorkflow.run`
+        result
     """
     return RegistrationWorkflow(**opts).run(*inputs)
+
 
 class RegistrationWorkflow(WorkflowBase):
     """
     The RegistrationWorkflow class builds and executes the registration workflow.
     
     The workflow registers the images as follows:
-    
-    - Obtain a mask to subtract extraneous tissue
     
     - Make a fixed reference image
     
@@ -53,12 +55,35 @@ class RegistrationWorkflow(WorkflowBase):
     
     - ``session``: the session name
     
-    - ``recon``: the registration XNAT reconstruction name
+    - ``mask``: the mask to apply to the images
     
     - ``images``: the session images to register
     
-    In addition, the iterable ``image_iter`` node input field ``images`` must
+    In addition, the iterable ``image_iter`` node input field ``image`` must
     be set to the input session images.
+    
+    The mask can be obtained by running the :class:`qipipe.pipeline.mask.MaskWorkflow`
+    workflow.
+    
+    The registration workflow output is the ``output_spec`` node consisting of the
+    following output fields:
+    
+    - ``out_file``: the realigned image file
+    
+    - ``reconstruction``: the registration XNAT reconstruction name
+    
+    The ``reconstruction`` output value is a unique value used for all
+    workflow runs against this
+    :class:`qipipe.pipeline.registration.RegistrationWorkflow` instance.
+    
+    There are two registration workflow paths:
+    
+    - a path which uses the images list as an input to create the mask and
+        registration reference image
+    
+    - a path which uses each image as an input to realign the image
+    
+    The image realign path uses outputs from the mask/reference path.
     
     The fixed reference image is the average of the middle three input images.
     
@@ -69,9 +94,6 @@ class RegistrationWorkflow(WorkflowBase):
     - FSL_ FNIRT_ non-linear registration
     
     The optional workflow configuration file can contain the following sections:
-    
-    - ``FSLMriVolCluster``: the :class:`qipipe.interfaces.mri_volcluster.MriVolCluster`
-        interface options
     
     - ``ANTSAverage``: the ANTS `Average interface`_ options
     
@@ -104,11 +126,18 @@ class RegistrationWorkflow(WorkflowBase):
         """
         super(RegistrationWorkflow, self).__init__(logger, opts.pop('cfg_file', None))
         
+        self.reusable_workflow = self._create_reusable_workflow(**opts)
+        """The reusable registration workflow."""
+        
         self._reg_mask_dl_wf = self._create_workflow_with_existing_mask(**opts)
-        """The registration workflow to use with a existing mask."""
+        """The execution workflow to use with a existing mask."""
         
         self._reg_mask_cr_wf = self._create_workflow_with_nonexisting_mask(**opts)
-        """The registration workflow to use with a non-existing mask."""
+        """The execution workflow to use with a non-existing mask."""
+        
+        self._reconstruction = self._generate_reconstruction_name()
+        """The XNAT reconstruction name used for all runs against this workflow
+        instance."""
     
     def run(self, *inputs):
         """
@@ -124,15 +153,14 @@ class RegistrationWorkflow(WorkflowBase):
         :return: the registration reconstruction name, unqualified by the
             session parent label
         """
-        recon = self.generate_reconstruction_name()
         
         # Run the workflow on each session.
         for sbj, sess in inputs:
-            self._register(sbj, sess, recon)
+            self._register(sbj, sess)
         
-        return recon
+        return self._reconstruction
     
-    def generate_reconstruction_name(self):
+    def _generate_reconstruction_name(self):
         """
         Makes a unique registration reconstruction name for the registration
         workflow input. Uniqueness permits more than one registration to be
@@ -142,7 +170,7 @@ class RegistrationWorkflow(WorkflowBase):
         """
         return "%s_%s" % (REG_PREFIX, file_helper.generate_file_name())
     
-    def _register(self, subject, session, recon):
+    def _register(self, subject, session):
         """
         Runs a registration execution workflow on the given session.
         
@@ -158,22 +186,23 @@ class RegistrationWorkflow(WorkflowBase):
         # since Nipype requires that the workflow iterator is bound to the images
         # when the workflow is built rather than set dynamically by a download
         # step.
-        images = self._download_scans(subject, session, dest)
+        with xnat_helper.connection() as xnat:
+            images = self._download_scans(xnat, subject, session, dest)
         # Sort the images by series number.
         images.sort()
         
         # The workflow to use depends on whether there is a mask.
-        reg_wf = self._get_workflow(subject, session)
+        reg_wf = self._execution_workflow_for(subject, session)
         
         # Execute the registration workflow.
-        self._set_registration_input(reg_wf, subject, session, recon, images)
+        self._set_registration_input(reg_wf, subject, session, images)
         logger.debug("Executing the %s workflow on %s %s..." %
             (reg_wf.name, subject, session))
         self._run_workflow(reg_wf)
         logger.debug("%s %s is registered as reconstruction %s." %
             (subject, session, recon))
     
-    def _get_workflow(self, subject, session):
+    def _execution_workflow_for(self, subject, session):
         """
         Returns the registration execution workflow to use for the given session.
         
@@ -190,21 +219,19 @@ class RegistrationWorkflow(WorkflowBase):
             else:
                 return self._reg_mask_cr_wf
     
-    def _set_registration_input(self, workflow, subject, session, recon, images):
+    def _set_registration_input(self, workflow, subject, session, images):
         """
         Sets the registration input.
         
-        :param workflow: the registration workflow
+        :param workflow: the registration execution workflow
         :param subject: the subject name
         :param session: the session name
-        :param recon: the reconstruction name
         :param images: the scan images to register
         """
         # Set the workflow inputs.
         input_spec = workflow.get_node('input_spec')
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
-        input_spec.inputs.reconstruction = recon
         input_spec.inputs.images = images
         
         # The images are iterable in the realign workflow.
@@ -215,65 +242,86 @@ class RegistrationWorkflow(WorkflowBase):
     def _create_workflow_with_existing_mask(self, **opts):
         logger.debug("Creating the registration workflow to use with a existing mask...")
         
-        # Start with a base registration workflow.
-        reg_wf = self._create_base_workflow(name='reg_existing_mask',**opts)
+        # The reusable registration workflow.
+        base_wf = self.reusable_workflow.clone(name='reg_dl_mask_base')
+        
+        # The execution workflow.
+        exec_wf = pe.Workflow(name='reg_dl_mask_exec', base_dir=opts.get('base_dir'))
+        
+        # The execution workflow input.
+        in_fields = ['subject', 'session', 'images']
+        input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
+        
+        # The image iterator.
+        image_iter = pe.Node(IdentityInterface(fields=['image']), name='image_iter')
+        exec_wf.connect(image_iter, 'image', base_wf, 'image_iter.image')
         
         # Download the mask.
-        input_spec = reg_wf.get_node('input_spec')
         dl_mask = pe.Node(XNATDownload(project=project(), reconstruction=MASK_RECON),
             name='dl_mask')
-        reg_wf.connect(input_spec, 'subject', dl_mask, 'subject')
-        reg_wf.connect(input_spec, 'session', dl_mask, 'session')
+        exec_wf.connect(input_spec, 'subject', dl_mask, 'subject')
+        exec_wf.connect(input_spec, 'session', dl_mask, 'session')
         
-        # Connect the mask download output to the registration mask input.
-        mask = reg_wf.get_node('mask')
-        reg_wf.connect(dl_mask, 'out_file', mask, 'mask')
+        # Connect the reusable workflow inputs.
+        input_spec = base_wf.get_node('input_spec')
+        exec_wf.connect(input_spec, 'subject', base_wf, 'input_spec.subject')
+        exec_wf.connect(input_spec, 'session', base_wf, 'input_spec.session')
+        exec_wf.connect(input_spec, 'images', base_wf, 'input_spec.images')
+        exec_wf.connect(dl_mask, 'out_file', base_wf, 'input_spec.mask')
         
-        logger.debug("Created the %s workflow." % reg_wf.name)
+        logger.debug("Created the %s workflow." % exec_wf.name)
         
         # If debug is set, then diagram the workflow graph.
         if logger.level <= logging.DEBUG:
-            self._depict_workflow(reg_wf)
+            self._depict_workflow(exec_wf)
         
-        return reg_wf
+        return exec_wf
     
     def _create_workflow_with_nonexisting_mask(self, **opts):
         logger.debug("Creating the registration workflow to use with a non-existing mask...")
         
         # The mask creation workflow.
-        mask_wf = self._create_mask_workflow(base_dir=opts.get('base_dir'))
+        mask_wf = MaskWorkflow(base_dir=opts.get('base_dir')).workflow.clone(name='reg_mask')
         
-        # Start with a base registration workflow.
-        reg_wf = self._create_base_workflow(name='reg_nonexisting_mask', **opts)
+        # The reusable registration workflow.
+        base_wf = self.reusable_workflow.clone(name='reg_cr_mask_base')
+        
+        # The execution workflow.
+        exec_wf = pe.Workflow(name='reg_cr_mask_exec', base_dir=opts.get('base_dir'))
+        
+        # The execution workflow input.
+        in_fields = ['subject', 'session', 'images']
+        input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
+        
+        # The image iterator.
+        image_iter = pe.Node(IdentityInterface(fields=['image']), name='image_iter')
+        exec_wf.connect(image_iter, 'image', base_wf, 'image_iter.image')
         
         # Connect the mask workflow inputs.
-        input_spec = reg_wf.get_node('input_spec')
-        reg_wf.connect(input_spec, 'subject', mask_wf, 'input_spec.subject')
-        reg_wf.connect(input_spec, 'session', mask_wf, 'input_spec.session')
-        reg_wf.connect(input_spec, 'images', mask_wf, 'input_spec.images')
+        exec_wf.connect(input_spec, 'subject', mask_wf, 'input_spec.subject')
+        exec_wf.connect(input_spec, 'session', mask_wf, 'input_spec.session')
+        exec_wf.connect(input_spec, 'images', mask_wf, 'input_spec.images')
         
-        # Upload the mask to XNAT.
-        upload_mask = pe.Node(XNATUpload(project=project(), reconstruction=MASK_RECON,
-            format='NIFTI'), name='upload_mask')
-        reg_wf.connect(input_spec, 'subject', upload_mask, 'subject')
-        reg_wf.connect(input_spec, 'session', upload_mask, 'session')
-        reg_wf.connect(mask_wf, 'output_spec.mask', upload_mask, 'in_files')
+        # Connect the reusable workflow inputs.
+        input_spec = base_wf.get_node('input_spec')
+        exec_wf.connect(input_spec, 'subject', base_wf, 'input_spec.subject')
+        exec_wf.connect(input_spec, 'session', base_wf, 'input_spec.session')
+        exec_wf.connect(input_spec, 'images', base_wf, 'input_spec.images')
+        exec_wf.connect(mask_wf, 'output_spec.out_file', base_wf, 'input_spec.mask')
         
-        # Connect the mask workflow output to the registration mask input.
-        mask = reg_wf.get_node('mask')
-        reg_wf.connect(mask_wf, 'output_spec.mask', mask, 'mask')
-        
-        logger.debug("Created the %s workflow." % reg_wf.name)
+        logger.debug("Created the %s workflow." % exec_wf.name)
         # If debug is set, then diagram the workflow graph.
         if logger.level <= logging.DEBUG:
-            self._depict_workflow(reg_wf)
+            self._depict_workflow(exec_wf)
         
-        return reg_wf
+        return exec_wf
     
-    def _create_base_workflow(self, name, **opts):
+    def _create_reusable_workflow(self, name, **opts):
         """
         Creates the base registration workflow. The registration workflow performs the
         following steps:
+        
+        - Generates a unique XNAT reconstruction name
         
         - Set the mask and realign workflow inputs
         
@@ -290,15 +338,15 @@ class RegistrationWorkflow(WorkflowBase):
         """
         logger.debug("Creating a base registration workflow...")
         
-        # The execution workflow.
+        # The reusable workflow.
         base_wf = pe.Workflow(name=name, base_dir=opts.get('base_dir'))
         
-        # The execution workflow input.
-        in_fields = ['subject', 'session', 'reconstruction', 'images']
+        # The workflow input.
+        in_fields = ['subject', 'session', 'images', 'mask']
         input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
-        
-        # The mask is set by the execution workflow.
-        mask = pe.Node(IdentityInterface(fields=['mask']), name='mask')
+        # The same reconstruction name is used for all runs
+        # against this instance.
+        input_spec.inputs.reconstruction = self._reconstruction
         
         # The average options.
         avg_opts = self.configuration.get('ANTSAverage', {})
@@ -310,7 +358,7 @@ class RegistrationWorkflow(WorkflowBase):
         # Mask the reference image.
         mask_ref = pe.Node(fsl.maths.ApplyMask(output_type='NIFTI_GZ'), name='mask_ref')
         base_wf.connect(average, 'output_average_image', mask_ref, 'in_file')
-        base_wf.connect(mask, 'mask', mask_ref, 'mask_file')
+        base_wf.connect(input_spec, 'mask', mask_ref, 'mask_file')
         
         # The realign image iterator.
         image_iter = pe.Node(IdentityInterface(fields=['image']), name='image_iter')
@@ -321,7 +369,6 @@ class RegistrationWorkflow(WorkflowBase):
         # Register and resample the images.
         base_wf.connect(input_spec, 'subject', realign_wf, 'input_spec.subject')
         base_wf.connect(input_spec, 'session', realign_wf, 'input_spec.session')
-        base_wf.connect(input_spec, 'reconstruction', realign_wf, 'input_spec.reconstruction')
         base_wf.connect(image_iter, 'image', realign_wf, 'input_spec.moving_image')
         base_wf.connect(mask_ref, 'out_file', realign_wf, 'input_spec.mask')
         base_wf.connect(average, 'output_average_image', realign_wf, 'input_spec.fixed_image')
@@ -332,84 +379,17 @@ class RegistrationWorkflow(WorkflowBase):
         base_wf.connect(input_spec, 'subject', upload_reg, 'subject')
         base_wf.connect(input_spec, 'session', upload_reg, 'session')
         base_wf.connect(input_spec, 'reconstruction', upload_reg, 'reconstruction')
-        base_wf.connect(realign_wf, 'output_spec.realigned', upload_reg, 'in_files')
+        base_wf.connect(realign_wf, 'output_spec.out_file', upload_reg, 'in_files')
         
-        # The workflow output is the realigned image.
+        # The workflow output is the reconstruction name and the realigned image file.
         realign_output = realign_wf.get_node('output_spec')
-        out_fields = realign_output.outputs.copyable_trait_names()
+        out_fields = ['out_file', 'reconstruction']
         output_spec = pe.Node(IdentityInterface(fields=out_fields), name='output_spec')
-        for field in out_fields:
-            realign_field = 'output_spec.' + field
-            base_wf.connect(realign_wf, realign_field, output_spec, field)
+        base_wf.connect(realign_wf, 'output_spec.out_file', output_spec, 'out_file')
+        
         
         return base_wf
-    
-    def _create_mask_workflow(self, base_dir=None):
-        """
-        Creates the mask workflow.
-        
-        :param base_dir: the workflow execution directory
-        :return: the Workflow object
-        """
-        logger.debug('Creating the mask workflow...')
-        
-        workflow = pe.Workflow(name='make_mask', base_dir=base_dir)
-        
-        # The workflow inputs.
-        in_fields = ['subject', 'session', 'images']
-        input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
-        
-        # Merge the DCE data to 4D.
-        dce_merge = pe.Node(MergeNifti(out_format='dce_series'), name='dce_merge')
-        workflow.connect(input_spec, 'images', dce_merge, 'in_files')
-        
-        # Get a mean image from the DCE data.
-        dce_mean = pe.Node(fsl.MeanImage(), name='dce_mean')
-        workflow.connect(dce_merge, 'out_file', dce_mean, 'in_file')
-        
-        # Find the center of gravity from the mean image.
-        find_cog = pe.Node(fsl.ImageStats(), name='find_cog')
-        find_cog.inputs.op_string = '-C'
-        workflow.connect(dce_mean, 'out_file', find_cog, 'in_file')
-        
-        # Zero everything posterior to the center of gravity on mean image.
-        crop_back = pe.Node(fsl.ImageMaths(), name='crop_back')
-        workflow.connect(dce_mean, 'out_file', crop_back, 'in_file')
-        workflow.connect(find_cog, ('out_stat', _gen_crop_op_string), crop_back, 'op_string')
-        
-        # The cluster options.
-        mask_opts = self.configuration.get('FSLMriVolCluster', {})
-        # Find large clusters of empty space on the cropped image.
-        cluster_mask = pe.Node(MriVolCluster(**mask_opts), name='cluster_mask')
-        workflow.connect(crop_back, 'out_file', cluster_mask, 'in_file')
-        
-        # Convert the cluster labels to a binary mask.
-        binarize = pe.Node(fsl.BinaryMaths(), name='binarize')
-        binarize.inputs.operation = 'min'
-        binarize.inputs.operand_value = 1
-        workflow.connect(cluster_mask, 'out_cluster_file', binarize, 'in_file')
-        
-        # Make the mask file name.
-        mask_name_func = Function(input_names=['subject', 'session'],
-            output_names=['out_file'],
-            function=_gen_mask_filename)
-        mask_name = pe.Node(mask_name_func, name='mask_name')
-        workflow.connect(input_spec, 'subject', mask_name, 'subject')
-        workflow.connect(input_spec, 'session', mask_name, 'session')
-        
-        # Invert the binary mask.
-        inv_mask = pe.Node(fsl.maths.MathsCommand(), name='inv_mask')
-        inv_mask.inputs.args = '-sub 1 -mul -1'
-        workflow.connect(mask_name, 'out_file', inv_mask, 'out_file')
-        workflow.connect(binarize, 'out_file', inv_mask, 'in_file')
-        
-        # Collect the outputs.
-        out_fields = ['mask']
-        output_spec = pe.Node(IdentityInterface(fields=out_fields), name='output_spec')
-        workflow.connect(inv_mask, 'out_file', output_spec, 'mask')
-        
-        return workflow
-    
+
     def _create_realign_workflow(self, base_dir=None, technique='ANTS'):
         """
         Creates the workflow which registers and resamples images.
@@ -474,24 +454,10 @@ class RegistrationWorkflow(WorkflowBase):
             raise PipelineError("Registration technique not recognized: %s" % technique)
         
         # The output is the realigned images.
-        out_fields = ['realigned']
-        output_spec = pe.Node(IdentityInterface(fields=out_fields), name='output_spec')
-        workflow.connect(copy_meta, 'dest_file', output_spec, 'realigned')
+        output_spec = pe.Node(IdentityInterface(fields=['out_file']), name='output_spec')
+        workflow.connect(copy_meta, 'dest_file', output_spec, 'out_file')
         
         return workflow
-    
-    def _download_scans(self, subject, session, dest):
-        """
-        Download the NIFTI scan files for the given session.
-        
-        :param subject: the XNAT subject label
-        :param session: the XNAT session label
-        :param dest: the destination directory path
-        :return: the download file paths
-        """
-        with xnat_helper.connection() as xnat:
-            return xnat.download(project(), subject, session, dest=dest,
-                container_type='scan', format='NIFTI')
 
 
 ### Utility functions called by workflow nodes. ###
@@ -563,18 +529,3 @@ def _middle(items, proportion_or_length):
             " a number: %s" % proportion_or_length)
     
     return sorted(items)[offset:len(items)-offset]
-
-def _gen_crop_op_string(cog):
-    """
-    :param cog: the center of gravity
-    :return: the crop -roi option
-    """
-    return "-roi 0 -1 %d -1 0 -1 0 -1" % cog[1]
-
-def _crop_posterior(image, cog):
-    from nipype.interfaces import fsl
-    
-    crop_back = fsl.ImageMaths()
-    crop_back.inputs.op_string = '-roi 0 -1 %d -1 0 -1 0 -1' % cog[1]
-    crop_back.inputs.in_file = image
-    return crop_back.run().outputs.out_file

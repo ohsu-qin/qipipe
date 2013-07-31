@@ -4,6 +4,7 @@ from nipype.interfaces.utility import IdentityInterface, Function
 from ..helpers import xnat_helper
 from .pipeline_error import PipelineError
 from .staging import detect_new_visits, StagingWorkflow
+from .mask import MaskWorkflow
 from .registration import RegistrationWorkflow
 from .modeling import ModelingWorkflow
 
@@ -13,11 +14,15 @@ logger = logging.getLogger(__name__)
 
 def run(*inputs, **opts):
     """
-    Creates a :class:`QIPipelineWorkflow` and runs its on the given inputs.
+    Creates a :class:`qipipe.pipeline.qipipeline.QIPipelineWorkflow`
+    and runs it on the given inputs.
     
-    :param inputs: the :meth:`QIPipelineWorkflow.run` inputs
-    :param opts: the :class:`QIPipelineWorkflow` initializer options
-    :return: the :meth:`QIPipelineWorkflow.run` result
+    :param inputs: the :meth:`qipipe.pipeline.qipipeline.QIPipelineWorkflow.run`
+        inputs
+    :param opts: the :class:`qipipe.pipeline.qipipeline.QIPipelineWorkflow`
+        initializer options
+    :return: the :meth:`qipipe.pipeline.qipipeline.QIPipelineWorkflow.run`
+        result
     """
     return QIPipelineWorkflow(**opts).run(*inputs)
 
@@ -29,29 +34,50 @@ class QIPipelineWorkflow(object):
     the following constituent workflows:
     
     - staging: Prepare the new AIRC DICOM visits, as described in
-        :class:`qipipe.staging.StagingWorkflow`
+      :class:`qipipe.staging.StagingWorkflow`
+    
+    - mask: Create a mask from the staged images,
+      as described in :class:`qipipe.staging.MaskWorkflow`
     
     - registration: Mask, register and realign the staged images,
-        as described in :class:`qipipe.staging.RegistrationWorkflow`
+      as described in :class:`qipipe.staging.RegistrationWorkflow`
     
     - modeling: Perform PK modeling as described in
-        :class:`qipipe.staging.ModelingWorkflow`
-     """
+      :class:`qipipe.staging.ModelingWorkflow`
+    
+    The easiest way to execute the pipeline is to call the
+    :meth:`qipipe.pipeline.qipipeline.run` method.
+    
+    The pipeline execution workflow is also available as the
+    ``workflow`` instance variable. The workflow input is a node
+    named ``input_spec`` with the same fields as the staging ``input_spec``.
+    
+    In addition, there are two iterable inputs:
+    
+    - The ``iter_session`` node input field ``session_spec`` must be set
+      to the (subject, session) input tuples
+    
+    - The ``iter_series`` node input field ``series_spec`` must be set
+      to the (subject, session, scan, dicom_files) input tuples
+    """
     
     def __init__(self, **opts):
         """
         Builds the pipeline workflow.
         
         The default workflow settings can be overriden by a configuration
-        file specified in the ```staging``, ``registration`` or ``modeling``
-        option. If the ``registration`` option is set to False, then
-        registration is skipped and modeling is performed on the staged
-        scans. If the ``modeling`` option is set to False, then PK modeling
-        is not performed.
+        file specified in the ``staging``, ``mask``, ``registration`` or
+        ``modeling`` option. If the ``mask`` option is set to False, then
+        only staging is performed. If the ``registration`` option is set
+        to false, then  registration is skipped and modeling is performed on
+        the staged scans. If the ``modeling`` option is set to False, then
+        PK modeling is not performed.
         
         :param opts: the constituent workflow initialization options,
             augmented by the following options
         :keyword staging: the optional staging configuration file
+        :keyword mask: the optional mask configuration file, or False to
+            halt after staging the files
         :keyword registration: the optional registration configuration file,
             or False to skip registration and model the staged scans
         :keyword modeling: the optional modeling configuration file, or
@@ -106,6 +132,11 @@ class QIPipelineWorkflow(object):
             if not stg_result:
                 return []
             
+            # If the mask flag is set to False, then return the staged XNAT sessions.
+            if opts.get('mask') == False:
+                logger.debug("Halting after staging since the mask option is set to False.")
+                return session_specs
+            
             # If the registration flag is set to False, then return the staged XNAT sessions.
             if opts.get('registration') == False:
                 logger.debug("Skipping registration since the registration option is set to False.")
@@ -140,67 +171,99 @@ class QIPipelineWorkflow(object):
         
         # The staging workflow.
         stg_opt = opts.get('staging', None)
-        stg_wf = self._create_constituent_workflow(StagingWorkflow, base_dir, stg_opt)
+        stg_wf_gen = self._workflow_generator(StagingWorkflow, base_dir, stg_opt)
+        stg_wf = stg_wf_gen.workflow
         
-        # The registration workflow.
-        reg_opt = opts.get('registration', None)
-        if reg_opt == False:
-            reg_wf = None
+        # The mask workflow.
+        mask_opt = opts.get('mask', None)
+        if mask_opt == False:
+            mask_wf = reg_wf = mdl_wf = None
         else:
-            reg_wf = self._create_constituent_workflow(RegistrationWorkflow, base_dir, reg_opt)
-        
-        # The modeling workflow.
-        mdl_opt = opts.get('modeling', None)
-        if mdl_opt == False:
-            mdl_wf = None
-        else:
-            mdl_wf = self._create_constituent_workflow(ModelingWorkflow, base_dir, mdl_opt)
+            mask_wf_gen = self._workflow_generator(MaskWorkflow, base_dir, mask_opt)
+            mask_wf = mask_wf_gen.workflow()
+            
+            # The registration workflow.
+            reg_opt = opts.get('registration', None)
+            if reg_opt == False:
+                reg_wf = None
+            else:
+                reg_wf_gen = self._workflow_generator(RegistrationWorkflow, base_dir, reg_opt)
+                reg_wf = reg_wf_gen.reusable_workflow()
+            
+            # The modeling workflow.
+            mdl_opt = opts.get('modeling', None)
+            if mdl_opt == False:
+                mdl_wf = None
+            else:
+                mdl_wf_gen = self._workflow_generator(ModelingWorkflow, base_dir, mdl_opt)
+                mdl_wf = mdl_wf_gen.reusable_workflow
         
         # The non-iterable workflow inputs.
-        stg_input = stg_wf.get_node('input_spec')
-        stg_input_fields = stg_input.inputs.copyable_trait_names()
-        input_fields = set(stg_input_fields)
-        if reg_wf:
-            reg_input = reg_wf.get_node('input_spec')
-            reg_input_fields = reg_input.inputs.copyable_trait_names()
-            input_fields.update(reg_input_fields)
-        if mdl_wf:
-            mdl_input = mdl_wf.get_node('input_spec')
-            mdl_input_fields = mdl_input.inputs.copyable_trait_names()
-            input_fields.update(mdl_input_fields)
-        input_spec = pe.Node(IdentityInterface(fields=input_fields),
-            name='input_spec')
+        in_fields = ['collection', 'dest', 'subjects']
+        input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
         logger.debug("The QIN pipeline non-iterable input is %s with fields %s" %
             (input_spec.name, input_fields))
-
-        # The iterable workflow inputs.
-        stg_iter_series = stg_wf.get_node('iter_series')
-        iter_fields = stg_iter_series.inputs.copyable_trait_names()
-        iter_series = pe.Node(IdentityInterface(fields=iter_fields),
-            name='iter_series')
-        logger.debug("The QIN pipeline iterable input is %s with fields %s" %
-            (iter_series.name, iter_fields))
+        exec_wf.connect(input_spec, 'collection', stg_wf, 'input_spec.collection')
+        exec_wf.connect(input_spec, 'dest', stg_wf, 'input_spec.dest')
+        exec_wf.connect(input_spec, 'subjects', stg_wf, 'input_spec.subjects')
         
+        # The iterable session input.
+        iter_session_xf = Unpack(input_name='session_spec',
+            output_names=['subject', 'session'])
+        iter_session = pe.Node(iter_session_xf, name='iter_session')
+        logger.debug("The QIN pipeline iterable series input is %s with fields %s" %
+            (iter_session.name, iter_session.inputs.copyable_trait_names()))
+        exec_wf.connect(iter_session, 'session_spec', stg_wf, 'iter_session.session_spec')
+        
+        # The iterable series input.
+        iter_series_xf = Unpack(input_name='series_spec',
+            output_names=['scan', 'dicom_files'])
+        iter_series = pe.Node(iter_series_xf, name='iter_series')
+        iter_series.itersource = 'iter_session'
+        logger.debug("The QIN pipeline iterable series input is %s with fields %s" %
+            (iter_series.name, iter_series.inputs.copyable_trait_names()))
+        exec_wf.connect(iter_series, 'series_spec', stg_wf, 'iter_series.series_spec')
         
         # Stitch together the workflows.
-        for field in stg_input_fields:
-            stg_field = '.'.join(stg_input.name, field)
-            exec_wf.connect(input_spec, field, stg_wf, stg_field)
-        if reg_wf:
-            for field in reg_input_fields:
-                reg_field = '.'.join(reg_input.name, field)
-                exec_wf.connect(input_spec, field, reg_wf, reg_field)
-            exec_wf.connect(stg_wf, 'output_spec.out_file', reg_wf, 'image_iter.image')
-        if mdl_wf:
+        if mask_wf:
+            staged = pe.Node(IdentityInterface(fields=['subject', 'session', 'image']), name='staged')
+            exec_wf.connect(iter_series, 'subject', mask_wf, 'input_spec.subject')
+            exec_wf.connect(iter_series, 'session', mask_wf, 'input_spec.session')
+            exec_wf.connect(stg_wf, 'output_spec.out_file', staged, 'image')
+            
+            
+            # The iterable session node.
+            iter_session_xf = Unpack(input_name='session_spec',
+                output_names=['subject', 'session'])
+            exec_wf.connect(iter_series, 'subject', mask_wf, 'input_spec.subject')
+            exec_wf.connect(iter_series, 'session', mask_wf, 'input_spec.session')
+            images = pe.JoinNode(IdentityInterface(fields=['subject', 'session', 'images']), name='images',
+                joinsource='iter_series')
+            exec_wf.connect(stg_wf, 'output_spec.out_file', images, 'images')
+            exec_wf.connect(images, 'images', mask_wf, 'input_spec.images')
             if reg_wf:
-                exec_wf.connect(reg_wf, 'output_spec.realigned', mdl_wf, 'image_iter.image')
-            else:
+                exec_wf.connect(iter_series, ('session_spec', _select_from, [0, 1]),
+                    iter_session, 'session_spec')
+                exec_wf.connect(stg_wf, 'input_spec.session', iter_session, 'session')
+                exec_wf.connect(iter_session, 'session_spec', stg_wf, 'iter_series.series_spec')
+                exec_wf.connect(input_spec, 'subject', reg_wf, 'input_spec.subject')
+                exec_wf.connect(input_spec, 'session', reg_wf, 'input_spec.sess')
+                exec_wf.connect(images, 'images', reg_wf, 'input_spec.images')
+                exec_wf.connect(mask_wf, 'output_spec.out_file', reg_wf, 'input_spec.mask')
+                exec_wf.connect(stg_wf, 'output_spec.out_file', reg_wf, 'image_iter.image')
+            if mdl_wf:
+                iter_session = pe.Node(iter_session_xf, name='iter_session')
+                logger.debug("The QIN pipeline iterable session input is %s with fields %s" %
+                    (iter_session.name, iter_session.inputs.copyable_trait_names()))
                 for field in mdl_input_fields:
-                    mdl_field = '.'.join(mdl_input.name, field)
-                    exec_wf.connect(input_spec, field, mdl_wf, mdl_field)
-                # Model the input scans rather than registered images.
-                mdl_input.inputs.container_type = 'scan'
-                
+                    exec_wf.connect(input_spec, field, mdl_wf, '')
+                if reg_wf:
+                    exec_wf.connect(reg_wf, 'output_spec.realigned', mdl_wf, 'image_iter.image')
+                else:
+                    # Model the input scans rather than the registered images.
+                    mdl_input.inputs.container_type = 'scan'
+        
+        
         
         
         # The workflow inputs.
@@ -214,6 +277,8 @@ class QIPipelineWorkflow(object):
         
         
         
+        
+                
         
         # The download fields.
         dl_fields = ['subject', 'session', 'reconstruction', 'container_type']
@@ -268,16 +333,31 @@ class QIPipelineWorkflow(object):
             self._depict_workflow(reusable_wf)
         
         return exec_wf
-
-    def _create_constituent_workflow(self, factory, base_dir, cfg_file=None):
+    
+    def _workflow_generator(self, factory, base_dir, cfg_file=None):
         """
         :param factory: the workflow class
         :param base_dir: the workflow base directory
         :param cfg_file: the workflow configuration file
-        :return: the new workflow instance
+        :return: the new workflow generator instance
         """
         opts = dict(base_dir=base_dir)
         if cfg_file:
             opts['cfg_file'] = cfg_file
         return factory(**opts)
+
+
+def _collect_session_images(dictionary, subject, session, image):
+    dictionary[(subject, session)].append(image)
+
+def _select_from(bunch, indexes):
+    """
+    return a tuple consisting of the items in the given bunch
+    at the given indexes
     
+    Examples
+    --------
+    >>> _select_from('abcd', [1, 3])
+    ('b', 'd')
+    """
+    return tuple([bunch[i] for i in indexes])

@@ -7,7 +7,8 @@ class Unpack(IOBase):
     The Unpack Interface converts a list input field to one output field per list item.
     
     Example:
-        >>> unpack = Unpack(input_names=['list'], output_names=['a', 'b'], list=[1, 2])
+        >>> from qipipe.interfaces.unpack import Unpack
+        >>> unpack = Unpack(input_name='list', output_names=['a', 'b'], list=[1, 2])
         >>> result = unpack.run()
         >>> result.outputs.a
         1
@@ -23,7 +24,8 @@ class Unpack(IOBase):
         """
         :param input_name: the input list field name
         :param output_names: the output field names
-        :param mandatory_inputs: a flag indicating whether every input field is required
+        :param mandatory_inputs: a flag indicating whether every input field is
+            required
         :param inputs: the input field name => value bindings
         """
         super(Unpack, self).__init__(**inputs)
@@ -35,9 +37,9 @@ class Unpack(IOBase):
         self.output_names = output_names
         self._mandatory_inputs = mandatory_inputs
         add_traits(self.inputs, self.input_names, traits.List)
-        # Adding any traits wipes out all input values set in superclass initialization,
-        # even it the trait is not in the add_traits argument. The work-around is to reset
-        # the values after adding the traits.
+        # Adding any traits wipes out all input values set in superclass
+        # initialization, even it the trait is not in the add_traits argument.
+        # The work-around is to reset the values after adding the traits.
         self.inputs.set(**inputs)
         
     def _add_output_traits(self, base):
@@ -49,9 +51,10 @@ class Unpack(IOBase):
             for key in self.input_names:
                 value = getattr(self.inputs, key)
                 if not isdefined(value):
-                    msg = "%s requires a value for input '%s' because it was listed in 'input_names'." \
-                        " You can turn off mandatory inputs checking by passing mandatory_inputs = False to the constructor." % \
-                        (self.__class__.__name__, key)
+                    msg = ("%s requires a value for input '%s' because it was "
+                        "listed in 'input_names'. You can turn off mandatory "
+                        "inputs checking  by passing mandatory_inputs = False "
+                        "to the constructor." % (self.__class__.__name__, key))
                     raise ValueError(msg)
         
         # The transform keyword arguments.

@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from test.helpers.project import project
-from qipipe.pipeline import registration
+from qipipe.pipeline import mask
 from qipipe.helpers import xnat_helper
 from qipipe.helpers.xnat_helper import delete_subjects
 from test.unit.pipeline.xnat_scan_test_base import XNATScanTestBase, ROOT
@@ -15,10 +15,10 @@ from test.unit.pipeline.xnat_scan_test_base import XNATScanTestBase, ROOT
 FIXTURES = os.path.join(ROOT, 'fixtures', 'registration')
 """The test fixtures directory."""
 
-REG_CONF = os.path.join(ROOT, 'conf', 'registration.cfg')
-"""The test registration configuration."""
+MASK_CONF = os.path.join(ROOT, 'conf', 'mask.cfg')
+"""The test mask configuration."""
 
-RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'registration')
+RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'mask')
 """The test results directory."""
 
 from nipype import config
@@ -27,29 +27,26 @@ cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_fi
 config.update_config(cfg)
 
 
-class TestRegistrationWorkflow(XNATScanTestBase):
+class TestMaskWorkflow(XNATScanTestBase):
     """
-    Registration workflow unit tests.
+    Mask workflow unit tests.
     
-    This test exercises the registration workflow on three series of one visit in each of the
+    This test exercises the mask workflow on three series of one visit in each of the
     Breast and Sarcoma studies.
     """
     
     def __init__(self):
-        super(TestRegistrationWorkflow, self).__init__(FIXTURES, RESULTS)
+        super(TestMaskWorkflow, self).__init__(FIXTURES, RESULTS)
     
-    def test_breast_with_ants(self):
+    def test_breast(self):
         self._test_breast()
     
-    def test_sarcoma_with_ants(self):
+    def test_sarcoma(self):
         self._test_sarcoma()
     
-    def test_breast_with_fnirt(self):
-        self._test_breast(technique='fnirt')
-        
-    def _run_workflow(self, fixture, *inputs, **opts):
+    def _run_workflow(self, xnat, fixture, *inputs, **opts):
         """
-        Executes :meth:`qipipe.pipeline.registration.run` on the input sessions.
+        Executes :meth:`qipipe.pipeline.mask.run` on the input sessions.
         
         :param fixture: the test fixture directory
         :param inputs: the (subject, session) tuples
@@ -57,8 +54,8 @@ class TestRegistrationWorkflow(XNATScanTestBase):
         :keyword base_dir: the workflow exection directory
         :return: the :meth:`qipipe.pipeline.modeling.run` result
         """
-        logger.debug("Testing the registration workflow on %s..." % fixture)
-        return registration.run(*inputs, cfg_file=REG_CONF, **opts)
+        logger.debug("Testing the mask workflow on %s..." % fixture)
+        return mask.run(*inputs, cfg_file=MASK_CONF, **opts)
     
     def _verify_result(self, xnat, inputs, result):
         # The return value is the reconstruction name.

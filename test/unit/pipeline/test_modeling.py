@@ -65,7 +65,6 @@ class TestModelingWorkflow(XNATScanTestBase):
         """
         Executes :meth:`qipipe.pipeline.modeling.run` on the input session scans.
         
-        :param xnat: the :class:`qipipe.helpers.xnat_helpers.XNAT` connection
         :param fixture: the test fixture directory
         :param inputs: the (subject, session) tuples
         :param opts: the :meth:`qipipe.pipeline.modeling.run` options
