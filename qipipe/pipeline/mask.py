@@ -38,19 +38,19 @@ class MaskWorkflow(WorkflowBase):
     of input session images. The new mask is uploaded to XNAT as a resource of
     the `subject`, `session` and the reconstruction named ``mask``.
     
-    The reusable mask workflow input is the ``input_spec`` node consisting of
+    The reusable mask workflow input is the `input_spec` node consisting of
     the following input fields:
     
-    - ``subject``: the subject name
+    - `subject`: the subject name
     
-    - ``session``: the session name
+    - `session`: the session name
     
-    - ``images``: the session images to mask
+    - `images`: the session images to mask
     
-    The mask workflow output is the ``output_spec`` node consisting of the
+    The mask workflow output is the `output_spec` node consisting of the
     following output fields:
     
-    - ``out_file``: the mask file
+    - `out_file`: the mask file
     
     The optional workflow configuration file can contain the following sections:
     
@@ -60,7 +60,7 @@ class MaskWorkflow(WorkflowBase):
     The execution mask workflow fronts the reusable workflow with an iterable
     input node named ``input_spec`` consisting of the following input fields:
     
-    - ``session_spec``: the (subject, session, images) tuple to mask
+    - `session_spec`: the (subject, session, images) tuple to mask
     """
     
     def __init__(self, **opts):

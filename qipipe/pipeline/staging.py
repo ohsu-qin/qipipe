@@ -19,7 +19,7 @@ def detect_new_visits(collection, *inputs, **opts):
     Detects which AIRC visits in the given input directories have not yet
     been stored into XNAT. The new visit images are grouped by series.
     
-    :Note: If the ``overwrite`` option is set, then existing XNAT subjects
+    :Note: If the `overwrite` option is set, then existing XNAT subjects
         which correspond to subjects in the input directories are deleted.
     
     :param collection: the AIRC image collection name
@@ -83,19 +83,19 @@ class StagingWorkflow(WorkflowBase):
     The staging workflow input is the ``input_spec`` node consisting of the
     following input fields:
     
-    - ``collection``: the AIRC collection name
+    - `collection`: the AIRC collection name
     
-    - ``dest``: the staging destination directory
+    - `dest`: the staging destination directory
     
-    - ``subjects``: the subjects to stage
+    - `subjects`: the subjects to stage
     
-    In addition, the iterable ``iter_series`` node input ``series_spec`` field
+    In addition, the iterable `iter_series` node input `series_spec` field
     must be set to the (subject, session, scan, dicom_files) staging input tuples.
     
-    The staging workflow output is the ``output_spec`` node consisting of the
+    The staging workflow output is the `output_spec` node consisting of the
     following output fields:
     
-    - ``out_file``: the series stack NiFTI image file
+    - `out_file`: the series stack NiFTI image file
     
     .. _CTP: https://wiki.cancerimagingarchive.net/display/Public/Image+Submitter+Site+User%27s+Guide
     .. _DcmStack: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.dcmstack.html
@@ -129,7 +129,7 @@ class StagingWorkflow(WorkflowBase):
         inputs.
         
         This method can be used with an alternate workflow specified by the
-        ``workflow`` option. The workflow is required to implement the same
+        `workflow` option. The workflow is required to implement the same
         input nodes and fields as this  execution workflow.
         
         :param collection: the AIRC image collection name

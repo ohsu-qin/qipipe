@@ -47,16 +47,16 @@ class ModelingWorkflow(WorkflowBase):
     
     - Upload the modeling result to XNAT
     
-    The modeling reusable workflow input is the ``input_spec`` node consisting
+    The modeling reusable workflow input is the `input_spec` node consisting
     of the following input fields:
     
-    - ``subject``: the subject name
+    - `subject`: the subject name
     
-    - ``session``: the session name
+    - `session`: the session name
     
-    - ``mask``: the mask to apply to the images
+    - `mask`: the mask to apply to the images
     
-    - ``images``: the session images to model
+    - `images`: the session images to model
     
     - the PK modeling parameters described in 
       :meth:`qipipe.pipeline.modeling.ModelingWorkflow.__init__`
@@ -69,27 +69,27 @@ class ModelingWorkflow(WorkflowBase):
     If the |R10| option is not set, then it is computed from the proton density
     weighted scans and DCE series baseline image.
     
-    The outputs are collected in the ``output_spec`` node with the following
+    The outputs are collected in the `output_spec` node with the following
     fields:
     
-    - ``r1_series``: the R1 series files
+    - `r1_series`: the R1 series files
     
-    - ``pk_params``: the AIF and R1 parameter CSV file
+    - `pk_params`: the AIF and R1 parameter CSV file
     
-    - ``k_trans``: the |Ktrans| extra/intravasation transfer rate
+    - `k_trans`: the |Ktrans| extra/intravasation transfer rate
     
-    - ``v_e``: the |ve| interstitial volume fraction
+    - `v_e`: the |ve| interstitial volume fraction
     
-    - ``tau_i``: the intracellular |H2O| mean lifetime
+    - `tau_i`: the intracellular |H2O| mean lifetime
     
     In addition, if |R10| is computed, then the output includes the
     following fields:
     
-    - ``pdw_image``: the proton density weighted image
+    - `pdw_image`: the proton density weighted image
     
-    - ``dce_baseline``: the DCE series baseline image
+    - `dce_baseline`: the DCE series baseline image
     
-    - ``r1_0``: the computed |R10| value
+    - `r1_0`: the computed |R10| value
     
     This workflow is adapted from https://everett.ohsu.edu/hg/qin_dce.
     
@@ -143,7 +143,7 @@ class ModelingWorkflow(WorkflowBase):
         Each input is a (subject, session) tuple. The modeling input images
         to download are determined as follows:
         
-        - If the ``reconstruction`` parameter is set, then the images for
+        - If the `reconstruction` parameter is set, then the images for
             that reconstruction are downloaded. The reconstruction is typically
             a registration output.
         
@@ -206,14 +206,14 @@ class ModelingWorkflow(WorkflowBase):
         downloads the mask and input images from XNAT and sets the
         reusable workflow inputs to the downloaded files. 
         
-        The execution workflow input is ``input_spec`` with the following
+        The execution workflow input is `input_spec` with the following
         input fields:
         
-        - the reusable workflow input fields, minus ``mask`` and ``image``
+        - the reusable workflow input fields, minus `mask` and `image`
         
-        - the download fields ``reconstruction`` and ``container_type``
+        - the download fields `reconstruction` and `container_type`
         
-        The execution workflow output is ``output_spec`` with the same output
+        The execution workflow output is `output_spec` with the same output
         fields as the reusable workflow outputs.
         
         :param base_dir: the execution working directory (default is the

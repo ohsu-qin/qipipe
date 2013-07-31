@@ -198,7 +198,7 @@ class XNAT(object):
         The keyword options include the format and session child container.
         The session child container option can be set to a specific resource container,
         e.g. ``scan=1``, as described in :meth:`XNAT.upload` or all resources of a given
-        container type. In the latter case, the ``container_type`` parameter is set.
+        container type. In the latter case, the `container_type` parameter is set.
         The permissible container types are described in :meth:`XNAT.upload`.
         
         The session value is qualified by the subject, if necessary.
@@ -272,7 +272,7 @@ class XNAT(object):
     
         where:
         
-        -  the XNAT experiment name is the ``session`` parameter
+        -  the XNAT experiment name is the `session` parameter
         
         -  CTR_TYPE is the experiment child type, e.g. ``scan``
         
@@ -400,13 +400,13 @@ class XNAT(object):
         """
         Determines the resource container item from the given options as follows:
 
-        - If there is a ``container_type`` option, then that type is returned without a value.
+        - If there is a `container_type` option, then that type is returned without a value.
 
         - Otherwise, if the options include a container type in :object:`XNAT.CONTAINER_TYPES`,
           then the option type and value are returned.
 
         - Otherwise, if the options include a container type in :object:`XNAT.ASSESSOR_SYNONYMS`,
-          then the ``assessor`` container type and the option value are returned.
+          then the `assessor` container type and the option value are returned.
 
         - Otherwise, this method returns (``scan``, None) to specify the single scan container.
         

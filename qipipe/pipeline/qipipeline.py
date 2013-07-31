@@ -49,15 +49,15 @@ class QIPipelineWorkflow(object):
     :meth:`qipipe.pipeline.qipipeline.run` method.
     
     The pipeline execution workflow is also available as the
-    ``workflow`` instance variable. The workflow input is a node
-    named ``input_spec`` with the same fields as the staging ``input_spec``.
+    `workflow` instance variable. The workflow input is a node
+    named ``input_spec`` with the same fields as the staging `input_spec`.
     
     In addition, there are two iterable inputs:
     
-    - The ``iter_session`` node input field ``session_spec`` must be set
+    - The `iter_session` node input field `session_spec` must be set
       to the (subject, session) input tuples
     
-    - The ``iter_series`` node input field ``series_spec`` must be set
+    - The `iter_series` node input field `series_spec` must be set
       to the (subject, session, scan, dicom_files) input tuples
     """
     
@@ -66,11 +66,11 @@ class QIPipelineWorkflow(object):
         Builds the pipeline workflow.
         
         The default workflow settings can be overriden by a configuration
-        file specified in the ``staging``, ``mask``, ``registration`` or
-        ``modeling`` option. If the ``mask`` option is set to False, then
-        only staging is performed. If the ``registration`` option is set
+        file specified in the `staging`, `mask`, `registration` or
+        `modeling` option. If the `mask` option is set to False, then
+        only staging is performed. If the `registration` option is set
         to false, then  registration is skipped and modeling is performed on
-        the staged scans. If the ``modeling`` option is set to False, then
+        the staged scans. If the `modeling` option is set to False, then
         PK modeling is not performed.
         
         :keyword staging: the optional staging configuration file
@@ -96,12 +96,12 @@ class QIPipelineWorkflow(object):
         
         This method returns a dictionary consisting of the following items:
         
-        - ``sessions``: the (subject, session) name tuples of the new sessions
+        - `sessions`: the (subject, session) name tuples of the new sessions
           created in XNAT
         
-        - ``reconstruction``: the registration XNAT reconstruction name
+        - `reconstruction`: the registration XNAT reconstruction name
         
-        - ``analysis``: the PK mapping XNAT analysis name
+        - `analysis`: the PK mapping XNAT analysis name
         
         :param collection: the AIRC image collection name
         :param inputs: the AIRC source subject directories to stage

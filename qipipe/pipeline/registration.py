@@ -51,15 +51,15 @@ class RegistrationWorkflow(WorkflowBase):
     The registration workflow input is the ``input_spec`` node consisting of the
     following input fields:
     
-    - ``subject``: the subject name
+    - `subject`: the subject name
     
-    - ``session``: the session name
+    - `session`: the session name
     
-    - ``mask``: the mask to apply to the images
+    - `mask`: the mask to apply to the images
     
-    - ``images``: the session images to register
+    - `images`: the session images to register
     
-    In addition, the iterable ``image_iter`` node input field ``image`` must
+    In addition, the iterable `image_iter` node input field `image` must
     be set to the input session images.
     
     The mask can be obtained by running the :class:`qipipe.pipeline.mask.MaskWorkflow`
@@ -68,11 +68,11 @@ class RegistrationWorkflow(WorkflowBase):
     The registration workflow output is the ``output_spec`` node consisting of the
     following output fields:
     
-    - ``out_file``: the realigned image file
+    - `out_file`: the realigned image file
     
-    - ``reconstruction``: the registration XNAT reconstruction name
+    - `reconstruction`: the registration XNAT reconstruction name
     
-    The ``reconstruction`` output value is a unique value used for all
+    The `reconstruction` output value is a unique value used for all
     workflow runs against this
     :class:`qipipe.pipeline.registration.RegistrationWorkflow` instance.
     
