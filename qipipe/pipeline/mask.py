@@ -36,7 +36,7 @@ class MaskWorkflow(WorkflowBase):
     
     The workflow creates a mask to subtract extraneous tissue for a given set
     of input session images. The new mask is uploaded to XNAT as a resource of
-    the subject, session and the reconstruction named ``mask``.
+    the `subject`, `session` and the reconstruction named ``mask``.
     
     The reusable mask workflow input is the ``input_spec`` node consisting of
     the following input fields:
