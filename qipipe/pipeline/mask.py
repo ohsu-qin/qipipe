@@ -52,9 +52,11 @@ class MaskWorkflow(WorkflowBase):
     
     - `out_file`: the mask file
     
-    The optional workflow configuration file can contain the following sections:
+    The optional workflow configuration file can contain the following
+    sections:
     
-    - ``FSLMriVolCluster``: the :class:`qipipe.interfaces.mri_volcluster.MriVolCluster`
+    - ``FSLMriVolCluster``: the
+        :class:`qipipe.interfaces.mri_volcluster.MriVolCluster`
         interface options
     
     The execution mask workflow fronts the reusable workflow with an iterable
@@ -65,10 +67,11 @@ class MaskWorkflow(WorkflowBase):
     
     def __init__(self, **opts):
         """
-        If the optional configuration file is specified, then the workflow settings in
-        that file override the default settings.
+        If the optional configuration file is specified, then the workflow
+        settings in that file override the default settings.
         
-        :keyword base_dir: the workflow execution directory (default a new temp directory)
+        :keyword base_dir: the workflow execution directory (default is a new
+            temp directory)
         :keyword cfg_file: the optional workflow inputs configuration file
         """
         super(MaskWorkflow, self).__init__(logger, opts.pop('cfg_file', None))
@@ -118,14 +121,13 @@ class MaskWorkflow(WorkflowBase):
         # The workflow input.
         unpacked_fields = ['subject', 'session', 'images']
         # Unpack the input.
-        input_spec = pe.Node(Unpack(input_name='session_spec', output_names=unpacked_fields),
-            name='input_spec')
-        for field in unpacked_fields:
-            base_field = 'input_spec.' + field
-            exec_wf.connect(input_spec, field, base_wf, base_field)
+        input_spec = pe.Node(Unpack(input_name='session_spec',
+            output_names=unpacked_fields), name='input_spec')
+        exec_wf.connect(input_spec, 'subject', base_wf, 'input_spec.subject')
+        exec_wf.connect(input_spec, 'session', base_wf, 'input_spec.session')
+        exec_wf.connect(input_spec, 'images', base_wf, 'input_spec.images')
         
         return exec_wf
-        
     
     def _create_reusable_workflow(self, base_dir=None):
         """
@@ -140,10 +142,12 @@ class MaskWorkflow(WorkflowBase):
         
         # The workflow input.
         in_fields = ['subject', 'session', 'images']
-        input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
+        input_spec = pe.Node(IdentityInterface(fields=in_fields),
+            name='input_spec')
         
         # Merge the DCE data to 4D.
-        dce_merge = pe.Node(MergeNifti(out_format='dce_series'), name='dce_merge')
+        dce_merge = pe.Node(MergeNifti(out_format='dce_series'),
+            name='dce_merge')
         workflow.connect(input_spec, 'images', dce_merge, 'in_files')
         
         # Get a mean image from the DCE data.
@@ -158,7 +162,8 @@ class MaskWorkflow(WorkflowBase):
         # Zero everything posterior to the center of gravity on mean image.
         crop_back = pe.Node(fsl.ImageMaths(), name='crop_back')
         workflow.connect(dce_mean, 'out_file', crop_back, 'in_file')
-        workflow.connect(find_cog, ('out_stat', _gen_crop_op_string), crop_back, 'op_string')
+        workflow.connect(find_cog, ('out_stat', _gen_crop_op_string),
+            crop_back, 'op_string')
         
         # The cluster options.
         mask_opts = self.configuration.get('FSLMriVolCluster', {})
@@ -181,20 +186,22 @@ class MaskWorkflow(WorkflowBase):
         workflow.connect(input_spec, 'session', mask_name, 'session')
         
         # Invert the binary mask.
-        inv_mask = pe.Node(fsl.maths.MathsCommand(args='-sub 1 -mul -1'), name='inv_mask')
+        inv_mask = pe.Node(fsl.maths.MathsCommand(args='-sub 1 -mul -1'),
+            name='inv_mask')
         workflow.connect(binarize, 'out_file', inv_mask, 'in_file')
         workflow.connect(mask_name, 'out_file', inv_mask, 'out_file')
         
         # Upload the mask to XNAT.
-        upload_mask = pe.Node(XNATUpload(project=project(), reconstruction=MASK_RECON,
-            format='NIFTI'), name='upload_mask')
+        upload_mask = pe.Node(XNATUpload(project=project(),
+            reconstruction=MASK_RECON, format='NIFTI'), name='upload_mask')
         workflow.connect(input_spec, 'subject', upload_mask, 'subject')
         workflow.connect(input_spec, 'session', upload_mask, 'session')
         workflow.connect(inv_mask, 'out_file', upload_mask, 'in_files')
         
         # Collect the outputs.
         out_fields = ['out_file']
-        output_spec = pe.Node(IdentityInterface(fields=out_fields), name='output_spec')
+        output_spec = pe.Node(IdentityInterface(fields=out_fields),
+            name='output_spec')
         workflow.connect(inv_mask, 'out_file', output_spec, 'out_file')
         
         return workflow

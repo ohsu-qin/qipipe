@@ -48,6 +48,11 @@ class TestQIPipeline(object):
         shutil.rmtree(RESULTS, True)
     
     def test_breast(self):
+        
+        
+        qip.QIPipelineWorkflow()
+        
+        
         data = os.getenv('QIN_DATA')
         if data:
             fixture = os.path.join(RESULT, 'data', 'breast', 'BreastChemo3')
@@ -57,7 +62,8 @@ class TestQIPipeline(object):
             os.symlink(src, dest)
             self._test_collection('Breast', fixture)
         else:
-            logger.info("Skipping the QIN pipeline unit Breast test, since the QIN_DATA environment variable is not set.")
+            logger.info("Skipping the QIN pipeline unit Breast test, since the "
+                "QIN_DATA environment variable is not set.")
     
     def test_sarcoma(self):
         data = os.getenv('QIN_DATA')
@@ -69,11 +75,13 @@ class TestQIPipeline(object):
             os.symlink(src, dest)
             self._test_collection('Sarcoma', fixture)
         else:
-            logger.info("Skipping the QIN pipeline unit Sarcoma test, since the QIN_DATA environment variable is not set.")
+            logger.info("Skipping the QIN pipeline unit Sarcoma test, "
+                "since the QIN_DATA environment variable is not set.")
     
     def _test_collection(self, collection, fixture):
         """
-        Run the pipeline on the given collection and verify that scans are created in XNAT.
+        Run the pipeline on the given collection and verify that scans are
+        created in XNAT.
         
         :param collection: the AIRC collection name
         :param fixture: the test input
@@ -105,14 +113,16 @@ class TestQIPipeline(object):
             # Delete any existing test subjects.
             delete_subjects(project(), *subjects)
             
-            # Run the staging and registration workflows, but not the modeling.
+            # Run the staging, mask and registration workflows, but not
+            # the modeling.
             logger.debug("Executing the QIN pipeline...")
             reg_specs = qip.run(collection, *sources, dest=dest, work=work, **opts)
             
             # Verify the result.
             for sbj, sess, recon in reg_specs:
                 reg_obj = xnat.get_reconstruction(project(), sbj, sess, recon)
-                assert_true(reg_obj.exists(), "The %s %s reconstruction %s was not created in XNAT" % (sbj, sess, recon))
+                assert_true(reg_obj.exists(), "The %s %s reconstruction %s was "
+                    "not created in XNAT" % (sbj, sess, recon))
             
             # Delete the test subjects.
             delete_subjects(project(), *subjects)

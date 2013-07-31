@@ -62,19 +62,33 @@ class RegistrationWorkflow(WorkflowBase):
     In addition, the iterable `image_iter` node input field `image` must
     be set to the input session images.
     
-    The mask can be obtained by running the :class:`qipipe.pipeline.mask.MaskWorkflow`
-    workflow.
+    The mask can be obtained by running the
+    :class:`qipipe.pipeline.mask.MaskWorkflow` workflow.
     
-    The registration workflow output is the ``output_spec`` node consisting of the
-    following output fields:
+    The registration workflow output is the ``output_spec`` node consisting of
+    the following output fields:
     
     - `out_file`: the realigned image file
     
     - `reconstruction`: the registration XNAT reconstruction name
     
-    The `reconstruction` output value is a unique value used for all
-    workflow runs against this
+    The `reconstruction` output value is a unique value used for all workflow
+    runs against this
     :class:`qipipe.pipeline.registration.RegistrationWorkflow` instance.
+    Thus, if the workflow execution iterates over multiple sessions, the
+    resulting resliced images for each session are uploaded to the
+    XNAT reconstruction whose name is the concatenation of the project,
+    subject, session and reconstruction names, e.g.:
+        qin_subject011_session01_reg_jZf4D9
+        qin_subject011_session02_reg_jZf4D9
+        qin_subject012_session01_reg_jZf4D9
+    
+    Note:: since the XNAT `reconstruction` name is unique, a
+        :class:`qipipe.pipeline.registration.RegistrationWorkflow`
+        instance can be used for only one registration workflow
+        execution. Separate registrations require separate
+        :class:`qipipe.pipeline.registration.RegistrationWorkflow`
+        instances.
     
     There are two registration workflow paths:
     
@@ -125,6 +139,10 @@ class RegistrationWorkflow(WorkflowBase):
         """
         super(RegistrationWorkflow, self).__init__(logger, opts.pop('cfg_file', None))
         
+        self._reconstruction = self._generate_reconstruction_name()
+        """The XNAT reconstruction name used for all runs against this workflow
+        instance."""
+        
         self.reusable_workflow = self._create_reusable_workflow(**opts)
         """The reusable registration workflow."""
         
@@ -133,10 +151,6 @@ class RegistrationWorkflow(WorkflowBase):
         
         self._reg_mask_cr_wf = self._create_workflow_with_nonexisting_mask(**opts)
         """The execution workflow to use with a non-existing mask."""
-        
-        self._reconstruction = self._generate_reconstruction_name()
-        """The XNAT reconstruction name used for all runs against this workflow
-        instance."""
     
     def run(self, *inputs):
         """
@@ -238,14 +252,14 @@ class RegistrationWorkflow(WorkflowBase):
         abs_images = [os.path.abspath(fname) for fname in images]
         image_iter.iterables = dict(image=abs_images).items()
     
-    def _create_workflow_with_existing_mask(self, **opts):
+    def _create_workflow_with_existing_mask(self, base_dir=None):
         logger.debug("Creating the registration workflow to use with a existing mask...")
         
         # The reusable registration workflow.
         base_wf = self.reusable_workflow.clone(name='reg_dl_mask_base')
         
         # The execution workflow.
-        exec_wf = pe.Workflow(name='reg_dl_mask_exec', base_dir=opts.get('base_dir'))
+        exec_wf = pe.Workflow(name='reg_dl_mask_exec', base_dir=base_dir)
         
         # The execution workflow input.
         in_fields = ['subject', 'session', 'images']
@@ -276,17 +290,19 @@ class RegistrationWorkflow(WorkflowBase):
         
         return exec_wf
     
-    def _create_workflow_with_nonexisting_mask(self, **opts):
-        logger.debug("Creating the registration workflow to use with a non-existing mask...")
+    def _create_workflow_with_nonexisting_mask(self, base_dir=None):
+        logger.debug("Creating the registration workflow to use with a "
+            "non-existing mask...")
         
         # The mask creation workflow.
-        mask_wf = MaskWorkflow(base_dir=opts.get('base_dir')).workflow.clone(name='reg_mask')
+        mask_wf_gen = MaskWorkflow(base_dir=base_dir)
+        mask_wf = mask_wf_gen.reusable_workflow.clone(name='reg_mask')
         
         # The reusable registration workflow.
         base_wf = self.reusable_workflow.clone(name='reg_cr_mask_base')
         
         # The execution workflow.
-        exec_wf = pe.Workflow(name='reg_cr_mask_exec', base_dir=opts.get('base_dir'))
+        exec_wf = pe.Workflow(name='reg_cr_mask_exec', base_dir=base_dir)
         
         # The execution workflow input.
         in_fields = ['subject', 'session', 'images']
@@ -315,10 +331,10 @@ class RegistrationWorkflow(WorkflowBase):
         
         return exec_wf
     
-    def _create_reusable_workflow(self, name, **opts):
+    def _create_reusable_workflow(self, base_dir=None, technique='ANTS'):
         """
-        Creates the base registration workflow. The registration workflow performs the
-        following steps:
+        Creates the base registration workflow. The registration workflow
+        performs the following steps:
         
         - Generates a unique XNAT reconstruction name
         
@@ -328,24 +344,20 @@ class RegistrationWorkflow(WorkflowBase):
         
         - Upload the mask and realign outputs to XNAT
         
-        :param name: the workflow name
-        :param opts: the following workflow options:
-        :keyword base_dir: the workflow execution directory (default current directory)
-        :keyword technique: the registration technique
+        :param base_dir: the workflow execution directory
+            (default current directory)
+        :param technique: the registration technique
             ('``ANTS`` or ``FNIRT``, default ``ANTS``)
         :return: the Workflow object
         """
         logger.debug("Creating a base registration workflow...")
         
         # The reusable workflow.
-        base_wf = pe.Workflow(name=name, base_dir=opts.get('base_dir'))
+        base_wf = pe.Workflow(name='registration', base_dir=base_dir)
         
         # The workflow input.
         in_fields = ['subject', 'session', 'images', 'mask']
         input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
-        # The same reconstruction name is used for all runs
-        # against this instance.
-        input_spec.inputs.reconstruction = self._reconstruction
         
         # The average options.
         avg_opts = self.configuration.get('ANTSAverage', {})
@@ -363,7 +375,7 @@ class RegistrationWorkflow(WorkflowBase):
         image_iter = pe.Node(IdentityInterface(fields=['image']), name='image_iter')
         
         # The realign workflow.
-        realign_wf = self._create_realign_workflow(**opts)
+        realign_wf = self._create_realign_workflow(base_dir, technique)
         
         # Register and resample the images.
         base_wf.connect(input_spec, 'subject', realign_wf, 'input_spec.subject')
@@ -373,11 +385,10 @@ class RegistrationWorkflow(WorkflowBase):
         base_wf.connect(average, 'output_average_image', realign_wf, 'input_spec.fixed_image')
         
         # Upload the realigned image to XNAT.
-        upload_reg = pe.Node(XNATUpload(project=project(), format='NIFTI'),
-            name='upload_reg')
+        upload_reg = pe.Node(XNATUpload(project=project(),
+            reconstruction=self._reconstruction, format='NIFTI'), name='upload_reg')
         base_wf.connect(input_spec, 'subject', upload_reg, 'subject')
         base_wf.connect(input_spec, 'session', upload_reg, 'session')
-        base_wf.connect(input_spec, 'reconstruction', upload_reg, 'reconstruction')
         base_wf.connect(realign_wf, 'output_spec.out_file', upload_reg, 'in_files')
         
         # The workflow output is the reconstruction name and the realigned image file.
@@ -393,7 +404,8 @@ class RegistrationWorkflow(WorkflowBase):
         """
         Creates the workflow which registers and resamples images.
         
-        :param base_dir: the workflow execution directory (default is the current directory)
+        :param base_dir: the workflow execution directory
+            (default is the current directory)
         :param technique: the registration technique (``ANTS`` or ``FNIRT``)
         :return: the Workflow object
         """
@@ -402,7 +414,8 @@ class RegistrationWorkflow(WorkflowBase):
         workflow = pe.Workflow(name='realign', base_dir=base_dir)
         
         # The workflow input image iterator.
-        in_fields = ['subject', 'session', 'mask', 'fixed_image', 'moving_image', 'reconstruction']
+        in_fields = ['subject', 'session', 'mask', 'fixed_image',
+            'moving_image', 'reconstruction']
         input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
         
         # Make the realigned image file name.
@@ -450,10 +463,12 @@ class RegistrationWorkflow(WorkflowBase):
             # Copy the meta-data.
             workflow.connect(fnirt, 'warped_file', copy_meta, 'dest_file')
         else:
-            raise PipelineError("Registration technique not recognized: %s" % technique)
+            raise PipelineError("Registration technique not recognized: %s" %
+                technique)
         
         # The output is the realigned images.
-        output_spec = pe.Node(IdentityInterface(fields=['out_file']), name='output_spec')
+        output_spec = pe.Node(IdentityInterface(fields=['out_file']),
+            name='output_spec')
         workflow.connect(copy_meta, 'dest_file', output_spec, 'out_file')
         
         return workflow

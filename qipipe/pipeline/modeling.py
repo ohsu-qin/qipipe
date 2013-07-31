@@ -3,7 +3,7 @@ from collections import defaultdict
 from nipype.pipeline import engine as pe
 from nipype.interfaces.dcmstack import DcmStack, MergeNifti, CopyMeta
 from nipype.interfaces.utility import IdentityInterface, Function
-from ..interfaces import XNATDownload, XNATUpload, Fastfit
+from ..interfaces import Unpack, XNATDownload, XNATUpload, Fastfit
 from ..helpers import file_helper
 from ..helpers.project import project
 from .workflow_base import WorkflowBase
@@ -121,6 +121,14 @@ class ModelingWorkflow(WorkflowBase):
             baseline image (default is 1)
         """
         super(ModelingWorkflow, self).__init__(logger, opts.pop('cfg_file', None))
+        
+        self.analysis = "%s_%s" % (PK_PREFIX, file_helper.generate_file_name())
+        """
+        The XNAT assessment name for all executions of this
+        :class:`qipipe.pipeline.modeling.ModelingWorkflow` instance. The name
+        is unique, which permits more than one model to be stored for each input
+        series without a name conflict.
+        """
         
         self.reusable_workflow = self._create_reusable_workflow(**opts)
         """
@@ -245,8 +253,8 @@ class ModelingWorkflow(WorkflowBase):
             " with fields %s" % (input_spec.name, in_fields))
         
         # The session iterator.
-        iter_sessions_xf = Unpack(input_name='spec', output_names=['subject', 'session'])
-        iter_session = pe.Node(iter_session_xf, name='iter_session')
+        iter_session_xfc = Unpack(input_name='spec', output_names=['subject', 'session'])
+        iter_session = pe.Node(iter_session_xfc, name='iter_session')
         logger.debug("The modeling execution workflow iterable input is %s"
             " with fields %s" %
             (iter_session.name, iter_session.inputs.copyable_trait_names()))
@@ -267,7 +275,7 @@ class ModelingWorkflow(WorkflowBase):
         # Model the images.
         exec_wf.connect(input_spec, 'subject', reusable_wf, 'input_spec.subject')
         exec_wf.connect(input_spec, 'session', reusable_wf, 'input_spec.session')
-        exec_wf.connect(dl_mask, 'out_file', reusable_wf, 'input_spec.mask_file')
+        exec_wf.connect(dl_mask, 'out_file', reusable_wf, 'input_spec.mask')
         exec_wf.connect(dl_images, 'out_files', reusable_wf, 'input_spec.in_files')
         
         # The execution workflow output is the reusable workflow output.
@@ -294,50 +302,42 @@ class ModelingWorkflow(WorkflowBase):
         :param opts: the additional workflow initialization options
         :return: the Nipype workflow
         """
-        logger.debug("Building the modeling execution workflow...")
+        logger.debug("Building the modeling reusable workflow...")
         
         # The reusable workflow.
-        reusable_wf = pe.Workflow(name='modeling', base_dir=base_dir)
+        reusable_wf = self._create_base_workflow(base_dir=base_dir)
         
-        # The base workflow.
+        # Start with a base workflow.
         base_wf = self._create_base_workflow(base_dir=base_dir, **opts)
         
-        # The base workflow input fields.
-        base_fields = base_wf.get_node('input_spec').inputs.copyable_trait_names()
-        in_fields = base_fields + ['images', 'mask']
-        # The input node.
-        input_spec = pe.Node(IdentityInterface(fields=in_fields),
-        name='input_spec')
+        # The workflow input fields.
+        in_fields = ['subject', 'session', 'mask']
+        input_xfc = IdentityInterface(fields=in_fields)
+        input_spec = pe.Node(input_xfc, name='input_spec')
         logger.debug("The modeling reusable workflow input is %s with"
             " fields %s" % (input_spec.name, in_fields))
-        
-        # Model the images.
-        reusable_wf.connect(input_spec, 'subject', base_wf, 'input_spec.subject')
-        reusable_wf.connect(input_spec, 'session', base_wf, 'input_spec.session')
-        reusable_wf.connect(input_spec, 'mask', base_wf, 'input_spec.mask_file')
-        reusable_wf.connect(input_spec, 'images', base_wf, 'input_spec.in_files')
-        
-        # Make the default XNAT assessment name. The name is unique, which permits
-        # more than one model to be stored for each input series without a name
-        # conflict.
-        analysis = "%s_%s" % (PK_PREFIX, file_helper.generate_file_name())
+        reusable_wf.connect(input_spec, 'mask', base_wf, 'input_spec.mask')
         
         # The upload nodes.
-        base_out_fields = base_wf.get_node('output_spec').outputs.copyable_trait_names()
-        upload_node_dict = {field: self._create_output_upload_node(analysis, field)
+        base_output = base_wf.get_node('output_spec')
+        base_out_fields = base_output.outputs.copyable_trait_names()
+        upload_dict = {field: self._create_upload_node(field)
             for field in base_out_fields}
-        for field, node in upload_node_dict.iteritems():
+        for field, node in upload_dict.iteritems():
             reusable_wf.connect(input_spec, 'subject', node, 'subject')
             reusable_wf.connect(input_spec, 'session', node, 'session')
             base_field = 'output_spec.' + field
             reusable_wf.connect(base_wf, base_field, node, 'in_files')
         
-        # Collect the workflow output fields.
-        out_fields = ['subject', 'session', 'analysis']
-        output_spec = pe.Node(IdentityInterface(fields=out_fields, analysis=analysis),
-            name='output_spec')
-        for field in ['subject', 'session']:
-            reusable_wf.connect(input_spec, field, output_spec, field)
+        # The output is the base outputs and the XNAT analysis name.
+        out_fields = ['analysis'] + base_out_fields
+        output_xfc = IdentityInterface(fields=out_fields, analysis=analysis)
+        output_spec = pe.Node(output_xfc, name='output_spec')
+        for field in base_out_fields:
+            base_field = 'output_spec.' + field
+            reusable_wf.connect(base_wf, base_field, output_spec, field)
+        logger.debug("The modeling reusable workflow output is %s with"
+            " fields %s" % (output_spec.name, out_fields))
         
         logger.debug("Created the %s workflow." % reusable_wf.name)
         # If debug is set, then diagram the workflow graph.
@@ -346,28 +346,30 @@ class ModelingWorkflow(WorkflowBase):
         
         return reusable_wf
     
-    def _create_output_upload_node(self, analysis, resource):
+    def _create_upload_node(self, resource):
         """
-        :param analysis: the modeling assessment name
         :param resource: the modeling parameter resource name
         :return: the modeling parameter XNAT upload node
         """
+        upload_xfc = XNATUpload(project=project(), assessor=self.analysis, resource=resource)
         name = 'upload_' + resource
         
-        return pe.Node(XNATUpload(project=project(), assessor=analysis, resource=resource),
-            name=name)
+        return pe.Node(upload_xfc, name=name)
     
     def _create_base_workflow(self, base_dir=None, **opts):
         """
-        Creates the modeling base workflow described in :class:`ModelingWorkflow`.
+        Creates the modeling base workflow. This workflow performs the steps described
+        in :class:`qipipe.pipeline.modeling.ModelingWorkflow` with the exception of
+        XNAT upload.
         
         :param base_dir: the workflow working directory
         :param opts: the additional PK mapping initialization parameters
         :return: the pyxnat Workflow
         """
-        workflow = pe.Workflow(name='modeling_base', base_dir=base_dir)
+        workflow = pe.Workflow(name='modeling', base_dir=base_dir)
         
-        # The parameters can be defined in either the options or the configuration.
+        # The parameters can be defined in either the options or the
+        # configuration.
         config = self.configuration.get('Parameters', {})
         
         if  'baseline_end_idx' not in opts:
@@ -418,13 +420,13 @@ class ModelingWorkflow(WorkflowBase):
         logger.debug("The PK modeling parameters: %s" % opts)
         
         # Set up the input node.
-        in_fields = ['subject', 'session', 'in_files', 'mask', 'baseline_end_idx']
+        in_fields = ['in_files', 'mask', 'baseline_end_idx']
         if use_fixed_r1_0:
             in_fields += ['r1_0_val']
         else:
             in_fields += r1_fields
-        input_spec = pe.Node(IdentityInterface(fields=in_fields, **opts),
-            name='input_spec')
+        input_xfc = IdentityInterface(fields=in_fields, **opts)
+        input_spec = pe.Node(input_xfc, name='input_spec')
         # Set the config parameters.
         for field in in_fields:
             if opts.has_key(field):

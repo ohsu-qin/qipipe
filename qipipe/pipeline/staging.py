@@ -50,10 +50,11 @@ def run(*inputs, **opts):
     on the given inputs.
     
     :param inputs: the :meth:`qipipe.pipeline.staging.StagingWorkflow.run` inputs
-    :param opts: the :class:`qipipe.pipeline.staging.StagingWorkflow` initializer options
+    :param opts: the :class:`qipipe.pipeline.staging.StagingWorkflow` initializer
+        and :meth:`qipipe.pipeline.staging.StagingWorkflow.run` options
     :return: the :meth:`qipipe.pipeline.staging.StagingWorkflow.run` result
     """
-    return StagingWorkflow(**opts).run(*inputs)
+    return StagingWorkflow(**opts).run(*inputs, **opts)
 
 
 class StagingWorkflow(WorkflowBase):
@@ -80,7 +81,7 @@ class StagingWorkflow(WorkflowBase):
     - Collect the id map and the compressed DICOM images into a target directory in
       collection/subject/session/series format for TCIA upload.
     
-    The staging workflow input is the ``input_spec`` node consisting of the
+    The staging workflow input is the `input_spec` node consisting of the
     following input fields:
     
     - `collection`: the AIRC collection name
@@ -101,25 +102,28 @@ class StagingWorkflow(WorkflowBase):
     .. _DcmStack: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.dcmstack.html
     """
     
-    def __init__(self, **opts):
+    def __init__(self, cfg_file=None, base_dir=None):
         """
         If the optional configuration file is specified, then the workflow settings in
         that file override the default settings.
         
-        :keyword base_dir: the workflow execution directory (default a new temp directory)
-        :keyword cfg_file: the optional workflow inputs configuration file
+        :parameter base_dir: the workflow execution directory (default a new temp directory)
+        :parameter cfg_file: the optional workflow inputs configuration file
         """
-        super(StagingWorkflow, self).__init__(logger, opts.pop('cfg_file', None))
-        
-        self.reusable_workflow = self._create_reusable_workflow(**opts)
+        super(StagingWorkflow, self).__init__(logger, cfg_file)
+
+        self.reusable_workflow = self._create_reusable_workflow(base_dir=base_dir)
         """
         The reusable staging workflow.
         The reusable workflow can be embedded in an execution workflow.
         """
         
-        self.execution_workflow = self._create_execution_workflow(**opts)
+        self.execution_workflow = self._create_execution_workflow()
         """
-        The execution workflow. The execution workflow is executed by calling
+        The execution staging workflow which embeds the reusable workflow.
+        This workflow has an `iter_series` node with input field `series_spec`
+        consisting of `(subject, session, scan, dicom_files)` tuples.
+        The execution workflow is executed by calling
         the :meth:`qipipe.pipeline.staging.StagingWorkflow.run` method.
         """
     
@@ -130,13 +134,14 @@ class StagingWorkflow(WorkflowBase):
         
         This method can be used with an alternate workflow specified by the
         `workflow` option. The workflow is required to implement the same
-        input nodes and fields as this  execution workflow.
+        input nodes and fields as the `StagingWorkflow` execution workflow,
+        as described in :class:`qipipe.pipeline.staging.StagingWorkflow`.
         
         :param collection: the AIRC image collection name
         :param inputs: the AIRC source subject directories to stage
         :param opts: the following workflow execution options
-        :keyword dest: the TCIA upload destination directory (default current working
-            directory)
+        :keyword dest: the TCIA upload destination directory (default current
+            working directory)
         :keyword overwrite: the :meth:`new_series` overwrite flag
         :keyword workflow: the workflow to run
             (default is the execution workflow)
@@ -156,7 +161,7 @@ class StagingWorkflow(WorkflowBase):
             dest = os.path.join(os.getcwd(), 'data')
         
         # Set the workflow (collection, destination, subjects) input.
-        exec_wf = self.execution_workflow
+        exec_wf = opts.get('workflow', self.execution_workflow)
         input_spec = exec_wf.get_node('input_spec')
         input_spec.inputs.collection = collection
         input_spec.inputs.dest = dest
@@ -172,14 +177,12 @@ class StagingWorkflow(WorkflowBase):
         # Return the new XNAT (subject, session) tuples.
         return {(sbj, sess) for sbj, sess, _, _ in new_series}
     
-    def _create_execution_workflow(self, **opts):
+    def _create_execution_workflow(self):
         """
-        :param opts: the workflow options described below
-        :keyword base_dir: the workflow execution directory
-            (default current directory)
-        :keyword dest: the staging target directory
-            (default base_dir ``data`` subdirectory)
-        :return: the staging workflow
+        Makes the execution workflow described in
+        :class:`qipipe.pipeline.staging.StagingWorkflow`.
+       
+        :return: the new workflow
         """
         logger.debug("Creating the staging execution workflow...")
         
@@ -187,7 +190,7 @@ class StagingWorkflow(WorkflowBase):
         base_wf = self.reusable_workflow.clone(name='staging_base')
         
         # The execution workflow.
-        exec_wf = pe.Workflow(name='exec_staging', base_dir=opts.get('base_dir'))
+        exec_wf = pe.Workflow(name='exec_staging', base_dir=base_wf.base_dir)
         
         # The non-iterable input.
         in_fields = ['collection', 'dest', 'subjects']
@@ -207,23 +210,17 @@ class StagingWorkflow(WorkflowBase):
         
         return exec_wf
     
-    def _create_reusable_workflow(self, **opts):
+    def _create_reusable_workflow(self, base_dir=None):
         """
-        :param opts: the workflow options described below
-        :keyword base_dir: the workflow execution directory
+        Makes the reusable workflow described in
+        :class:`qipipe.pipeline.staging.StagingWorkflow`.
+        
+        :param base_dir: the workflow execution directory
             (default current directory)
-        :keyword dest: the staging target directory
-            (default base_dir ``data`` subdirectory)
-        :return: the staging workflow
+        :return: the new workflow
         """
         logger.debug("Creating the staging workflow to embed in an execution "
             "workflow...")
-        
-        # The work directory.
-        if opts.has_key('base_dir'):
-            base_dir = os.path.abspath(opts['base_dir'])
-        else:
-            base_dir = os.getcwd()
         
         # The workflow.
         workflow = pe.Workflow(name='staging', base_dir=base_dir)
@@ -290,7 +287,6 @@ class StagingWorkflow(WorkflowBase):
         workflow.connect(iter_series, 'subject', upload_stack, 'subject')
         workflow.connect(iter_series, 'session', upload_stack, 'session')
         workflow.connect(iter_series, 'scan', upload_stack, 'scan')
-        
         workflow.connect(stack, 'out_file', upload_stack, 'in_files')
         
         # The output is the series stack file.
