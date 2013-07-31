@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 @contextmanager
 def connection():
     """
-    Returns the sole :class:`XNAT` connection. The connection is closed
+    Returns the sole :class:`qipipe.helpers.xnat_helper.XNAT` connection. The connection is closed
     when the outermost connection block finishes.
     
     Example:
@@ -19,7 +19,8 @@ def connection():
         >>> with xnat_helper.connection() as xnat:
         ...    sbj = xnat.get_subject(project(), 'Breast003')
 
-    :return a :class:`XNAT` instance
+    :return: the XNAT instance
+    :rtype: :class:`qipipe.helpers.xnat_helper.XNAT`
     """
     if hasattr(connection, 'xnat'):
         yield connection.xnat
@@ -218,6 +219,7 @@ class XNAT(object):
         :keyword reconstruction: the reconstruction name
         :keyword analysis: the analysis name
         :keyword container_type: the container type, if no specific container is specified
+            (default ``scan``)
         :keyword inout: the ``in``/``out`` reconstruction resource qualifier
             (default ``out``)
         :keyword dest: the optional download location (default current directory)
@@ -314,8 +316,8 @@ class XNAT(object):
         :keyword overwrite: flag indicating whether to replace an existing file (default False)
         :return: the new XNAT file names
         :raise XNATError: if the project does not exist
-        :raise XNATError: if the session child resource container type option is missing
-        :raise XNATError: if the XNAT experiment does not exist and the modality option is missing
+        :raise ValueError: if the session child resource container type option is missing
+        :raise ValueError: if the XNAT experiment does not exist and the modality option is missing
         """
         # The XNAT experiment.
         exp = self.get_session(project, subject, session)
@@ -338,6 +340,8 @@ class XNAT(object):
 
         # Make the resource parent container, if necessary.
         ctr_type, ctr_id = self._infer_resource_container(opts)
+        if not ctr_id:
+            raise ValueError("XNAT %s upload container id is missing" % session)
         ctr = self._xnat_resource_parent(exp, ctr_type, ctr_id)
         if not ctr.exists():
             logger.debug("Creating the XNAT %s %s resource parent container %s..." %
@@ -356,7 +360,7 @@ class XNAT(object):
         # The name of the resource that will hold the files. The default is the image format.
         rsc = opts.pop('resource', format)
         if not rsc:
-            raise XNATError("XNAT %s upload cannot infer the image format"
+            raise ValueError("XNAT %s upload cannot infer the image format"
                 " as the default resource name" % session)
         rsc_obj = self._xnat_child_resource(ctr, rsc, opts.pop('inout', None))
         # Make the resource, if necessary.
@@ -405,11 +409,10 @@ class XNAT(object):
         - Otherwise, if the options include a container type in :object:`XNAT.ASSESSOR_SYNONYMS`,
           then the ``assessor`` container type and the option value are returned.
 
-        - Otherwise, an exception is thrown.
+        - Otherwise, this method returns (``scan``, None) to specify the single scan container.
         
         :param opts: the options to check
         :return: the container (type, value) tuple
-        :raise XNATError: if the resource container could not be inferred
         """
         if opts.has_key('container_type'):
             return (opts['container_type'], None)

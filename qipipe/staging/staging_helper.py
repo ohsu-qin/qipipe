@@ -38,8 +38,9 @@ def get_subjects(collection, source, pattern=None):
     
     :param collection: the AIRC collection name
     :param source: the input parent directory
-    :param pattern: the subject directory name match pattern
-        (default :class:`airc.AIRCCollection`.subject_pattern`)
+    :param pattern: the subject directory name match pattern (default
+        is the :class:`qipipe.staging.airc_collection.AIRCCollection`
+        ``subject_pattern``)
     :return: the subject name => directory dictionary
     """
     airc_coll = airc.collection_with_name(collection)

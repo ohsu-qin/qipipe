@@ -3,6 +3,7 @@ from .copy import Copy
 from .fastfit import Fastfit
 from .fix_dicom import FixDicom
 from .group_dicom import GroupDicom
+from .lookup import Lookup
 from .map_ctp import MapCTP
 from .move import Move
 from .mri_volcluster import MriVolCluster
