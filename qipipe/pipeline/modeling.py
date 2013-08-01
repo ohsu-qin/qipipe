@@ -305,7 +305,7 @@ class ModelingWorkflow(WorkflowBase):
         logger.debug("Building the modeling reusable workflow...")
         
         # The reusable workflow.
-        reusable_wf = self._create_base_workflow(base_dir=base_dir)
+        reusable_wf = pe.Workflow(name='modeling', base_dir=base_dir)
         
         # Start with a base workflow.
         base_wf = self._create_base_workflow(base_dir=base_dir, **opts)
@@ -366,7 +366,7 @@ class ModelingWorkflow(WorkflowBase):
         :param opts: the additional PK mapping initialization parameters
         :return: the pyxnat Workflow
         """
-        workflow = pe.Workflow(name='modeling', base_dir=base_dir)
+        workflow = pe.Workflow(name='modeling_base', base_dir=base_dir)
         
         # The parameters can be defined in either the options or the
         # configuration.

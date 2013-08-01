@@ -187,18 +187,18 @@ class QIPipelineWorkflow(object):
         exec_wf.connect(input_spec, 'subjects', stg_wf, 'input_spec.subjects')
         
         # The iterable session input.
-        iter_session_xf = Unpack(input_name='session_spec',
+        iter_session_xfc = Unpack(input_name='session_spec',
             output_names=['subject', 'session'])
-        iter_session = pe.Node(iter_session_xf, name='iter_session')
+        iter_session = pe.Node(iter_session_xfc, name='iter_session')
         logger.debug("The QIN pipeline iterable session input is %s with fields %s" %
             (iter_session.name, iter_session.inputs.copyable_trait_names()))
         exec_wf.connect(iter_session, 'subject', stg_wf, 'iter_series.subject')
         exec_wf.connect(iter_session, 'session', stg_wf, 'iter_series.session')
         
         # The iterable series input.
-        iter_series_xf = Unpack(input_name='series_spec',
+        iter_series_xfc = Unpack(input_name='series_spec',
             output_names=['scan', 'dicom_files'])
-        iter_series = pe.Node(iter_series_xf, itersource='iter_session',
+        iter_series = pe.Node(iter_series_xfc, itersource='iter_session',
             name='iter_series')
         logger.debug("The QIN pipeline iterable series input is %s with "
             "itersource %s and fields %s" % (iter_series.name,

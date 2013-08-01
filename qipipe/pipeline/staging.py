@@ -200,9 +200,9 @@ class StagingWorkflow(WorkflowBase):
         exec_wf.connect(input_spec, 'subjects', base_wf, 'input_spec.subjects')
         
         # The iterable series node.
-        iter_series_xf = Unpack(input_name='series_spec',
+        iter_series_xfc = Unpack(input_name='series_spec',
             output_names=['subject', 'session', 'scan', 'dicom_files'])
-        iter_series = pe.Node(iter_series_xf, name='iter_series')
+        iter_series = pe.Node(iter_series_xfc, name='iter_series')
         exec_wf.connect(iter_series, 'subject', base_wf, 'iter_series.subject')
         exec_wf.connect(iter_series, 'session', base_wf, 'iter_series.session')
         exec_wf.connect(iter_series, 'scan', base_wf, 'iter_series.scan')
