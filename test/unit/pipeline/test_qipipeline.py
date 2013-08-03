@@ -13,9 +13,9 @@ from qipipe.staging import airc_collection as airc
 from qipipe.helpers.xnat_helper import delete_subjects
 from qipipe.staging.staging_helper import get_subjects
 from qipipe.helpers.ast_config import read_config
-from .test_mask import MASK_CONF
-from .test_registration import REG_CONF
-from .test_modeling import MODELING_CONF
+from test.unit.pipeline.test_mask import MASK_CONF
+from test.unit.pipeline.test_registration import REG_CONF
+from test.unit.pipeline.test_modeling import MODELING_CONF
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
