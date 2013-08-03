@@ -113,6 +113,6 @@ class WorkflowBase(object):
                     (workflow.name, log_msg_params))
         
         # Run the workflow.
-        self._logger.debug("Executing the workflow %s" % workflow.name)
+        self.logger.debug("Executing the workflow %s" % workflow.name)
         with xnat_helper.connection():
             workflow.run(**args)
