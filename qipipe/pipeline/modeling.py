@@ -196,7 +196,7 @@ class ModelingWorkflow(WorkflowBase):
             input_spec.container_type = 'scan'
         # The execution workflow iterates over the inputs.
         in_fields = ['subject' 'session', 'images']
-        input_spec.iterables = self._transpose_iterables(in_fields, inputs)
+        input_spec.iterables = (in_fields, inputs)
         input_spec.synchronize = True
         
         # Run the workflow.
@@ -472,7 +472,7 @@ class ModelingWorkflow(WorkflowBase):
         
         # Optimize the pharmacokinetic model.
         pk_map = pe.Node(Fastfit(), name='pk_map')
-        pk_map.inputs.model_name = 'bolero'
+        pk_map.inputs.model_name = 'bolero_est'
         workflow.connect(copy_meta, 'dest_file', pk_map, 'target_data')
         workflow.connect(input_spec, 'mask', pk_map, 'mask')
         workflow.connect(get_params, 'params_csv', pk_map, 'params_csv')

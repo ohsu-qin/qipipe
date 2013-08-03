@@ -1,4 +1,5 @@
 import os, tempfile
+from collections import defaultdict
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Merge)
 from ..helpers import xnat_helper
@@ -90,7 +91,7 @@ class QIPipelineWorkflow(WorkflowBase):
         method.
         """
     
-    def run(self, collection, *inputs, **opts):
+    def run(self, collection, *inputs, dest=None):
         """
         Runs the OHSU QIN pipeline on the the given AIRC subject directories.
         The supported AIRC collections are listed in
@@ -107,22 +108,57 @@ class QIPipelineWorkflow(WorkflowBase):
         
         :param collection: the AIRC image collection name
         :param inputs: the AIRC source subject directories to stage
-        :param opts: the :meth:`qipipe.pipeline.staging.run` options
-        :return: the pipeline result
+        :param dest: the TCIA upload destination directory (default current
+            working directory)
+        :return: the (subject, session) XNAT names for the new sessions
         """
+        # The AIRC series not yet uploaded to XNAT.
+        new_series = detect_new_visits(collection, *inputs)
+        if not new_series:
+            return []
+        
+        # The session: series iterables dictionary.
+        sess_ser_dict = defaultdict(list)
+        for sbj, sess, ser, dicom_files in new_series:
+            sess_ser_dict[(sbj, sess)].append((ser, dicom_files))
+        
+        # The (subject, session) inputs.
+        new_sessions = sess_ser_dict.keys()
+        
+        # The subjects input.
+        subjects = {sbj for sbj, _ in new_sessions}
+        
         # The staging location.
-        if opts.has_key('dest'):
-            dest = os.path.abspath(opts['dest'])
+        if dest:
+            dest = os.path.abspath(dest)
         else:
             dest = os.path.join(os.getcwd(), 'data')
+
+        # Set the workflow (collection, destination, subjects) input.
+        exec_wf = opts.get('workflow', self.workflow)
+        input_spec = exec_wf.get_node('input_spec')
+        input_spec.inputs.collection = collection
+        input_spec.inputs.dest = dest
+        input_spec.inputs.subjects = subjects
         
-        # The overwrite option is only used for detecting new visits.
-        overwrite = opts.pop('overwrite', False)
-        with xnat_helper.connection():
-            # The new (subject, session, series) tuples.
-            inputs = detect_new_visits(collection, *inputs, overwrite=overwrite)
-            # Execute the pipeline.
-            staging.run(self.collection, *inputs, workflow=self.workflow, **opts)
+        # Set the iterable session inputs.
+        iter_session = exec_wf.get_node('iter_session')
+        iter_sess_fields = ['subject', 'session']
+        iter_session.iterables = [iter_sess_fields, new_sessions]
+        iter_session.synchronize = True
+        
+        # Set the iterable series inputs.
+        iter_series = exec_wf.get_node('iter_series')
+        iter_ser_fields = ['scan', 'dicom_files']
+        iter_series.itersource=(iter_session, iter_sess_fields),
+        iter_series.iterables = [iter_ser_fields, sess_ser_dict]
+        iter_series.synchronize = True
+        
+        # Run the staging workflow.
+        self._run_workflow(self.workflow)
+        
+        # Return the new XNAT (subject, session) tuples.
+        return new_sessions
     
     def _create_workflow(self, **opts):
         """
@@ -193,12 +229,11 @@ class QIPipelineWorkflow(WorkflowBase):
             (iter_session.name, iter_session.inputs.copyable_trait_names()))
         
         # The iterable staging series input.
-        iter_series_fields = iter_session_fields + ['scan', 'dicom_files']
+        iter_series_fields = ['scan', 'dicom_files']
         iter_series = pe.Node(IdentityInterface(fields=iter_series_fields),
-            itersource=(iter_session, iter_session_fields), name='iter_series')
-        logger.debug("The QIN pipeline iterable series input is %s with "
-            "itersource %s and fields %s" % (iter_series.name,
-            iter_series.itersource[0], iter_series.inputs.copyable_trait_names()))
+            name='iter_series')
+        logger.debug("The QIN pipeline iterable series input is %s with fields %s" %
+            (iter_series.name, iter_series.inputs.copyable_trait_names()))
         
         # Stitch together the workflows.
         tuple_func = lambda x: tuple(x)

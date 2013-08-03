@@ -143,8 +143,6 @@ class StagingWorkflow(WorkflowBase):
         :keyword dest: the TCIA upload destination directory (default current
             working directory)
         :keyword overwrite: the :meth:`new_series` overwrite flag
-        :keyword workflow: the workflow to run (default is the workflow built
-            by this :class:`qipipe.pipeline.staging.StagingWorkflow` instance)
         :return: the new XNAT (subject, session) name tuples
         """
         # Group the new DICOM files by series.
@@ -159,14 +157,9 @@ class StagingWorkflow(WorkflowBase):
             dest = os.path.abspath(opts['dest'])
         else:
             dest = os.path.join(os.getcwd(), 'data')
-        
-        ##
-        ## TODO - no workflow option here or in outer run
-        ##        dup get new series in qipipeline instead
-        ##
-        
+
         # Set the workflow (collection, destination, subjects) input.
-        exec_wf = opts.get('workflow', self.workflow)
+        exec_wf = self.workflow
         input_spec = exec_wf.get_node('input_spec')
         input_spec.inputs.collection = collection
         input_spec.inputs.dest = dest

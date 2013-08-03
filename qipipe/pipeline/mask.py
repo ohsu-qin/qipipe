@@ -95,7 +95,6 @@ class MaskWorkflow(WorkflowBase):
                 for sbj, sess in inputs]
         input_spec = exec_wf.get_node('input_spec')
         in_fields = ['subject' 'session', 'images']
-        input_spec.iterables = self._transpose_iterables(in_fields, dl_inputs)
         input_spec.synchronize = True
 
         # Execute the workflow
