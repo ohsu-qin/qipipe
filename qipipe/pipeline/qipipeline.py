@@ -91,7 +91,7 @@ class QIPipelineWorkflow(WorkflowBase):
         method.
         """
     
-    def run(self, collection, *inputs, dest=None):
+    def run(self, collection, *inputs, **opts):
         """
         Runs the OHSU QIN pipeline on the the given AIRC subject directories.
         The supported AIRC collections are listed in
@@ -108,7 +108,8 @@ class QIPipelineWorkflow(WorkflowBase):
         
         :param collection: the AIRC image collection name
         :param inputs: the AIRC source subject directories to stage
-        :param dest: the TCIA upload destination directory (default current
+        :param opts: the following workflow execution options:
+        :keyword dest: the TCIA upload destination directory (default current
             working directory)
         :return: the (subject, session) XNAT names for the new sessions
         """
@@ -129,8 +130,8 @@ class QIPipelineWorkflow(WorkflowBase):
         subjects = {sbj for sbj, _ in new_sessions}
         
         # The staging location.
-        if dest:
-            dest = os.path.abspath(dest)
+        if opts.has_key('dest'):
+            dest = os.path.abspath(opts['dest'])
         else:
             dest = os.path.join(os.getcwd(), 'data')
 
