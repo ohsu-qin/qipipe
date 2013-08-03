@@ -50,7 +50,7 @@ class TestQIPipeline(object):
     def test_breast(self):
         data = os.getenv('QIN_DATA')
         if data:
-            fixture = os.path.join(RESULT, 'data', 'breast', 'BreastChemo3')
+            fixture = os.path.join(RESULTS, 'data', 'breast', 'BreastChemo3')
             os.makedirs(fixture)
             src = os.path.join(data, 'Breast_Chemo_Study', 'BreastChemo3', 'Visit1')
             dest = os.path.join(fixture, 'Visit1')
@@ -63,7 +63,7 @@ class TestQIPipeline(object):
     def test_sarcoma(self):
         data = os.getenv('QIN_DATA')
         if data:
-            fixture = os.path.join(RESULT, 'data', 'sarcoma', 'Subj_1')
+            fixture = os.path.join(RESULTS, 'data', 'sarcoma', 'Subj_1')
             os.makedirs(fixture)
             src = os.path.join(data, 'Sarcoma', 'Subj_1', 'Visit1')
             dest = os.path.join(fixture, 'Visit1')
