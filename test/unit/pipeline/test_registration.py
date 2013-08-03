@@ -36,7 +36,7 @@ class TestRegistrationWorkflow(XNATScanTestBase):
     """
     
     def __init__(self):
-        super(TestRegistrationWorkflow, self).__init__(FIXTURES, RESULTS)
+        super(TestRegistrationWorkflow, self).__init__(logger, FIXTURES, RESULTS)
     
     def test_breast_with_ants(self):
         self._test_breast()

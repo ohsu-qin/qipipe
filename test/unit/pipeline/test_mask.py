@@ -36,7 +36,7 @@ class TestMaskWorkflow(XNATScanTestBase):
     """
     
     def __init__(self):
-        super(TestMaskWorkflow, self).__init__(FIXTURES, RESULTS)
+        super(TestMaskWorkflow, self).__init__(logger, FIXTURES, RESULTS)
     
     def test_breast(self):
         self._test_breast()

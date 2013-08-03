@@ -15,16 +15,13 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
 
 from nipype import config
-cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
-    execution=dict(crashdump_dir=RESULTS, create_report=False))
-config.update_config(cfg)
-
 
 class XNATScanTestBase(object):
     """
     Base class for testing workflows that download XNAT scan files.
     """
-    def __init__(self, fixtures, results):
+    def __init__(self, logger, fixtures, results):
+        self._logger = logger
         self._fixtures = fixtures
         self._results = results
     
@@ -107,7 +104,7 @@ class XNATScanTestBase(object):
         with xnat_helper.connection() as xnat:
             sess_obj = xnat.get_session(project(), subject, sess)
             fnames = [self._upload_file(sess_obj, f) for f in glob.glob(session_dir + '/series*.nii.gz')]
-            logger.debug("%s uploaded the %s test files %s." %
+            self._logger.debug("%s uploaded the %s test files %s." %
                 (self.__class__.__name__, sess_obj.label(), fnames))
         
         return (sess, fnames)
