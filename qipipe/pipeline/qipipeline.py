@@ -230,19 +230,21 @@ class QIPipelineWorkflow(WorkflowBase):
             (iter_session.name, iter_session.inputs.copyable_trait_names()))
         
         # The iterable staging series input.
-        iter_series_fields = ['scan', 'dicom_files']
+        iter_series_fields = iter_session_fields + ['scan', 'dicom_files']
         iter_series = pe.Node(IdentityInterface(fields=iter_series_fields),
             name='iter_series')
         logger.debug("The QIN pipeline iterable series input is %s with fields %s" %
             (iter_series.name, iter_series.inputs.copyable_trait_names()))
+        exec_wf.connect(iter_session, 'subject', iter_series, 'subject')
+        exec_wf.connect(iter_session, 'session', iter_series, 'session')
         
         # Stitch together the workflows.
         tuple_func = lambda x: tuple(x)
         exec_wf.connect(input_spec, 'collection', stg_wf, 'input_spec.collection')
         exec_wf.connect(input_spec, 'dest', stg_wf, 'input_spec.dest')
         exec_wf.connect(input_spec, 'subjects', stg_wf, 'input_spec.subjects')
-        exec_wf.connect(iter_session, 'subject', stg_wf, 'iter_series.subject')
-        exec_wf.connect(iter_session, 'session', stg_wf, 'iter_series.session')
+        exec_wf.connect(iter_series, 'subject', stg_wf, 'iter_series.subject')
+        exec_wf.connect(iter_series, 'session', stg_wf, 'iter_series.session')
         exec_wf.connect(iter_series, 'scan', stg_wf, 'iter_series.scan')
         exec_wf.connect(iter_series, 'dicom_files', stg_wf, 'iter_series.dicom_files')
         if mask_wf:
