@@ -1,6 +1,7 @@
 """Pipeline utility functions."""
 
 import os, re, glob
+from collections import defaultdict
 from ..helpers.project import project
 from ..helpers import xnat_helper
 from ..helpers.dicom_helper import iter_dicom_headers
@@ -87,11 +88,12 @@ def group_dicom_files_by_series(*dicom_files):
     :param dicom_files: the DICOM files or directories
     :return: a series number => DICOM file names dictionary
     """
-    ser_files_dict = {}    
+    ser_files_dict = defaultdict(list)
     for ds in iter_dicom_headers(*dicom_files):
         # Ignore subtraction images.
         if not 'SUB' in ds.ImageType:
-            ser_files_dict.setdefault(int(ds.SeriesNumber), []).append(ds.filename)
+            ser_files_dict[int(ds.SeriesNumber)].append(ds.filename)
+    
     return ser_files_dict
 
 class NewVisitIterator(object):
