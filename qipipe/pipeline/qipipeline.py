@@ -151,7 +151,7 @@ class QIPipelineWorkflow(WorkflowBase):
         # Set the iterable series inputs.
         iter_series = exec_wf.get_node('iter_series')
         iter_ser_fields = ['scan', 'dicom_files']
-        iter_series.itersource=(iter_session, iter_sess_fields),
+        iter_series.itersource = (iter_session, iter_sess_fields)
         iter_series.iterables = [iter_ser_fields, sess_ser_dict]
         iter_series.synchronize = True
         
