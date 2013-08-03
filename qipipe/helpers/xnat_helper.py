@@ -1,7 +1,7 @@
 import os, re
-from contextlib import contextmanager, closing
+from contextlib import (contextmanager, closing)
 import pyxnat
-from pyxnat.core.resources import Reconstruction, Reconstructions, Assessor, Assessors
+from pyxnat.core.resources import (Reconstruction, Reconstructions, Assessor, Assessors)
 from pyxnat.core.errors import DatabaseError
 from .xnat_config import default_configuration
 

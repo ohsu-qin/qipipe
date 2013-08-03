@@ -10,7 +10,7 @@ from qipipe.interfaces import XNATUpload
 from qipipe.helpers import xnat_helper
 from qipipe.helpers import xnat_helper
 from qipipe.helpers.xnat_helper import delete_subjects
-from test.unit.helpers.test_xnat_helper import FIXTURES, RESULTS
+from test.unit.helpers.test_xnat_helper import (FIXTURES, RESULTS)
 from test.helpers.xnat_test_helper import generate_subject_name
 
 SUBJECT = generate_subject_name(__name__)

@@ -1,6 +1,6 @@
 from collections import defaultdict
 from .dictionary_hierarchy import DictionaryHierarchy
-from .dicom_reader import iter_dicom_headers, select_dicom_tags
+from .dicom_reader import (iter_dicom_headers, select_dicom_tags)
 
 def read_image_hierarchy(*files):
     """

@@ -1,5 +1,5 @@
 from nipype.interfaces.base import (traits, Undefined, DynamicTraitedSpec, isdefined)
-from nipype.interfaces.io import IOBase, add_traits
+from nipype.interfaces.io import (IOBase, add_traits)
 from ..helpers.collection_helper import is_nonstring_iterable
     
 class Unpack(IOBase):

@@ -5,7 +5,7 @@ Maps the OHSU DICOM Patient IDs to the CTP Patient IDs.
 import os
 from nipype.interfaces.base import (traits, BaseInterfaceInputSpec,
     TraitedSpec, BaseInterface, File, Directory)
-from ..staging.map_ctp import property_filename, CTPPatientIdMap
+from ..staging.map_ctp import (property_filename, CTPPatientIdMap)
 
 
 class MapCTPInputSpec(BaseInterfaceInputSpec):

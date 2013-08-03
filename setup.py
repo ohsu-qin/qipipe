@@ -1,5 +1,5 @@
 import glob
-from setuptools import setup, find_packages
+from setuptools import (setup, find_packages)
 
 from qipipe import __version__
 

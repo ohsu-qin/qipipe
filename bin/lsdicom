@@ -9,7 +9,7 @@ from collections import defaultdict
 import dicom
 from qipipe.helpers.collection_helper import to_series
 from qipipe.helpers.dicom_reader import read_dicom_header
-from qipipe.helpers.dicom_helper import ImageHierarchy, iter_dicom_headers, select_dicom_tags
+from qipipe.helpers.dicom_helper import (ImageHierarchy, iter_dicom_headers, select_dicom_tags)
 
 import logging
 logger = logging.getLogger(__name__)
