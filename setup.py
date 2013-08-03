@@ -3,7 +3,8 @@ from setuptools import (setup, find_packages)
 
 from qipipe import __version__
 
-requires = ['pydicom', 'dcmstack', 'nipype', 'nose', 'traits']
+requires = ['httplib2', 'lxml', 'nipy', 'dipy', 'traits', 'nibabel',
+            'pydicom', 'dcmstack', 'nipype', 'nose']
 
 def readme():
     with open("README.rst") as f:
