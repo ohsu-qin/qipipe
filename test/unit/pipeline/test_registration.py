@@ -12,11 +12,11 @@ from qipipe.helpers import xnat_helper
 from qipipe.helpers.xnat_helper import delete_subjects
 from test.unit.pipeline.xnat_scan_test_base import (XNATScanTestBase, ROOT)
 
-FIXTURES = os.path.join(ROOT, 'fixtures', 'registration')
-"""The test fixtures directory."""
-
 REG_CONF = os.path.join(ROOT, 'conf', 'registration.cfg')
 """The test registration configuration."""
+
+FIXTURES = os.path.join(ROOT, 'fixtures', 'registration')
+"""The test fixtures directory."""
 
 RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'registration')
 """The test results directory."""

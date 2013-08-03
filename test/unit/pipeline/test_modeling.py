@@ -12,6 +12,9 @@ from qipipe.helpers.xnat_helper import delete_subjects
 from test.helpers.project import project
 from test.unit.pipeline.xnat_scan_test_base import (XNATScanTestBase, ROOT)
 
+MODELING_CONF = os.path.join(ROOT, 'conf', 'modeling.cfg')
+"""The test registration configuration."""
+
 FIXTURES = os.path.join(ROOT, 'fixtures', 'pipeline', 'modeling')
 
 RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'modeling')

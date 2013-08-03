@@ -13,6 +13,9 @@ from qipipe.staging import airc_collection as airc
 from qipipe.helpers.xnat_helper import delete_subjects
 from qipipe.staging.staging_helper import get_subjects
 from qipipe.helpers.ast_config import read_config
+from .test_mask import MASK_CONF
+from .test_registration import REG_CONF
+from .test_modeling import MODELING_CONF
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
@@ -87,11 +90,8 @@ class TestQIPipeline(object):
         dest = os.path.join(RESULTS, 'data')
         work = os.path.join(RESULTS, 'work')
         
-        # The test registration configuration.
-        reg_opts = dict(read_config(REG_CONF))
-        
         # The pipeline options.
-        opts = dict(registration=reg_opts)
+        opts = dict(mask=MASK_CONF, registration=REG_CONF, modeling=MODELING_CONF)
         
         # Check whether the modeling workflow is executable.
         if not distutils.spawn.find_executable('fastfit'):

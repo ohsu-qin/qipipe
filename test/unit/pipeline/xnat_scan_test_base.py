@@ -14,15 +14,6 @@ from qipipe.helpers.xnat_helper import delete_subjects
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
 
-FIXTURES = os.path.join(ROOT, 'fixtures', 'registration')
-"""The test fixtures directory."""
-
-REG_CONF = os.path.join(ROOT, 'conf', 'registration.cfg')
-"""The test registration configuration."""
-
-RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'registration')
-"""The test results directory."""
-
 from nipype import config
 cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
     execution=dict(crashdump_dir=RESULTS, create_report=False))
