@@ -34,6 +34,7 @@ def detect_new_visits(collection, *inputs, **opts):
     # Collect the new AIRC visits into (subject, session, dicom_files)
     # tuples.
     new_visits = list(iter_new_visits(collection, *inputs))
+
     # If there are no new images, then bail.
     if not new_visits:
         logger.info("No new images were detected.")
@@ -265,7 +266,7 @@ class StagingWorkflow(WorkflowBase):
         return workflow
 
 
-def _group_sessions_by_series(self, *session_specs):
+def _group_sessions_by_series(*session_specs):
     """
     Creates the series specifications for the new images in the given sessions.
     
