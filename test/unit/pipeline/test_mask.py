@@ -10,7 +10,7 @@ from test.helpers.project import project
 from qipipe.pipeline import mask
 from qipipe.helpers import xnat_helper
 from qipipe.helpers.xnat_helper import delete_subjects
-from test.unit.pipeline.xnat_scan_test_base import XNATScanTestBase, ROOT
+from test.unit.pipeline.xnat_scan_test_base import (XNATScanTestBase, ROOT)
 
 FIXTURES = os.path.join(ROOT, 'fixtures', 'registration')
 """The test fixtures directory."""

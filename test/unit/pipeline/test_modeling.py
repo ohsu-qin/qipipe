@@ -10,7 +10,7 @@ from qipipe.pipeline import modeling
 from qipipe.helpers import xnat_helper
 from qipipe.helpers.xnat_helper import delete_subjects
 from test.helpers.project import project
-from test.unit.pipeline.xnat_scan_test_base import XNATScanTestBase, ROOT
+from test.unit.pipeline.xnat_scan_test_base import (XNATScanTestBase, ROOT)
 
 FIXTURES = os.path.join(ROOT, 'fixtures', 'pipeline', 'modeling')
 

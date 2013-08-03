@@ -1,13 +1,12 @@
-import os
+import os, tempfile
 from nipype.pipeline import engine as pe
-from nipype.interfaces.utility import IdentityInterface, Function
+from nipype.interfaces.utility import (IdentityInterface, Function)
 from nipype.interfaces.dcmstack import DcmStack
 from ..helpers.project import project
-from ..interfaces import Unpack, FixDicom, Compress, MapCTP, XNATUpload
+from ..interfaces import (Unpack, FixDicom, Compress, MapCTP, XNATUpload)
 from ..staging.staging_error import StagingError
-from ..staging.staging_helper import subject_for_directory, iter_new_visits, group_dicom_files_by_series
+from ..staging.staging_helper import (subject_for_directory, iter_new_visits, group_dicom_files_by_series)
 from ..helpers import xnat_helper
-from .pipeline_error import PipelineError
 from .workflow_base import WorkflowBase
     
 import logging
@@ -81,8 +80,8 @@ class StagingWorkflow(WorkflowBase):
     - Collect the id map and the compressed DICOM images into a target directory in
       collection/subject/session/series format for TCIA upload.
     
-    The staging workflow input is the `input_spec` node consisting of the
-    following input fields:
+    The staging execution workflow input is the `input_spec` node consisting of
+    the following input fields:
     
     - `collection`: the AIRC collection name
     
@@ -90,13 +89,24 @@ class StagingWorkflow(WorkflowBase):
     
     - `subjects`: the subjects to stage
     
-    In addition, the iterable `iter_series` node input `series_spec` field
-    must be set to the (subject, session, scan, dicom_files) staging input tuples.
+    In addition, the execution must set the iterable `iter_series` node inputs for
+    the following fields:
+     
+    - subject: the XNAT subject name
+    
+    - session: the XNAT session name
+    
+    - scan: the XNAT scan name
+    
+    - dicom_files: the DICOM files to stage
     
     The staging workflow output is the `output_spec` node consisting of the
     following output fields:
     
     - `out_file`: the series stack NiFTI image file
+
+    The workflow is executed by calling the
+    :meth:`qipipe.pipeline.staging.StagingWorkflow.run` method.
     
     .. _CTP: https://wiki.cancerimagingarchive.net/display/Public/Image+Submitter+Site+User%27s+Guide
     .. _DcmStack: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.dcmstack.html
@@ -112,39 +122,29 @@ class StagingWorkflow(WorkflowBase):
         """
         super(StagingWorkflow, self).__init__(logger, cfg_file)
 
-        self.reusable_workflow = self._create_reusable_workflow(base_dir=base_dir)
+        self.workflow = self._create_workflow(base_dir=base_dir)
         """
-        The reusable staging workflow.
-        The reusable workflow can be embedded in an execution workflow.
-        """
-        
-        self.execution_workflow = self._create_execution_workflow()
-        """
-        The execution staging workflow which embeds the reusable workflow.
-        This workflow has an `iter_series` node with input field `series_spec`
-        consisting of `(subject, session, scan, dicom_files)` tuples.
-        The execution workflow is executed by calling
-        the :meth:`qipipe.pipeline.staging.StagingWorkflow.run` method.
+        The staging workflow described in :class:`qipipe.pipeline.staging.StagingWorkflow`.
         """
     
     def run(self, collection, *inputs, **opts):
         """
-        Builds and runs the staging workflow on the new AIRC visits in the given
-        inputs.
+        Runs the staging workflow on the new AIRC visits in the given
+        input directories.
         
         This method can be used with an alternate workflow specified by the
         `workflow` option. The workflow is required to implement the same
-        input nodes and fields as the `StagingWorkflow` execution workflow,
+        input nodes and fields as the `StagingWorkflow` workflow,
         as described in :class:`qipipe.pipeline.staging.StagingWorkflow`.
         
         :param collection: the AIRC image collection name
         :param inputs: the AIRC source subject directories to stage
-        :param opts: the following workflow execution options
+        :param opts: the following workflow execution options:
         :keyword dest: the TCIA upload destination directory (default current
             working directory)
         :keyword overwrite: the :meth:`new_series` overwrite flag
-        :keyword workflow: the workflow to run
-            (default is the execution workflow)
+        :keyword workflow: the workflow to run (default is the workflow built
+            by this :class:`qipipe.pipeline.staging.StagingWorkflow` instance)
         :return: the new XNAT (subject, session) name tuples
         """
         # Group the new DICOM files by series.
@@ -160,8 +160,13 @@ class StagingWorkflow(WorkflowBase):
         else:
             dest = os.path.join(os.getcwd(), 'data')
         
+        ##
+        ## TODO - no workflow option here or in outer run
+        ##        dup get new series in qipipeline instead
+        ##
+        
         # Set the workflow (collection, destination, subjects) input.
-        exec_wf = opts.get('workflow', self.execution_workflow)
+        exec_wf = opts.get('workflow', self.workflow)
         input_spec = exec_wf.get_node('input_spec')
         input_spec.inputs.collection = collection
         input_spec.inputs.dest = dest
@@ -169,7 +174,9 @@ class StagingWorkflow(WorkflowBase):
         
         # Set the iterable series inputs.
         iter_series = exec_wf.get_node('iter_series')
-        iter_series.iterables = ('series_spec', new_series)
+        in_fields = ['subject', 'session', 'scan', 'dicom_files']
+        iter_series.iterables = [in_fields, new_series]
+        iter_series.synchronize = True
         
         # Run the staging workflow.
         self._run_workflow(exec_wf)
@@ -177,55 +184,23 @@ class StagingWorkflow(WorkflowBase):
         # Return the new XNAT (subject, session) tuples.
         return {(sbj, sess) for sbj, sess, _, _ in new_series}
     
-    def _create_execution_workflow(self):
+    def _create_workflow(self, base_dir=None):
         """
-        Makes the execution workflow described in
+        Makes the workflow described in
         :class:`qipipe.pipeline.staging.StagingWorkflow`.
        
-        :return: the new workflow
-        """
-        logger.debug("Creating the staging execution workflow...")
-        
-        # The reusable registration workflow.
-        base_wf = self.reusable_workflow.clone(name='staging_base')
-        
-        # The execution workflow.
-        exec_wf = pe.Workflow(name='exec_staging', base_dir=base_wf.base_dir)
-        
-        # The non-iterable input.
-        in_fields = ['collection', 'dest', 'subjects']
-        input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
-        exec_wf.connect(input_spec, 'collection', base_wf, 'input_spec.collection')
-        exec_wf.connect(input_spec, 'dest', base_wf, 'input_spec.dest')
-        exec_wf.connect(input_spec, 'subjects', base_wf, 'input_spec.subjects')
-        
-        # The iterable series node.
-        iter_series_xfc = Unpack(input_name='series_spec',
-            output_names=['subject', 'session', 'scan', 'dicom_files'])
-        iter_series = pe.Node(iter_series_xfc, name='iter_series')
-        exec_wf.connect(iter_series, 'subject', base_wf, 'iter_series.subject')
-        exec_wf.connect(iter_series, 'session', base_wf, 'iter_series.session')
-        exec_wf.connect(iter_series, 'scan', base_wf, 'iter_series.scan')
-        exec_wf.connect(iter_series, 'dicom_files', base_wf, 'iter_series.dicom_files')
-        
-        return exec_wf
-    
-    def _create_reusable_workflow(self, base_dir=None):
-        """
-        Makes the reusable workflow described in
-        :class:`qipipe.pipeline.staging.StagingWorkflow`.
-        
         :param base_dir: the workflow execution directory
-            (default current directory)
+            (default is a new temp directory)
         :return: the new workflow
         """
-        logger.debug("Creating the staging workflow to embed in an execution "
-            "workflow...")
+        logger.debug("Creating the staging workflow...")
         
         # The workflow.
+        if not base_dir:
+            base_dir = tempfile.mkdtemp()
         workflow = pe.Workflow(name='staging', base_dir=base_dir)
         
-        # The workflow (collection, directory, subjects) input.
+        # The workflow (collection, destination, subjects) input.
         in_fields = ['collection', 'dest', 'subjects']
         input_spec = pe.Node(IdentityInterface(fields=in_fields),
             name='input_spec')
@@ -233,11 +208,11 @@ class StagingWorkflow(WorkflowBase):
             " with fields %s" % (input_spec.name, in_fields))
         
         # The iterable series node.
-        series_fields = ['subject', 'session', 'scan', 'dicom_files']
-        iter_series = pe.Node(IdentityInterface(fields=series_fields),
+        iter_fields=['subject', 'session', 'scan', 'dicom_files']
+        iter_series = pe.Node(IdentityInterface(fields=iter_fields),
             name='iter_series')
-        logger.debug("The staging workflow iterable input is %s with fields %s"
-            % (iter_series.name, iter_series.inputs.copyable_trait_names()))
+        logger.debug("The staging workflow iterable input is %s "
+            "with field %s" % (iter_series.name, 'series_spec'))
         
         # Map each QIN Patient ID to a TCIA Patient ID for upload using CTP.
         map_ctp = pe.Node(MapCTP(), name='map_ctp')

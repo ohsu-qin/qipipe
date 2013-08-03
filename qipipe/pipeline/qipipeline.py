@@ -1,9 +1,9 @@
 import os, tempfile
 from nipype.pipeline import engine as pe
-from nipype.interfaces.utility import IdentityInterface, Function
+from nipype.interfaces.utility import (IdentityInterface, Merge)
 from ..helpers import xnat_helper
-from .pipeline_error import PipelineError
-from .staging import detect_new_visits, StagingWorkflow
+from .workflow_base import WorkflowBase
+from .staging import (detect_new_visits, StagingWorkflow)
 from .mask import MaskWorkflow
 from .registration import RegistrationWorkflow
 from .modeling import ModelingWorkflow
@@ -27,7 +27,7 @@ def run(*inputs, **opts):
     return QIPipelineWorkflow(**opts).run(*inputs)
 
 
-class QIPipelineWorkflow(object):
+class QIPipelineWorkflow(WorkflowBase):
     """
     QIPipeline builds and executes the OHSU QIN workflows.
     The pipeline builds a composite workflow which stitches together
@@ -81,6 +81,8 @@ class QIPipelineWorkflow(object):
         :keyword modeling: the optional modeling configuration file, or
             False to skip modeling
         """
+        super(QIPipelineWorkflow, self).__init__(logger)
+
         self.workflow = self._create_workflow(**opts)
         """
         The pipeline execution workflow. The execution workflow is executed by
@@ -142,7 +144,7 @@ class QIPipelineWorkflow(object):
         # The staging workflow.
         stg_opt = opts.get('staging', None)
         stg_wf_gen = self._workflow_generator(StagingWorkflow, base_dir, stg_opt)
-        stg_wf = stg_wf_gen.reusable_workflow
+        stg_wf = stg_wf_gen.workflow
         
         # The mask workflow.
         mask_opt = opts.get('mask', None)
@@ -152,7 +154,7 @@ class QIPipelineWorkflow(object):
             mask_wf = reg_wf = mdl_wf = None
         else:
             mask_wf_gen = self._workflow_generator(MaskWorkflow, base_dir=base_dir)
-            mask_wf = mask_wf_gen.reusable_workflow
+            mask_wf = mask_wf_gen.workflow
             
             # The registration workflow.
             reg_opt = opts.get('registration', None)
@@ -181,45 +183,46 @@ class QIPipelineWorkflow(object):
         input_spec = pe.Node(IdentityInterface(fields=in_fields),
             name='input_spec')
         logger.debug("The QIN pipeline non-iterable input is %s with "
-            "fields %s" %(input_spec.name, input_fields))
+            "fields %s" %(input_spec.name, in_fields))
+        
+        # The iterable session input.
+        iter_session_fields = ['subject', 'session']
+        iter_session = pe.Node(IdentityInterface(fields=iter_session_fields),
+            name='iter_session')
+        logger.debug("The QIN pipeline iterable session input is %s with fields %s" %
+            (iter_session.name, iter_session.inputs.copyable_trait_names()))
+        
+        # The iterable staging series input.
+        iter_series_fields = iter_session_fields + ['scan', 'dicom_files']
+        iter_series = pe.Node(IdentityInterface(fields=iter_series_fields),
+            itersource=(iter_session, iter_session_fields), name='iter_series')
+        logger.debug("The QIN pipeline iterable series input is %s with "
+            "itersource %s and fields %s" % (iter_series.name,
+            iter_series.itersource[0], iter_series.inputs.copyable_trait_names()))
+        
+        # Stitch together the workflows.
+        tuple_func = lambda x: tuple(x)
         exec_wf.connect(input_spec, 'collection', stg_wf, 'input_spec.collection')
         exec_wf.connect(input_spec, 'dest', stg_wf, 'input_spec.dest')
         exec_wf.connect(input_spec, 'subjects', stg_wf, 'input_spec.subjects')
-        
-        # The iterable session input.
-        iter_session_xfc = Unpack(input_name='session_spec',
-            output_names=['subject', 'session'])
-        iter_session = pe.Node(iter_session_xfc, name='iter_session')
-        logger.debug("The QIN pipeline iterable session input is %s with fields %s" %
-            (iter_session.name, iter_session.inputs.copyable_trait_names()))
         exec_wf.connect(iter_session, 'subject', stg_wf, 'iter_series.subject')
         exec_wf.connect(iter_session, 'session', stg_wf, 'iter_series.session')
-        
-        # The iterable series input.
-        iter_series_xfc = Unpack(input_name='series_spec',
-            output_names=['scan', 'dicom_files'])
-        iter_series = pe.Node(iter_series_xfc, itersource='iter_session',
-            name='iter_series')
-        logger.debug("The QIN pipeline iterable series input is %s with "
-            "itersource %s and fields %s" % (iter_series.name,
-            iter_series.itersource, iter_series.inputs.copyable_trait_names()))
         exec_wf.connect(iter_series, 'scan', stg_wf, 'iter_series.scan')
         exec_wf.connect(iter_series, 'dicom_files', stg_wf, 'iter_series.dicom_files')
-        
-        # Stitch together the workflows.
         if mask_wf:
-            exec_wf.connect(iter_session, 'subject', mask_wf, 'iter_series.subject')
-            exec_wf.connect(iter_session, 'session', mask_wf, 'iter_series.session')
             # Collect the staged images.
             staged = pe.JoinNode(IdentityInterface(fields=['images']),
                 joinsource='iter_series', name='staged')
             exec_wf.connect(stg_wf, 'output_spec.out_file', staged, 'images')
+            mask_inputs = pe.Node(Merge(2), name='mask_inputs')
+            exec_wf.connect(iter_session, 'subject', mask_wf, 'input_spec.subject')
+            exec_wf.connect(iter_session, 'session', mask_wf, 'input_spec.session')
             exec_wf.connect(staged, 'images', mask_wf, 'input_spec.images')
             if reg_wf:
                 exec_wf.connect(iter_session, 'subject', reg_wf, 'input_spec.subject')
                 exec_wf.connect(iter_session, 'session', reg_wf, 'input_spec.session')
-                exec_wf.connect(mask_wf, 'output_spec.out_file', reg_wf, 'input_spec.mask')
                 exec_wf.connect(staged, 'images', reg_wf, 'input_spec.images')
+                exec_wf.connect(mask_wf, 'output_spec.out_file', reg_wf, 'input_spec.mask')
                 exec_wf.connect(stg_wf, 'output_spec.out_file', reg_wf, 'iter_image.image')
             if mdl_wf:
                 exec_wf.connect(iter_session, 'subject', mdl_wf, 'input_spec.subject')
@@ -229,24 +232,16 @@ class QIPipelineWorkflow(object):
                     # Model the realigned images.
                     realigned = pe.JoinNode(IdentityInterface(fields=['images']),
                         joinsource='iter_series', name='realigned')
-                    exec_wf.connect(stg_wf, 'output_spec.out_file', realigned, 'images')
+                    exec_wf.connect(reg_wf, 'output_spec.out_file', realigned, 'images')
                     exec_wf.connect(realigned, 'images', mdl_wf, 'input_spec.images')
-                    exec_wf.connect(reg_wf, 'output_spec.realigned', mdl_wf, 'input_spec.images')
                 else:
                     # Model the staged images.
                     exec_wf.connect(staged, 'images', mdl_wf, 'input_spec.images')
         
-        # Collect the execution workflow output fields.
-        exec_out_fields = ['subject', 'session', 'analysis']
-        output_spec = pe.Node(IdentityInterface(fields=exec_out_fields, analysis=analysis),
-            name='output_spec')
-        for field in ['subject', 'session']:
-            exec_wf.connect(input_spec, field, output_spec, field)
-        
         logger.debug("Created the %s workflow." % exec_wf.name)
         # If debug is set, then diagram the workflow graph.
         if logger.level <= logging.DEBUG:
-            self._depict_workflow(reusable_wf)
+            self._depict_workflow(exec_wf)
         
         return exec_wf
     

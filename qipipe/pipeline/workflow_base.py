@@ -63,7 +63,7 @@ class WorkflowBase(object):
             return dict(cfg)
         else:
             return {}
-
+        
     def _download_scans(self, xnat, subject, session, dest):
         """
         Download the NIFTI scan files for the given session.

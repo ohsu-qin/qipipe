@@ -48,11 +48,6 @@ class TestQIPipeline(object):
         shutil.rmtree(RESULTS, True)
     
     def test_breast(self):
-        
-        
-        qip.QIPipelineWorkflow()
-        
-        
         data = os.getenv('QIN_DATA')
         if data:
             fixture = os.path.join(RESULT, 'data', 'breast', 'BreastChemo3')

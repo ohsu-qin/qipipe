@@ -1,11 +1,11 @@
-import os
+import os, tempfile
 from nipype.pipeline import engine as pe
-from nipype.interfaces.utility import IdentityInterface, Function
+from nipype.interfaces.utility import (IdentityInterface, Function)
 from nipype.interfaces import fsl
 from nipype.interfaces.dcmstack import MergeNifti
 from ..helpers.project import project
 from ..helpers import xnat_helper
-from ..interfaces import Unpack, XNATUpload, MriVolCluster
+from ..interfaces import (Unpack, XNATUpload, MriVolCluster)
 from .workflow_base import WorkflowBase
 
 import logging
@@ -38,14 +38,14 @@ class MaskWorkflow(WorkflowBase):
     of input session images. The new mask is uploaded to XNAT as a resource of
     the `subject`, `session` and the reconstruction named ``mask``.
     
-    The reusable mask workflow input is the `input_spec` node consisting of
+    The mask workflow input is the `input_spec` node consisting of
     the following input fields:
-    
-    - `subject`: the subject name
-    
-    - `session`: the session name
-    
-    - `images`: the session images to mask
+
+     - subject: the XNAT subject name
+
+     - session: the XNAT session name
+
+     - images: the image files to mask
     
     The mask workflow output is the `output_spec` node consisting of the
     following output fields:
@@ -76,11 +76,8 @@ class MaskWorkflow(WorkflowBase):
         """
         super(MaskWorkflow, self).__init__(logger, opts.pop('cfg_file', None))
         
-        self.reusable_workflow = self._create_reusable_workflow(**opts)
-        """The mask creation reusable workflow."""
-        
-        self.execution_workflow = self._create_execution_workflow(**opts)
-        """The mask creation execution workflow."""
+        self.workflow = self._create_workflow(**opts)
+        """The mask creation workflow."""
     
     def run(self, *inputs):
         """
@@ -91,53 +88,32 @@ class MaskWorkflow(WorkflowBase):
         :return: the mask reconstruction name
         """
         # Set the workflow inputs.
-        exec_wf = self.execution_workflow
-        base_dir = exec_wf.base_dir or os.getcwd()
-        dest = os.path.join(base_dir, 'data')
+        exec_wf = self.workflow
+        dest = os.path.join(exec_wf.base_dir, 'data')
         with xnat_helper.connection() as xnat:
             dl_inputs = [(sbj, sess, self._download_scans(xnat, sbj, sess, dest))
                 for sbj, sess in inputs]
         input_spec = exec_wf.get_node('input_spec')
-        input_spec.iterables = ('session_spec', dl_inputs)
+        in_fields = ['subject' 'session', 'images']
+        input_spec.iterables = self._transpose_iterables(in_fields, dl_inputs)
+        input_spec.synchronize = True
 
         # Execute the workflow
         self._run_workflow(exec_wf)
         
         return MASK_RECON        
     
-    def _create_execution_workflow(self, base_dir=None):
+    def _create_workflow(self, base_dir=None):
         """
-        Creates the mask workflow with an iterable input.
-        
-        :param base_dir: the workflow execution directory
-        :return: the Workflow object
-        """
-        logger.debug('Creating the mask execution workflow...')
-        
-        base_wf = self.reusable_workflow.clone(name='mask_base')
-        
-        exec_wf = pe.Workflow(name='exec_mask', base_dir=base_dir)
-        
-        # The workflow input.
-        unpacked_fields = ['subject', 'session', 'images']
-        # Unpack the input.
-        input_spec = pe.Node(Unpack(input_name='session_spec',
-            output_names=unpacked_fields), name='input_spec')
-        exec_wf.connect(input_spec, 'subject', base_wf, 'input_spec.subject')
-        exec_wf.connect(input_spec, 'session', base_wf, 'input_spec.session')
-        exec_wf.connect(input_spec, 'images', base_wf, 'input_spec.images')
-        
-        return exec_wf
-    
-    def _create_reusable_workflow(self, base_dir=None):
-        """
-        Creates the mask workflow for embedding in an execution workflow.
+        Creates the mask workflow.
         
         :param base_dir: the workflow execution directory
         :return: the Workflow object
         """
         logger.debug('Creating the mask reusable workflow...')
         
+        if not base_dir:
+            base_dir = tempfile.mkdtemp()
         workflow = pe.Workflow(name='mask', base_dir=base_dir)
         
         # The workflow input.
