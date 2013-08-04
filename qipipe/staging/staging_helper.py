@@ -44,6 +44,7 @@ def get_subjects(collection, source, pattern=None):
         ``subject_pattern``)
     :return: the subject name => directory dictionary
     """
+    logger.debug("Detecting %s subjects from %s..." % (collection, source))
     airc_coll = airc.collection_with_name(collection)
     pat = pattern or airc_coll.subject_pattern
     sbj_dir_dict = {}
