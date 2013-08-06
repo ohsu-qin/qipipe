@@ -100,9 +100,9 @@ class WorkflowBase(object):
             # Distribution parameters collected for a debug message.
             log_msg_params = {}
             # The execution setting.
-            if 'execution' in self.configuration:
-                workflow.config['execution'] = self.configuration['execution']
-                log_msg_params.update(self.configuration['execution'])
+            if 'Execution' in self.configuration:
+                workflow.config['execution'] = self.configuration['Execution']
+                log_msg_params.update(self.configuration['Execution'])
             # The Grid Engine setting.
             if 'SGE' in self.configuration:
                 args = dict(plugin='SGE', plugin_args=self.configuration['SGE'])
