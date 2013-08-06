@@ -53,10 +53,11 @@ class TestQIPipeline(object):
     def test_breast(self):
         data = os.getenv('QIN_DATA')
         if data:
-            fixture = os.path.join(RESULTS, 'data', 'breast', 'BreastChemo3')
-            os.makedirs(fixture)
+            fixture = os.path.join(RESULTS, 'data', 'breast')
+            parent = os.path.join(fixture, 'BreastChemo3')
+            os.makedirs(parent)
             src = os.path.join(data, 'Breast_Chemo_Study', 'BreastChemo3', 'Visit1')
-            dest = os.path.join(fixture, 'Visit1')
+            dest = os.path.join(parent, 'Visit1')
             os.symlink(src, dest)
             self._test_collection('Breast', fixture)
         else:
@@ -66,10 +67,11 @@ class TestQIPipeline(object):
     def test_sarcoma(self):
         data = os.getenv('QIN_DATA')
         if data:
-            fixture = os.path.join(RESULTS, 'data', 'sarcoma', 'Subj_1')
-            os.makedirs(fixture)
+            fixture = os.path.join(RESULTS, 'data', 'sarcoma')
+            parent = os.path.join(fixture, 'Subj_1')
+            os.makedirs(parent)
             src = os.path.join(data, 'Sarcoma', 'Subj_1', 'Visit1')
-            dest = os.path.join(fixture, 'Visit1')
+            dest = os.path.join(parent, 'Visit1')
             os.symlink(src, dest)
             self._test_collection('Sarcoma', fixture)
         else:
@@ -91,11 +93,12 @@ class TestQIPipeline(object):
         work = os.path.join(RESULTS, 'work')
         
         # The pipeline options.
-        opts = dict(mask=MASK_CONF, registration=REG_CONF, modeling=MODELING_CONF)
-        
+        opts = dict(mask=MASK_CONF, registration=REG_CONF)
         # Check whether the modeling workflow is executable.
         if not distutils.spawn.find_executable('fastfit'):
             opts['modeling'] = False
+        else
+            opts['modeling'] = MODELING_CONF
         
         # The test subject => directory dictionary.
         sbj_dir_dict = get_subjects(collection, fixture)
