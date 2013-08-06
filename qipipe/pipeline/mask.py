@@ -55,7 +55,7 @@ class MaskWorkflow(WorkflowBase):
     The optional workflow configuration file can contain the following
     sections:
     
-    - ``FSLMriVolCluster``: the
+    - ``fsl.MriVolCluster``: the
         :class:`qipipe.interfaces.mri_volcluster.MriVolCluster`
         interface options
     
@@ -141,7 +141,7 @@ class MaskWorkflow(WorkflowBase):
             crop_back, 'op_string')
         
         # The cluster options.
-        mask_opts = self.configuration.get('FSLMriVolCluster', {})
+        mask_opts = self.configuration.get('fsl.MriVolCluster', {})
         # Find large clusters of empty space on the cropped image.
         cluster_mask = pe.Node(MriVolCluster(**mask_opts), name='cluster_mask')
         workflow.connect(crop_back, 'out_file', cluster_mask, 'in_file')

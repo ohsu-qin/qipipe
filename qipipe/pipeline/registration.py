@@ -109,13 +109,13 @@ class RegistrationWorkflow(WorkflowBase):
     
     The optional workflow configuration file can contain the following sections:
     
-    - ``ANTSAverage``: the ANTS `Average interface`_ options
+    - ``ants.Average``: the ANTS `Average interface`_ options
     
-    - ``ANTSRegistration``: the ANTS `Registration interface`_ options
+    - ``ants.Registration``: the ANTS `Registration interface`_ options
     
-    - ``ANTSApplyTransforms``: the ANTS `ApplyTransform interface`_ options
+    - ``ants.ApplyTransforms``: the ANTS `ApplyTransform interface`_ options
     
-    - ``FSLFNIRT``: the FSL `FNIRT interface`_ options
+    - ``fsl.FNIRT``: the FSL `FNIRT interface`_ options
     
     .. _ANTS: http://stnava.github.io/ANTs/
     .. _ApplyTransform interface: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.ants.resampling.html
@@ -363,7 +363,7 @@ class RegistrationWorkflow(WorkflowBase):
         input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
         
         # The average options.
-        avg_opts = self.configuration.get('ANTSAverage', {})
+        avg_opts = self.configuration.get('ants.Average', {})
         # Make the reference image.
         average = pe.Node(AverageImages(**avg_opts), name='average')
         # The average is taken over the middle three images.
@@ -435,7 +435,7 @@ class RegistrationWorkflow(WorkflowBase):
         
         if not technique or technique.lower() == 'ants':
             # The ANTS registration options.
-            reg_opts = self.configuration.get('ANTSRegistration', {})
+            reg_opts = self.configuration.get('ants.Registration', {})
             # Register the images to create the warp and affine transformations.
             register = pe.Node(Registration(**reg_opts), name='register')
             workflow.connect(input_spec, 'fixed_image', register, 'fixed_image')
@@ -443,7 +443,7 @@ class RegistrationWorkflow(WorkflowBase):
             workflow.connect(input_spec, 'mask', register, 'fixed_image_mask')
             workflow.connect(input_spec, 'mask', register, 'moving_image_mask')
             # The ANTS realign options.
-            apply_opts = self.configuration.get('ANTSApplyTransforms', {})
+            apply_opts = self.configuration.get('ants.ApplyTransforms', {})
             # Apply the transforms to the input image.
             apply_xfm = pe.Node(ApplyTransforms(**apply_opts), name='apply_xfm')
             workflow.connect(input_spec, 'fixed_image', apply_xfm, 'reference_image')
@@ -454,7 +454,7 @@ class RegistrationWorkflow(WorkflowBase):
             workflow.connect(apply_xfm, 'output_image', copy_meta, 'dest_file')
         elif technique.lower() == 'fnirt':
             # The FNIRT registration options.
-            fnirt_opts = self.configuration.get('FSLFNIRT', {})
+            fnirt_opts = self.configuration.get('fsl.FNIRT', {})
             # Register the images.
             fnirt = pe.Node(fsl.FNIRT(**fnirt_opts), name='fnirt')
             workflow.connect(input_spec, 'fixed_image', fnirt, 'ref_file')
