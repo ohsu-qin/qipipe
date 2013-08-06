@@ -31,7 +31,7 @@ def main(argv=sys.argv):
     if args.output:
         opts['dest'] = args.output
     if args.work:
-        opts['work'] = args.work
+        opts['base_dir'] = args.work
     if args.staging != None:
         opts['staging'] = args.staging
     if args.registration != None:
