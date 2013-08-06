@@ -399,7 +399,6 @@ class RegistrationWorkflow(WorkflowBase):
         output_spec = pe.Node(IdentityInterface(fields=out_fields), name='output_spec')
         base_wf.connect(realign_wf, 'output_spec.out_file', output_spec, 'out_file')
         
-        
         return base_wf
 
     def _create_realign_workflow(self, base_dir, technique='ANTS'):
@@ -418,6 +417,7 @@ class RegistrationWorkflow(WorkflowBase):
         in_fields = ['subject', 'session', 'mask', 'fixed_image',
             'moving_image', 'reconstruction']
         input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
+        input_spec.inputs.reconstruction = self._reconstruction
         
         # Make the realigned image file name.
         realign_name_func = Function(input_names=['reconstruction', 'in_file'],
@@ -538,7 +538,8 @@ def _middle(items, proportion_or_length):
                 " exceed 1.0: %s" % proportion_or_length)
         offset = int(len(items) * (proportion_or_length / 2))
     elif isinstance(proportion_or_length, int):
-        offset = max(0, int(proportion_or_length / 2))
+        length = min(len(items), proportion_or_length)
+        offset = int((len(items) - length) / 2)
     else:
         raise ValueError("The _middle proportion_or_length parameter is not"
             " a number: %s" % proportion_or_length)
