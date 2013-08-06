@@ -54,7 +54,7 @@ class TestQIPipeline(object):
         data = os.getenv('QIN_DATA')
         if data:
             fixture = os.path.join(RESULTS, 'data', 'breast')
-            parent = os.path.join(fixture, 'BreastChemo3')
+            parent = os.path.join(fixture, 'BreastChemo1')
             os.makedirs(parent)
             src = os.path.join(data, 'Breast_Chemo_Study', 'BreastChemo3', 'Visit1')
             dest = os.path.join(parent, 'Visit1')
@@ -70,8 +70,8 @@ class TestQIPipeline(object):
             fixture = os.path.join(RESULTS, 'data', 'sarcoma')
             parent = os.path.join(fixture, 'Subj_1')
             os.makedirs(parent)
-            src = os.path.join(data, 'Sarcoma', 'Subj_1', 'Visit1')
-            dest = os.path.join(parent, 'Visit1')
+            src = os.path.join(data, 'Sarcoma', 'Subj_1', 'Visit_1')
+            dest = os.path.join(parent, 'Visit_1')
             os.symlink(src, dest)
             self._test_collection('Sarcoma', fixture)
         else:
@@ -97,7 +97,7 @@ class TestQIPipeline(object):
         # Check whether the modeling workflow is executable.
         if not distutils.spawn.find_executable('fastfit'):
             opts['modeling'] = False
-        else
+        else:
             opts['modeling'] = MODELING_CONF
         
         # The test subject => directory dictionary.
