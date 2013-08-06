@@ -129,10 +129,11 @@ class RegistrationWorkflow(WorkflowBase):
     
     def __init__(self, **opts):
         """
-        If the optional configuration file is specified, then the workflow settings in
-        that file override the default settings.
+        If the optional configuration file is specified, then the workflow
+        settings in that file override the default settings.
         
-        :keyword base_dir: the workflow execution directory (default a new temp directory)
+        :keyword base_dir: the workflow execution directory
+            (default a new temp directory)
         :keyword cfg_file: the optional workflow inputs configuration file
         :keyword technique: the case-insensitive workflow technique
             (``ANTS`` or ``FNIRT``, default ``ANTS``)

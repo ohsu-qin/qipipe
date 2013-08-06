@@ -107,10 +107,11 @@ class ModelingWorkflow(WorkflowBase):
     
     def __init__(self, **opts):
         """
-        If the optional configuration file is specified, then the workflow settings in
-        that file override the default settings.
+        If the optional configuration file is specified, then the workflow
+        settings in that file override the default settings.
         
-        :keyword base_dir: the workflow execution directory (default a new temp directory)
+        :keyword base_dir: the workflow execution directory
+            (default a new temp directory)
         :keyword cfg_file: the optional workflow inputs configuration file
         :keyword r1_0_val: the optional fixed |R10| value
         :keyword max_r1_0: the maximum computed |R10| value, if the fixed |R10|

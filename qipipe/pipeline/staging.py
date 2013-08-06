@@ -115,10 +115,11 @@ class StagingWorkflow(WorkflowBase):
     
     def __init__(self, cfg_file=None, base_dir=None):
         """
-        If the optional configuration file is specified, then the workflow settings in
-        that file override the default settings.
+        If the optional configuration file is specified, then the workflow
+        settings in that file override the default settings.
         
-        :parameter base_dir: the workflow execution directory (default a new temp directory)
+        :parameter base_dir: the workflow execution directory
+            (default a new temp directory)
         :parameter cfg_file: the optional workflow inputs configuration file
         """
         super(StagingWorkflow, self).__init__(logger, cfg_file)

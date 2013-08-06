@@ -70,8 +70,8 @@ class MaskWorkflow(WorkflowBase):
         If the optional configuration file is specified, then the workflow
         settings in that file override the default settings.
         
-        :keyword base_dir: the workflow execution directory (default is a new
-            temp directory)
+        :keyword base_dir: the workflow execution directory
+            (default is a new temp directory)
         :keyword cfg_file: the optional workflow inputs configuration file
         """
         super(MaskWorkflow, self).__init__(logger, opts.pop('cfg_file', None))

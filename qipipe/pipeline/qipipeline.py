@@ -74,6 +74,8 @@ class QIPipelineWorkflow(WorkflowBase):
         the staged scans. If the `modeling` option is set to False, then
         PK modeling is not performed.
         
+        :keyword base_dir: the workflow execution directory
+            (default a new temp directory)
         :keyword staging: the optional staging configuration file
         :keyword mask: the optional mask configuration file, or False to
             halt after staging the files
