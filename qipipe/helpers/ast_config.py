@@ -15,6 +15,7 @@ def read_config(*filenames):
     :raise ValueError: if none of the files could not be read
     """
     cfg = ASTConfig()
+    filenames = [os.path.abspath(fname) for fname in filenames]
     cfg_files = cfg.read(filenames)
     if not cfg_files:
         raise ValueError("Configuration file could not be read: %s" % filenames)
@@ -40,44 +41,50 @@ class ASTConfig(Config):
         parameters = [(1,), (2, 3)]
         two_tailed = false
         threshold = 4.0
-    
+        plugin_args = {'qsub_args': '-pe mpi 48-120'}
     then:
     
     >>> cfg = ASTConfig('tuning.cfg')
     >>> cfg['Tuning']
     {'method': u'FFT', 'parameters' = [(1,), (2, 3)], 'iterations': [[1, 2], 5],
-    'two_tailed': False, 'threshold': 4.0}
+    'two_tailed': False, 'threshold': 4.0,
+    'plugin_args': {'qsub_args': '-pe mpi 48-120'}}
     """
 
-    LIST_PAT = re.compile("""
-        \[      # The left bracket
-        (.*)    # The list items
-        \]$     # The right bracket
-        """, re.VERBOSE)
+    BUNCH_PAT = """
+        \%(left)s   # The left delimiter
+        (.*)        # The list items
+        \%(right)s$ # The right delimiter
+        """
+    """A bunch string pattern."""
+
+    LIST_PAT = re.compile(BUNCH_PAT % dict(left='[', right=']'), re.VERBOSE)
     """A list string pattern."""
 
-    TUPLE_PAT = re.compile("""
-        \(      # The left paren
-        (.*)    # The tuple items
-        \)$     # The right paren
-        """, re.VERBOSE)
+    TUPLE_PAT = re.compile(BUNCH_PAT % dict(left='(', right=')'), re.VERBOSE)
     """A tuple string pattern."""
+
+    DICT_PAT = re.compile(BUNCH_PAT % dict(left='{', right='}'), re.VERBOSE)
+    """A dictionary string pattern."""
     
-    EMBEDDED_LIST_PAT = re.compile("""
-        ([^[]*)     # A prefix without the '[' character
-        (\[.*\])?   # The embedded list
-        ([^]]*)     # A suffix without the ']' character
-        $           # The end of the value
-        """, re.VERBOSE)
+    EMBEDDED_BUNCH_PAT = """
+        ([^%(left)s]*)          # A prefix without the left delimiter
+        (\%(left)s.*\%(right)s)? # The embedded item
+        ([^%(right)s]*)         # A suffix without the right delimiter
+        $                       # The end of the value
+    """
+    
+    EMBEDDED_LIST_PAT = re.compile(EMBEDDED_BUNCH_PAT %
+        dict(left='[', right=']'), re.VERBOSE)
     """A (prefix)(list)(suffix) recognition pattern."""
     
-    EMBEDDED_TUPLE_PAT = re.compile("""
-        ([^(]*)     # A prefix without the '(' character
-        (\(.*\))?   # The embedded tuple
-        ([^)]*)     # A suffix without the ')' character
-        $           # The end of the value
-        """, re.VERBOSE)
+    EMBEDDED_TUPLE_PAT = re.compile(EMBEDDED_BUNCH_PAT %
+        dict(left='(', right=')'), re.VERBOSE)
     """A (prefix)(tuple)(suffix) recognition pattern."""
+    
+    EMBEDDED_DICT_PAT = re.compile(EMBEDDED_BUNCH_PAT %
+        dict(left='{', right='}'), re.VERBOSE)
+    """A (prefix)(dictionary)(suffix) recognition pattern."""
     
     PARSEABLE_ITEM_PAT = re.compile("""
         (
@@ -128,7 +135,7 @@ class ASTConfig(Config):
             ast_value = self._to_ast(s)
             try:
                 return ast.literal_eval(ast_value)
-            except SyntaxError:
+            except Exception:
                 logger.error("Cannot load the configuration entry %s: %s parsed as %s" % (name, s, ast_value))
                 raise
     
@@ -148,8 +155,8 @@ class ASTConfig(Config):
         # If the string is a list, then make a quoted list.
         # Otherwise, if the string signifies a boolean, then return the boolean.
         # Otherwise, quote the content.
-        if ASTConfig.LIST_PAT.match(s) or ASTConfig.TUPLE_PAT.match(s):
-            return self._quote_list_or_tuple(s)
+        if self._is_bunch(s):
+            return self._quote_bunch(s)
         elif s.lower() == 'true':
             return 'True'
         elif s.lower() == 'false':
@@ -159,25 +166,35 @@ class ASTConfig(Config):
         else:
             return '"%s"' % s.replace('"', '\\"')
     
-    def _quote_list_or_tuple(self, s):
-        quoted_items = self._quote_list_content(s[1:-1])
+    def _is_bunch(self, s):
+        return (ASTConfig.LIST_PAT.match(s) or
+                ASTConfig.TUPLE_PAT.match(s) or
+                ASTConfig.DICT_PAT.match(s))
+    
+    def _quote_bunch(self, s):
+        # A dictionary must already be properly quoted.
+        if s[0] == '{':
+            return s
+        quoted_items = self._quote_bunch_content(s[1:-1])
         if len(quoted_items) == 1:
             quoted_items.append('')
         return s[0] + ', '.join(quoted_items) + s[-1]
     
-    def _quote_list_content(self, s):
+    def _quote_bunch_content(self, s):
         """
         :param s: the comma-separated items
-        :return: the list of quoted items
+        :return: the bunch of quoted items
         """
         pre, mid, post = ASTConfig.EMBEDDED_LIST_PAT.match(s).groups()
         if not mid:
             pre, mid, post = ASTConfig.EMBEDDED_TUPLE_PAT.match(s).groups()
+        if not mid:
+            pre, mid, post = ASTConfig.EMBEDDED_DICT_PAT.match(s).groups()
         if mid:
             items = []
             if pre:
-                items.extend(self._quote_list_content(pre))
-            # Balance the left and right bracket or paren.
+                items.extend(self._quote_bunch_content(pre))
+            # Balance the left and right delimiter.
             left = mid[0]
             right = mid[-1]
             count = 1
@@ -190,12 +207,12 @@ class ASTConfig(Config):
                 i = i + 1
             post = mid[i:] + post
             mid = mid[0:i]
-            items.append(self._quote_list_or_tuple(mid))
+            items.append(self._quote_bunch(mid))
             if post:
-                items.extend(self._quote_list_content(post))
+                items.extend(self._quote_bunch_content(post))
             return items
         else:
-            # No embedded list.
+            # No embedded bunch.
             items = re.split('\s*,\s*', s)
             quoted_items = [self._to_ast(item) for item in items if item]
             return quoted_items
