@@ -19,6 +19,12 @@ class TestCollectionHelper:
         assert_equal('1, 2 or 3', to_series([1, 2, 3], 'or'), "Series formatter with conjunction incorrect")
         assert_equal('1', to_series([1]), "Singleton series formatter incorrect")
         assert_equal('', to_series([]), "Empty series formatter incorrect")
+    
+    def test_immutable_dict(self):
+        idict = ImmutableDict(foo='bar')
+        assert_equal('bar', idict['foo'], "Value was not set.")
+        with assert_raises(NotImplementedError):
+            idict['foo'] = 'baz'
 
 
 if __name__ == "__main__":

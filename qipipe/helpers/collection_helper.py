@@ -26,3 +26,26 @@ def to_series(items, conjunction='and'):
         return suffix
     else:
         return (' ' + conjunction + ' ').join([prefix, suffix])
+
+class ImmutableDict(dict):
+    """
+    ImmutableDict is a dictionary that cannot be changed after creation.
+    
+    An ImmutableDict is *not* hashable and therefore cannot be used as a dictionary
+    key or set member. See http://www.python.org/dev/peps/pep-0351 for the rationale.
+    """
+    
+    def __int__(*args, **kwargs):
+        super(ImmutableDict, self).__init__(*args, **kwargs)
+    
+    def __setitem__(self, key, value):
+        """
+        :raise NotImplementedError: always
+        """
+        raise NotImplementedError("The dictionary is immutable: %s" % self)
+
+EMPTY_DICT = ImmutableDict()
+"""
+An immutable empty dictionary.
+This constant serves as an efficient method return default value.
+"""
