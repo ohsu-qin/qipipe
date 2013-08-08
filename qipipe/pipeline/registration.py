@@ -1,8 +1,7 @@
 import os, re, tempfile
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Merge, Function)
-from nipype.interfaces.ants.registration import Registration
-from nipype.interfaces.ants import (AverageImages, ApplyTransforms)
+from nipype.interfaces.ants import (AverageImages, Registration, ApplyTransforms)
 from nipype.interfaces import fsl
 from nipype.interfaces.dcmstack import (DcmStack, CopyMeta)
 from ..helpers.project import project
@@ -107,9 +106,10 @@ class RegistrationWorkflow(WorkflowBase):
     
     - FSL_ FNIRT_ non-linear registration
     
-    The optional workflow configuration file can contain the following sections:
+    The optional workflow configuration file can contain overrides for the
+    Nipype interface inputs in the following sections:
     
-    - ``ants.Average``: the ANTS `Average interface`_ options
+    - ``ants.AverageImages``: the ANTS `Average interface`_ options
     
     - ``ants.Registration``: the ANTS `Registration interface`_ options
     
@@ -140,7 +140,7 @@ class RegistrationWorkflow(WorkflowBase):
         """
         super(RegistrationWorkflow, self).__init__(logger, opts.pop('cfg_file', None))
         
-        self._reconstruction = self._generate_reconstruction_name()
+        self.reconstruction = self._generate_reconstruction_name()
         """The XNAT reconstruction name used for all runs against this workflow
         instance."""
         
@@ -172,7 +172,7 @@ class RegistrationWorkflow(WorkflowBase):
         for sbj, sess in inputs:
             self._register(sbj, sess)
         
-        return self._reconstruction
+        return self.reconstruction
     
     def _generate_reconstruction_name(self):
         """
@@ -362,10 +362,8 @@ class RegistrationWorkflow(WorkflowBase):
         in_fields = ['subject', 'session', 'images', 'mask']
         input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
         
-        # The average options.
-        avg_opts = self.configuration.get('ants.Average', {})
         # Make the reference image.
-        average = pe.Node(AverageImages(**avg_opts), name='average')
+        average = pe.Node(AverageImages(), name='average')
         # The average is taken over the middle three images.
         base_wf.connect(input_spec, ('images', _middle, 3), average, 'images')
         
@@ -389,7 +387,7 @@ class RegistrationWorkflow(WorkflowBase):
         
         # Upload the realigned image to XNAT.
         upload_reg = pe.Node(XNATUpload(project=project(),
-            reconstruction=self._reconstruction, format='NIFTI'), name='upload_reg')
+            reconstruction=self.reconstruction, format='NIFTI'), name='upload_reg')
         base_wf.connect(input_spec, 'subject', upload_reg, 'subject')
         base_wf.connect(input_spec, 'session', upload_reg, 'session')
         base_wf.connect(realign_wf, 'output_spec.out_file', upload_reg, 'in_files')
@@ -399,6 +397,8 @@ class RegistrationWorkflow(WorkflowBase):
         out_fields = ['out_file', 'reconstruction']
         output_spec = pe.Node(IdentityInterface(fields=out_fields), name='output_spec')
         base_wf.connect(realign_wf, 'output_spec.out_file', output_spec, 'out_file')
+        
+        self._configure_nodes(base_wf, average, mask_ref)
         
         return base_wf
 
@@ -412,58 +412,59 @@ class RegistrationWorkflow(WorkflowBase):
         """
         logger.debug('Creating the realign workflow...')
         
-        workflow = pe.Workflow(name='realign', base_dir=base_dir)
+        realign_wf = pe.Workflow(name='realign', base_dir=base_dir)
         
         # The workflow input image iterator.
         in_fields = ['subject', 'session', 'mask', 'fixed_image',
             'moving_image', 'reconstruction']
         input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
-        input_spec.inputs.reconstruction = self._reconstruction
+        input_spec.inputs.reconstruction = self.reconstruction
         
         # Make the realigned image file name.
         realign_name_func = Function(input_names=['reconstruction', 'in_file'],
-            output_names=['out_file'],
-            function=_gen_realign_filename)
+            output_names=['out_file'], function=_gen_realign_filename)
         realign_name = pe.Node(realign_name_func, name='realign_name')
-        workflow.connect(input_spec, 'reconstruction', realign_name, 'reconstruction')
-        workflow.connect(input_spec, 'moving_image', realign_name, 'in_file')
+        realign_wf.connect(input_spec, 'reconstruction', realign_name, 'reconstruction')
+        realign_wf.connect(input_spec, 'moving_image', realign_name, 'in_file')
         
         # Copy the DICOM meta-data. The copy target is set by the technique
         # node defined below.
         copy_meta = pe.Node(CopyMeta(), name='copy_meta')
-        workflow.connect(input_spec, 'moving_image', copy_meta, 'src_file')
+        realign_wf.connect(input_spec, 'moving_image', copy_meta, 'src_file')
         
         if not technique or technique.lower() == 'ants':
-            # The ANTS registration options.
-            reg_opts = self.configuration.get('ants.Registration', {})
+            # Setting the registration metric and metric_weight inputs after the
+            # node is created results in a Nipype input trait dependency warning.
+            # Avoid this warning by setting these inputs in the constructor
+            # from the values in the configuration.
+            reg_cfg = self._interface_configuration(Registration)
+            metric_inputs = {field: reg_cfg[field]
+                for field in ['metric', 'metric_weight']
+                if field in reg_cfg}
             # Register the images to create the warp and affine transformations.
-            register = pe.Node(Registration(**reg_opts), name='register')
-            workflow.connect(input_spec, 'fixed_image', register, 'fixed_image')
-            workflow.connect(input_spec, 'moving_image', register, 'moving_image')
-            workflow.connect(input_spec, 'mask', register, 'fixed_image_mask')
-            workflow.connect(input_spec, 'mask', register, 'moving_image_mask')
-            # The ANTS realign options.
-            apply_opts = self.configuration.get('ants.ApplyTransforms', {})
+            register = pe.Node(Registration(**metric_inputs), name='register')
+            realign_wf.connect(input_spec, 'fixed_image', register, 'fixed_image')
+            realign_wf.connect(input_spec, 'moving_image', register, 'moving_image')
+            realign_wf.connect(input_spec, 'mask', register, 'fixed_image_mask')
+            realign_wf.connect(input_spec, 'mask', register, 'moving_image_mask')
             # Apply the transforms to the input image.
-            apply_xfm = pe.Node(ApplyTransforms(**apply_opts), name='apply_xfm')
-            workflow.connect(input_spec, 'fixed_image', apply_xfm, 'reference_image')
-            workflow.connect(input_spec, 'moving_image', apply_xfm, 'input_image')
-            workflow.connect(realign_name, 'out_file', apply_xfm, 'output_image')
-            workflow.connect(register, 'forward_transforms', apply_xfm, 'transforms')
+            apply_xfm = pe.Node(ApplyTransforms(), name='apply_xfm')
+            realign_wf.connect(input_spec, 'fixed_image', apply_xfm, 'reference_image')
+            realign_wf.connect(input_spec, 'moving_image', apply_xfm, 'input_image')
+            realign_wf.connect(realign_name, 'out_file', apply_xfm, 'output_image')
+            realign_wf.connect(register, 'forward_transforms', apply_xfm, 'transforms')
             # Copy the meta-data.
-            workflow.connect(apply_xfm, 'output_image', copy_meta, 'dest_file')
+            realign_wf.connect(apply_xfm, 'output_image', copy_meta, 'dest_file')
         elif technique.lower() == 'fnirt':
-            # The FNIRT registration options.
-            fnirt_opts = self.configuration.get('fsl.FNIRT', {})
             # Register the images.
-            fnirt = pe.Node(fsl.FNIRT(**fnirt_opts), name='fnirt')
-            workflow.connect(input_spec, 'fixed_image', fnirt, 'ref_file')
-            workflow.connect(input_spec, 'moving_image', fnirt, 'in_file')
-            workflow.connect(input_spec, 'mask', fnirt, 'inmask_file')
-            workflow.connect(input_spec, 'mask', fnirt, 'refmask_file')
-            workflow.connect(realign_name, 'out_file', fnirt, 'warped_file')
+            fnirt = pe.Node(fsl.FNIRT(), name='fnirt')
+            realign_wf.connect(input_spec, 'fixed_image', fnirt, 'ref_file')
+            realign_wf.connect(input_spec, 'moving_image', fnirt, 'in_file')
+            realign_wf.connect(input_spec, 'mask', fnirt, 'inmask_file')
+            realign_wf.connect(input_spec, 'mask', fnirt, 'refmask_file')
+            realign_wf.connect(realign_name, 'out_file', fnirt, 'warped_file')
             # Copy the meta-data.
-            workflow.connect(fnirt, 'warped_file', copy_meta, 'dest_file')
+            realign_wf.connect(fnirt, 'warped_file', copy_meta, 'dest_file')
         else:
             raise ValueError("Registration technique not recognized: %s" %
                 technique)
@@ -471,9 +472,11 @@ class RegistrationWorkflow(WorkflowBase):
         # The output is the realigned images.
         output_spec = pe.Node(IdentityInterface(fields=['out_file']),
             name='output_spec')
-        workflow.connect(copy_meta, 'dest_file', output_spec, 'out_file')
+        realign_wf.connect(copy_meta, 'dest_file', output_spec, 'out_file')
         
-        return workflow
+        self._configure_nodes(realign_wf)
+        
+        return realign_wf
 
 
 ### Utility functions called by workflow nodes. ###

@@ -1,8 +1,10 @@
-import os, re
+import os, re, tempfile
+from collections import defaultdict
 import logging
 import nipype.pipeline.engine as pe
 from ..helpers.project import project
 from ..helpers import xnat_helper
+from ..helpers.collection_helper import EMPTY_DICT
 from ..helpers.ast_config import read_config
 from .distributable import DISTRIBUTABLE
 
@@ -16,6 +18,22 @@ class WorkflowBase(object):
     
     DEF_CONF_DIR = os.path.join(os.path.dirname(__file__),'..', '..', 'conf')
     """The default configuration directory."""
+    
+    INTERFACE_PREFIX_PAT = re.compile('(\w+\.)+interfaces?\.?')
+    """Regexp matcher for an interface module."""
+    
+    MODULE_PREFIX_PAT = re.compile('^((\w+\.)*)(\w+\.)(\w+)$')
+    """
+    Regexp matcher for a module prefix.
+    
+    Example:
+    
+    >>> from qipipe.pipeline.workflow_base import WorkflowBase
+    >>> WorkflowBase.MODULE_PREFIX_PAT.match('ants.util.AverageImages').groups()
+    ('ants.', 'ants.', 'util.', 'AverageImages')
+    >>> WorkflowBase.MODULE_PREFIX_PAT.match('AverageImages')
+    None
+    """
     
     def __init__(self, logger, cfg_file=None):
         """
@@ -51,9 +69,9 @@ class WorkflowBase(object):
         # The configuration files to load.
         cfg_files = []
         if os.path.exists(def_cfg_file):
-            cfg_files.append(def_cfg_file)
+            cfg_files.append(os.path.abspath(def_cfg_file))
         if cfg_file:
-            cfg_files.append(cfg_file)
+            cfg_files.append(os.path.abspath(cfg_file))
         
         # Load the configuration.
         if cfg_files:
@@ -93,26 +111,156 @@ class WorkflowBase(object):
         
         :param workflow: the workflow to run
         """
-        # The workflow submission arguments.
-        args = {}
         # Check whether the workflow can be distributed.
         if DISTRIBUTABLE:
-            # Distribution parameters collected for a debug message.
-            log_msg_params = {}
-            # The execution setting.
-            if 'Execution' in self.configuration:
-                workflow.config['execution'] = self.configuration['Execution']
-                log_msg_params.update(self.configuration['Execution'])
-            # The Grid Engine setting.
-            if 'SGE' in self.configuration:
-                args = dict(plugin='SGE', plugin_args=self.configuration['SGE'])
-                log_msg_params.update(self.configuration['SGE'])
-            # Print a debug message.
-            if log_msg_params:
-                self.logger.debug("Submitting the %s workflow to the Grid Engine with parameters %s..." %
-                    (workflow.name, log_msg_params))
+            args = self._configure_plugin(workflow)
+        else:
+            args = {}
+        
+        # Set the base directory to an absolute path.
+        if workflow.base_dir:
+            workflow.base_dir = os.path.abspath(workflow.base_dir)
+        else:
+            workflow.base_dir = tempfile.mkdtemp()
         
         # Run the workflow.
-        self.logger.debug("Executing the workflow %s" % workflow.name)
+        self.logger.debug("Executing the workflow %s in %s..." %
+            (workflow.name, workflow.base_dir))
         with xnat_helper.connection():
-            workflow.run(**args)
+            pass #workflow.run(**args)
+        
+    def _configure_plugin(self, workflow):
+        """
+        Sets the ``execution`` and ``SGE`` parameters for the given workflow.
+        See the ``conf`` directory files for examples.
+        
+        :param workflow: the workflow to run
+        :return: the workflow execution arguments
+        """
+        # The workflow submission arguments.
+        # The execution setting.
+        if 'Execution' in self.configuration:
+            workflow.config['execution'] = self.configuration['Execution']
+            self.logger.debug("Workflow %s execution parameter: %s." %
+                (workflow.name, workflow.config['execution']))
+        # The Grid Engine setting.
+        if 'SGE' in self.configuration:
+            args = dict(plugin='SGE', **self.configuration['SGE'])
+            self.logger.debug("Workflow %s plug-in parameters: %s." %
+                (workflow.name, args))
+        else:
+            args = {}
+        
+        # Print the node plugin arguments.
+        detail = {}
+        for node_name in workflow.list_node_names():
+            node = workflow.get_node(node_name)
+            if node.plugin_args:
+                detail[node_name] = node.plugin_args
+        # Print a debug message.
+        if detail:
+            self.logger.debug("Workflow %s node plug-in arguments: %s." %
+                (workflow.name, detail))
+        
+        return args
+    
+    def _inspect_workflow_inputs(self, workflow):
+        """
+        Collects the given workflow nodes' inputs for debugging.
+        
+        :return: a {node name: parameters} dictionary, where *parameters*
+            is a node parameter {name: value} dictionary
+        """
+        return {node_name: self._inspect_node_inputs(workflow.get_node(node_name))
+            for node_name in workflow.list_node_names()}
+    
+    def _inspect_node_inputs(self, node):
+        """
+        Collects the given node inputs and plugin arguments for debugging.
+        
+        :return: the node parameter {name: value} dictionary
+        """
+        fields = node.inputs.copyable_trait_names()
+        param_dict = {}
+        for field in fields:
+            value = getattr(node.inputs, field)
+            if value != None:
+                param_dict[field] = value
+        
+        return param_dict
+        
+    def _configure_nodes(self, workflow, *nodes):
+        """
+        Sets the input parameters defined for the given workflow in
+        this WorkflowBase's configuration.
+        
+        See :meth:`qipipe.pipeline.WorkflowBase._node_input_configuration`
+        
+        :param workflow: the workflow containing the nodes
+        :param nodes: the nodes to configure (default all nodes)
+        """
+        # A {node: {field: value}} dictionary to format a debug log message.
+        input_dict = defaultdict(dict)
+        if not nodes:
+            nodes = [workflow.get_node(name)
+                for name in workflow.list_node_names()]
+        for node in nodes:
+            cfg = self._interface_configuration(node.interface.__class__)
+            for attr, value in cfg.iteritems():
+                if attr == 'plugin_args':
+                    if DISTRIBUTABLE:
+                        setattr(node, attr, value)
+                elif value != getattr(node.inputs, attr):
+                    # The config value differs from the default value.
+                    # Set the field to the config value and collect it
+                    # for the debug log message.
+                    setattr(node.inputs, attr, value)
+                    input_dict[node.name][attr] = value
+        # If a field was set to a config value, then print the config
+        # setting to the log.
+        if input_dict:
+            # A prefix to strip off the node name.
+            prefix = workflow.name + '.'
+            self.logger.debug("The following %s workflow inputs were set "
+                "from the configuration:" % workflow.name)
+            for node_name, values in input_dict.iteritems():
+                name = node_name.replace(prefix, '')
+                self.logger.debug("  %s: %s" % (name, values))
+    
+    def _interface_configuration(self, klass):
+        """
+        Returns the {parameter: value} dictionary defined for the given
+        interface class in this WorkflowBase's configuration. The
+        configuration topic matches the module path of the interface class
+        name. The topic can elide the ``interfaces`` or ``interface`` prefix,
+        e.g.:
+        
+            [nipype.interfaces.ants.AverageImages]
+            [ants.AverageImages]
+
+        both refer to the ANTS AverageImages interface.
+
+        :param node: the interface class to check
+        :return: the corresponding {field: value} dictionary
+        """
+        topic = "%s.%s" % (klass.__module__,
+                           klass.__name__)
+        if topic in self.configuration:
+            return self.configuration[topic]
+        elif WorkflowBase.INTERFACE_PREFIX_PAT.match(topic):
+            # A parent module might import the class. Therefore,
+            # strip out the last module and retry.
+            abbr = WorkflowBase.INTERFACE_PREFIX_PAT.sub('', topic)
+            while abbr:
+                if abbr in self.configuration:
+                    return self.configuration[abbr]
+                match = WorkflowBase.MODULE_PREFIX_PAT.match(abbr)
+                if match:
+                    prefix, _, _, name = match.groups()
+                    abbr = prefix + name
+                else:
+                    abbr = None
+        
+        # Use a constant for the default return value, since most
+        # interfaces do not have a configuration entry.
+        return EMPTY_DICT

@@ -141,9 +141,8 @@ class MaskWorkflow(WorkflowBase):
             crop_back, 'op_string')
         
         # The cluster options.
-        mask_opts = self.configuration.get('fsl.MriVolCluster', {})
         # Find large clusters of empty space on the cropped image.
-        cluster_mask = pe.Node(MriVolCluster(**mask_opts), name='cluster_mask')
+        cluster_mask = pe.Node(MriVolCluster(), name='cluster_mask')
         workflow.connect(crop_back, 'out_file', cluster_mask, 'in_file')
         
         # Convert the cluster labels to a binary mask.
@@ -178,6 +177,8 @@ class MaskWorkflow(WorkflowBase):
         output_spec = pe.Node(IdentityInterface(fields=out_fields),
             name='output_spec')
         workflow.connect(inv_mask, 'out_file', output_spec, 'out_file')
+        
+        self._configure_nodes(workflow)
         
         return workflow
 

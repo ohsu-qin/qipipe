@@ -123,9 +123,9 @@ class ModelingWorkflow(WorkflowBase):
         """
         super(ModelingWorkflow, self).__init__(logger, opts.pop('cfg_file', None))
         
-        self.analysis = "%s_%s" % (PK_PREFIX, file_helper.generate_file_name())
+        self.assessor = "%s_%s" % (PK_PREFIX, file_helper.generate_file_name())
         """
-        The XNAT assessment name for all executions of this
+        The XNAT assessor name for all executions of this
         :class:`qipipe.pipeline.modeling.ModelingWorkflow` instance. The name
         is unique, which permits more than one model to be stored for each input
         series without a name conflict.
@@ -312,7 +312,7 @@ class ModelingWorkflow(WorkflowBase):
         
         # The output is the base outputs and the XNAT analysis name.
         out_fields = ['analysis'] + base_out_fields
-        output_xfc = IdentityInterface(fields=out_fields, analysis=self.analysis)
+        output_xfc = IdentityInterface(fields=out_fields, analysis=self.assessor)
         output_spec = pe.Node(output_xfc, name='output_spec')
         for field in base_out_fields:
             base_field = 'output_spec.' + field
@@ -332,7 +332,7 @@ class ModelingWorkflow(WorkflowBase):
         :param resource: the modeling parameter resource name
         :return: the modeling parameter XNAT upload node
         """
-        upload_xfc = XNATUpload(project=project(), assessor=self.analysis, resource=resource)
+        upload_xfc = XNATUpload(project=project(), assessor=self.assessor, resource=resource)
         name = 'upload_' + resource
         
         return pe.Node(upload_xfc, name=name)
@@ -477,13 +477,8 @@ class ModelingWorkflow(WorkflowBase):
         workflow.connect(copy_meta, 'dest_file', pk_map, 'target_data')
         workflow.connect(input_spec, 'mask', pk_map, 'mask')
         workflow.connect(get_params, 'params_csv', pk_map, 'params_csv')
-        # Set the distributable MPI parameters.
-        if DISTRIBUTABLE and 'FastFit' in config:
-            qsub_args = config['FastFit'].get('qsub_args', {})
-            if qsub_args:
-                pk_map.inputs.use_mpi = True
-                pk_map.plugin_args = dict(qsub_args=qsub_args, overwrite=True)
-                logger.debug("FastFit MPI parameters: %s" % qsub_args)
+        # Set the MPI flag.
+        pk_map.inputs.use_mpi = DISTRIBUTABLE
         
         # Set up the outputs.
         outputs = ['r1_series', 'pk_params', 'k_trans', 'v_e', 'tau_i']
@@ -500,6 +495,8 @@ class ModelingWorkflow(WorkflowBase):
             workflow.connect(pd_stack, 'out_file', output_spec, 'pdw_image')
             workflow.connect(make_base, 'baseline_nii', output_spec, 'dce_baseline')
             workflow.connect(get_r1_0, 'r1_0_map', output_spec, 'r1_0')
+        
+        self._configure_nodes(workflow)
         
         return workflow
 

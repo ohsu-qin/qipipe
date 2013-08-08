@@ -25,7 +25,11 @@ def run(*inputs, **opts):
     :return: the :meth:`qipipe.pipeline.qipipeline.QIPipelineWorkflow.run`
         result
     """
-    return QIPipelineWorkflow(**opts).run(*inputs)
+    # dest is a run option.
+    run_opts = {}
+    if 'dest' in opts:
+        run_opts['dest'] = opts.pop('dest')
+    return QIPipelineWorkflow(**opts).run(*inputs, **run_opts)
 
 
 class QIPipelineWorkflow(WorkflowBase):
@@ -85,13 +89,19 @@ class QIPipelineWorkflow(WorkflowBase):
             False to skip modeling
         """
         super(QIPipelineWorkflow, self).__init__(logger)
-
+        
         self.workflow = self._create_workflow(**opts)
         """
         The pipeline execution workflow. The execution workflow is executed by
         calling the :meth:`qipipe.pipeline.modeling.QIPipelineWorkflow.run`
         method.
         """
+        
+        self.registration_reconstruction = None
+        """The registration XNAT reconstruction name."""
+        
+        mdl_anl = self.modeling_assessor = None
+        """The modeling XNAT assessor name."""
     
     def run(self, collection, *inputs, **opts):
         """
@@ -111,11 +121,11 @@ class QIPipelineWorkflow(WorkflowBase):
         :param collection: the AIRC image collection name
         :param inputs: the AIRC source subject directories to stage
         :param opts: the following workflow execution options:
-        :keyword dest: the TCIA upload destination directory (default current
-            working directory)
+        :keyword dest: the TCIA upload destination directory
+            (default current working directory)
         :return: the (subject, session) XNAT names for the new sessions
         """
-        # The AIRC series not yet uploaded to XNAT.
+        # The AIRC series which are not yet uploaded to XNAT.
         new_series = detect_new_visits(collection, *inputs)
         if not new_series:
             return []
@@ -136,9 +146,9 @@ class QIPipelineWorkflow(WorkflowBase):
             dest = os.path.abspath(opts['dest'])
         else:
             dest = os.path.join(os.getcwd(), 'data')
-
+        
         # Set the workflow (collection, destination, subjects) input.
-        exec_wf = opts.get('workflow', self.workflow)
+        exec_wf = self.workflow
         input_spec = exec_wf.get_node('input_spec')
         input_spec.inputs.collection = collection
         input_spec.inputs.dest = dest
@@ -160,8 +170,10 @@ class QIPipelineWorkflow(WorkflowBase):
         # Run the staging workflow.
         self._run_workflow(self.workflow)
         
-        # Return the new XNAT (subject, session) tuples.
-        return new_sessions
+        # Return the new XNAT (subject, session, reconstruction, analysis) tuples.
+        reg_recon = self.registration_reconstruction
+        mdl_anl = self.modeling_assessor
+        return [(sbj, sess, reg_recon, mdl_anl) for sbj, sess in new_sessions]
     
     def _create_workflow(self, **opts):
         """
@@ -192,7 +204,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 "to False.")
             mask_wf = reg_wf = mdl_wf = None
         else:
-            mask_wf_gen = self._workflow_generator(MaskWorkflow, base_dir=base_dir)
+            mask_wf_gen = self._workflow_generator(MaskWorkflow, base_dir, mask_opt)
             mask_wf = mask_wf_gen.workflow
             
             # The registration workflow.
@@ -202,9 +214,10 @@ class QIPipelineWorkflow(WorkflowBase):
                     "option is set to False.")
                 reg_wf = None
             else:
-                reg_wf_gen = self._workflow_generator(RegistrationWorkflow,
-                    base_dir, reg_opt)
+                reg_wf_gen = self._workflow_generator(RegistrationWorkflow, base_dir,
+                    reg_opt)
                 reg_wf = reg_wf_gen.reusable_workflow
+                self.registration_reconstruction = reg_wf_gen.reconstruction
             
             # The modeling workflow.
             mdl_opt = opts.get('modeling', None)
@@ -213,9 +226,10 @@ class QIPipelineWorkflow(WorkflowBase):
                     "set to False.")
                 mdl_wf = None
             else:
-                mdl_wf_gen = self._workflow_generator(ModelingWorkflow,
-                    base_dir, mdl_opt)
+                mdl_wf_gen = self._workflow_generator(ModelingWorkflow, base_dir,
+                    mdl_opt)
                 mdl_wf = mdl_wf_gen.reusable_workflow
+                self.modeling_assessor = mdl_wf_gen.assessor
         
         # The non-iterable workflow inputs.
         in_fields = ['collection', 'dest', 'subjects']

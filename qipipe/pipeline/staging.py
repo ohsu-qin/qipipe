@@ -264,6 +264,8 @@ class StagingWorkflow(WorkflowBase):
             name='output_spec')
         workflow.connect(stack, 'out_file', output_spec, 'out_file')
         
+        self._configure_nodes(workflow)
+        
         return workflow
 
 
