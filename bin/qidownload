@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Runs the QIN registration pipeline.
+Downloads files from XNAT.
 """
 
 import sys, os, re
@@ -27,16 +27,17 @@ def main(argv=sys.argv):
     from qipipe.helpers import xnat_helper
     from qipipe.interfaces import XNATDownload
     
-    # The options.
-    dest = args.output
+    # The download options.
     if args.reconstruction:
-        tgt_opts = dict(reconstruction=args.reconstruction)
-    elif args.assessor
-        tgt_opts = dict(assessor=args.assessor)
-    else
-        tgt_opts = {}
+        dl_opts = dict(reconstruction=args.reconstruction)
+    elif args.assessor:
+        dl_opts = dict(assessor=args.assessor)
+    else:
+        dl_opts = {}
     if args.format:
-        tgt_opts['format'] = args.format
+        dl_opts['format'] = args.format
+    if args.output:
+        dl_opts['dest'] = args.output
     
     # Parse the XNAT session label arguments.
     prj_sess_dict = _parse_session_labels(args.sessions)
@@ -44,9 +45,10 @@ def main(argv=sys.argv):
     with xnat_helper.connection() as xnat:
     for prj, sessions in prj_sess_dict.iteritems():
         for sbj, sess in sessions:
-            tgt_dir = os.path.join(dest, prj, sbj, sess, **tgt_opts)
+            tgt_dir = os.path.join(dest, prj, sbj, sess)
             # Download the files.
-            XNATDownload(dest=tgt_dir)
+            download = XNATDownload(**dl_opts)
+            result = download.run()
     
     return 0
 
