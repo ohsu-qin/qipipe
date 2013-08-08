@@ -6,12 +6,13 @@ from ..helpers import xnat_helper
 
 class XNATDownloadInputSpec(BaseInterfaceInputSpec):
     project = traits.Str(mandatory=True, desc='The XNAT project id')
-
+    
     subject = traits.Str(mandatory=True, desc='The XNAT subject name')
-
+    
     session = traits.Str(mandatory=True, desc='The XNAT session name')
     
-    scan = traits.Either(traits.Str, traits.Int, desc='The XNAT scan label or number')
+    scan = traits.Either(traits.Str, traits.Int,
+        desc='The XNAT scan label or number')
     
     reconstruction = traits.Str(desc='The XNAT reconstruction name')
     
@@ -35,12 +36,37 @@ class XNATDownload(BaseInterface):
     """
     The ``XNATDownload`` Nipype interface wraps the
     :meth:`qipipe.helpers.xnat_helper.download` method.
+    
+    Examples
+    --------
+    >>> # Download the scan NiFTI files.
+    >>> from qipipe.interfaces import XNATDownload
+    >>> XNATDownload(project='QIN', subject='BreastChemo003',
+    ...     session='Session02', dest='data').run()
+    
+    >>> # Download the scan DICOM files.
+    >>> from qipipe.interfaces import XNATDownload
+    >>> XNATDownload(project='QIN', subject='BreastChemo003',
+    ...     session='Session02', format='DICOM',
+    ...     dest='data').run()
+    
+    >>> # Download the XNAT registration result reg_H3pIz4s.
+    >>> from qipipe.interfaces import XNATDownload
+    >>> XNATDownload(project='QIN', subject='BreastChemo003',
+    ...     session='Session02', reconstruction='reg_H3pIz4',
+    ...     dest='data').run()
+    
+    >>> # Download the XNAT modeling result pk_r8C4dY.
+    >>> from qipipe.interfaces import XNATDownload
+    >>> XNATDownload(project='QIN', subject='BreastChemo003',
+    ...     session='Session02', assessor='pk_r8C4dY',
+    ...     dest='data').run()
     """
     
     input_spec = XNATDownloadInputSpec
     
     output_spec = XNATDownloadOutputSpec
-
+    
     def _run_interface(self, runtime):
         opts = {}
         for ctr_type in ['container_type', 'scan', 'reconstruction', 'assessor']:
@@ -57,7 +83,7 @@ class XNATDownload(BaseInterface):
                 self.inputs.subject, self.inputs.session, **opts)
         
         return runtime
-
+    
     def _list_outputs(self):
         outputs = self._outputs().get()
         outputs['out_files'] = self._out_files
