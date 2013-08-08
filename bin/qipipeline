@@ -94,7 +94,7 @@ def _parse_arguments():
     reg_grp = parser.add_mutually_exclusive_group()
     reg_grp.add_argument('--registration', help="the registration configuration file",
         metavar='FILE', dest='registration')
-    reg_grp.add_argument('--no-registration', help='don't' perform the registration workflow',
+    reg_grp.add_argument('--no-registration', help="don't' perform the registration workflow",
         dest='registration', action='store_false')
     modeling_grp = parser.add_mutually_exclusive_group()
     modeling_grp.add_argument('--modeling', help="the modeling configuration file",
