@@ -287,9 +287,12 @@ def _group_sessions_by_series(*session_specs):
                 " %s %s session source directory." % (sbj, sess))
         # Collect the (subject, session, series, dicom_files) tuples.
         for ser, dcm in ser_dcm_dict.iteritems():
-            logger.debug("The staging workflow will iterate over subject %s"
-                " session %s series %s." % (sbj, sess, ser))
             ser_specs.append((sbj, sess, ser, dcm))
+    if ser_specs:
+        ser_names = ["%s %s series %d" % (sbj, sess, ser)
+            for sbj, sess, ser, _ in ser_specs]
+        logger.debug("The staging workflow will iterate over the following "
+            " series: %s." % ', '.join(ser_names))
     
     return ser_specs
 
