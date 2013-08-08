@@ -34,6 +34,8 @@ def main(argv=sys.argv):
         opts['base_dir'] = args.work
     if args.staging != None:
         opts['staging'] = args.staging
+    if args.mask != None:
+        opts['mask'] = args.mask
     if args.registration != None:
         opts['registration'] = args.registration
     if args.modeling != None:
@@ -84,10 +86,15 @@ def _parse_arguments():
     # The workflow configurations.
     parser.add_argument('--staging', help="the staging configuration file",
          metavar='FILE', dest='staging')
+    mask_grp = parser.add_mutually_exclusive_group()
+    mask_grp.add_argument('--mask', help="the mask configuration file",
+        metavar='FILE', dest='mask')
+    mask_grp.add_argument('--no-mask', help='only perform the staging workflow',
+        dest='mask', action='store_false')
     reg_grp = parser.add_mutually_exclusive_group()
     reg_grp.add_argument('--registration', help="the registration configuration file",
         metavar='FILE', dest='registration')
-    reg_grp.add_argument('--no-registration', help='only perform the staging workflow',
+    reg_grp.add_argument('--no-registration', help='don't' perform the registration workflow',
         dest='registration', action='store_false')
     modeling_grp = parser.add_mutually_exclusive_group()
     modeling_grp.add_argument('--modeling', help="the modeling configuration file",
