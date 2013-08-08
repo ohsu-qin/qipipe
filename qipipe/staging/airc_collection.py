@@ -9,7 +9,11 @@ def collection_with_name(name):
     """
     :param name: the OHSU QIN collection name
     :return: the corresponding AIRC collection
+    :raise ValueError: if the given collection name is not recognized
     """
+    if name not in EXTENT:
+        raise ValueError("The collection name is not recognized: %s" % name)
+        
     return EXTENT[name]
 
 
