@@ -53,38 +53,34 @@ class TestQIPipeline(object):
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
     
-    # def test_breast(self):
-    #     data = os.getenv('QIN_DATA')
-    #     if data:
-    #         fixture = os.path.join(RESULTS, 'data', 'breast')
-    #         parent = os.path.join(fixture, 'BreastChemo1')
-    #         os.makedirs(parent)
-    #         src = os.path.join(data, 'Breast_Chemo_Study', 'BreastChemo3', 'Visit1')
-    #         dest = os.path.join(parent, 'Visit1')
-    #         os.symlink(src, dest)
-    #         self._test_collection('Breast', fixture)
-    #     else:
-    #         logger.info("Skipping the QIN pipeline unit Breast test, since the "
-    #             "QIN_DATA environment variable is not set.")
+    def test_breast(self):
+        data = os.getenv('QIN_DATA')
+        if data:
+            fixture = os.path.join(RESULTS, 'data', 'breast')
+            parent = os.path.join(fixture, 'BreastChemo1')
+            os.makedirs(parent)
+            src = os.path.join(data, 'Breast_Chemo_Study', 'BreastChemo3', 'Visit1')
+            dest = os.path.join(parent, 'Visit1')
+            os.symlink(src, dest)
+            self._test_collection('Breast', fixture)
+        else:
+            logger.info("Skipping the QIN pipeline unit Breast test, since the "
+                "QIN_DATA environment variable is not set.")
     
     def test_sarcoma(self):
         
-        fixture = os.path.join(FIXTURES, 'sarcoma')
-        self._test_collection('Sarcoma', fixture)
-        
-        
-        # data = os.getenv('QIN_DATA')
-        # if data:
-        #     fixture = os.path.join(RESULTS, 'data', 'sarcoma')
-        #     parent = os.path.join(fixture, 'Subj_1')
-        #     os.makedirs(parent)
-        #     src = os.path.join(data, 'Sarcoma', 'Subj_1', 'Visit_1')
-        #     dest = os.path.join(parent, 'Visit_1')
-        #     os.symlink(src, dest)
-        #     self._test_collection('Sarcoma', fixture)
-        # else:
-        #     logger.info("Skipping the QIN pipeline unit Sarcoma test, "
-        #         "since the QIN_DATA environment variable is not set.")
+        data = os.getenv('QIN_DATA')
+        if data:
+            fixture = os.path.join(RESULTS, 'data', 'sarcoma')
+            parent = os.path.join(fixture, 'Subj_1')
+            os.makedirs(parent)
+            src = os.path.join(data, 'Sarcoma', 'Subj_1', 'Visit_1')
+            dest = os.path.join(parent, 'Visit_1')
+            os.symlink(src, dest)
+            self._test_collection('Sarcoma', fixture)
+        else:
+            logger.info("Skipping the QIN pipeline unit Sarcoma test, "
+                "since the QIN_DATA environment variable is not set.")
     
     def _test_collection(self, collection, fixture):
         """
