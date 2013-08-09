@@ -64,7 +64,7 @@ class TestModelingWorkflow(XNATScanTestBase):
     def test_sarcoma(self):
         self._test_sarcoma()
     
-    def _run_workflow(self, xnat, fixture, *inputs, **opts):
+    def _run_workflow(self, fixture, *inputs, **opts):
         """
         Executes :meth:`qipipe.pipeline.modeling.run` on the input session scans.
         

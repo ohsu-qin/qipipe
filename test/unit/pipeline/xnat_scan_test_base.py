@@ -56,7 +56,7 @@ class XNATScanTestBase(object):
             # Seed XNAT with the test files.
             sess_files_dict = self._seed_xnat(fixture)
             # Run the workflow.
-            result = self._run_workflow(xnat, fixture, *sess_files_dict.iterkeys(), **opts)
+            result = self._run_workflow(fixture, *sess_files_dict.iterkeys(), **opts)
             # Verify the result.
             self._verify_result(xnat, sess_files_dict, result)
             # Clean up.
@@ -90,6 +90,7 @@ class XNATScanTestBase(object):
             for sess_dir in glob.glob(sbj_dir + '/Session*'):
                 sess, in_files = self._upload_session_files(sbj, sess_dir)
                 sess_files_dict[(sbj, sess)] = in_files
+        
         return sess_files_dict
     
     def _upload_session_files(self, subject, session_dir):
@@ -109,12 +110,11 @@ class XNATScanTestBase(object):
         
         return (sess, fnames)
     
-    def _run_workflow(self, xnat, *inputs, **opts):
+    def _run_workflow(self, fixture, *inputs, **opts):
         """
         This method is implemented by subclasses to execute the subclass
         target workflow on the given session inputs.
         
-        :param xnat: the :class:`qipipe.helpers.xnat_helpers.XNAT` connection
         :param fixture: the test fixture directory
         :param inputs: the (subject, session) tuples
         :param opts: the target workflow options
