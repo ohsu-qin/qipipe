@@ -97,10 +97,11 @@ class WorkflowBase(object):
     
     def _depict_workflow(self, workflow):
         """Diagrams the given workflow graph."""
+        fname = workflow.name + '.dot'
         if workflow.base_dir:
-            grf = os.path.join(workflow.base_dir, 'staging.dot')
+            grf = os.path.join(workflow.base_dir, fname)
         else:
-            grf = 'staging.dot'
+            grf = fname
         workflow.write_graph(dotfilename=grf)
         self.logger.debug("The %s workflow graph is depicted at %s.png." %
             (workflow.name, grf))
