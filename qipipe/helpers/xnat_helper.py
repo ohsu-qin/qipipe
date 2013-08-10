@@ -391,9 +391,11 @@ class XNAT(object):
         -------
         >>> from qipipe.helpers import xnat_helper
         >>> with xnat_helper.connection() as xnat:
-        ...     xnat.find('QIN', 'Sarcoma003')
-        ...     xnat.find('QIN', 'Sarcoma003', 'Session01', create=True)
-        ...     xnat.find('QIN', 'Sarcoma003', 'Session01', scan=4)
+        ...     subject = xnat.find('QIN', 'Sarcoma003')
+        ...     session = xnat.find('QIN', 'Sarcoma003', 'Session01', create=True)
+        ...     scan = xnat.find('QIN', 'Sarcoma003', 'Session01', scan=4)
+        ...     resource = xnat.find('QIN', 'Sarcoma003', 'Session01', scan=4,
+        ...         resource='NIFTI')
         
         :param project: the XNAT project id
         :param subject: the XNAT subject name
@@ -418,19 +420,20 @@ class XNAT(object):
         # If no session is specified, then return the XNAT subject.
         if not session:
             sbj = self.get_subject(project, subject)
-            if create and not sbj.exists():
+            if sbj.exists():
+                return sbj
+            elif create:
                 logger.debug("Creating the XNAT %s subject %s..." %
                     (project, subject))
                 sbj.insert()
                 logger.debug("Created the XNAT %s subject with id %s." %
                     (subject, sbj.id()))
-            return sbj
+                return sbj
+            else:
+                return
         
         # The XNAT experiment.
         exp = self.get_session(project, subject, session)
-        
-        # The resource parent container.
-        ctr_spec = self._infer_resource_container(opts)
         
         # If there is an experiment and we are not asked for a container,
         # then return the experiment.
@@ -451,7 +454,9 @@ class XNAT(object):
                     "id %s." % (project, subject, session, exp.id()))
             else:
                 return
-
+        
+        # The resource parent container.
+        ctr_spec = self._infer_resource_container(opts)
         # If only the session was specified, then we are done.
         if not ctr_spec:
             return exp
@@ -493,7 +498,7 @@ class XNAT(object):
                 return
         
         return rsc
-            
+    
     
     def _standardize_modality(self, modality):
         """
