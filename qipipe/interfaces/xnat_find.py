@@ -2,7 +2,6 @@ import os
 from nipype.interfaces.base import (traits, BaseInterfaceInputSpec, TraitedSpec,
     BaseInterface, InputMultiPath, File)
 from nipype.interfaces.traits_extension import isdefined
-from pyxnat.core.resources import (Reconstruction, Assessor)
 from ..helpers import xnat_helper
 
 
@@ -18,13 +17,17 @@ class XNATFindInputSpec(BaseInterfaceInputSpec):
     reconstruction = traits.Str(desc='The XNAT reconstruction name')
 
     assessor = traits.Str(desc='The XNAT assessor name')
+
+    resource = traits.Str(desc='The XNAT resource name')
+
+    inout = traits.Str(desc='The XNAT resource in/out designator')
     
     create = traits.Bool(default=False, desc='Flag indicating whether to '
         'create the XNAT object if it does not yet exist')
 
 
 class XNATFindOutputSpec(TraitedSpec):
-    label = traits.Str(desc='The XNAT object label')
+    xnat_id = traits.Str(desc='The XNAT object id')
 
 
 class XNATFind(BaseInterface):
@@ -44,6 +47,12 @@ class XNATFind(BaseInterface):
         # The find options.
         opts = dict(create=self.inputs.create)
         
+        # The session is optional.
+        if isdefined(self.inputs.session):
+            session = self.inputs.session
+        else:
+            session = None
+        
         # The resource parent.
         if self.inputs.scan:
             opts['modality'] = 'MR'
@@ -53,26 +62,22 @@ class XNATFind(BaseInterface):
         elif self.inputs.assessor:
             opts['assessor'] = self.inputs.assessor
         
-        # The session is optional.
-        if isdefined(self.inputs.session):
-            session = self.inputs.session
-        else:
-            session = None
+        # The resource.
+        if isdefined(self.inputs.resource):
+            opts['resource'] = self.inputs.resource
         
         # Delegate to the XNAT helper.
         with xnat_helper.connection() as xnat:
             obj = xnat.find(self.inputs.project, self.inputs.subject,
                 session, **opts)
             if obj and (opts['create'] or obj.exists()):
-                if isinstance(obj, Assessor) or isinstance(obj, Reconstruction):
-                    self._label = obj.id()
-                else:
-                    self._label = obj.label()
+                self._xnat_id = obj.id()
         
         return runtime
     
     def _list_outputs(self):
         outputs = self._outputs().get()
-        if hasattr(self, '_label'):
-            outputs['label'] = self._label
+        if hasattr(self, '_xnat_id'):
+            outputs['xnat_id'] = self._xnat_id
+        
         return outputs

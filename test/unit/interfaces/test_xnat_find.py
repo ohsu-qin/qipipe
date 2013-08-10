@@ -54,6 +54,9 @@ class TestXNATFind(object):
     def test_find_scan(self):
         self._test_find(SUBJECT, SESSION, scan=SCAN)
     
+    def test_find_resource(self):
+        self._test_find(SUBJECT, SESSION, scan=SCAN, resource='NIFTI')
+    
     def test_find_reconstruction(self):
         self._test_find(SUBJECT, SESSION, reconstruction=RECON)
     
@@ -74,23 +77,23 @@ class TestXNATFind(object):
         # Try to find the object.
         find = XNATFind(project=project(), **inputs)
         result = find.run()
-        assert_false(isdefined(result.outputs.label),
-            "Find %s incorrectly returned a label: %s." %
-            (inputs, result.outputs.label))
+        assert_false(isdefined(result.outputs.xnat_id),
+            "Find %s incorrectly returned an id: %s." %
+            (inputs, result.outputs.xnat_id))
         
         # Create the object.
         find = XNATFind(project=project(), create=True, **inputs)
         result = find.run()
-        assert_true(isdefined(result.outputs.label),
-            "Find %s with create did not return a label." % inputs)
-        label = result.outputs.label
+        assert_true(isdefined(result.outputs.xnat_id),
+            "Find %s with create did not return an id." % inputs)
+        xnat_id = result.outputs.xnat_id
         
         # Refind the object.
         find = XNATFind(project=project(), **inputs)
         result = find.run()
-        assert_equals(result.outputs.label, label,
-            "Find %s returned the wrong label: %s." %
-            (inputs, result.outputs.label))
+        assert_equals(result.outputs.xnat_id, xnat_id,
+            "Find %s returned the wrong id: %s." %
+            (inputs, result.outputs.xnat_id))
         
 
 if __name__ == "__main__":

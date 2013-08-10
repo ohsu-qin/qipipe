@@ -372,13 +372,14 @@ class XNAT(object):
         If the ``create`` flag is set, then the object is created if it does not
         yet exist.
         
-        The keyword options specify the session child container. The container
-        keyword argument associates the container type to the container name,
-        e.g. ``reconstruction=reg_zPa4R``. The container type is ``scan``,
+        The keyword options specify the session child container and resource.
+        The container keyword argument associates the container type to the container
+        name, e.g. ``reconstruction=reg_zPa4R``. The container type is ``scan``,
         ``reconstruction`` or ``analysis``. The ``analysis`` container type value
         corresponds to the XNAT ``assessor`` Image Assessment type. ``analysis``,
         ``assessment`` and ``assessor`` are synonymous. The container name can be a
-        string or integer, e.g. the scan number.
+        string or integer, e.g. the scan number. The resource is specified by the
+        resource keyword.
         
         If the session does not yet exist as a XNAT experiment and the ``create``
         option is set, then the ``modality`` keyword option specifies a supported
@@ -401,10 +402,11 @@ class XNAT(object):
         :keyword scan: the scan number
         :keyword reconstruction: the reconstruction name
         :keyword analysis: the analysis name
+        :keyword resource: the resource name
         :keyword modality: the session modality
         :keyword create: flag indicating whether to create the XNAT object
             if it does not yet exist
-        :return: the XNAT object
+        :return: the XNAT object, if it exists, `None` otherwise
         :raise XNATError: if the project does not exist
         :raise ValueError: if the session child resource container type
             option is missing
@@ -460,16 +462,38 @@ class XNAT(object):
             raise ValueError("XNAT %s %s %s %s container id is missing" %
                 (project, subject, session, ctr_type))
         ctr = self._xnat_resource_parent(exp, ctr_type, ctr_id)
-        if create and not ctr.exists():
-            logger.debug("Creating the XNAT %s %s %s %s resource parent "
-                "container %s..." %
-                (project, subject, session, ctr_type, ctr_id))
-            ctr.insert()
-            logger.debug("Created the XNAT %s %s %s %s resource parent "
-                "container with id %s." %
-                (project, subject, session, ctr_type, ctr.id()))
+        if not ctr.exists():
+            if create:
+                logger.debug("Creating the XNAT %s %s %s %s resource parent "
+                    "container %s..." %
+                    (project, subject, session, ctr_type, ctr_id))
+                ctr.insert()
+                logger.debug("Created the XNAT %s %s %s %s resource parent "
+                    "container with id %s." %
+                    (project, subject, session, ctr_type, ctr.id()))
+            else:
+                return
         
-        return ctr
+        # Find the resource, if specified.
+        resource = opts.get('resource')
+        if not resource:
+            return ctr
+        
+        rsc = self._xnat_child_resource(ctr, resource, opts.get('inout'))
+        if not rsc.exists():
+            if create:
+                logger.debug("Creating the XNAT %s %s %s %s %s resource "
+                    "%s..." %
+                    (project, subject, session, ctr_type, ctr_id, resource))
+                rsc.insert()
+                logger.debug("Created the XNAT %s %s %s %s resource %s with "
+                    "id %s." %
+                    (project, subject, session, ctr_type, ctr_id, rsc.id()))
+            else:
+                return
+        
+        return rsc
+            
     
     def _standardize_modality(self, modality):
         """

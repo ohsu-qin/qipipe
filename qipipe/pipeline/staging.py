@@ -262,11 +262,11 @@ class StagingWorkflow(WorkflowBase):
         
         # Connect the create subject nodes to the create session node
         # with an artificial gate node.
-        gate_cr_sbj_fields = ['subject', 'label', 'out_dir']
+        gate_cr_sbj_fields = ['subject', 'xnat_id', 'out_dir']
         gate_cr_subject = pe.Node(IdentityInterface(fields=gate_cr_sbj_fields),
             name='gate_cr_subject')
         workflow.connect(iter_subject, 'subject', gate_cr_subject, 'subject')
-        workflow.connect(cr_subject, 'label', gate_cr_subject, 'label')
+        workflow.connect(cr_subject, 'xnat_id', gate_cr_subject, 'xnat_id')
         workflow.connect(subject_dir, 'out_dir', gate_cr_subject, 'out_dir')
         
         # Make the XNAT session.
@@ -286,16 +286,16 @@ class StagingWorkflow(WorkflowBase):
         
         # Connect the create session nodes to the create series node
         # with an artificial gate node.
-        gate_cr_sess_fields = ['session', 'label', 'out_dir']
+        gate_cr_sess_fields = ['session', 'xnat_id', 'out_dir']
         gate_cr_session = pe.Node(IdentityInterface(fields=gate_cr_sess_fields),
             name='gate_cr_session')
         workflow.connect(iter_session, 'session', gate_cr_session, 'session')
-        workflow.connect(cr_session, 'label', gate_cr_session, 'label')
+        workflow.connect(cr_session, 'xnat_id', gate_cr_session, 'xnat_id')
         workflow.connect(session_dir, 'out_dir', gate_cr_session, 'out_dir')
         
-        # Make the XNAT series.
-        cr_series = pe.Node(XNATFind(project=project(), create=True),
-            name='cr_series')
+        # Make the XNAT scan NIFTI resource.
+        cr_series_xf = XNATFind(project=project(), resource='NIFTI', create=True)
+        cr_series = pe.Node(cr_series_xf, name='cr_series')
         workflow.connect(gate_cr_subject, 'subject', cr_series, 'subject')
         workflow.connect(gate_cr_session, 'session', cr_series, 'session')
         workflow.connect(iter_series, 'scan', cr_series, 'scan')
@@ -312,11 +312,11 @@ class StagingWorkflow(WorkflowBase):
         
         # Connect the create series node to the downstream nodes
         # with an artificial gate node.
-        gate_cr_ser_fields = ['scan', 'label', 'out_dir']
+        gate_cr_ser_fields = ['scan', 'xnat_id', 'out_dir']
         gate_cr_series = pe.Node(IdentityInterface(fields=gate_cr_ser_fields),
             name='gate_cr_series')
         workflow.connect(iter_series, 'scan', gate_cr_series, 'scan')
-        workflow.connect(cr_series, 'label', gate_cr_series, 'label')
+        workflow.connect(cr_series, 'xnat_id', gate_cr_series, 'xnat_id')
         workflow.connect(staging_dir, 'out_dir', gate_cr_series, 'out_dir')
         
         # Map each QIN Patient ID to a TCIA Patient ID for upload using CTP.
