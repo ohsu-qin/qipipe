@@ -18,7 +18,7 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
 """The test fixture directory."""
 
-RESULTS = os.path.join(ROOT, 'results', 'staging')
+RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'staging')
 """The test results directory."""
 
 from nipype import config
@@ -70,7 +70,7 @@ class TestStagingWorkflow(object):
             # Delete any existing test subjects.
             delete_subjects(project(), *subjects)
             # Run the pipeline.
-            session_specs = staging.run(collection, *sources, base_dir=dest)
+            session_specs = staging.run(collection, *sources, dest=dest, base_dir=RESULTS)
             # Verify the result.
             for sbj, sess in session_specs:
                 sess_obj = xnat.get_session(project(), sbj, sess)
