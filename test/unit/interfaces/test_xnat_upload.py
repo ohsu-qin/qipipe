@@ -50,7 +50,7 @@ class TestXNATUpload:
         delete_subjects(project(), SUBJECT)
         
     def tearDown(self):
-        #delete_subjects(project(), SUBJECT)
+        delete_subjects(project(), SUBJECT)
         shutil.rmtree(RESULTS, True)
     
     def test_upload_scan(self):
