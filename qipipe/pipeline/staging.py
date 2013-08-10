@@ -55,7 +55,12 @@ def run(*inputs, **opts):
         and :meth:`qipipe.pipeline.staging.StagingWorkflow.run` options
     :return: the :meth:`qipipe.pipeline.staging.StagingWorkflow.run` result
     """
-    return StagingWorkflow(**opts).run(*inputs, **opts)
+    # Extract the run options.
+    run_opts = {}
+    for opt in ['dest', 'overwrite']:
+        if opt in opts:
+            run_opts[opt] = opts.pop(opt)
+    return StagingWorkflow(**opts).run(*inputs, **run_opts)
 
 
 class StagingWorkflow(WorkflowBase):
@@ -164,6 +169,8 @@ class StagingWorkflow(WorkflowBase):
             dest = os.path.join(os.getcwd(), 'data')
 
         # Set the workflow (collection, destination, subjects) input.
+        subjects = sbj_sess_dict.keys()
+        
         exec_wf = self.workflow
         input_spec = exec_wf.get_node('input_spec')
         input_spec.inputs.collection = collection
@@ -172,7 +179,7 @@ class StagingWorkflow(WorkflowBase):
         
         # Set the iterable subject inputs.
         iter_subject = exec_wf.get_node('iter_subject')
-        iter_subject.iterables = ('subject', sbj_sess_dict.keys())
+        iter_subject.iterables = ('subject', subjects)
         
         # Set the iterable session inputs.
         iter_session = exec_wf.get_node('iter_session')
@@ -184,7 +191,7 @@ class StagingWorkflow(WorkflowBase):
         # Set the iterable series inputs.
         iter_series = exec_wf.get_node('iter_series')
         iter_series.itersource = ('iter_session', ['subject', 'session'])
-        iter_ser_fields = iter_sess_fields + ['scan', 'dicom_files']
+        iter_ser_fields = ['scan', 'dicom_files']
         iter_series.iterables = [iter_ser_fields, sess_ser_dict]
         iter_series.synchronize = True
         
@@ -231,7 +238,6 @@ class StagingWorkflow(WorkflowBase):
             "with fields %s" % (iter_session.name, iter_sess_fields))
         workflow.connect(iter_subject, 'subject', iter_session, 'subject')
         
-        
         # The iterable series node.
         iter_ser_fields= iter_sess_fields + ['scan', 'dicom_files']
         iter_series = pe.Node(IdentityInterface(fields=iter_ser_fields),
@@ -241,21 +247,83 @@ class StagingWorkflow(WorkflowBase):
         workflow.connect(iter_session, 'subject', iter_series, 'subject')
         workflow.connect(iter_session, 'session', iter_series, 'session')
         
+        # Make the XNAT subject.
+        cr_subject = pe.Node(XNATFind(project=project(), create=True),
+            name='cr_subject')
+        workflow.connect(iter_subject, 'subject', cr_subject, 'subject')
+        
+        # The CTP staging subject directory factory.
+        sbj_dir_func = Function(
+            input_names=['dest', 'subject'],
+            output_names=['out_dir'], function=_make_subject_staging_directory)
+        subject_dir = pe.Node(sbj_dir_func, name='subject_dir')
+        workflow.connect(input_spec, 'dest', subject_dir, 'dest')
+        workflow.connect(iter_subject, 'subject', subject_dir, 'subject')
+        
+        # Connect the create subject nodes to the create session node
+        # with an artificial gate node.
+        gate_cr_sbj_fields = ['subject', 'label', 'out_dir']
+        gate_cr_subject = pe.Node(IdentityInterface(fields=gate_cr_sbj_fields),
+            name='gate_cr_subject')
+        workflow.connect(iter_subject, 'subject', gate_cr_subject, 'subject')
+        workflow.connect(cr_subject, 'label', gate_cr_subject, 'label')
+        workflow.connect(subject_dir, 'out_dir', gate_cr_subject, 'out_dir')
+        
+        # Make the XNAT session.
+        cr_session = pe.Node(XNATFind(project=project(), create=True),
+            name='cr_session')
+        workflow.connect(gate_cr_subject, 'subject', cr_session, 'subject')
+        workflow.connect(iter_session, 'session', cr_session, 'session')
+        
+        # The CTP staging session directory factory.
+        sess_dir_func = Function(
+            input_names=['dest', 'subject', 'session'],
+            output_names=['out_dir'], function=_make_session_staging_directory)
+        session_dir = pe.Node(sess_dir_func, name='session_dir')
+        workflow.connect(input_spec, 'dest', session_dir, 'dest')
+        workflow.connect(gate_cr_subject, 'subject', session_dir, 'subject')
+        workflow.connect(iter_session, 'session', session_dir, 'session')
+        
+        # Connect the create session nodes to the create series node
+        # with an artificial gate node.
+        gate_cr_sess_fields = ['session', 'label', 'out_dir']
+        gate_cr_session = pe.Node(IdentityInterface(fields=gate_cr_sess_fields),
+            name='gate_cr_session')
+        workflow.connect(iter_session, 'session', gate_cr_session, 'session')
+        workflow.connect(cr_session, 'label', gate_cr_session, 'label')
+        workflow.connect(session_dir, 'out_dir', gate_cr_session, 'out_dir')
+        
+        # Make the XNAT series.
+        cr_series = pe.Node(XNATFind(project=project(), create=True),
+            name='cr_series')
+        workflow.connect(gate_cr_subject, 'subject', cr_series, 'subject')
+        workflow.connect(gate_cr_session, 'session', cr_series, 'session')
+        workflow.connect(iter_series, 'scan', cr_series, 'scan')
+        
+        # The CTP staging series directory factory.
+        ser_dir_func = Function(
+            input_names=['dest', 'subject', 'session', 'series'],
+            output_names=['out_dir'], function=_make_series_staging_directory)
+        staging_dir = pe.Node(ser_dir_func, name='staging_dir')
+        workflow.connect(input_spec, 'dest', staging_dir, 'dest')
+        workflow.connect(gate_cr_subject, 'subject', staging_dir, 'subject')
+        workflow.connect(gate_cr_session, 'session', staging_dir, 'session')
+        workflow.connect(iter_series, 'scan', staging_dir, 'series')
+        
+        # Connect the create series node to the downstream nodes
+        # with an artificial gate node.
+        gate_cr_ser_fields = ['scan', 'label', 'out_dir']
+        gate_cr_series = pe.Node(IdentityInterface(fields=gate_cr_ser_fields),
+            name='gate_cr_series')
+        workflow.connect(iter_series, 'scan', gate_cr_series, 'scan')
+        workflow.connect(cr_series, 'label', gate_cr_series, 'label')
+        workflow.connect(staging_dir, 'out_dir', gate_cr_series, 'out_dir')
+        
         # Map each QIN Patient ID to a TCIA Patient ID for upload using CTP.
         map_ctp = pe.Node(MapCTP(), name='map_ctp')
         workflow.connect(input_spec, 'collection', map_ctp, 'collection')
         workflow.connect(input_spec, 'subjects', map_ctp, 'patient_ids')
         workflow.connect(input_spec, 'dest', map_ctp, 'dest')
-        
-        # The CTP staging directory factory.
-        staging_dir_func = Function(
-            input_names=['dest', 'subject', 'session', 'series'],
-            output_names=['out_dir'], function=_make_series_staging_directory)
-        staging_dir = pe.Node(staging_dir_func, name='staging_dir')
-        workflow.connect(input_spec, 'dest', staging_dir, 'dest')
-        workflow.connect(iter_series, 'subject', staging_dir, 'subject')
-        workflow.connect(iter_series, 'session', staging_dir, 'session')
-        workflow.connect(iter_series, 'scan', staging_dir, 'series')
         
         # Fix the AIRC DICOM tags.
         fix_dicom = pe.Node(FixDicom(), name='fix_dicom')
@@ -269,45 +337,6 @@ class StagingWorkflow(WorkflowBase):
             name='compress_dicom')
         workflow.connect(fix_dicom, 'out_files', compress_dicom, 'in_file')
         workflow.connect(staging_dir, 'out_dir', compress_dicom, 'dest')
-        
-        # Make the XNAT subject.
-        cr_subject = pe.Node(XNATFind(project=project(), create=True),
-            name='cr_subject')
-        workflow.connect(iter_subject, 'subject', cr_subject, 'subject')
-        
-        # Connect the create subject node to the create session node
-        # with an artificial gate node.
-        gate_cr_subject = pe.Node(IdentityInterface(fields=['subject', 'label']),
-            name='gate_cr_subject')
-        workflow.connect(iter_subject, 'subject', gate_cr_subject, 'subject')
-        workflow.connect(cr_subject, 'label', gate_cr_subject, 'label')
-        
-        # Make the XNAT session.
-        cr_session = pe.Node(XNATFind(project=project(), create=True),
-            name='cr_session')
-        workflow.connect(gate_cr_subject, 'subject', cr_session, 'subject')
-        workflow.connect(iter_session, 'session', cr_session, 'session')
-        
-        # Connect the create session node to the create series node
-        # with an artificial gate node.
-        gate_cr_session = pe.Node(IdentityInterface(fields=['session', 'label']),
-            name='gate_cr_session')
-        workflow.connect(iter_session, 'session', gate_cr_session, 'session')
-        workflow.connect(cr_session, 'label', gate_cr_session, 'label')
-        
-        # Make the XNAT series.
-        cr_series = pe.Node(XNATFind(project=project(), create=True),
-            name='cr_series')
-        workflow.connect(gate_cr_subject, 'subject', cr_series, 'subject')
-        workflow.connect(gate_cr_session, 'session', cr_series, 'session')
-        workflow.connect(iter_series, 'scan', cr_series, 'scan')
-        
-        # Connect the create series node to the upload nodes
-        # with an artificial gate node.
-        gate_cr_series = pe.Node(IdentityInterface(fields=['scan', 'label']),
-            name='gate_cr_series')
-        workflow.connect(iter_series, 'scan', gate_cr_series, 'scan')
-        workflow.connect(cr_series, 'label', gate_cr_series, 'label')
         
         # Upload the compressed scan DICOM files to XNAT.
         upload_dicom = pe.Node(XNATUpload(project=project(), format='DICOM'),
@@ -337,6 +366,11 @@ class StagingWorkflow(WorkflowBase):
         
         self._configure_nodes(workflow)
         
+        logger.debug("Created the %s workflow." % workflow.name)
+        # If debug is set, then diagram the workflow graph.
+        if logger.level <= logging.DEBUG:
+            self._depict_workflow(workflow)
+        
         return workflow
 
 def _group_sessions_by_series(*session_specs):
@@ -365,6 +399,34 @@ def _group_sessions_by_series(*session_specs):
             " series: %s." % ', '.join(ser_names))
     
     return ser_specs
+
+def _make_subject_staging_directory(dest, subject):
+    """
+    Returns the dest/subject directory path in which to place
+    DICOM files for TCIA upload. Creates the directory, if necessary.
+    
+    :return: the target subject directory path
+    """
+    import os
+    path = os.path.join(dest, subject)
+    if not os.path.exists(path):
+        os.makedirs(path)
+    
+    return path
+
+def _make_session_staging_directory(dest, subject, session):
+    """
+    Returns the dest/subject/session directory path in which to place
+    DICOM files for TCIA upload. Creates the directory, if necessary.
+    
+    :return: the target session directory path
+    """
+    import os
+    path = os.path.join(dest, subject, session)
+    if not os.path.exists(path):
+        os.makedirs(path)
+    
+    return path
 
 def _make_series_staging_directory(dest, subject, session, series):
     """
