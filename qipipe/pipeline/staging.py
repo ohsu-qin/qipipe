@@ -1,9 +1,10 @@
 import os, tempfile
+from collections import defaultdict
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Function)
 from nipype.interfaces.dcmstack import DcmStack
 from ..helpers.project import project
-from ..interfaces import (Unpack, FixDicom, Compress, MapCTP, XNATUpload)
+from ..interfaces import (Unpack, FixDicom, Compress, MapCTP, XNATFind, XNATUpload)
 from ..staging.staging_error import StagingError
 from ..staging.staging_helper import (subject_for_directory, iter_new_visits, group_dicom_files_by_series)
 from ..helpers import xnat_helper
@@ -90,24 +91,21 @@ class StagingWorkflow(WorkflowBase):
     
     - `subjects`: the subjects to stage
     
-    In addition, the execution must set the iterable `iter_series` node inputs for
-    the following fields:
-     
-    - subject: the XNAT subject name
+    In addition, the execution must set three iterable nodes as follows:
     
-    - session: the XNAT session name
+    - the `iter_subject` input field `subject`
     
-    - scan: the XNAT scan name
+    - the `iter_session` input fields `subject` and `session`
     
-    - dicom_files: the DICOM files to stage
+    - the `iter_series` input field `scan` and `dicom_files`
+    
+    These iterables should be set using the Nipype `itersource` as shown in
+    the :meth:`qipipe.pipeline.staging.StagingWorkflow.run` method. 
     
     The staging workflow output is the `output_spec` node consisting of the
     following output fields:
     
     - `out_file`: the series stack NiFTI image file
-
-    The workflow is executed by calling the
-    :meth:`qipipe.pipeline.staging.StagingWorkflow.run` method.
     
     .. _CTP: https://wiki.cancerimagingarchive.net/display/Public/Image+Submitter+Site+User%27s+Guide
     .. _DcmStack: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.dcmstack.html
@@ -151,8 +149,13 @@ class StagingWorkflow(WorkflowBase):
         overwrite = opts.get('overwrite', False)
         new_series = detect_new_visits(collection, *inputs, overwrite=overwrite)
         
-        # The subjects with new sessions.
-        subjects = {sbj for sbj, _, _, _ in new_series}
+        # The {subject: session}, and {(subject, session): [(scan, dicom_files), ...]}
+        # dictionaries.
+        sbj_sess_dict = defaultdict(list)
+        sess_ser_dict = defaultdict(list)
+        for sbj, sess, scan, dicom_files in new_series:
+            sbj_sess_dict[sbj].append((sbj, sess))
+            sess_ser_dict[(sbj, sess)].append((scan, dicom_files))
         
         # The staging location.
         if opts.has_key('dest'):
@@ -167,10 +170,22 @@ class StagingWorkflow(WorkflowBase):
         input_spec.inputs.dest = dest
         input_spec.inputs.subjects = subjects
         
+        # Set the iterable subject inputs.
+        iter_subject = exec_wf.get_node('iter_subject')
+        iter_subject.iterables = ('subject', sbj_sess_dict.keys())
+        
+        # Set the iterable session inputs.
+        iter_session = exec_wf.get_node('iter_session')
+        iter_session.itersource = ('iter_subject', 'subject')
+        iter_sess_fields = ['subject', 'session']
+        iter_session.iterables = [iter_sess_fields, sbj_sess_dict]
+        iter_session.synchronize = True
+        
         # Set the iterable series inputs.
         iter_series = exec_wf.get_node('iter_series')
-        in_fields = ['subject', 'session', 'scan', 'dicom_files']
-        iter_series.iterables = [in_fields, new_series]
+        iter_series.itersource = ('iter_session', ['subject', 'session'])
+        iter_ser_fields = iter_sess_fields + ['scan', 'dicom_files']
+        iter_series.iterables = [iter_ser_fields, sess_ser_dict]
         iter_series.synchronize = True
         
         # Run the staging workflow.
@@ -202,12 +217,29 @@ class StagingWorkflow(WorkflowBase):
         logger.debug("The staging workflow non-iterable input is %s"
             " with fields %s" % (input_spec.name, in_fields))
         
+        # The iterable subject node.
+        iter_subject = pe.Node(IdentityInterface(fields=['subject']),
+            name='iter_subject')
+        logger.debug("The staging workflow iterable subject input node is %s "
+            "with field %s" % (iter_subject.name, 'subject'))
+        
+        # The iterable session node.
+        iter_sess_fields = ['subject', 'session']
+        iter_session = pe.Node(IdentityInterface(fields=iter_sess_fields),
+            name='iter_session')
+        logger.debug("The staging workflow iterable session input node is %s "
+            "with fields %s" % (iter_session.name, iter_sess_fields))
+        workflow.connect(iter_subject, 'subject', iter_session, 'subject')
+        
+        
         # The iterable series node.
-        iter_fields=['subject', 'session', 'scan', 'dicom_files']
-        iter_series = pe.Node(IdentityInterface(fields=iter_fields),
+        iter_ser_fields= iter_sess_fields + ['scan', 'dicom_files']
+        iter_series = pe.Node(IdentityInterface(fields=iter_ser_fields),
             name='iter_series')
-        logger.debug("The staging workflow iterable input is %s "
-            "with field %s" % (iter_series.name, 'series_spec'))
+        logger.debug("The staging workflow iterable session input node is %s "
+            "with fields %s" % (iter_series.name, iter_ser_fields))
+        workflow.connect(iter_session, 'subject', iter_series, 'subject')
+        workflow.connect(iter_session, 'session', iter_series, 'session')
         
         # Map each QIN Patient ID to a TCIA Patient ID for upload using CTP.
         map_ctp = pe.Node(MapCTP(), name='map_ctp')
@@ -238,12 +270,51 @@ class StagingWorkflow(WorkflowBase):
         workflow.connect(fix_dicom, 'out_files', compress_dicom, 'in_file')
         workflow.connect(staging_dir, 'out_dir', compress_dicom, 'dest')
         
-        # Store the compressed scan DICOM files in XNAT.
+        # Make the XNAT subject.
+        cr_subject = pe.Node(XNATFind(project=project(), create=True),
+            name='cr_subject')
+        workflow.connect(iter_subject, 'subject', cr_subject, 'subject')
+        
+        # Connect the create subject node to the create session node
+        # with an artificial gate node.
+        gate_cr_subject = pe.Node(IdentityInterface(fields=['subject', 'label']),
+            name='gate_cr_subject')
+        workflow.connect(iter_subject, 'subject', gate_cr_subject, 'subject')
+        workflow.connect(cr_subject, 'label', gate_cr_subject, 'label')
+        
+        # Make the XNAT session.
+        cr_session = pe.Node(XNATFind(project=project(), create=True),
+            name='cr_session')
+        workflow.connect(gate_cr_subject, 'subject', cr_session, 'subject')
+        workflow.connect(iter_session, 'session', cr_session, 'session')
+        
+        # Connect the create session node to the create series node
+        # with an artificial gate node.
+        gate_cr_session = pe.Node(IdentityInterface(fields=['session', 'label']),
+            name='gate_cr_session')
+        workflow.connect(iter_session, 'session', gate_cr_session, 'session')
+        workflow.connect(cr_session, 'label', gate_cr_session, 'label')
+        
+        # Make the XNAT series.
+        cr_series = pe.Node(XNATFind(project=project(), create=True),
+            name='cr_series')
+        workflow.connect(gate_cr_subject, 'subject', cr_series, 'subject')
+        workflow.connect(gate_cr_session, 'session', cr_series, 'session')
+        workflow.connect(iter_series, 'scan', cr_series, 'scan')
+        
+        # Connect the create series node to the upload nodes
+        # with an artificial gate node.
+        gate_cr_series = pe.Node(IdentityInterface(fields=['scan', 'label']),
+            name='gate_cr_series')
+        workflow.connect(iter_series, 'scan', gate_cr_series, 'scan')
+        workflow.connect(cr_series, 'label', gate_cr_series, 'label')
+        
+        # Upload the compressed scan DICOM files to XNAT.
         upload_dicom = pe.Node(XNATUpload(project=project(), format='DICOM'),
             name='upload_dicom')
-        workflow.connect(iter_series, 'subject', upload_dicom, 'subject')
-        workflow.connect(iter_series, 'session', upload_dicom, 'session')
-        workflow.connect(iter_series, 'scan', upload_dicom, 'scan')
+        workflow.connect(gate_cr_subject, 'subject', upload_dicom, 'subject')
+        workflow.connect(gate_cr_session, 'session', upload_dicom, 'session')
+        workflow.connect(gate_cr_series, 'scan', upload_dicom, 'scan')
         workflow.connect(compress_dicom, 'out_file', upload_dicom, 'in_files')
         
         # Stack the scan.
@@ -254,9 +325,9 @@ class StagingWorkflow(WorkflowBase):
         # Store the stack files in XNAT.
         upload_stack = pe.Node(XNATUpload(project=project(), format='NIFTI'),
             name='upload_stack')
-        workflow.connect(iter_series, 'subject', upload_stack, 'subject')
-        workflow.connect(iter_series, 'session', upload_stack, 'session')
-        workflow.connect(iter_series, 'scan', upload_stack, 'scan')
+        workflow.connect(gate_cr_subject, 'subject', upload_stack, 'subject')
+        workflow.connect(gate_cr_session, 'session', upload_stack, 'session')
+        workflow.connect(gate_cr_series, 'scan', upload_stack, 'scan')
         workflow.connect(stack, 'out_file', upload_stack, 'in_files')
         
         # The output is the series stack file.
@@ -267,7 +338,6 @@ class StagingWorkflow(WorkflowBase):
         self._configure_nodes(workflow)
         
         return workflow
-
 
 def _group_sessions_by_series(*session_specs):
     """
