@@ -153,6 +153,8 @@ class StagingWorkflow(WorkflowBase):
         # Group the new DICOM files by series.
         overwrite = opts.get('overwrite', False)
         new_series = detect_new_visits(collection, *inputs, overwrite=overwrite)
+        if not new_series:
+            return []
         
         # The {subject: session}, and {(subject, session): [(scan, dicom_files), ...]}
         # dictionaries.
@@ -170,7 +172,6 @@ class StagingWorkflow(WorkflowBase):
 
         # Set the workflow (collection, destination, subjects) input.
         subjects = sbj_sess_dict.keys()
-        
         exec_wf = self.workflow
         input_spec = exec_wf.get_node('input_spec')
         input_spec.inputs.collection = collection
