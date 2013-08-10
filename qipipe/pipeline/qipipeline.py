@@ -130,40 +130,43 @@ class QIPipelineWorkflow(WorkflowBase):
         if not new_series:
             return []
         
-        # The session: series iterables dictionary.
+        # The {subject: session}, and {(subject, session): [(scan, dicom_files), ...]}
+        # dictionaries.
+        sbj_sess_dict = defaultdict(list)
         sess_ser_dict = defaultdict(list)
-        for sbj, sess, ser, dicom_files in new_series:
-            sess_ser_dict[(sbj, sess)].append((ser, dicom_files))
-        
-        # The (subject, session) inputs.
-        new_sessions = sess_ser_dict.keys()
-        
-        # The subjects input.
-        subjects = {sbj for sbj, _ in new_sessions}
+        for sbj, sess, scan, dicom_files in new_series:
+            sbj_sess_dict[sbj].append((sbj, sess))
+            sess_ser_dict[(sbj, sess)].append((scan, dicom_files))
         
         # The staging location.
         if opts.has_key('dest'):
             dest = os.path.abspath(opts['dest'])
         else:
             dest = os.path.join(os.getcwd(), 'data')
-        
+
         # Set the workflow (collection, destination, subjects) input.
+        subjects = sbj_sess_dict.keys()
         exec_wf = self.workflow
         input_spec = exec_wf.get_node('input_spec')
         input_spec.inputs.collection = collection
         input_spec.inputs.dest = dest
         input_spec.inputs.subjects = subjects
         
+        # Set the iterable subject inputs.
+        iter_subject = exec_wf.get_node('iter_subject')
+        iter_subject.iterables = ('subject', subjects)
+        
         # Set the iterable session inputs.
         iter_session = exec_wf.get_node('iter_session')
+        iter_session.itersource = ('iter_subject', 'subject')
         iter_sess_fields = ['subject', 'session']
-        iter_session.iterables = [iter_sess_fields, new_sessions]
+        iter_session.iterables = [iter_sess_fields, sbj_sess_dict]
         iter_session.synchronize = True
         
         # Set the iterable series inputs.
         iter_series = exec_wf.get_node('iter_series')
+        iter_series.itersource = ('iter_session', ['subject', 'session'])
         iter_ser_fields = ['scan', 'dicom_files']
-        iter_series.itersource = ('iter_session', iter_sess_fields)
         iter_series.iterables = [iter_ser_fields, sess_ser_dict]
         iter_series.synchronize = True
         
@@ -238,6 +241,12 @@ class QIPipelineWorkflow(WorkflowBase):
         logger.debug("The QIN pipeline non-iterable input is %s with "
             "fields %s" %(input_spec.name, in_fields))
         
+        # The iterable subject input.
+        iter_subject = pe.Node(IdentityInterface(fields=['subject']),
+            name='iter_subject')
+        logger.debug("The QIN pipeline iterable subject input is %s with fields %s" %
+            (iter_subject.name, iter_subject.inputs.copyable_trait_names()))
+        
         # The iterable session input.
         iter_session_fields = ['subject', 'session']
         iter_session = pe.Node(IdentityInterface(fields=iter_session_fields),
@@ -245,7 +254,7 @@ class QIPipelineWorkflow(WorkflowBase):
         logger.debug("The QIN pipeline iterable session input is %s with fields %s" %
             (iter_session.name, iter_session.inputs.copyable_trait_names()))
         
-        # The iterable staging series input.
+        # The iterable series input.
         iter_series_fields = iter_session_fields + ['scan', 'dicom_files']
         iter_series = pe.Node(IdentityInterface(fields=iter_series_fields),
             name='iter_series')
@@ -259,6 +268,9 @@ class QIPipelineWorkflow(WorkflowBase):
         exec_wf.connect(input_spec, 'collection', stg_wf, 'input_spec.collection')
         exec_wf.connect(input_spec, 'dest', stg_wf, 'input_spec.dest')
         exec_wf.connect(input_spec, 'subjects', stg_wf, 'input_spec.subjects')
+        exec_wf.connect(iter_subject, 'subject', stg_wf, 'iter_subject.subject')
+        exec_wf.connect(iter_session, 'subject', stg_wf, 'iter_session.subject')
+        exec_wf.connect(iter_session, 'session', stg_wf, 'iter_session.session')
         exec_wf.connect(iter_series, 'subject', stg_wf, 'iter_series.subject')
         exec_wf.connect(iter_series, 'session', stg_wf, 'iter_series.session')
         exec_wf.connect(iter_series, 'scan', stg_wf, 'iter_series.scan')
@@ -267,18 +279,21 @@ class QIPipelineWorkflow(WorkflowBase):
             # Collect the staged images.
             staged = pe.JoinNode(IdentityInterface(fields=['images']),
                 joinsource='iter_series', name='staged')
+            # Hook up the mask workflow inputs.
             exec_wf.connect(stg_wf, 'output_spec.out_file', staged, 'images')
             mask_inputs = pe.Node(Merge(2), name='mask_inputs')
             exec_wf.connect(iter_session, 'subject', mask_wf, 'input_spec.subject')
             exec_wf.connect(iter_session, 'session', mask_wf, 'input_spec.session')
             exec_wf.connect(staged, 'images', mask_wf, 'input_spec.images')
             if reg_wf:
+                # Hook up the registration workflow inputs.
                 exec_wf.connect(iter_session, 'subject', reg_wf, 'input_spec.subject')
                 exec_wf.connect(iter_session, 'session', reg_wf, 'input_spec.session')
                 exec_wf.connect(staged, 'images', reg_wf, 'input_spec.images')
                 exec_wf.connect(mask_wf, 'output_spec.out_file', reg_wf, 'input_spec.mask')
                 exec_wf.connect(stg_wf, 'output_spec.out_file', reg_wf, 'iter_image.image')
             if mdl_wf:
+                # Hook up the modeling workflow non-iterable inputs.
                 exec_wf.connect(iter_session, 'subject', mdl_wf, 'input_spec.subject')
                 exec_wf.connect(iter_session, 'session', mdl_wf, 'input_spec.session')
                 exec_wf.connect(mask_wf, 'output_spec.out_file', mdl_wf, 'input_spec.mask')
