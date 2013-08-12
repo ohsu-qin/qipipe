@@ -4,7 +4,7 @@ from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Merge)
 from ..helpers import xnat_helper
 from .workflow_base import WorkflowBase
-from .staging import (detect_new_visits, StagingWorkflow)
+from . import staging
 from .mask import MaskWorkflow
 from .registration import RegistrationWorkflow
 from .modeling import ModelingWorkflow
@@ -90,7 +90,7 @@ class QIPipelineWorkflow(WorkflowBase):
         """
         super(QIPipelineWorkflow, self).__init__(logger)
         
-        self.workflow = self._create_workflow(**opts)
+        #self.workflow = self._create_workflow(**opts)
         """
         The pipeline execution workflow. The execution workflow is executed by
         calling the :meth:`qipipe.pipeline.modeling.QIPipelineWorkflow.run`
@@ -125,58 +125,74 @@ class QIPipelineWorkflow(WorkflowBase):
             (default current working directory)
         :return: the (subject, session) XNAT names for the new sessions
         """
-        # The AIRC series which are not yet uploaded to XNAT.
-        new_series = detect_new_visits(collection, *inputs)
-        if not new_series:
-            return []
-        
-        # The {subject: session}, and {(subject, session): [(scan, dicom_files), ...]}
-        # dictionaries.
-        sbj_sess_dict = defaultdict(list)
-        sess_ser_dict = defaultdict(list)
-        for sbj, sess, scan, dicom_files in new_series:
-            sbj_sess_dict[sbj].append((sbj, sess))
-            sess_ser_dict[(sbj, sess)].append((scan, dicom_files))
-        
         # The staging location.
         if opts.has_key('dest'):
             dest = os.path.abspath(opts['dest'])
         else:
             dest = os.path.join(os.getcwd(), 'data')
 
-        # Set the workflow (collection, destination, subjects) input.
-        subjects = sbj_sess_dict.keys()
-        exec_wf = self.workflow
-        input_spec = exec_wf.get_node('input_spec')
-        input_spec.inputs.collection = collection
-        input_spec.inputs.dest = dest
-        input_spec.inputs.subjects = subjects
+        with xnat_helper.connection() as xnat:
+            # Stage the files.
+            sess_stacks_dict = staging.run(collection, *inputs, dest=dest, base_dir=dest)
+            if not sess_stacks_dict:
+                return []
+            # TODO - mask, etc.
+            
+        return sess_stacks_dict.keys()
         
-        # Set the iterable subject inputs.
-        iter_subject = exec_wf.get_node('iter_subject')
-        iter_subject.iterables = ('subject', subjects)
         
-        # Set the iterable session inputs.
-        iter_session = exec_wf.get_node('iter_session')
-        iter_session.itersource = ('iter_subject', 'subject')
-        iter_sess_fields = ['subject', 'session']
-        iter_session.iterables = [iter_sess_fields, sbj_sess_dict]
-        iter_session.synchronize = True
-        
-        # Set the iterable series inputs.
-        iter_series = exec_wf.get_node('iter_series')
-        iter_series.itersource = ('iter_session', ['subject', 'session'])
-        iter_ser_fields = ['scan', 'dicom_files']
-        iter_series.iterables = [iter_ser_fields, sess_ser_dict]
-        iter_series.synchronize = True
-        
-        # Run the staging workflow.
-        self._run_workflow(self.workflow)
-        
-        # Return the new XNAT (subject, session, reconstruction, analysis) tuples.
-        reg_recon = self.registration_reconstruction
-        mdl_anl = self.modeling_assessor
-        return [(sbj, sess, reg_recon, mdl_anl) for sbj, sess in new_sessions]
+        # # The AIRC series which are not yet uploaded to XNAT.
+        # new_series = detect_new_visits(collection, *inputs)
+        # if not new_series:
+        #     return []
+        # 
+        # # The {subject: session}, and {(subject, session): [(scan, dicom_files), ...]}
+        # # dictionaries.
+        # sbj_sess_dict = defaultdict(list)
+        # sess_ser_dict = defaultdict(list)
+        # for sbj, sess, scan, dicom_files in new_series:
+        #     sbj_sess_dict[sbj].append((sbj, sess))
+        #     sess_ser_dict[(sbj, sess)].append((scan, dicom_files))
+        # 
+        # # The staging location.
+        # if opts.has_key('dest'):
+        #     dest = os.path.abspath(opts['dest'])
+        # else:
+        #     dest = os.path.join(os.getcwd(), 'data')
+        # 
+        # # Set the workflow (collection, destination, subjects) input.
+        # subjects = sbj_sess_dict.keys()
+        # exec_wf = self.workflow
+        # input_spec = exec_wf.get_node('input_spec')
+        # input_spec.inputs.collection = collection
+        # input_spec.inputs.dest = dest
+        # input_spec.inputs.subjects = subjects
+        # 
+        # # Set the iterable subject inputs.
+        # iter_subject = exec_wf.get_node('iter_subject')
+        # iter_subject.iterables = ('subject', subjects)
+        # 
+        # # Set the iterable session inputs.
+        # iter_session = exec_wf.get_node('iter_session')
+        # iter_session.itersource = ('iter_subject', 'subject')
+        # iter_sess_fields = ['subject', 'session']
+        # iter_session.iterables = [iter_sess_fields, sbj_sess_dict]
+        # iter_session.synchronize = True
+        # 
+        # # Set the iterable series inputs.
+        # iter_series = exec_wf.get_node('iter_series')
+        # iter_series.itersource = ('iter_session', ['subject', 'session'])
+        # iter_ser_fields = ['scan', 'dicom_files']
+        # iter_series.iterables = [iter_ser_fields, sess_ser_dict]
+        # iter_series.synchronize = True
+        # 
+        # # Run the staging workflow.
+        # self._run_workflow(self.workflow)
+        # 
+        # # Return the new XNAT (subject, session, reconstruction, analysis) tuples.
+        # reg_recon = self.registration_reconstruction
+        # mdl_anl = self.modeling_assessor
+        # return [(sbj, sess, reg_recon, mdl_anl) for sbj, sess in new_sessions]
     
     def _create_workflow(self, **opts):
         """
