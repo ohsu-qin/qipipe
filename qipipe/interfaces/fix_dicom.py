@@ -8,11 +8,11 @@ class FixDicomInputSpec(BaseInterfaceInputSpec):
 
     subject = traits.Str(desc='The subject name', mandatory=True)
 
-    in_files = InputMultiPath(File(exists=True), desc='The input DICOM files', mandatory=True)
+    in_file = File(exists=True, desc='The input DICOM file', mandatory=True)
     
 
 class FixDicomOutputSpec(TraitedSpec):
-    out_files = traits.List(desc="The modified output files", trait=File, exists=True)
+    out_file = File(desc="The modified output file", exists=True)
 
 
 class FixDicom(BaseInterface):
@@ -24,10 +24,10 @@ class FixDicom(BaseInterface):
     output_spec = FixDicomOutputSpec
     
     def _run_interface(self, runtime):
-        self._out_files = fix_dicom_headers(self.inputs.collection, self.inputs.subject, *self.inputs.in_files)
+        self._out_file = fix_dicom_headers(self.inputs.collection, self.inputs.subject, self.inputs.in_file)
         return runtime
 
     def _list_outputs(self):
         outputs = self._outputs().get()
-        outputs['out_files'] = self._out_files
+        outputs['out_file'] = self._out_file
         return outputs
