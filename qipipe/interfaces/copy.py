@@ -5,9 +5,11 @@ from nipype.interfaces.base import (traits,
 
 
 class CopyInputSpec(BaseInterfaceInputSpec):
-    in_file = traits.Either(File, Directory, exists=True, mandatory=True, desc='The file or directory to copy')
+    in_file = traits.Either(File, Directory, exists=True, mandatory=True,
+        desc='The file or directory to copy')
 
-    dest = traits.Either(File, Directory, mandatory=True, desc='The destination path')
+    dest = traits.Either(File, Directory, mandatory=True,
+        desc='The destination path')
 
 
 class CopyOutputSpec(TraitedSpec):
