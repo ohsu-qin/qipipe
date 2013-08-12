@@ -14,7 +14,8 @@ class MapCTPInputSpec(BaseInterfaceInputSpec):
     patient_ids = traits.CList(traits.Str(), mandatory=True,
         desc='The DICOM Patient IDs to map')
 
-    dest = Directory(desc='The optional directory to write the map file (default current directory)')
+    dest = Directory(desc='The optional directory to write the map file '
+        '(default current directory)')
 
 
 class MapCTPOutputSpec(TraitedSpec):
@@ -22,8 +23,8 @@ class MapCTPOutputSpec(TraitedSpec):
 
 
 class MapCTP(BaseInterface):
-    """The MapCTP interface wraps the :class:`qipipe.interfaces.map_ctp.CTPPatientIdMap`
-    class."""
+    """The MapCTP interface wraps the
+    :class:`qipipe.interfaces.map_ctp.CTPPatientIdMap` class."""
     
     input_spec = MapCTPInputSpec
     
