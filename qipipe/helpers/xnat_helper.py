@@ -423,11 +423,11 @@ class XNAT(object):
             if sbj.exists():
                 return sbj
             elif create:
-                logger.debug("Creating the XNAT %s subject %s..." %
+                logger.debug("Creating the XNAT %s %s subject..." %
                     (project, subject))
                 sbj.insert()
-                logger.debug("Created the XNAT %s subject with id %s." %
-                    (subject, sbj.id()))
+                logger.debug("Created the XNAT %s %s subject with id %s." %
+                    (project, subject, sbj.id()))
                 return sbj
             else:
                 return
@@ -447,10 +447,10 @@ class XNAT(object):
                 # experiments option.
                 opts['experiments'] = self._standardize_modality(modality)
                 # Create the experiment.
-                logger.debug("Creating the XNAT %s %s experiment %s..." %
+                logger.debug("Creating the XNAT %s %s %s experiment..." %
                     (project, subject, session))
                 exp.insert()
-                logger.debug("Created the XNAT %s %s experiment %s with "
+                logger.debug("Created the XNAT %s %s %s experiment with "
                     "id %s." % (project, subject, session, exp.id()))
             else:
                 return
@@ -469,13 +469,13 @@ class XNAT(object):
         ctr = self._xnat_resource_parent(exp, ctr_type, ctr_id)
         if not ctr.exists():
             if create:
-                logger.debug("Creating the XNAT %s %s %s %s resource parent "
-                    "container %s..." %
+                logger.debug("Creating the XNAT %s %s %s %s %s resource parent "
+                    "container..." %
                     (project, subject, session, ctr_type, ctr_id))
                 ctr.insert()
-                logger.debug("Created the XNAT %s %s %s %s resource parent "
+                logger.debug("Created the XNAT %s %s %s %s %s resource parent "
                     "container with id %s." %
-                    (project, subject, session, ctr_type, ctr.id()))
+                    (project, subject, session, ctr_type, ctr_id, ctr.id()))
             else:
                 return
         
@@ -487,13 +487,12 @@ class XNAT(object):
         rsc = self._xnat_child_resource(ctr, resource, opts.get('inout'))
         if not rsc.exists():
             if create:
-                logger.debug("Creating the XNAT %s %s %s %s %s resource "
-                    "%s..." %
+                logger.debug("Creating the XNAT %s %s %s %s %s %s resource..." %
                     (project, subject, session, ctr_type, ctr_id, resource))
                 rsc.insert()
-                logger.debug("Created the XNAT %s %s %s %s resource %s with "
+                logger.debug("Created the XNAT %s %s %s %s %s %s resource with "
                     "id %s." %
-                    (project, subject, session, ctr_type, ctr_id, rsc.id()))
+                    (project, subject, session, ctr_type, ctr_id, resource, rsc.id()))
             else:
                 return
         
