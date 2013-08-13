@@ -351,7 +351,7 @@ class XNAT(object):
         
         # Upload each file.
         logger.debug("Uploading %d %s %s %s files to XNAT..." %
-            (len(in_files), project, subject, session)
+            (len(in_files), project, subject, session))
         xnat_files = [self._upload_file(rsc_obj, f, opts) for f in in_files]
         logger.debug("%d %s %s %s files uploaded to XNAT." %
             (len(in_files), project, subject, session))
