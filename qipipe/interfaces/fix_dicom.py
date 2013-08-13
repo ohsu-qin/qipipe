@@ -1,6 +1,7 @@
 import os
 from nipype.interfaces.base import (BaseInterface, BaseInterfaceInputSpec, traits,
     InputMultiPath, File, Directory, TraitedSpec)
+from qipipe.staging.staging_error import StagingError
 from qipipe.staging.fix_dicom import fix_dicom_headers
 
 class FixDicomInputSpec(BaseInterfaceInputSpec):
@@ -24,10 +25,15 @@ class FixDicom(BaseInterface):
     output_spec = FixDicomOutputSpec
     
     def _run_interface(self, runtime):
-        self._out_file = fix_dicom_headers(self.inputs.collection, self.inputs.subject, self.inputs.in_file)
+        fixed = fix_dicom_headers(self.inputs.collection, self.inputs.subject, self.inputs.in_file)
+        if len(fixed) != 1:
+            raise StagingError("Fixed DICOM file count is not one: %s" % fixed)
+        self._out_file = fixed[0]
+        
         return runtime
 
     def _list_outputs(self):
         outputs = self._outputs().get()
         outputs['out_file'] = self._out_file
+        
         return outputs
