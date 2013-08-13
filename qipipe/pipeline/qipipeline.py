@@ -133,8 +133,8 @@ class QIPipelineWorkflow(WorkflowBase):
 
         with xnat_helper.connection() as xnat:
             # Stage the files.
-            sess_stacks_dict = staging.run(collection, *inputs, dest=dest, base_dir=dest)
-            if not sess_stacks_dict:
+            stg_dict = staging.run(collection, *inputs, dest=dest, base_dir=dest)
+            if not stg_dict:
                 return []
             # TODO - mask, etc.
             
