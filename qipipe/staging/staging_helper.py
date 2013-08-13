@@ -87,7 +87,7 @@ def group_dicom_files_by_series(*dicom_files):
     DICOM Image Type, are ignored.
     
     :param dicom_files: the DICOM files or directories
-    :return: a series number => DICOM file names dictionary
+    :return: a {series number: DICOM file names} dictionary
     """
     ser_files_dict = defaultdict(list)
     for ds in iter_dicom_headers(*dicom_files):
