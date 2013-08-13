@@ -330,7 +330,7 @@ class StagingWorkflow(WorkflowBase):
             session=session, scan=series, resource='DICOM', create=True)
         cr_rsc.run()
         
-        # Iterate over the DICOM files.
+        # Set the inputs.
         dicom_input = self.dicom_sequence.get_node('input_spec')
         dicom_input.inputs.collection = collection
         dicom_input.inputs.subject = subject
@@ -338,15 +338,14 @@ class StagingWorkflow(WorkflowBase):
         dicom_input.inputs.series = series
         dicom_input.inputs.dest = ser_dest
         dicom_input.iterables = ('dicom_file', dicom_files)
-        self.dicom_sequence.run()
+        
+        # Execute the workflow.
+        self._run_workflow(self.dicom_sequence)
         out_files = glob.glob(ser_dest + '/*.dcm.gz')
         logger.debug("Staged %d %s %s series %s DICOM files in %s." %
             (len(out_files), subject, session, series, ser_dest))
         
-        logger.debug(">>%s" % out_files)
-        
         return out_files
-    
     
     def _create_stack(self, subject, session, series, dicom_files, dest):
         """Stacks the given series DICOM files into a 3-D NiFTI image,
@@ -364,15 +363,17 @@ class StagingWorkflow(WorkflowBase):
             session=session, scan=series, resource='NIFTI', create=True)
         cr_rsc.run()
         
-        # Stack the series.
+        # Set the inputs.
         stack_input = self.stack_sequence.get_node('input_spec')
         stack_input.inputs.subject = subject
         stack_input.inputs.session = session
         stack_input.inputs.series = series
         stack_input.inputs.dicom_files = dicom_files
         stack_input.inputs.dest = ser_dest
-        self.stack_sequence.run()
-        logger.debug("Staged the %s %s series %s stacks in %s." %
+        
+        # Execute the workflow.
+        self._run_workflow(self.stack_sequence)
+        logger.debug("Staged the %s %s series %s stack in %s." %
             (subject, session, series, ser_dest))
         
         # Return the stack file in the staging area.
