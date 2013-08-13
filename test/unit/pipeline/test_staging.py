@@ -38,6 +38,9 @@ class TestStagingWorkflow(object):
     def test_breast(self):
         self._test_collection('Breast')
     
+    def test_sarcoma(self):
+        self._test_collection('Sarcoma')
+    
     def _test_collection(self, collection):
         """
         Run the staging workflow on the given collection and verify that
