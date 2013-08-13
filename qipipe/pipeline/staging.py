@@ -119,7 +119,7 @@ class StagingWorkflow(WorkflowBase):
             working directory)
         :keyword overwrite: flag indicating whether to replace existing XNAT
             subjects (default False)
-        :return: the new {(subject, session): stack files}
+        :return: the {subject: {session: stack files}} dictionary
         """
         # Group the new DICOM files into a
         # {subject: {session: [(series, dicom_files), ...]}} dictionary..
@@ -140,7 +140,7 @@ class StagingWorkflow(WorkflowBase):
         # Make the TCIA subject map.
         self._create_subject_map(collection, subjects, dest)
         
-        # The {(subject, series): stacks} dictionary result.
+        # The {subject: {session: stacks}} dictionary result.
         stacks_dict = defaultdict(lambda: defaultdict(list))
         
         series_cnt = sum(map(len, stg_dict.itervalues()))
@@ -242,13 +242,13 @@ class StagingWorkflow(WorkflowBase):
         workflow.connect(fix_dicom, 'out_file', compress_dicom, 'in_file')
         workflow.connect(input_spec, 'dest', compress_dicom, 'dest')
         
-        # Upload the compressed DICOM file to XNAT.
-        upload_dicom = pe.Node(XNATUpload(project=project(), format='DICOM'),
-            name='upload_dicom')
-        workflow.connect(input_spec, 'subject', upload_dicom, 'subject')
-        workflow.connect(input_spec, 'session', upload_dicom, 'session')
-        workflow.connect(input_spec, 'series', upload_dicom, 'scan')
-        workflow.connect(compress_dicom, 'out_file', upload_dicom, 'in_files')
+        # # Upload the compressed DICOM file to XNAT.
+        # upload_dicom = pe.Node(XNATUpload(project=project(), format='DICOM'),
+        #     name='upload_dicom')
+        # workflow.connect(input_spec, 'subject', upload_dicom, 'subject')
+        # workflow.connect(input_spec, 'session', upload_dicom, 'session')
+        # workflow.connect(input_spec, 'series', upload_dicom, 'scan')
+        # workflow.connect(compress_dicom, 'out_file', upload_dicom, 'in_files')
         
         logger.debug("Created the %s workflow sequence." % workflow.name)
         # If debug is set, then diagram the workflow graph.
@@ -342,6 +342,11 @@ class StagingWorkflow(WorkflowBase):
         # Execute the workflow.
         self._run_workflow(self.dicom_sequence)
         out_files = glob.glob(ser_dest + '/*.dcm.gz')
+        
+        # Upload the DICOM files.
+        with xnat_helper.connection() as xnat:
+            xnat.upload(project(), subject, session, series, *out_files)
+        
         logger.debug("Staged %d %s %s series %s DICOM files in %s." %
             (len(out_files), subject, session, series, ser_dest))
         

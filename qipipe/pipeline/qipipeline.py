@@ -139,7 +139,9 @@ class QIPipelineWorkflow(WorkflowBase):
             stg_dict = staging.run(collection, *inputs, dest=dest, base_dir=base_dir)
             if not stg_dict:
                 return []
-            # TODO - mask, etc.
+            
+            # Make the mask.
+            
             
         return sess_stacks_dict.keys()
         
