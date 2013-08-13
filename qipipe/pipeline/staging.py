@@ -345,7 +345,7 @@ class StagingWorkflow(WorkflowBase):
         
         # Upload the DICOM files.
         with xnat_helper.connection() as xnat:
-            xnat.upload(project(), subject, session, series, *out_files)
+            xnat.upload(project(), subject, session, scan=series, *out_files)
         
         logger.debug("Staged %d %s %s series %s DICOM files in %s." %
             (len(out_files), subject, session, series, ser_dest))
@@ -360,7 +360,7 @@ class StagingWorkflow(WorkflowBase):
         # Make the staging directory.
         ser_dest = self._make_series_staging_directory(dest, subject, session,
             series)
-        logger.debug("Staging the %s %s series %s stacks in %s..." %
+        logger.debug("Staging the %s %s series %d stacks in %s..." %
             (subject, session, series, ser_dest))
         
         # Make the XNAT scan NIFTI resource.
@@ -378,7 +378,7 @@ class StagingWorkflow(WorkflowBase):
         
         # Execute the workflow.
         self._run_workflow(self.stack_sequence)
-        logger.debug("Staged the %s %s series %s stack in %s." %
+        logger.debug("Staged the %s %s series %d stack in %s." %
             (subject, session, series, ser_dest))
         
         # Return the stack file in the staging area.
