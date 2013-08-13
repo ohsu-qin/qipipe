@@ -154,16 +154,16 @@ class StagingWorkflow(WorkflowBase):
         for sbj, sess_dict in stg_dict.iteritems():
             # The session workflow.
             logger.debug("Staging subject %s..." % sbj)
-            for sess, ser_specs in sess_dict.iteritems():
-                logger.debug("Staging %s %s..." % (sbj, sess))
+            for sess, ser_dict in sess_dict.iteritems():
+                logger.debug("Staging %s session %s..." % (sbj, sess))
                 # The series workflow.
-                for ser, dicom_files in ser_specs:
+                for ser, dicom_files in ser_dict.iteritems():
                     staged = self._stage_dicom(collection, sbj, sess, ser,
                         dicom_files, dicom_dest)
                     stack = self._create_stack(sbj, sess, ser, staged,
                         stack_dest)
                     stacks_dict[sbj][sess].append(stack)
-                logger.debug("Staged %s %s." % (sbj, sess))
+                logger.debug("Staged %s session %s." % (sbj, sess))
             logger.debug("Staged subject %s." % sbj)
         logger.debug("Staged %d new %s series from %d subjects in %s." %
             (series_cnt, collection, len(subjects), dest))
@@ -181,7 +181,7 @@ class StagingWorkflow(WorkflowBase):
         :param opts: the following options:
         :keyword overwrite: flag indicating whether to replace existing XNAT
             subjects (default False)
-        :return: the {subject: {session: [(series, dicom files)]}} dictionary
+        :return: the {subject: {session: {series: [dicom files]}}} dictionary
         """
         # If the overwrite option is set, then delete existing subjects.
         if opts.get('overwrite'):
@@ -399,11 +399,11 @@ class StagingWorkflow(WorkflowBase):
         Creates the staging dictionary for the new images in the given sessions.
         
         :param session_specs: the (subject, session, dicom_files) tuples to group
-        :return: the {subject: {session: [(series, dicom files)]}} dictionary
+        :return: the {subject: {session: {series: [dicom files]}}} dictionary
         """
         
-        # The {subject: {session: [(series, dicom files)]}} output.
-        stg_dict = defaultdict(lambda: defaultdict(list))
+        # The {subject: {session: {series: [dicom files]}}} output.
+        stg_dict = defaultdict(dict)
         
         for sbj, sess, dcm_file_iter in session_specs:
             # Group the session DICOM input files by series.
@@ -412,7 +412,7 @@ class StagingWorkflow(WorkflowBase):
                 raise StagingError("No DICOM files were detected in the "
                     "%s %s session source directory." % (sbj, sess))
             # Collect the (series, dicom_files) tuples.
-            stg_dict[sbj][sess] = ser_dcm_dict.items()
+            stg_dict[sbj][sess] = ser_dcm_dict
         
         return stg_dict
     
