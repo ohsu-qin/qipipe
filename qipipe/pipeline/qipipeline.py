@@ -21,15 +21,12 @@ def run(*inputs, **opts):
     :param inputs: the :meth:`qipipe.pipeline.qipipeline.QIPipelineWorkflow.run`
         inputs
     :param opts: the :class:`qipipe.pipeline.qipipeline.QIPipelineWorkflow`
-        initializer options
+        initializer and :meth:`qipipe.pipeline.qipipeline.QIPipelineWorkflow.run`
+        options
     :return: the :meth:`qipipe.pipeline.qipipeline.QIPipelineWorkflow.run`
         result
     """
-    # dest is a run option.
-    run_opts = {}
-    if 'dest' in opts:
-        run_opts['dest'] = opts.pop('dest')
-    return QIPipelineWorkflow(**opts).run(*inputs, **run_opts)
+    return QIPipelineWorkflow(**opts).run(*inputs, **opts)
 
 
 class QIPipelineWorkflow(WorkflowBase):
@@ -130,10 +127,16 @@ class QIPipelineWorkflow(WorkflowBase):
             dest = os.path.abspath(opts['dest'])
         else:
             dest = os.path.join(os.getcwd(), 'data')
+        
+        # The work area.
+        if opts.has_key('base_dir'):
+            base_dir = os.path.abspath(opts['base_dir'])
+        else:
+            base_dir = tempfile.mkdtemp()
 
         with xnat_helper.connection() as xnat:
             # Stage the files.
-            stg_dict = staging.run(collection, *inputs, dest=dest, base_dir=dest)
+            stg_dict = staging.run(collection, *inputs, dest=dest, base_dir=base_dir)
             if not stg_dict:
                 return []
             # TODO - mask, etc.
