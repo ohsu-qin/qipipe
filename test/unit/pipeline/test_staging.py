@@ -38,9 +38,6 @@ class TestStagingWorkflow(object):
     def test_breast(self):
         self._test_collection('Breast')
     
-    def test_sarcoma(self):
-        self._test_collection('Sarcoma')
-    
     def _test_collection(self, collection):
         """
         Run the staging workflow on the given collection and verify that
@@ -70,18 +67,18 @@ class TestStagingWorkflow(object):
             # Delete any existing test subjects.
             delete_subjects(project(), *subjects)
             # Run the pipeline.
-            sess_stacks_dict = staging.run(collection, *sources, dest=dest, base_dir=RESULTS)
+            stg_dict = staging.run(collection, *sources, dest=dest, base_dir=RESULTS)
             # Verify the result.
-            for sess_spec, stacks in sess_stacks_dict:
-                sbj, sess = sess_spec
-                sess_obj = xnat.get_session(project(), sbj, sess)
-                assert_true(sess_obj.exists(), "The %s %s session was not created in XNAT" % (sbj, sess))
-                dicom_dest = os.path.join(dest, 'dicom', sbj, sess)
-                assert_is_true(os.path.exists(dicom_dest), "The TCIA staging area was not created: %s" %
-                    dicom_dest)
-                stack_dest = os.path.join(dest, 'stacks', sbj, sess)
-                assert_is_true(os.path.exists(stack_dest), "The stacks staging area was not created: %s" %
-                    stack_dest)
+            for sbj, stacks_dict in stg_dict.iteritems():
+                for sess, images in stacks_dict.iteritems():
+                    sess_obj = xnat.get_session(project(), sbj, sess)
+                    assert_true(sess_obj.exists(), "The %s %s session was not created in XNAT" % (sbj, sess))
+                    dicom_dest = os.path.join(dest, 'dicom', sbj, sess)
+                    assert_true(os.path.exists(dicom_dest), "The TCIA staging area was not created: %s" %
+                        dicom_dest)
+                    stack_dest = os.path.join(dest, 'stacks', sbj, sess)
+                    assert_true(os.path.exists(stack_dest), "The stacks staging area was not created: %s" %
+                        stack_dest)
             # Delete the test subjects.
             delete_subjects(project(), *subjects)
 
