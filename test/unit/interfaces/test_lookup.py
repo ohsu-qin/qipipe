@@ -25,7 +25,7 @@ class TestLookup:
     def test_lookup(self):
         lookup = Lookup(key='a', dictionary=dict(a=1, b=2))
         result = lookup.run()
-        assert_equals(1, result.outputs.value, "Output field a incorrect: %s" % result.outputs.value)
+        assert_equal(1, result.outputs.value, "Output field a incorrect: %s" % result.outputs.value)
 
 
 if __name__ == "__main__":

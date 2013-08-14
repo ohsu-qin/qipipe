@@ -10,9 +10,8 @@ from test.helpers.project import project
 from qipipe.interfaces import XNATFind
 from qipipe.helpers import xnat_helper
 from qipipe.helpers import xnat_helper
-from qipipe.helpers.xnat_helper import delete_subjects
 from test.unit.helpers.test_xnat_helper import (FIXTURES, RESULTS)
-from test.helpers.xnat_test_helper import generate_subject_name
+from test.helpers.xnat_test_helper import (delete_subjects, generate_subject_name)
 
 SUBJECT = generate_subject_name(__name__)
 """The test subject name."""
@@ -91,7 +90,7 @@ class TestXNATFind(object):
         # Refind the object.
         find = XNATFind(project=project(), **inputs)
         result = find.run()
-        assert_equals(result.outputs.xnat_id, xnat_id,
+        assert_equal(result.outputs.xnat_id, xnat_id,
             "Find %s returned the wrong id: %s." %
             (inputs, result.outputs.xnat_id))
         

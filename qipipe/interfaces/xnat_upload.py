@@ -26,6 +26,10 @@ class XNATUploadInputSpec(BaseInterfaceInputSpec):
     in_files = InputMultiPath(File(exists=True), mandatory=True, desc='The files to upload')
 
 
+class XNATUploadOutputSpec(TraitedSpec):
+    xnat_files = traits.List(traits.Str, desc='The XNAT file object labels')
+
+
 class XNATUpload(BaseInterface):
     """
     The ``XNATUpload`` Nipype interface wraps the
@@ -33,6 +37,8 @@ class XNATUpload(BaseInterface):
     """
     
     input_spec = XNATUploadInputSpec
+    
+    output_spec = XNATUploadOutputSpec
 
     def _run_interface(self, runtime):
         # The upload options.
@@ -55,7 +61,15 @@ class XNATUpload(BaseInterface):
         
         # Upload the files.
         with xnat_helper.connection() as xnat:
-            xnat.upload(self.inputs.project, self.inputs.subject, self.inputs.session,
+            self._xnat_files = xnat.upload(self.inputs.project,
+                self.inputs.subject, self.inputs.session,
                 *self.inputs.in_files, **opts)
         
         return runtime
+    
+    def _list_outputs(self):
+        outputs = self._outputs().get()
+        if hasattr(self, '_xnat_files'):
+            outputs['xnat_files'] = self._xnat_files
+        
+        return outputs

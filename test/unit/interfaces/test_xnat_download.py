@@ -8,8 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from test.helpers.project import project
 from qipipe.interfaces import XNATDownload
 from qipipe.helpers import xnat_helper
-from qipipe.helpers.xnat_helper import delete_subjects
-from test.helpers.xnat_test_helper import generate_subject_name
+from test.helpers.xnat_test_helper import (delete_subjects, generate_subject_name)
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
@@ -74,7 +73,7 @@ class TestXNATDownload:
         
         # Verify the result
         dl_files = result.outputs.out_files
-        assert_equals(2, len(dl_files), "The %s download file count is incorrect: %s" % (SESSION, dl_files))
+        assert_equal(2, len(dl_files), "The %s download file count is incorrect: %s" % (SESSION, dl_files))
         for f in dl_files:
             assert_true(os.path.exists(f), "The file was not downloaded: %s" % f)
             fdir, fname = os.path.split(f)
