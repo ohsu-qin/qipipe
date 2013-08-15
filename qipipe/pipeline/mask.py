@@ -15,19 +15,18 @@ MASK_RECON = 'mask'
 """The XNAT mask reconstruction name."""
 
 
-def run(*inputs, **opts):
+def run(input_dict, **opts):
     """
     Creates a :class:`qipipe.pipeline.mask.MaskWorkflow` and runs it
     on the given inputs.
     
-    :param inputs: the :meth:`qipipe.pipeline.mask.MaskWorkflow.run`
+    :param input_dict: the :meth:`qipipe.pipeline.mask.MaskWorkflow.run`
         inputs
-    :param opts: the :class:`qipipe.pipeline.mask.MaskWorkflow`
-        initializer options
-    :return: the :meth:`qipipe.pipeline.mask.MaskWorkflow.run`
-        result
+    :param opts: the :meth:`qipipe.pipeline.mask.MaskWorkflow.__init__`
+        options
+    :return: the XNAT mask reconstruction name
     """
-    return MaskWorkflow(**opts).run(*inputs)
+    return MaskWorkflow(**opts).run(input_dict)
 
 
 class MaskWorkflow(WorkflowBase):
@@ -40,11 +39,11 @@ class MaskWorkflow(WorkflowBase):
     
     The mask workflow input is the `input_spec` node consisting of
     the following input fields:
-
+     
      - subject: the XNAT subject name
-
+     
      - session: the XNAT session name
-
+     
      - images: the image files to mask
     
     The mask workflow output is the `output_spec` node consisting of the
@@ -65,7 +64,7 @@ class MaskWorkflow(WorkflowBase):
     - `session_spec`: the (subject, session, images) tuple to mask
     """
     
-    def __init__(self, **opts):
+    def __init__(self, cfg_file=None, base_dir=None):
         """
         If the optional configuration file is specified, then the workflow
         settings in that file override the default settings.
@@ -74,33 +73,52 @@ class MaskWorkflow(WorkflowBase):
             (default is a new temp directory)
         :keyword cfg_file: the optional workflow inputs configuration file
         """
-        super(MaskWorkflow, self).__init__(logger, opts.pop('cfg_file', None))
+        super(MaskWorkflow, self).__init__(logger, cfg_file)
         
-        self.workflow = self._create_workflow(**opts)
+        self.workflow = self._create_workflow(base_dir)
         """The mask creation workflow."""
     
-    def run(self, *inputs):
+    def run(self, input_dict):
         """
         Runs the mask workflow on the scan NiFTI files for the given
         (subject, session) inputs.
         
-        :param inputs: the (subject, session) name tuples to mask
-        :return: the mask reconstruction name
+        :param input_dict: the input {subject: {session: [images]}} dictionary
+        :return: the mask XNAT reconstruction name
         """
-        # Set the workflow inputs.
-        exec_wf = self.workflow
-        dest = os.path.join(exec_wf.base_dir, 'data')
-        with xnat_helper.connection() as xnat:
-            dl_inputs = [(sbj, sess, self._download_scans(xnat, sbj, sess, dest))
-                for sbj, sess in inputs]
-        input_spec = exec_wf.get_node('input_spec')
+        sbj_cnt = len(input_dict)
+        sess_cnt = sum(map(len, input_dict.values()))
+        logger.debug("Masking %d sessions from %d subjects..." %
+            (sess_cnt, sbj_cnt))
+        input_spec = self.workflow.get_node('input_spec')
         in_fields = ['subject' 'session', 'images']
-        input_spec.synchronize = True
-
-        # Execute the workflow
-        self._run_workflow(exec_wf)
+        # The subject workflow.
+        for sbj, sess_dict in input_dict.iteritems():
+            # The session workflow.
+            logger.debug("Masking subject %s..." % sbj)
+            for sess, images in sess_dict.iteritems():
+                logger.debug("Masking %d %s %s images..." %
+                    (len(images), sbj, sess))
+                mask = self._mask_session(sbj, sess, images)
+                logger.debug("Masked the %s %s images." % (sbj, sess))
+            logger.debug("Masked the subject %s images." % sbj)
+        logger.debug("Masked %d sessions from %d subjects." %
+            (sess_cnt, sbj_cnt))
         
-        return MASK_RECON        
+        # Execute the workflow.
+        self._run_workflow(self.workflow)
+        
+        # Return the mask XNAT reconstruction name.
+        return MASK_RECON
+    
+    def _mask_session(self, subject, session, images):
+        # Set the inputs.
+        input_spec = self.workflow.get_node('input_spec')
+        input_spec.inputs.subject = subject
+        input_spec.inputs.session = session
+        input_spec.inputs.images = images
+        # Execute the workflow.
+        self._run_workflow(self.workflow)
     
     def _create_workflow(self, base_dir=None):
         """
@@ -121,8 +139,7 @@ class MaskWorkflow(WorkflowBase):
             name='input_spec')
         
         # Merge the DCE data to 4D.
-        dce_merge = pe.Node(MergeNifti(out_format='dce_series'),
-            name='dce_merge')
+        dce_merge = pe.Node(MergeNifti(), name='dce_merge')
         workflow.connect(input_spec, 'images', dce_merge, 'in_files')
         
         # Get a mean image from the DCE data.
@@ -172,11 +189,11 @@ class MaskWorkflow(WorkflowBase):
         workflow.connect(input_spec, 'session', upload_mask, 'session')
         workflow.connect(inv_mask, 'out_file', upload_mask, 'in_files')
         
-        # Collect the outputs.
-        out_fields = ['out_file']
+        # The output is the mask file.
+        out_fields = ['mask']
         output_spec = pe.Node(IdentityInterface(fields=out_fields),
             name='output_spec')
-        workflow.connect(inv_mask, 'out_file', output_spec, 'out_file')
+        workflow.connect(inv_mask, 'out_file', output_spec, 'mask')
         
         self._configure_nodes(workflow)
         

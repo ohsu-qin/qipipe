@@ -16,18 +16,18 @@ PK_PREFIX = 'pk'
 """The XNAT modeling assessor object label prefix."""
 
 
-def run(*inputs, **opts):
+def run(input_dict, **opts):
     """
     Creates a :class:`qipipe.pipeline.modeling.ModelingWorkflow` and runs it
     on the given inputs.
     
-    :param inputs: the :meth:`qipipe.pipeline.modeling.ModelingWorkflow.run`
+    :param input_dict: the :meth:`qipipe.pipeline.modeling.ModelingWorkflow.run`
         inputs
     :param opts: the :class:`qipipe.pipeline.modeling.ModelingWorkflow`
-        initializer and :meth:`ModelingWorkflow.run` options
+        initializer options
     :return: the :meth:`qipipe.pipeline.modeling.ModelingWorkflow.run` result
     """
-    return ModelingWorkflow(**opts).run(*inputs)
+    return ModelingWorkflow(**opts).run(input_dict)
 
 
 class ModelingWorkflow(WorkflowBase):
@@ -110,9 +110,9 @@ class ModelingWorkflow(WorkflowBase):
         If the optional configuration file is specified, then the workflow
         settings in that file override the default settings.
         
+        :keyword cfg_file: the optional workflow inputs configuration file
         :keyword base_dir: the workflow execution directory
             (default a new temp directory)
-        :keyword cfg_file: the optional workflow inputs configuration file
         :keyword r1_0_val: the optional fixed |R10| value
         :keyword max_r1_0: the maximum computed |R10| value, if the fixed |R10|
             option is not set
@@ -121,7 +121,8 @@ class ModelingWorkflow(WorkflowBase):
         :keyword baseline_end_idx: the number of images to merge into a R1 series
             baseline image (default is 1)
         """
-        super(ModelingWorkflow, self).__init__(logger, opts.pop('cfg_file', None))
+        cfg_file = opts.pop('cfg_file', None)
+        super(ModelingWorkflow, self).__init__(logger, cfg_file)
         
         self.assessor = "%s_%s" % (PK_PREFIX, file_helper.generate_file_name())
         """
@@ -143,7 +144,7 @@ class ModelingWorkflow(WorkflowBase):
         the :meth:`qipipe.pipeline.modeling.ModelingWorkflow.run` method.
         """
     
-    def run(self, *inputs, **opts):
+    def run(self, input_dict, **opts):
         """
         Builds the modeling workflow described in
         :class:`qipipe.pipeline.modeling.ModelingWorkflow`
@@ -176,25 +177,30 @@ class ModelingWorkflow(WorkflowBase):
         
         .. _AIRC Grid Engine: https://everett.ohsu.edu/wiki/GridEngine
         
-        :param inputs: the (subject, session) inputs
+        :param input_dict: the input {subject: {session: [images]}} dictionary
         :param opts: the following workflow options
         :keyword reconstruction: the XNAT reconstruction to model
-        :return: the modeling XNAT analysis name
+        :return: the the output {subject: {session: [files]}} dictionary
         """
-        # If no inputs, then bail.
-        if not inputs:
-            logger.warn("The modeling workflow inputs are empty.")
-            return
+        output_dict = defaultdict(lambda: defaultdict(list))
         
-        # The workflow input node.
-        exec_wf = self.execution_workflow
-        input_spec = exec_wf.get_node('input_spec')
-        # If there is no reconstruction name, then download the XNAT scan
-        # series stack NiFTI files.
-        if 'reconstruction' in opts:
-            input_spec.reconstruction = opts['reconstruction']
-        else:
-            input_spec.container_type = 'scan'
+        series_cnt = sum(map(len, input_dict.itervalues()))
+        logger.debug("Modeling %d series from %d subjects in %s..." %
+            (series_cnt, len(input_dict.keys()), dest))
+        # The subject workflow.
+        for sbj, sess_dict in input_dict.iteritems():
+            # The session workflow.
+            logger.debug("Masking subject %s..." % sbj)
+            for sess, ser_specs in sess_dict.iteritems():
+                logger.debug("Masking %s %s..." % (sbj, sess))
+                # The series workflow.
+                for ser, images in ser_specs:
+                    files = self._model(sbj, sess, ser, images)
+                    mask_dict[sbj][sess].append(mask)
+                logger.debug("Masked %s %s." % (sbj, sess))
+            logger.debug("Masked subject %s." % sbj)
+        logger.debug("Masked %d %s series from %d subjects in %s." %
+            (series_cnt, collection, len(subjects), dest))
         # The execution workflow iterates over the inputs.
         in_fields = ['subject' 'session', 'images']
         input_spec.iterables = (in_fields, inputs)

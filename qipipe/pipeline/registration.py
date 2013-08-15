@@ -1,4 +1,5 @@
 import os, re, tempfile
+from collections import defaultdict
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Merge, Function)
 from nipype.interfaces.ants import (AverageImages, Registration, ApplyTransforms)
@@ -16,23 +17,21 @@ logger = logging.getLogger(__name__)
 REG_PREFIX = 'reg'
 """The XNAT registration reconstruction name prefix."""
 
-MASK_RECON = 'mask'
-"""The XNAT mask reconstruction name."""
 
-
-def run(*inputs, **opts):
+def run(input_dict, **opts):
     """
     Creates a :class:`qipipe.pipeline.registration.RegistrationWorkflow`
     and runs it on the given inputs.
     
-    :param inputs: the :meth:`qipipe.pipeline.registrationRegistrationWorkflow.run`
+    :param input_dict: the :meth:`qipipe.pipeline.registration.RegistrationWorkflow.run`
         inputs
-    :param opts: the :class:`qipipe.pipeline.registrationRegistrationWorkflow`
-        initializer options
-    :return: the :meth:`qipipe.pipeline.registrationRegistrationWorkflow.run`
+    :param opts: the :class:`qipipe.pipeline.registration.RegistrationWorkflow`
+        initializer and :meth:`qipipe.pipeline.registration.RegistrationWorkflow.run`
+        options
+    :return: the :meth:`qipipe.pipeline.registration.RegistrationWorkflow.run`
         result
     """
-    return RegistrationWorkflow(**opts).run(*inputs)
+    return RegistrationWorkflow(**opts).run(input_dict)
 
 
 class RegistrationWorkflow(WorkflowBase):
@@ -144,16 +143,10 @@ class RegistrationWorkflow(WorkflowBase):
         """The XNAT reconstruction name used for all runs against this workflow
         instance."""
         
-        self.reusable_workflow = self._create_reusable_workflow(**opts)
-        """The reusable registration workflow."""
-        
-        self._reg_mask_dl_wf = self._create_workflow_with_existing_mask()
-        """The execution workflow to use with a existing mask."""
-        
-        self._reg_mask_cr_wf = self._create_workflow_with_nonexisting_mask()
-        """The execution workflow to use with a non-existing mask."""
+        self.workflow = self._create_workflow(**opts)
+        """The registration workflow."""
     
-    def run(self, *inputs):
+    def run(self, input_dict):
         """
         Runs the registration workflow on the given inputs.
         
@@ -163,14 +156,36 @@ class RegistrationWorkflow(WorkflowBase):
         directory). The workflow is run on these images, resulting in a new XNAT
         reconstruction object for each session which contains the realigned images.
         
-        :param inputs: the (subject, session) name tuples to register
-        :return: the registration reconstruction name, unqualified by the
-            session parent label
+        :param input_dict: the input {subject: {session: ([images], mask)}} to register
+        :param mask: the mask file
+        :return: the registration XNAT reconstruction name
         """
-        
-        # Run the workflow on each session.
-        for sbj, sess in inputs:
-            self._register(sbj, sess)
+        # The number of sessions.
+        sess_cnt = sum(map(len, input_dict.values()))
+        # The [[(images, mask])]] list.
+        sess_tuples = [sess_dict.values()
+            for sess_dict in input_dict.itervalues()]
+        # The flattened [(images, mask])] list.
+        sbj_tuples = reduce(lambda x,y: x+y, sess_tuples)
+        # The [images] list of lists.
+        images_list = [images for images, _ in sbj_tuples]
+        # The number of images.
+        img_cnt = sum(map(len, images_list))
+        logger.debug("Registering %d images in %d sessions..." %
+            (img_cnt, sess_cnt))
+        # The subject workflow.
+        for sbj, sess_dict in input_dict.iteritems():
+            # The session workflow.
+            logger.debug("Registering subject %s..." % sbj)
+            for sess, sess_inputs in sess_dict.iteritems():
+                images, mask = sess_inputs
+                logger.debug("Registering %d images in %s session %s"
+                    " with mask %s..." % (len(images), sbj, sess, mask))
+                self._register(sbj, sess, images, mask)
+                logger.debug("Registered %s session %s." % (sbj, sess))
+            logger.debug("Registered subject %s." % sbj)
+        logger.debug("Registered %d new %s series from %d subjects in %s." %
+            (series_cnt, collection, len(subjects), dest))
         
         return self.reconstruction
     
@@ -184,56 +199,28 @@ class RegistrationWorkflow(WorkflowBase):
         """
         return "%s_%s" % (REG_PREFIX, file_helper.generate_file_name())
     
-    def _register(self, subject, session):
+    def _register(self, subject, session, images, mask):
         """
-        Runs a registration execution workflow on the given session.
+        Runs a registration execution workflow on the given session images.
         
         :param subject: the subject name
         :param session: the session name
-        :param recon: the reconstruction name
+        :param images: the input session images
+        :param mask: the image mask
         """
-        # The scan series stack download location.
-        base_dir = self._reg_mask_cr_wf.base_dir or os.getcwd()
-        dest = os.path.join(base_dir, 'data', subject, session)
-        
-        # Download the scan images. This step cannot be done within the workflow,
-        # since Nipype requires that the workflow iterator is bound to the images
-        # when the workflow is built rather than set dynamically by a download
-        # step.
-        with xnat_helper.connection() as xnat:
-            images = self._download_scans(xnat, subject, session, dest)
-        # Sort the images by series number.
-        images.sort()
-        
-        # The workflow to use depends on whether there is a mask.
-        reg_wf = self._execution_workflow_for(subject, session)
+        # Sort the images by series number, since the fixed reference image
+        # is an average of several middle series.
+        images = sorted(images)
         
         # Execute the registration workflow.
-        self._set_registration_input(reg_wf, subject, session, images)
+        self._set_registration_input(self.workflow, subject, session, images, mask)
         logger.debug("Executing the %s workflow on %s %s..." %
-            (reg_wf.name, subject, session))
-        self._run_workflow(reg_wf)
+            (self.workflow.name, subject, session))
+        self._run_workflow(self.workflow)
         logger.debug("%s %s is registered as reconstruction %s." %
             (subject, session, recon))
     
-    def _execution_workflow_for(self, subject, session):
-        """
-        Returns the registration execution workflow to use for the given session.
-        
-        :param subject: the subject name
-        :param session: the session name
-        :return: the workflow to use
-        """
-        # The workflow to run is determined by whether there is an existing mask.
-        with xnat_helper.connection() as xnat:
-            mask = xnat.get_reconstruction(project(), subject, session, MASK_RECON)
-            if mask.exists():
-                logger.debug("The %s mask exisits." % mask.label())
-                return self._reg_mask_dl_wf
-            else:
-                return self._reg_mask_cr_wf
-    
-    def _set_registration_input(self, workflow, subject, session, images):
+    def _set_registration_input(self, workflow, subject, session, images, mask):
         """
         Sets the registration input.
         
@@ -241,98 +228,25 @@ class RegistrationWorkflow(WorkflowBase):
         :param subject: the subject name
         :param session: the session name
         :param images: the scan images to register
+        :param mask: the image mask
         """
+        # Validate the mask input.
+        if not mask:
+            raise ValueError("The mask option is required for registration.")
+
         # Set the workflow inputs.
         input_spec = workflow.get_node('input_spec')
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
         input_spec.inputs.images = images
+        input_spec.inputs.mask = mask
         
         # The images are iterable in the realign workflow.
         iter_image = workflow.get_node('iter_image')
         abs_images = [os.path.abspath(fname) for fname in images]
-        iter_image.iterables = dict(image=abs_images).items()
+        iter_image.iterables = ('image', abs_images)
     
-    def _create_workflow_with_existing_mask(self):
-        logger.debug("Creating the registration workflow to use with a existing mask...")
-        
-        # The reusable registration workflow.
-        base_wf = self.reusable_workflow.clone(name='reg_dl_mask_base')
-        
-        # The execution workflow.
-        exec_wf = pe.Workflow(name='reg_dl_mask_exec', base_dir=base_wf.base_dir)
-        
-        # The execution workflow input.
-        in_fields = ['subject', 'session', 'images']
-        input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
-        
-        # The image iterator.
-        iter_image = pe.Node(IdentityInterface(fields=['image']), name='iter_image')
-        exec_wf.connect(iter_image, 'image', base_wf, 'iter_image.image')
-        
-        # Download the mask.
-        dl_mask = pe.Node(XNATDownload(project=project(), reconstruction=MASK_RECON),
-            name='dl_mask')
-        exec_wf.connect(input_spec, 'subject', dl_mask, 'subject')
-        exec_wf.connect(input_spec, 'session', dl_mask, 'session')
-        
-        # Connect the reusable workflow inputs.
-        input_spec = base_wf.get_node('input_spec')
-        exec_wf.connect(input_spec, 'subject', base_wf, 'input_spec.subject')
-        exec_wf.connect(input_spec, 'session', base_wf, 'input_spec.session')
-        exec_wf.connect(input_spec, 'images', base_wf, 'input_spec.images')
-        exec_wf.connect(dl_mask, 'out_file', base_wf, 'input_spec.mask')
-        
-        logger.debug("Created the %s workflow." % exec_wf.name)
-        
-        # If debug is set, then diagram the workflow graph.
-        if logger.level <= logging.DEBUG:
-            self._depict_workflow(exec_wf)
-        
-        return exec_wf
-    
-    def _create_workflow_with_nonexisting_mask(self):
-        logger.debug("Creating the registration workflow to use with a "
-            "non-existing mask...")
-        
-        # The reusable registration workflow.
-        base_wf = self.reusable_workflow.clone(name='reg_cr_mask_base')
-        
-        # The mask creation workflow.
-        mask_wf_gen = MaskWorkflow(base_dir=base_wf.base_dir)
-        mask_wf = mask_wf_gen.workflow.clone(name='reg_mask')
-        
-        # The execution workflow.
-        exec_wf = pe.Workflow(name='reg_cr_mask_exec', base_dir=base_wf.base_dir)
-        
-        # The execution workflow input.
-        in_fields = ['subject', 'session', 'images']
-        input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
-        
-        # The image iterator.
-        iter_image = pe.Node(IdentityInterface(fields=['image']), name='iter_image')
-        exec_wf.connect(iter_image, 'image', base_wf, 'iter_image.image')
-        
-        # Connect the mask workflow inputs.
-        exec_wf.connect(input_spec, 'subject', mask_wf, 'input_spec.subject')
-        exec_wf.connect(input_spec, 'session', mask_wf, 'input_spec.session')
-        exec_wf.connect(input_spec, 'images', mask_wf, 'input_spec.images')
-        
-        # Connect the reusable workflow inputs.
-        input_spec = base_wf.get_node('input_spec')
-        exec_wf.connect(input_spec, 'subject', base_wf, 'input_spec.subject')
-        exec_wf.connect(input_spec, 'session', base_wf, 'input_spec.session')
-        exec_wf.connect(input_spec, 'images', base_wf, 'input_spec.images')
-        exec_wf.connect(mask_wf, 'output_spec.out_file', base_wf, 'input_spec.mask')
-        
-        logger.debug("Created the %s workflow." % exec_wf.name)
-        # If debug is set, then diagram the workflow graph.
-        if logger.level <= logging.DEBUG:
-            self._depict_workflow(exec_wf)
-        
-        return exec_wf
-    
-    def _create_reusable_workflow(self, base_dir=None, technique='ANTS'):
+    def _create_workflow(self, base_dir=None, technique='ANTS'):
         """
         Creates the base registration workflow. The registration workflow
         performs the following steps:
@@ -356,7 +270,7 @@ class RegistrationWorkflow(WorkflowBase):
         # The reusable workflow.
         if not base_dir:
             base_dir = tempfile.mkdtemp()
-        base_wf = pe.Workflow(name='registration', base_dir=base_dir)
+        reg_wf = pe.Workflow(name='registration', base_dir=base_dir)
         
         # The workflow input.
         in_fields = ['subject', 'session', 'images', 'mask']
@@ -365,12 +279,7 @@ class RegistrationWorkflow(WorkflowBase):
         # Make the reference image.
         average = pe.Node(AverageImages(), name='average')
         # The average is taken over the middle three images.
-        base_wf.connect(input_spec, ('images', _middle, 3), average, 'images')
-        
-        # Mask the reference image.
-        mask_ref = pe.Node(fsl.maths.ApplyMask(output_type='NIFTI_GZ'), name='mask_ref')
-        base_wf.connect(average, 'output_average_image', mask_ref, 'in_file')
-        base_wf.connect(input_spec, 'mask', mask_ref, 'mask_file')
+        reg_wf.connect(input_spec, ('images', _middle, 3), average, 'images')
         
         # The realign image iterator.
         iter_image = pe.Node(IdentityInterface(fields=['image']), name='iter_image')
@@ -379,28 +288,27 @@ class RegistrationWorkflow(WorkflowBase):
         realign_wf = self._create_realign_workflow(base_dir, technique)
         
         # Register and resample the images.
-        base_wf.connect(input_spec, 'subject', realign_wf, 'input_spec.subject')
-        base_wf.connect(input_spec, 'session', realign_wf, 'input_spec.session')
-        base_wf.connect(iter_image, 'image', realign_wf, 'input_spec.moving_image')
-        base_wf.connect(mask_ref, 'out_file', realign_wf, 'input_spec.mask')
-        base_wf.connect(average, 'output_average_image', realign_wf, 'input_spec.fixed_image')
+        reg_wf.connect(input_spec, 'subject', realign_wf, 'input_spec.subject')
+        reg_wf.connect(input_spec, 'session', realign_wf, 'input_spec.session')
+        reg_wf.connect(iter_image, 'image', realign_wf, 'input_spec.moving_image')
+        reg_wf.connect(input_spec, 'mask', realign_wf, 'input_spec.mask')
+        reg_wf.connect(average, 'output_average_image', realign_wf, 'input_spec.fixed_image')
         
         # Upload the realigned image to XNAT.
         upload_reg = pe.Node(XNATUpload(project=project(),
             reconstruction=self.reconstruction, format='NIFTI'), name='upload_reg')
-        base_wf.connect(input_spec, 'subject', upload_reg, 'subject')
-        base_wf.connect(input_spec, 'session', upload_reg, 'session')
-        base_wf.connect(realign_wf, 'output_spec.out_file', upload_reg, 'in_files')
+        reg_wf.connect(input_spec, 'subject', upload_reg, 'subject')
+        reg_wf.connect(input_spec, 'session', upload_reg, 'session')
+        reg_wf.connect(realign_wf, 'output_spec.out_file', upload_reg, 'in_files')
         
-        # The workflow output is the reconstruction name and the realigned image file.
+        # The workflow output is the realigned image file.
         realign_output = realign_wf.get_node('output_spec')
-        out_fields = ['out_file', 'reconstruction']
-        output_spec = pe.Node(IdentityInterface(fields=out_fields), name='output_spec')
-        base_wf.connect(realign_wf, 'output_spec.out_file', output_spec, 'out_file')
+        output_spec = pe.Node(IdentityInterface(fields=['out_file']), name='output_spec')
+        reg_wf.connect(realign_wf, 'output_spec.out_file', output_spec, 'out_file')
         
-        self._configure_nodes(base_wf, average, mask_ref)
+        self._configure_nodes(reg_wf, average)
         
-        return base_wf
+        return reg_wf
 
     def _create_realign_workflow(self, base_dir, technique='ANTS'):
         """

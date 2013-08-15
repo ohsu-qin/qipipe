@@ -120,7 +120,7 @@ class QIPipelineWorkflow(WorkflowBase):
         :param opts: the following workflow execution options:
         :keyword dest: the TCIA upload destination directory
             (default current working directory)
-        :return: the (subject, session) XNAT names for the new sessions
+        :return: the new session {subject: [sessions]} dictionary
         """
         # The staging location.
         if opts.has_key('dest'):
@@ -143,7 +143,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # Make the mask.
             
             
-        return sess_stacks_dict.keys()
+        return {sbj: sess_dict.keys() for sbj, sess_dict in stg_dict.iteritems()}
         
         
         # # The AIRC series which are not yet uploaded to XNAT.
