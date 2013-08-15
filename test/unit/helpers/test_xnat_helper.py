@@ -3,9 +3,8 @@ import sys, os, shutil
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.helpers import xnat_helper
-from qipipe.helpers.xnat_helper import delete_subjects
 from test.helpers.project import project
-from test.helpers.xnat_test_helper import generate_subject_name
+from test.helpers.xnat_test_helper import (delete_subjects, generate_subject_name)
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
@@ -35,7 +34,7 @@ class TestXNATHelper(object):
         
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
-        #delete_subjects(project(), SUBJECT)
+        delete_subjects(project(), SUBJECT)
         
     def test_round_trip(self):
         with xnat_helper.connection() as xnat:
