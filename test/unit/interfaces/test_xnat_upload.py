@@ -9,9 +9,8 @@ from test.helpers.project import project
 from qipipe.interfaces import XNATUpload
 from qipipe.helpers import xnat_helper
 from qipipe.helpers import xnat_helper
-from qipipe.helpers.xnat_helper import delete_subjects
 from test.unit.helpers.test_xnat_helper import (FIXTURES, RESULTS)
-from test.helpers.xnat_test_helper import generate_subject_name
+from test.helpers.xnat_test_helper import (delete_subjects, generate_subject_name)
 
 SUBJECT = generate_subject_name(__name__)
 """The test subject name."""
@@ -62,14 +61,18 @@ class TestXNATUpload:
         result = upload.run()
         
         # Verify the result.
+        xnat_files = set(result.outputs.xnat_files)
         with xnat_helper.connection() as xnat:
             scan_obj = xnat.get_scan(project(), SUBJECT, SESSION, SCAN)
             assert_true(scan_obj.exists(), "Upload did not create the %s %s scan: %s" %
                 (SUBJECT, SESSION, SCAN))
             _, fname = os.path.split(SCAN_FIXTURE)
+            assert_in(fname, xnat_files, "The XNATUpload result does not include the"
+                " %s %s scan %d file %s" % (SUBJECT, SESSION, SCAN, fname))
             file_obj = scan_obj.resource('NIFTI').file(fname)
             assert_true(file_obj.exists(),
-                "XNATUpload did not create the %s %s file: %s" % (SUBJECT, SESSION, fname))
+                "XNATUpload did not create the %s %s scan %d file: %s" %
+                (SUBJECT, SESSION, SCAN, fname))
     
     def test_upload_reconstruction(self):
         logger.debug("Testing the XNATUpload interface on %s %s reconstruction %s..." %
@@ -95,7 +98,7 @@ class TestXNATUpload:
             (SUBJECT, SESSION, ANALYSIS))
         # Upload the file.
         upload = XNATUpload(project=project(), subject=SUBJECT, session=SESSION,
-            analysis=ANALYSIS, resource='params', in_files=ANALYSIS_FIXTURE)
+            assessor=ANALYSIS, resource='params', in_files=ANALYSIS_FIXTURE)
         result = upload.run()
         
         # Verify the result.
