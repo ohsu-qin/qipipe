@@ -1,7 +1,8 @@
 import os, re
 from contextlib import (contextmanager, closing)
 import pyxnat
-from pyxnat.core.resources import (Reconstruction, Reconstructions, Assessor, Assessors)
+from pyxnat.core.resources import (Experiment, Reconstruction, Reconstructions,
+    Assessor, Assessors)
 from pyxnat.core.errors import DatabaseError
 from .xnat_config import default_configuration
 
@@ -11,8 +12,9 @@ logger = logging.getLogger(__name__)
 @contextmanager
 def connection():
     """
-    Returns the sole :class:`qipipe.helpers.xnat_helper.XNAT` connection. The connection is closed
-    when the outermost connection block finishes.
+    Yields a :class:`qipipe.helpers.xnat_helper.XNAT` instance.
+    The XNAT connection is closed when the outermost connection
+    block finishes.
     
     Example:
         >>> from qipipe.helpers import xnat_helper
@@ -22,28 +24,18 @@ def connection():
     :return: the XNAT instance
     :rtype: :class:`qipipe.helpers.xnat_helper.XNAT`
     """
-    if hasattr(connection, 'xnat'):
+    if not hasattr(connection, 'connect_cnt'):
+        connection.connect_cnt = 0
+    if not connection.connect_cnt:
+        connection.xnat = XNAT()
+    connection.connect_cnt += 1
+    try:
         yield connection.xnat
-    else:
-        with closing(XNAT()) as xnat:
-            connection.xnat = xnat
-            yield xnat
-            del connection.xnat
-
-def delete_subjects(project, *subject_names):
-    """
-    Deletes the given XNAT subjects, if they exist.
+    finally:
+        connection.connect_cnt -= 1
+        if not connection.connect_cnt:
+            connection.xnat.close()
     
-    :param project: the XNAT project id
-    :param subject_names: the XNAT subject names
-    """
-    with connection() as xnat:
-        for sbj_lbl in subject_names:
-            sbj = xnat.get_subject(project, sbj_lbl)
-            if sbj.exists():
-                sbj.delete()
-                logger.debug("Deleted the XNAT test subject %s." % sbj_lbl)
-
 def canonical_label(*names):
     """
     Returns the XNAT label for the given hierarchical name, qualified by
@@ -101,7 +93,9 @@ class XNAT(object):
         else:
             if not config_or_interface:
                 config_or_interface = default_configuration()
-            logger.debug("Connecting to XNAT with config %s..." % config_or_interface)
+            self._config = config_or_interface
+            logger.debug("Connecting to XNAT with config %s..." %
+                config_or_interface)
             self.interface = pyxnat.Interface(config=config_or_interface)
     
     def close(self):
@@ -219,8 +213,8 @@ class XNAT(object):
         :keyword analysis: the analysis name
         :keyword container_type: the container type, if no specific container is specified
             (default ``scan``)
-        :keyword inout: the ``in``/``out`` reconstruction resource qualifier
-            (default ``out``)
+        :keyword inout: the ``in``/``out`` container resource qualifier
+            (default ``out`` for a container type that requires this option)
         :keyword dest: the optional download location (default current directory)
         :return: the downloaded file names
         """
@@ -312,19 +306,19 @@ class XNAT(object):
         :keyword modality: the session modality
         :keyword format: the image format
         :keyword resource: the resource name (default is the format)
+        :keyword inout: the container `in``/``out`` option
+            (default ``out`` for a container type that requires this option)
         :keyword overwrite: flag indicating whether to replace an existing file (default False)
         :return: the new XNAT file names
         :raise XNATError: if the project does not exist
         :raise ValueError: if the session child resource container type option is missing
         :raise ValueError: if the XNAT experiment does not exist and the modality option is missing
         """
-        # Validate that the options specify a container.
+        # Validate that there is sufficient information to infer a resource
+        # parent container.
         if not self._infer_resource_container(opts):
-            raise XNATError("A resource container could not be inferred from "
-                "the options %s" % opts)
-        
-        # The XNAT resource parent container.
-        ctr = self.find(project, subject, session, create=True, **opts)
+            raise ValueError("XNAT upload cannot infer the %s %s %s resource parent"
+                " from the options %s" % (project, subject, session, opts))
         
         # Infer the format, if necessary.
         format = opts.get('format')
@@ -333,21 +327,20 @@ class XNAT(object):
             if format:
                 opts['format'] = format
         
-        # The name of the resource that will hold the files. The default is
-        # the image format.
-        rsc = opts.pop('resource', format)
-        if not rsc:
-            raise ValueError("XNAT %s upload cannot infer the image format"
-                " as the default resource name" % session)
-        rsc_obj = self._xnat_child_resource(ctr, rsc, opts.pop('inout', None))
-        # Make the resource, if necessary.
-        if not rsc_obj.exists():
-            logger.debug("Creating the XNAT %s %s %s %s resource..." %
-                (project, subject, session, rsc))
-            rsc_obj.insert()
-            logger.debug("Created the XNAT %s %s %s resource with name %s "
-                "and id %s." %
-                (project, subject, session, rsc_obj.label(), rsc_obj.id()))
+        # The default resource is the image format.
+        if 'resource' not in opts:
+            if not format:
+                raise ValueError("XNAT %s upload cannot infer the image format"
+                    " as the default resource name" % session)
+            opts['resource'] = format
+        
+        # The XNAT resource parent container.
+        rsc_obj = self.find(project, subject, session, create=True, **opts)
+        # If only the XNAT experiment was detected, then we don't have
+        # enough information to continue.
+        if isinstance(rsc_obj, Experiment):
+            raise XNATError("A resource container could not be inferred from "
+                "the options %s" % opts)
         
         # Upload each file.
         logger.debug("Uploading %d %s %s %s files to XNAT..." %
@@ -709,8 +702,8 @@ class XNAT(object):
         rsc_ctr = resource.parent()
         # Check for an existing file.
         if file_obj.exists() and not opts.get('overwrite'):
-            raise XNATError("The XNAT file object %s already exists in the %s %s resource" %
-                (fname, rsc_ctr.id(), resource.label()))
+            raise XNATError("The XNAT file object %s already exists in the %s"
+                " resource" % (fname, resource.label()))
         
         # Upload the file.
         logger.debug("Inserting the XNAT file %s into the %s %s %s resource..." %
