@@ -37,6 +37,8 @@ class XNATDownload(BaseInterface):
     The ``XNATDownload`` Nipype interface wraps the
     :meth:`qipipe.helpers.xnat_helper.download` method.
     
+    :Note: only one XNAT operation can run at a time.
+    
     Examples
     --------
     >>> # Download the scan NiFTI files.

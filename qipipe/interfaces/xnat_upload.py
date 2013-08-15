@@ -34,6 +34,8 @@ class XNATUpload(BaseInterface):
     """
     The ``XNATUpload`` Nipype interface wraps the
     :meth:`qipipe.helpers.xnat_helper.upload` method.
+    
+    :Note: only one XNAT operation can run at a time.
     """
     
     input_spec = XNATUploadInputSpec

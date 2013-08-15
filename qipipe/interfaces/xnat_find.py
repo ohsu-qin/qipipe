@@ -34,6 +34,8 @@ class XNATFind(BaseInterface):
     """
     The ``XNATFind`` Nipype interface wraps the
     :meth:`qipipe.helpers.xnat_helper.find` method.
+    
+    :Note: only one XNAT operation can run at a time.
     """
     
     input_spec = XNATFindInputSpec
