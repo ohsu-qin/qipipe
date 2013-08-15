@@ -8,9 +8,7 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from test.helpers.project import project
 from qipipe.pipeline import mask
-from qipipe.helpers import xnat_helper
-from qipipe.helpers.xnat_helper import delete_subjects
-from test.unit.pipeline.xnat_scan_test_base import (XNATScanTestBase, ROOT)
+from test.unit.pipeline.staged_test_base import (StagedTestBase, ROOT)
 
 FIXTURES = os.path.join(ROOT, 'fixtures', 'registration')
 """The test fixtures directory."""
@@ -27,7 +25,7 @@ cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_fi
 config.update_config(cfg)
 
 
-class TestMaskWorkflow(XNATScanTestBase):
+class TestMaskWorkflow(StagedTestBase):
     """
     Mask workflow unit tests.
     
@@ -44,26 +42,25 @@ class TestMaskWorkflow(XNATScanTestBase):
     def test_sarcoma(self):
         self._test_sarcoma()
     
-    def _run_workflow(self, fixture, *inputs, **opts):
+    def _run_workflow(self, fixture, input_dict, base_dir=None):
         """
-        Executes :meth:`qipipe.pipeline.mask.run` on the input sessions.
+        Executes :meth:`qipipe.pipeline.mask.run` on the given input.
         
         :param fixture: the test fixture directory
-        :param inputs: the (subject, session) tuples
-        :param opts: the following keyword options:
-        :keyword base_dir: the workflow exection directory
-        :return: the :meth:`qipipe.pipeline.modeling.run` result
+        :param input_dict: the input {subject: {session: [images]}} to mask
+        :param base_dir: the workflow exection directory
+        :return: the :meth:`qipipe.pipeline.mask.run` result
         """
         logger.debug("Testing the mask workflow on %s..." % fixture)
-        return mask.run(*inputs, cfg_file=MASK_CONF, **opts)
+        return mask.run(input_dict, cfg_file=MASK_CONF, base_dir=base_dir)
     
-    def _verify_result(self, xnat, inputs, result):
-        # The return value is the reconstruction name.
-        recon = result
-        for sbj, sess in inputs:
-            recon_obj = xnat.get_reconstruction(project(), sbj, sess, recon)
-            assert_true(recon_obj.exists(),
-                "The %s %s %s XNAT reconstruction object was not created" % (sbj, sess, recon))
+    def _verify_result(self, xnat, input_dict, recon):
+        for sbj, sess_dict in input_dict.iteritems():
+            for sess in sess_dict:
+                recon_obj = xnat.find(project(), sbj, sess,
+                    reconstruction=recon)
+                assert_is_not_none(recon_obj, "The %s %s %s XNAT reconstruction"
+                    " object was not created" % (sbj, sess, mask.MASK_RECON))
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ from qipipe.pipeline import qipipeline as qip
 from qipipe.helpers.dicom_helper import iter_dicom
 from qipipe.helpers import xnat_helper
 from qipipe.staging import airc_collection as airc
-from qipipe.helpers.xnat_helper import delete_subjects
+from test.helpers.xnat_test_helper import delete_subjects
 from qipipe.staging.staging_helper import get_subjects
 from qipipe.helpers.ast_config import read_config
 from test.unit.pipeline.test_mask import MASK_CONF

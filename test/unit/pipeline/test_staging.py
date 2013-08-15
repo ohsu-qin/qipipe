@@ -1,4 +1,4 @@
-import sys, os, shutil
+import sys, os, glob, shutil
 from nose.tools import *
 import nipype.pipeline.engine as pe
 
@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from test.helpers.project import project
 from qipipe.pipeline import staging
 from qipipe.helpers import xnat_helper
-from qipipe.helpers.xnat_helper import delete_subjects
+from test.helpers.xnat_test_helper import delete_subjects
 from qipipe.staging.staging_helper import get_subjects
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -51,7 +51,7 @@ class TestStagingWorkflow(object):
         verified manually.
         
         :param collection: the AIRC collection name
-        """       
+        """
         fixture = os.path.join(FIXTURES, collection.lower())
         logger.debug("Testing the staging workflow on %s..." % fixture)
 
@@ -75,13 +75,14 @@ class TestStagingWorkflow(object):
             for sbj, stacks_dict in stg_dict.iteritems():
                 for sess, images in stacks_dict.iteritems():
                     sess_obj = xnat.get_session(project(), sbj, sess)
-                    assert_true(sess_obj.exists(), "The %s %s session was not created in XNAT" % (sbj, sess))
-                    dicom_dest = os.path.join(dest, 'dicom', sbj, sess)
-                    assert_true(os.path.exists(dicom_dest), "The TCIA staging area was not created: %s" %
-                        dicom_dest)
-                    stack_dest = os.path.join(dest, 'stacks', sbj, sess)
-                    assert_true(os.path.exists(stack_dest), "The stacks staging area was not created: %s" %
-                        stack_dest)
+                    assert_true(sess_obj.exists(), "The %s %s session was not"
+                        " created in XNAT" % (sbj, sess))
+                    sess_dest = os.path.join(dest, sbj, sess)
+                    assert_true(os.path.exists(sess_dest), "The staging area was not"
+                        " created: %s" % sess_dest)
+                    out_files = glob.glob(sess_dest + '/*')
+                    assert_equal(len(out_files), len(images),
+                        "Staged image count incorrect")
             # Delete the test subjects.
             delete_subjects(project(), *subjects)
 

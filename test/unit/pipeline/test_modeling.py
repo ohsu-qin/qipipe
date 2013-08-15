@@ -7,10 +7,8 @@ logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.pipeline import modeling
-from qipipe.helpers import xnat_helper
-from qipipe.helpers.xnat_helper import delete_subjects
 from test.helpers.project import project
-from test.unit.pipeline.xnat_scan_test_base import (XNATScanTestBase, ROOT)
+from test.unit.pipeline.staged_test_base import (StagedTestBase, ROOT)
 
 MODELING_CONF = os.path.join(ROOT, 'conf', 'modeling.cfg')
 """The test registration configuration."""
@@ -26,7 +24,7 @@ cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_fi
 config.update_config(cfg)
 
 
-class TestModelingWorkflow(XNATScanTestBase):
+class TestModelingWorkflow(StagedTestBase):
     """
     Modeling workflow unit tests.
     This test exercises the modeling workflow on the QIN Breast and Sarcoma study
