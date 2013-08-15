@@ -48,15 +48,14 @@ def get_subjects(collection, source, pattern=None):
     airc_coll = airc.collection_with_name(collection)
     pat = pattern or airc_coll.subject_pattern
     sbj_dir_dict = {}
-    with xnat_helper.connection() as xnat:
-        for d in os.listdir(source):
-            match = re.match(pat, d)
-            if match:
-                # The XNAT subject name.
-                subject = SUBJECT_FMT % (collection, int(match.group(1)))
-                # The subject source directory.
-                sbj_dir_dict[subject] = os.path.join(source, d)
-                logger.debug("Discovered XNAT test subject %s subdirectory: %s" % (subject, d))
+    for d in os.listdir(source):
+        match = re.match(pat, d)
+        if match:
+            # The XNAT subject name.
+            subject = SUBJECT_FMT % (collection, int(match.group(1)))
+            # The subject source directory.
+            sbj_dir_dict[subject] = os.path.join(source, d)
+            logger.debug("Discovered XNAT test subject %s subdirectory: %s" % (subject, d))
     
     return sbj_dir_dict
 
