@@ -15,3 +15,17 @@ def generate_subject_name(name):
     :return: the test subject name
     """
     return encode(name).strip('=')
+
+def delete_subjects(project, *subject_names):
+    """
+    Deletes the given XNAT subjects, if they exist.
+
+    :param project: the XNAT project id
+    :param subject_names: the XNAT subject names
+    """
+    with xnat_helper.connection() as xnat:
+        for sbj_lbl in subject_names:
+            sbj = xnat.get_subject(project, sbj_lbl)
+            if sbj.exists():
+                sbj.delete()
+                logger.debug("Deleted the XNAT test subject %s." % sbj_lbl)
