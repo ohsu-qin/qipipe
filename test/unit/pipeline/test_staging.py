@@ -70,19 +70,21 @@ class TestStagingWorkflow(object):
             # Delete any existing test subjects.
             delete_subjects(project(), *subjects)
             # Run the pipeline.
-            stg_dict = staging.run(collection, *sources, dest=dest, base_dir=RESULTS)
+            output_dict = staging.run(collection, *sources, dest=dest, base_dir=RESULTS)
             # Verify the result.
-            for sbj, stacks_dict in stg_dict.iteritems():
-                for sess, images in stacks_dict.iteritems():
+            for sbj, sess_dict in output_dict.iteritems():
+                for sess, scans in sess_dict.iteritems():
                     sess_obj = xnat.get_session(project(), sbj, sess)
                     assert_true(sess_obj.exists(), "The %s %s session was not"
                         " created in XNAT" % (sbj, sess))
                     sess_dest = os.path.join(dest, sbj, sess)
                     assert_true(os.path.exists(sess_dest), "The staging area was not"
                         " created: %s" % sess_dest)
-                    out_files = glob.glob(sess_dest + '/*')
-                    assert_equal(len(out_files), len(images),
-                        "Staged image count incorrect")
+                    for scan in scans:
+                        scan_obj = xnat.get_scan(project(), sbj, sess, scan)
+                        assert_true(scan_obj.exists(), "The %s %s scan %s was not"
+                            " created in XNAT" % (sbj, sess, scan))
+                    
             # Delete the test subjects.
             delete_subjects(project(), *subjects)
 
