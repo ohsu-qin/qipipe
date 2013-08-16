@@ -8,7 +8,8 @@ from glob import glob
 import traits.api as traits
 from nipype.interfaces.base import (DynamicTraitedSpec,
                                     CommandLine, 
-                                    CommandLineInputSpec)
+                                    CommandLineInputSpec,
+                                    isdefined)
 from nipype.interfaces.traits_extension import Undefined
 
 class MpiCommandLineInputSpec(CommandLineInputSpec):
@@ -47,13 +48,28 @@ class FastfitInputSpec(MpiCommandLineInputSpec):
     params = traits.Dict(desc='Parameters for the model')
     params_csv = traits.File(desc='Parameters CSV', 
                              argstr='--param-csv %s')
+    fix_params = traits.Dict(desc="Optimization parameters to fix, and "
+                             "the values to fix them to", argstr='%s')
     optional_outs = traits.List(desc='Optional outputs to produce',
                                 argstr='%s')
 
 class Fastfit(MpiCommandLine):
+    '''Interface to the "fastfit" software package.
+    
+    Parameters
+    ----------
+    min_outs : list
+        The minimum outputs expected. Required if the 'model_name' 
+        input is being set dynamically.
+    '''
+    
     _cmd = 'fastfit'
     input_spec = FastfitInputSpec
     output_spec = DynamicTraitedSpec
+    
+    def __init__(self, min_outs=None, **inputs):
+        super(Fastfit, self).__init__(**inputs)
+        self._min_outs = min_outs
     
     def _format_arg(self, name, spec, value):
         if name == 'optional_outs':
@@ -61,22 +77,51 @@ class Fastfit(MpiCommandLine):
         elif name == 'params':
             return ' '.join(["-s %s:%s" % item 
                              for item in value.iteritems()])
+        elif name == 'fix_params':
+            return ' '.join(["--fix-param %s:%s" % item 
+                             for item in value.iteritems()])
         else:
             return spec.argstr % value
             
     def _outputs(self):
         #Set up dynamic outputs for resulting parameter maps
-        full_module_name = 'fastfit.models.%s' % self.inputs.model_name
-        model_module = __import__(full_module_name, [], [], ['fastfit.models'])
-        self._opt_params = model_module.model.optimization_params
         outputs = super(Fastfit, self)._outputs()
         undefined_traits = {}
-        for param_name in self._opt_params:
-            outputs.add_trait(param_name, traits.File(exists=True))
-            undefined_traits[param_name] = Undefined
+        
+        #Get a list of fixed params
+        fixed_params = []
+        if isdefined(self.inputs.fix_params):
+            for key in self.inputs.fix_params:
+                fixed_params.append(key)
+        
+        #If the model name is static, we can find the outputs
+        if isdefined(self.inputs.model_name):
+            full_module_name = 'fastfit.models.%s' % self.inputs.model_name
+            model_module = __import__(full_module_name, [], [], ['fastfit.models'])
+            self._opt_params = model_module.model.optimization_params
+            if (not self._min_outs is None and
+                any(not out in self._opt_params 
+                    for out in self._min_outs)
+               ):
+                raise ValueError("The model %s does not provide the "
+                                 "minimum outputs" % model_name)
+            for param_name in self._opt_params:
+                if not param_name in fixed_params:
+                    outputs.add_trait(param_name, traits.File(exists=True))
+                    undefined_traits[param_name] = Undefined
+        
+        #Otherwise we need min_outs
+        elif not self._min_outs is None:
+            for param_name in self._min_outs:
+                outputs.add_trait(param_name, traits.File(exists=True))
+                undefined_traits[param_name] = Undefined
+        else:
+            raise ValueError("Either the 'model_name' input must "
+                             "be static or the 'min_outs' argument "
+                             "to the constructor must be given.")
         
         #Set up dynamic outputs for any requested optional outputs
-        if self.inputs.optional_outs:
+        if isdefined(self.inputs.optional_outs):
             for opt_out in self.inputs.optional_outs:
                 outputs.add_trait(opt_out, traits.File(exists=True))
                 undefined_traits[opt_out] = Undefined
