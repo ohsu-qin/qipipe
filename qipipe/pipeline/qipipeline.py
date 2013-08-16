@@ -194,7 +194,9 @@ class QIPipelineWorkflow(WorkflowBase):
             mdl_opt = False
         else:
             reg_opts = dict(cfg_file=reg_opt, base_dir=base_dir)
-            reg_wf = RegistrationWorkflow(**reg_opts).workflow
+            reg_wf_gen = RegistrationWorkflow(**reg_opts)
+            reg_wf = reg_wf_gen.workflow
+            self.registration_reconstruction = reg_wf_gen.reconstruction
             mdl_opt = opts.get('modeling', None)
         
         # The modeling workflow.
@@ -202,7 +204,9 @@ class QIPipelineWorkflow(WorkflowBase):
             mdl_wf = None
         else:
             mdl_opts = dict(cfg_file=mdl_opt, base_dir=base_dir)
-            mdl_wf = ModelingWorkflow(**mdl_opts).workflow
+            mdl_wf_gen = ModelingWorkflow(**mdl_opts)
+            mdl_wf = mdl_wf_gen.workflow
+            self.modeling_assessor = mdl_wf_gen.assessor
         
         # The workflow inputs.
         in_fields = ['subject', 'session']
@@ -226,7 +230,6 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(mask_wf, 'output_spec.mask', reg_wf, 'input_spec.mask')
             exec_wf.connect(stg_wf, 'output_spec.images', reg_wf, 'input_spec.images')
             exec_wf.connect(stg_wf, 'stack.out_file', reg_wf, 'iter_image.image')
-            self.registration_reconstruction = reg_wf.reconstruction
         
         # Model the realigned images.
         if mdl_wf:
@@ -234,7 +237,6 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(input_spec, 'session', mdl_wf, 'input_spec.session')
             exec_wf.connect(mask_wf, 'output_spec.mask', mdl_wf, 'input_spec.mask')
             exec_wf.connect(reg_wf, 'output_spec.images', mdl_wf, 'input_spec.images')
-            self.modeling_assessor = mdl_wf.assessor
         
         logger.debug("Created the %s workflow." % exec_wf.name)
         # If debug is set, then diagram the workflow graph.
