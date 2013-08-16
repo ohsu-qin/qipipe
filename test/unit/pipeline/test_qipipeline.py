@@ -60,6 +60,8 @@ class TestQIPipeline(object):
             parent = os.path.join(fixture, 'BreastChemo1')
             os.makedirs(parent)
             src = os.path.join(data, 'Breast_Chemo_Study', 'BreastChemo3', 'Visit1')
+            assert_true(os.path.exists(src), "Breast test fixture not found: %s" %
+                src)
             dest = os.path.join(parent, 'Visit1')
             os.symlink(src, dest)
             self._test_collection('Breast', fixture)
@@ -68,13 +70,14 @@ class TestQIPipeline(object):
                 "QIN_DATA environment variable is not set.")
     
     def test_sarcoma(self):
-        
         data = os.getenv('QIN_DATA')
         if data:
             fixture = os.path.join(RESULTS, 'data', 'sarcoma')
             parent = os.path.join(fixture, 'Subj_1')
             os.makedirs(parent)
             src = os.path.join(data, 'Sarcoma', 'Subj_1', 'Visit_1')
+            assert_true(os.path.exists(src), "Sarcoma test fixture not found: %s" %
+                src)
             dest = os.path.join(parent, 'Visit_1')
             os.symlink(src, dest)
             self._test_collection('Sarcoma', fixture)
@@ -94,10 +97,11 @@ class TestQIPipeline(object):
         
         # The staging destination and work area.
         dest = os.path.join(RESULTS, 'data')
-        work = os.path.join(RESULTS, 'work')
+        base_dir = os.path.join(RESULTS, 'work')
         
         # The pipeline options.
-        opts = dict(mask=MASK_CONF, registration=REG_CONF)
+        opts = dict(base_dir=base_dir, dest=dest, mask=MASK_CONF,
+            registration=REG_CONF)
         # Check whether the modeling workflow is executable.
         if not distutils.spawn.find_executable('fastfit'):
             opts['modeling'] = False
@@ -118,18 +122,29 @@ class TestQIPipeline(object):
             # Run the staging, mask and registration workflows, but not
             # the modeling.
             logger.debug("Executing the QIN pipeline...")
-            qip_specs = qip.run(collection, *sources, dest=dest, work=work, **opts)
+            output_dict = qip.run(collection, *sources, **opts)
             # Verify the result.
-            for sbj, sess, recon, anl in qip_specs:
-                assert_is_not_none(recon, "The %s %s result does not have a "
-                    "registration reconstruction" % (sbj, sess))
-                reg_obj = xnat.get_reconstruction(project(), sbj, sess, recon)
-                assert_true(reg_obj.exists(), "The %s %s registration reconstruction "
-                    "%s was not created in XNAT" % (sbj, sess, recon))
-                if opts['modeling']:
-                    mdl_obj = xnat.get_assessor(project(), sbj, sess, anl)
-                    assert_true(mdl_obj.exists(), "The %s %s modeling assessor %s "
-                        "was not created in XNAT" % (sbj, sess, anl))
+            recon = qip
+            for sbj, sess_dict in output_dict.iteritems():
+                for sess, results in sess_dict.iteritems():
+                    if opts['mask'] == False:
+                        continue
+                    # Verify the registration
+                    if opts['registration'] == False:
+                        continue
+                    recon = results['registration']
+                    assert_is_not_none(recon, "The %s %s result does not have a"
+                        " registration reconstruction" % (sbj, sess))
+                    reg_obj = xnat.get_reconstruction(project(), sbj, sess, recon)
+                    assert_true(reg_obj.exists(), "The %s %s registration"
+                        " reconstruction  %s was not created in XNAT" %
+                        (sbj, sess, recon))
+                    # Verify the modeling assessor
+                    if opts['modeling'] != False:
+                        assessor = results['modeling']
+                        mdl_obj = xnat.get_assessor(project(), sbj, sess, assessor)
+                        assert_true(mdl_obj.exists(), "The %s %s modeling assessor %s "
+                            "was not created in XNAT" % (sbj, sess, assessor))
             
             # Delete the test subjects.
             delete_subjects(project(), *subjects)
