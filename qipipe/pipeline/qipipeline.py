@@ -223,7 +223,7 @@ class QIPipelineWorkflow(WorkflowBase):
         if reg_wf:
             exec_wf.connect(input_spec, 'subject', reg_wf, 'input_spec.subject')
             exec_wf.connect(input_spec, 'session', reg_wf, 'input_spec.session')
-            exec_wf.connect(mask_wf, 'output_spec.out_file', reg_wf, 'input_spec.mask')
+            exec_wf.connect(mask_wf, 'output_spec.mask', reg_wf, 'input_spec.mask')
             exec_wf.connect(stg_wf, 'output_spec.images', reg_wf, 'input_spec.images')
             exec_wf.connect(stg_wf, 'stack.out_file', reg_wf, 'iter_image.image')
             self.registration_reconstruction = reg_wf.reconstruction
@@ -232,7 +232,7 @@ class QIPipelineWorkflow(WorkflowBase):
         if mdl_wf:
             exec_wf.connect(input_spec, 'subject', mdl_wf, 'input_spec.subject')
             exec_wf.connect(input_spec, 'session', mdl_wf, 'input_spec.session')
-            exec_wf.connect(mask_wf, 'output_spec.out_file', reg_wf, 'input_spec.mask')
+            exec_wf.connect(mask_wf, 'output_spec.mask', mdl_wf, 'input_spec.mask')
             exec_wf.connect(reg_wf, 'output_spec.images', mdl_wf, 'input_spec.images')
             self.modeling_assessor = mdl_wf.assessor
         
