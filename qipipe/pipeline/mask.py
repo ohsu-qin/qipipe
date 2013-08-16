@@ -197,6 +197,11 @@ class MaskWorkflow(WorkflowBase):
         
         self._configure_nodes(workflow)
         
+        logger.debug("Created the %s workflow." % workflow.name)
+        # If debug is set, then diagram the workflow graph.
+        if logger.level <= logging.DEBUG:
+            self._depict_workflow(workflow)
+        
         return workflow
 
 

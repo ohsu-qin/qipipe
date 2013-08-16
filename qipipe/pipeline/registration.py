@@ -274,7 +274,8 @@ class RegistrationWorkflow(WorkflowBase):
         
         # The workflow input.
         in_fields = ['subject', 'session', 'images', 'mask']
-        input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
+        input_spec = pe.Node(IdentityInterface(fields=in_fields),
+            name='input_spec')
         
         # Make the reference image.
         average = pe.Node(AverageImages(), name='average')
@@ -282,7 +283,8 @@ class RegistrationWorkflow(WorkflowBase):
         reg_wf.connect(input_spec, ('images', _middle, 3), average, 'images')
         
         # The realign image iterator.
-        iter_image = pe.Node(IdentityInterface(fields=['image']), name='iter_image')
+        iter_image = pe.Node(IdentityInterface(fields=['image']),
+            name='iter_image')
         
         # The realign workflow.
         realign_wf = self._create_realign_workflow(base_dir, technique)
@@ -307,6 +309,11 @@ class RegistrationWorkflow(WorkflowBase):
         reg_wf.connect(realign_wf, 'output_spec.out_file', output_spec, 'out_file')
         
         self._configure_nodes(reg_wf, average)
+        
+        logger.debug("Created the %s workflow." % reg_wf.name)
+        # If debug is set, then diagram the workflow graph.
+        if logger.level <= logging.DEBUG:
+            self._depict_workflow(reg_wf)
         
         return reg_wf
 
