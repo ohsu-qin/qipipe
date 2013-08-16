@@ -58,7 +58,7 @@ class ModelingWorkflow(WorkflowBase):
     
     - `images`: the session images to model
     
-    - the PK modeling parameters described in 
+    - the PK modeling parameters described in
       :meth:`qipipe.pipeline.modeling.ModelingWorkflow.__init__`
     
     If an input field is defined in the
@@ -107,8 +107,26 @@ class ModelingWorkflow(WorkflowBase):
     
     def __init__(self, **opts):
         """
-        If the optional configuration file is specified, then the workflow
-        settings in that file override the default settings.
+        Initializes the modeling workflow. The modeling parameters can be
+        defined in either the options or the configuration as follows:
+        
+        - The parameters can be defined in the configuration
+          ``Parameters`` section.
+        
+        - The input options take precedence over the configuration
+          settings.
+        
+        - The ``r1_0_val`` takes precedence over the R1_0 computation
+          fields ``pd_dir`` and ``max_r1_0``. If ``r1_0_val`` is set
+          in the input options, then ``pd_dir`` and ``max_r1_0`` are
+          not included from the result.
+        
+        - If ``pd_dir`` and ``max_r1_0`` are set in the input options
+          and ``r1_0_val`` is not set in the input options, then
+          a ``r1_0_val`` configuration setting is ignored.
+        
+        - The ``baseline_end_idx`` defaults to 1 if it is not set in
+          either the input options or the configuration.
         
         :keyword cfg_file: the optional workflow inputs configuration file
         :keyword base_dir: the workflow execution directory
@@ -132,16 +150,10 @@ class ModelingWorkflow(WorkflowBase):
         series without a name conflict.
         """
         
-        self.reusable_workflow = self._create_reusable_workflow(**opts)
+        self.workflow = self._create_workflow(**opts)
         """
-        The reusable modeling workflow.
-        The reusable workflow can be embedded in an execution workflow.
-        """
-        
-        self.execution_workflow = self._create_execution_workflow()
-        """
-        The execution workflow. The execution workflow is executed by calling
-        the :meth:`qipipe.pipeline.modeling.ModelingWorkflow.run` method.
+        The modeling workflow described in
+        :class:`qipipe.pipeline.modeling.ModelingWorkflow`.
         """
     
     def run(self, input_dict, **opts):
@@ -213,83 +225,18 @@ class ModelingWorkflow(WorkflowBase):
         output_spec = self.execution_workflow.get_node('output_spec')
         return output_spec.outputs.analysis
     
-    def _create_execution_workflow(self):
+    def _create_workflow(self, base_dir=None, **opts):
         """
-        Builds the modeling execution workflow. The execution workflow
-        downloads the mask and input images from XNAT and sets the
-        reusable workflow inputs to the downloaded files. 
-        
-        The execution workflow input is `session_spec` consisting of
-        a `(subject, session)` tuple.
-        
-        The execution workflow output is `output_spec` with the same output
-        fields as the reusable workflow outputs.
-        
-        :return: the Nipype workflow
-        """
-        logger.debug("Building the modeling execution workflow...")
-        
-        # The reusable workflow.
-        reusable_wf = self.reusable_workflow
-        
-        # The execution workflow.
-        exec_wf = pe.Workflow(name='modeling_exec', base_dir=reusable_wf.base_dir)
-        
-        # The input node.
-        in_fields = ['subject', 'session', 'reconstruction', 'container_type']
-        input_spec = pe.Node(IdentityInterface(fields=in_fields), name='input_spec')
-        logger.debug("The modeling execution workflow non-iterable input is %s"
-            " with input fields %s" % (input_spec.name, in_fields))
-        
-        # Download the mask.
-        dl_mask = pe.Node(XNATDownload(project=project(), reconstruction='mask'),
-            name='dl_mask')
-        exec_wf.connect(input_spec, 'subject', dl_mask, 'subject')
-        exec_wf.connect(input_spec, 'session', dl_mask, 'session')
-        
-        # The XNAT image parent fields.
-        dl_fields = ['subject', 'session', 'reconstruction', 'container_type']
-        # Download the images.
-        dl_image_xfc = XNATDownload(project=project())
-        dl_images = pe.Node(dl_image_xfc, name='dl_images')
-        exec_wf.connect(input_spec, 'subject', dl_images, 'subject')
-        exec_wf.connect(input_spec, 'session', dl_images, 'session')
-        exec_wf.connect(input_spec, 'reconstruction', dl_images, 'reconstruction')
-        exec_wf.connect(input_spec, 'container_type', dl_images, 'container_type')
-        
-        # Model the images.
-        exec_wf.connect(input_spec, 'subject', reusable_wf, 'input_spec.subject')
-        exec_wf.connect(input_spec, 'session', reusable_wf, 'input_spec.session')
-        exec_wf.connect(dl_mask, 'out_file', reusable_wf, 'input_spec.mask')
-        exec_wf.connect(dl_images, 'out_files', reusable_wf, 'input_spec.images')
-        
-        # The execution workflow output is the reusable workflow output.
-        reusable_output = reusable_wf.get_node('output_spec')
-        out_fields = reusable_output.outputs.copyable_trait_names()
-        output_spec = pe.Node(IdentityInterface(fields=out_fields), name='output_spec')
-        for field in out_fields:
-            reusable_field = 'output_spec.' + field
-            exec_wf.connect(reusable_wf, reusable_field, output_spec, field)
-        
-        logger.debug("Created the %s workflow." % exec_wf.name)
-        # If debug is set, then diagram the workflow graph.
-        if logger.level <= logging.DEBUG:
-            self._depict_workflow(exec_wf)
-        
-        return exec_wf
-    
-    def _create_reusable_workflow(self, base_dir=None, **opts):
-        """
-        Builds the modeling reusable workflow described in :class:`ModelingWorkflow`.
+        Builds the modeling workflow.
         
         :param base_dir: the execution working directory
             (default is a new temp directory)
         :param opts: the additional workflow initialization options
         :return: the Nipype workflow
         """
-        logger.debug("Building the modeling reusable workflow...")
+        logger.debug("Building the modeling workflow...")
         
-        # The reusable workflow.
+        # The base workflow.
         if not base_dir:
             base_dir = tempfile.mkdtemp()
         reusable_wf = pe.Workflow(name='modeling', base_dir=base_dir)
@@ -301,9 +248,10 @@ class ModelingWorkflow(WorkflowBase):
         in_fields = ['subject', 'session', 'mask', 'images']
         input_xfc = IdentityInterface(fields=in_fields)
         input_spec = pe.Node(input_xfc, name='input_spec')
-        logger.debug("The modeling reusable workflow input is %s with"
+        logger.debug("The modeling workflow input is %s with"
             " fields %s" % (input_spec.name, in_fields))
         reusable_wf.connect(input_spec, 'mask', base_wf, 'input_spec.mask')
+        reusable_wf.connect(input_spec, 'images', base_wf, 'input_spec.images')
         
         # The upload nodes.
         base_output = base_wf.get_node('output_spec')
@@ -338,26 +286,148 @@ class ModelingWorkflow(WorkflowBase):
         :param resource: the modeling parameter resource name
         :return: the modeling parameter XNAT upload node
         """
-        upload_xfc = XNATUpload(project=project(), assessor=self.assessor, resource=resource)
+        upload_xfc = XNATUpload(project=project(), assessor=self.assessor,
+            resource=resource)
         name = 'upload_' + resource
         
         return pe.Node(upload_xfc, name=name)
     
     def _create_base_workflow(self, base_dir=None, **opts):
         """
-        Creates the modeling base workflow. This workflow performs the steps described
-        in :class:`qipipe.pipeline.modeling.ModelingWorkflow` with the exception of
-        XNAT upload.
+        Creates the modeling base workflow. This workflow performs the steps
+        described in :class:`qipipe.pipeline.modeling.ModelingWorkflow` with
+        the exception of XNAT upload.
+        
+        :Note: This workflow is adapted from https://everett.ohsu.edu/hg/qin_dce.
+        Any change to the ``qin_dce`` workflow should be reflected in this
+        method.
         
         :param base_dir: the workflow working directory
-        :param opts: the additional PK mapping initialization parameters
+        :param opts: the PK modeling parameters
         :return: the pyxnat Workflow
         """
-        workflow = pe.Workflow(name='modeling_base', base_dir=base_dir)
+        base_wf = pe.Workflow(name='modeling_base', base_dir=base_dir)
         
-        # The parameters can be defined in either the options or the
-        # configuration.
+        # The PK modeling parameters.
+        opts = self._pk_parameters(**opts)
+        # Set the use_fixed_r1_0 flag.
+        use_fixed_r1_0 = not not opts.get('r1_0_val')
+        
+        # Set up the input node.
+        in_fields = ['images', 'mask'] + opts.keys()
+        input_xfc = IdentityInterface(fields=in_fields, **opts)
+        input_spec = pe.Node(input_xfc, name='input_spec')
+        # Set the config parameters.
+        for field in in_fields:
+            if opts.has_key(field):
+                setattr(input_spec.inputs, field, opts[field])
+        
+        # Merge the DCE data to 4D.
+        dce_merge = pe.Node(MergeNifti(), name='dce_merge')
+        dce_merge.inputs.out_format = 'dce_series'
+        base_wf.connect(input_spec, 'images', dce_merge, 'in_files')
+        
+        # If we are not using a fixed r1_0 value, then compute a map from a
+        # proton density weighted scan and the baseline of the DCE series.
+        if not use_fixed_r1_0:
+            # Convert each series dir to a Nifti.
+            pd_stack = pe.Node(DcmStack(), name='pd_stack')
+            pd_stack.inputs.embed_meta = True
+            base_wf.connect(input_spec, 'pd_dir', pd_stack, 'dicom_files')
+            
+            # Create the DCE baseline image.
+            make_base_func = Function(
+                input_names=['dce_images', 'baseline_end_idx'],
+                output_names=['baseline_nii'],
+                function=_make_baseline),
+            make_base = pe.Node(make_base_func, name='make_base')
+            base_wf.connect(input_spec, 'images', make_base, 'dce_images')
+            base_wf.connect(input_spec, 'baseline_end_idx', make_base, 'baseline_end_idx')
+            
+            # Create the R1_0 map.
+            get_r1_0_func = Function(
+                input_names=['pdw_image', 't1w_image', 'max_r1_0', 'mask_file'],
+                output_names=['r1_0_map'],
+                function=_make_r1_0),
+            get_r1_0 = pe.Node(get_r1_0_func, name='get_r1_0')
+            base_wf.connect(pd_stack, 'out_file', get_r1_0, 'pdw_image')
+            base_wf.connect(make_base, 'baseline_nii', get_r1_0, 't1w_image')
+            base_wf.connect(input_spec, 'max_r1_0', get_r1_0, 'max_r1_0')
+            base_wf.connect(input_spec, 'mask', get_r1_0, 'mask_file')
+        
+        # Convert the DCE time series to R1 maps.
+        get_r1_series_func = Function(
+            input_names=['time_series', 'r1_0', 'baseline_end', 'mask_file'],
+            output_names=['r1_series'], function=_make_r1_series)
+        get_r1_series = pe.Node(get_r1_series_func, name='get_r1_series')
+        base_wf.connect(dce_merge, 'out_file', get_r1_series, 'time_series')
+        base_wf.connect(input_spec, 'baseline_end_idx', get_r1_series, 'baseline_end')
+        base_wf.connect(input_spec, 'mask', get_r1_series, 'mask_file')
+        if use_fixed_r1_0:
+            base_wf.connect(input_spec, 'r1_0_val', get_r1_series, 'r1_0')
+        else:
+            base_wf.connect(get_r1_0, 'r1_0_map', get_r1_series, 'r1_0')
+        
+        # Copy the time series meta-data to the R1 series.
+        copy_meta = pe.Node(CopyMeta(), name='copy_meta')
+        copy_meta.inputs.include_classes = [('global', 'const'), ('time', 'samples')]
+        base_wf.connect(dce_merge, 'out_file', copy_meta, 'src_file')
+        base_wf.connect(get_r1_series, 'r1_series', copy_meta, 'dest_file')
+        
+        # Get the pharmacokinetic mapping parameters.
+        get_params_func = Function(input_names=['time_series'], output_names=['params_csv'],
+            function=_get_fit_params)
+        get_params = pe.Node(get_params_func, name='get_params')
+        base_wf.connect(dce_merge, 'out_file', get_params, 'time_series')
+        
+        # Optimize the pharmacokinetic model.
+        pk_map = pe.Node(Fastfit(), name='pk_map')
+        pk_map.inputs.model_name = 'bolero_est'
+        base_wf.connect(copy_meta, 'dest_file', pk_map, 'target_data')
+        base_wf.connect(input_spec, 'mask', pk_map, 'mask')
+        base_wf.connect(get_params, 'params_csv', pk_map, 'params_csv')
+        # Set the MPI flag.
+        pk_map.inputs.use_mpi = DISTRIBUTABLE
+        
+        # Set up the outputs.
+        outputs = ['r1_series', 'pk_params', 'k_trans', 'v_e', 'tau_i']
+        if not use_fixed_r1_0:
+            outputs += ['pdw_image', 'dce_baseline', 'r1_0']
+        output_spec = pe.Node(IdentityInterface(fields=outputs), name='output_spec')
+        base_wf.connect(copy_meta, 'dest_file', output_spec, 'r1_series')
+        base_wf.connect(get_params, 'params_csv', output_spec, 'pk_params')
+        base_wf.connect(pk_map, 'k_trans', output_spec, 'k_trans')
+        base_wf.connect(pk_map, 'v_e', output_spec, 'v_e')
+        base_wf.connect(pk_map, 'tau_i', output_spec, 'tau_i')
+        
+        if not use_fixed_r1_0:
+            base_wf.connect(pd_stack, 'out_file', output_spec, 'pdw_image')
+            base_wf.connect(make_base, 'baseline_nii', output_spec, 'dce_baseline')
+            base_wf.connect(get_r1_0, 'r1_0_map', output_spec, 'r1_0')
+        
+        self._configure_nodes(base_wf)
+        
+        return base_wf
+    
+    def _pk_parameters(self, **opts):
+        """
+        Collects the modeling parameters defined in either the options
+        or the configuration as described in
+        :meth:`qipipe.pipeline.modeling.ModelingWorkflow.__init__`.
+        
+        :param opts: the input options
+        :return: the parameter {name: value} dictionary
+        """
         config = self.configuration.get('Parameters', {})
+        
+        # The R1_0 computation fields.
+        r1_fields = ['pd_dir', 'max_r1_0']
+        # All of the possible fields.
+        fields = set(r1_fields).update(['baseline_end_idx', 'r1_0_val'])
+        # Validate the input options.
+        for field in opts.iterkeys():
+            if field not in fields:
+                raise KeyError("The PK paramter is not recognized: %s" % field) 
         
         if  'baseline_end_idx' not in opts:
             # Look for the the baseline parameter in the configuration.
@@ -367,8 +437,6 @@ class ModelingWorkflow(WorkflowBase):
                 # The default baseline image count.
                 opts['baseline_end_idx'] = 1
         
-        # The R1_0 computation fields.
-        r1_fields = ['pd_dir', 'max_r1_0']
         # Set the use_fixed_r1_0 variable to None, signifying unknown.
         use_fixed_r1_0 = None
         # Get the R1_0 parameter values.
@@ -404,107 +472,14 @@ class ModelingWorkflow(WorkflowBase):
                     raise ValueError("Missing both the r1_0_val and the %s"
                         " parameter." % field)
         
+        # If the use_fixed_r1_0 flag is set, then remove the
+        # extraneous R1 computation fields.
+        if use_fixed_r1_0:
+            for field in r1_fields:
+                opts.pop(field, None)
+        
         logger.debug("The PK modeling parameters: %s" % opts)
-        
-        # Set up the input node.
-        in_fields = ['images', 'mask', 'baseline_end_idx']
-        if use_fixed_r1_0:
-            in_fields += ['r1_0_val']
-        else:
-            in_fields += r1_fields
-        input_xfc = IdentityInterface(fields=in_fields, **opts)
-        input_spec = pe.Node(input_xfc, name='input_spec')
-        # Set the config parameters.
-        for field in in_fields:
-            if opts.has_key(field):
-                setattr(input_spec.inputs, field, opts[field])
-        
-        # Merge the DCE data to 4D.
-        dce_merge = pe.Node(MergeNifti(), name='dce_merge')
-        dce_merge.inputs.out_format = 'dce_series'
-        workflow.connect(input_spec, 'images', dce_merge, 'in_files')
-        
-        # If we are not using a fixed r1_0 value, then compute a map from a
-        # proton density weighted scan and the baseline of the DCE series.
-        if not use_fixed_r1_0:
-            # Convert each series dir to a Nifti.
-            pd_stack = pe.Node(DcmStack(), name='pd_stack')
-            pd_stack.inputs.embed_meta = True
-            workflow.connect(input_spec, 'pd_dir', pd_stack, 'dicom_files')
-            
-            # Create the DCE baseline image.
-            make_base_func = Function(
-                input_names=['dce_images', 'baseline_end_idx'],
-                output_names=['baseline_nii'],
-                function=_make_baseline),
-            make_base = pe.Node(make_base_func, name='make_base')
-            workflow.connect(input_spec, 'images', make_base, 'dce_images')
-            workflow.connect(input_spec, 'baseline_end_idx', make_base, 'baseline_end_idx')
-            
-            # Create the R1_0 map.
-            get_r1_0_func = Function(
-                input_names=['pdw_image', 't1w_image', 'max_r1_0', 'mask_file'],
-                output_names=['r1_0_map'],
-                function=_make_r1_0),
-            get_r1_0 = pe.Node(get_r1_0_func, name='get_r1_0')
-            workflow.connect(pd_stack, 'out_file', get_r1_0, 'pdw_image')
-            workflow.connect(make_base, 'baseline_nii', get_r1_0, 't1w_image')
-            workflow.connect(input_spec, 'max_r1_0', get_r1_0, 'max_r1_0')
-            workflow.connect(input_spec, 'mask', get_r1_0, 'mask_file')
-        
-        # Convert the DCE time series to R1 maps.
-        get_r1_series_func = Function(
-            input_names=['time_series', 'r1_0', 'baseline_end', 'mask_file'],
-            output_names=['r1_series'], function=_make_r1_series)
-        get_r1_series = pe.Node(get_r1_series_func, name='get_r1_series')
-        workflow.connect(dce_merge, 'out_file', get_r1_series, 'time_series')
-        workflow.connect(input_spec, 'baseline_end_idx', get_r1_series, 'baseline_end')
-        workflow.connect(input_spec, 'mask', get_r1_series, 'mask_file')
-        if use_fixed_r1_0:
-            workflow.connect(input_spec, 'r1_0_val', get_r1_series, 'r1_0')
-        else:
-            workflow.connect(get_r1_0, 'r1_0_map', get_r1_series, 'r1_0')
-        
-        # Copy the time series meta-data to the R1 series.
-        copy_meta = pe.Node(CopyMeta(), name='copy_meta')
-        copy_meta.inputs.include_classes = [('global', 'const'), ('time', 'samples')]
-        workflow.connect(dce_merge, 'out_file', copy_meta, 'src_file')
-        workflow.connect(get_r1_series, 'r1_series', copy_meta, 'dest_file')
-        
-        # Get the pharmacokinetic mapping parameters.
-        get_params_func = Function(input_names=['time_series'], output_names=['params_csv'],
-            function=_get_fit_params)
-        get_params = pe.Node(get_params_func, name='get_params')
-        workflow.connect(dce_merge, 'out_file', get_params, 'time_series')
-        
-        # Optimize the pharmacokinetic model.
-        pk_map = pe.Node(Fastfit(), name='pk_map')
-        pk_map.inputs.model_name = 'bolero_est'
-        workflow.connect(copy_meta, 'dest_file', pk_map, 'target_data')
-        workflow.connect(input_spec, 'mask', pk_map, 'mask')
-        workflow.connect(get_params, 'params_csv', pk_map, 'params_csv')
-        # Set the MPI flag.
-        pk_map.inputs.use_mpi = DISTRIBUTABLE
-        
-        # Set up the outputs.
-        outputs = ['r1_series', 'pk_params', 'k_trans', 'v_e', 'tau_i']
-        if not use_fixed_r1_0:
-            outputs += ['pdw_image', 'dce_baseline', 'r1_0']
-        output_spec = pe.Node(IdentityInterface(fields=outputs), name='output_spec')
-        workflow.connect(copy_meta, 'dest_file', output_spec, 'r1_series')
-        workflow.connect(get_params, 'params_csv', output_spec, 'pk_params')
-        workflow.connect(pk_map, 'k_trans', output_spec, 'k_trans')
-        workflow.connect(pk_map, 'v_e', output_spec, 'v_e')
-        workflow.connect(pk_map, 'tau_i', output_spec, 'tau_i')
-        
-        if not use_fixed_r1_0:
-            workflow.connect(pd_stack, 'out_file', output_spec, 'pdw_image')
-            workflow.connect(make_base, 'baseline_nii', output_spec, 'dce_baseline')
-            workflow.connect(get_r1_0, 'r1_0_map', output_spec, 'r1_0')
-        
-        self._configure_nodes(workflow)
-        
-        return workflow
+        return opts
 
 
 def _make_baseline(dce_images, baseline_end_idx):
