@@ -119,8 +119,6 @@ class QIPipelineWorkflow(WorkflowBase):
         :param collection: the AIRC image collection name
         :param inputs: the AIRC source subject directories to stage
         :param opts: the following workflow execution options:
-        :parameter base_dir: the workflow execution directory
-            (default a new temp directory)
         :keyword dest: the TCIA upload destination directory
             (default is subdirectory named ``staged`` in the
             current working directory)
@@ -132,16 +130,10 @@ class QIPipelineWorkflow(WorkflowBase):
         else:
             dest = os.path.join(os.getcwd(), 'staged')
         
-        # The work area.
-        if opts.has_key('base_dir'):
-            base_dir = os.path.abspath(opts['base_dir'])
-        else:
-            base_dir = tempfile.mkdtemp()
-        
         # Delegate to staging with the executive workflow. Staging
         # executes the workflow on the new inputs.
         stg_dict = staging.run(collection, *inputs, dest=dest,
-            base_dir=base_dir, workflow=self.workflow)
+            base_dir=self.workflow.base_dir, workflow=self.workflow)
         
         # Return the new {subject: session: results}  dictionary,
         # where results includes the session scans, the registration
@@ -172,7 +164,11 @@ class QIPipelineWorkflow(WorkflowBase):
         
         # The work directory used for the master workflow and all
         # constituent workflows.
-        base_dir = opts.get('base_dir', None) or tempfile.mkdtemp()
+        base_dir_opt = opts.get('base_dir', None)
+        if base_dir_opt:
+            base_dir = os.path.abspath(base_dir_opt)
+        else:
+            base_dir = tempfile.mkdtemp()
         
         # The execution workflow.
         exec_wf = pe.Workflow(name='qin_exec', base_dir=base_dir)
