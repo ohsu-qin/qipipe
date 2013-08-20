@@ -196,12 +196,12 @@ class StagingWorkflow(WorkflowBase):
         
         # Collect the new AIRC visits into (subject, session, dicom_files)
         # tuples.
-        if opts.get('ignore_existing', True):
+        ignore_existing = opts.get('ignore_existing', True)
+        if ignore_existing:
             visit_gen = iter_new_visits
         else:
             visit_gen = iter_visits
         visits = list(visit_gen(collection, *inputs))
-        
         
         # If there are no new images, then bail.
         if not visits:
