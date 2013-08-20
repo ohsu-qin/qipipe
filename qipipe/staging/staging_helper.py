@@ -59,27 +59,6 @@ def get_subjects(collection, source, pattern=None):
     
     return sbj_dir_dict
 
-def iter_new_visits(collection, *subject_dirs):
-    """
-    Iterates over the visits in the given subject directories which are not in XNAT.
-    Each iteration item is a `(subject, session, files)` tuple, formed
-    as follows:
-    
-    - The `subject` is the XNAT subject ID formatted by ``SUBJECT_FMT``
-    
-    - The `session` is the XNAT experiment name formatted by ``SESSION_FMT``
-    
-    - The `files` iterates over the files which match the
-      :mod:`qipipe.staging.airc_collection` DICOM file include pattern
-    
-    The supported AIRC collections are defined by :mod:`qipipe.staging.airc_collection`.
-    
-    :param collection: the AIRC image collection name
-    :param subject_dirs: the subject directories over which to iterate
-    :return: the new visit `(subject, session, files)` tuples
-    """
-    return NewVisitIterator(collection, *subject_dirs)
-
 def group_dicom_files_by_series(*dicom_files):
     """
     Groups the given DICOM files by series. Subtraction images, indicated by a ``SUB``
@@ -96,19 +75,67 @@ def group_dicom_files_by_series(*dicom_files):
     
     return ser_files_dict
 
-class NewVisitIterator(object):
+def iter_visits(collection, *subject_dirs, **opts):
     """
-    **NewVisitIterator** is a generator class for detecting new AIRC visits.
+    Iterates over the visits in the given subject directories.
+    Each iteration item is a *(subject, session, files)* tuple, formed
+    as follows:
+    
+    - The *subject* is the XNAT subject ID formatted by ``SUBJECT_FMT``
+    
+    - The *session* is the XNAT experiment name formatted by ``SESSION_FMT``
+    
+    - The *files* iterates over the files which match the
+      :mod:`qipipe.staging.airc_collection` DICOM file include pattern
+    
+    The supported AIRC collections are defined by
+    :mod:`qipipe.staging.airc_collection`.
+    
+    :param collection: the AIRC image collection name
+    :param subject_dirs: the subject directories over which to iterate
+    :param opts: the following keyword options:
+    :keyword filter: a *(subject, session)* selection filter
+    :return: the visit *(subject, session, files)* tuples
+    """
+    return VisitIterator(collection, *subject_dirs, **opts)
+
+def iter_new_visits(collection, *subject_dirs):
+    """
+    Filters :meth:`qipipe.staging.staging_helper.iter_visits` to iterate
+    over the new visits in the given subject directories which are not in XNAT.
+    
+    :param collection: the AIRC image collection name
+    :param subject_dirs: the subject directories over which to iterate
+    :return: the new visit `(subject, session, files)` tuples
+    """
+    return iter_visits(collection, *subject_dirs, filter=_is_new_session)
+    
+def _is_new_session(subject, session):    
+    # If the session is not yet in XNAT, then yield the tuple.
+    with xnat_helper.connection() as xnat:
+        exists = xnat.get_session(project(), subject, session).exists()
+    if exists:
+        logger.debug("Skipping the %s %s %s session since it has already been"
+            " loaded to XNAT." % (project(), subject, session))
+    
+    return not exists
+
+
+class VisitIterator(object):
+    """
+    **VisitIterator** is a generator class for detecting AIRC visits.
     """
 
-    def __init__(self, collection, *subject_dirs):
+    def __init__(self, collection, *subject_dirs, **opts):
         """
         :param collection: the AIRC image collection name
         :param subject_dirs: the subject directories over which to iterate
+        :keyword filter: a *(subject, session)* selection filter
         """
         # The AIRC collection with the given name.
         self.collection = airc.collection_with_name(collection)
         self.subject_dirs = subject_dirs
+        self.filter = opts.get('filter', lambda: True)
     
     def __iter__(self):
         return self.next()
@@ -124,7 +151,7 @@ class NewVisitIterator(object):
         with xnat_helper.connection() as xnat:
             for d in self.subject_dirs:
                 d = os.path.abspath(d)
-                logger.debug("Discovering new sessions in %s..." % d)
+                logger.debug("Discovering sessions in %s..." % d)
                 # Make the XNAT subject name.
                 sbj_nbr = self.collection.path2subject_number(d)
                 sbj = SUBJECT_FMT % (self.collection.name, sbj_nbr)
@@ -140,14 +167,11 @@ class NewVisitIterator(object):
                         sess_nbr = self.collection.path2session_number(v)
                         # The XNAT session name.
                         sess = SESSION_FMT % sess_nbr
-                        # If the session is not yet in XNAT, then yield the session and its files.
-                        if xnat.get_session(project(), sbj, sess).exists():
-                            logger.debug("Skipping the %s %s %s session"
-                                " since it has already been loaded to XNAT." % (project(), sbj, sess))
-                        else:
+                        # Apply the selection filter.
+                        if self.filter(sbj, sess):
                             # The DICOM file match pattern.
                             dpat = os.path.join(visit_dir, self.collection.dicom_pattern)
                             # The visit directory DICOM file iterator.
                             dicom_file_iter = glob.iglob(dpat)
-                            logger.debug("Discovered new session %s in %s" % (sess, visit_dir))
+                            logger.debug("Discovered session %s in %s" % (sess, visit_dir))
                             yield (sbj, sess, dicom_file_iter)

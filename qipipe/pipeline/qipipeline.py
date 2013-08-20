@@ -118,7 +118,8 @@ class QIPipelineWorkflow(WorkflowBase):
         
         :param collection: the AIRC image collection name
         :param inputs: the AIRC source subject directories to stage
-        :param opts: the following workflow execution options:
+        :param opts: the meth:`qipipe.pipeline.staging.run` options,
+            modified as follows:
         :keyword dest: the TCIA upload destination directory
             (default is subdirectory named ``staged`` in the
             current working directory)
@@ -126,14 +127,14 @@ class QIPipelineWorkflow(WorkflowBase):
         """
         # The staging location.
         if opts.has_key('dest'):
-            dest = os.path.abspath(opts['dest'])
+            dest = os.path.abspath(opts.pop('dest'))
         else:
             dest = os.path.join(os.getcwd(), 'staged')
         
         # Delegate to staging with the executive workflow. Staging
         # executes the workflow on the new inputs.
         stg_dict = staging.run(collection, *inputs, dest=dest,
-            base_dir=self.workflow.base_dir, workflow=self.workflow)
+            base_dir=self.workflow.base_dir, workflow=self.workflow, **opts)
         
         # Return the new {subject: session: results}  dictionary,
         # where results includes the session scans, the registration
@@ -174,9 +175,13 @@ class QIPipelineWorkflow(WorkflowBase):
         exec_wf = pe.Workflow(name='qin_exec', base_dir=base_dir)
         
         # The staging workflow.
-        stg_cfg = opts.get('staging', None)
-        stg_opts = dict(cfg_file=stg_cfg, base_dir=base_dir)
-        stg_wf = StagingWorkflow(**stg_opts).workflow
+        stg_opt = opts.get('staging', None)
+        if stg_opt == False:
+            stg_wf = None
+        else:
+            stg_cfg = opts.get('staging', None)
+            stg_opts = dict(cfg_file=stg_cfg, base_dir=base_dir)
+            stg_wf = StagingWorkflow(**stg_opts).workflow
         
         # The mask workflow.
         mask_opt = opts.get('mask', None)

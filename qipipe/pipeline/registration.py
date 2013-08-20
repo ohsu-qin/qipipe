@@ -409,7 +409,7 @@ Unlike ``os.path.splitext``, this pattern captures a composite extension, e.g.:
 >>> import os
 >>> os.path.splitext('/tmp/foo.nii.gz')
 ('/tmp/foo.nii', '.gz')
->>> FILENAME_SPLITTER_PAT.match('/tmp/foo.3/bar.nii.gz').groups()
+>>> SPLITEXT_PAT.match('/tmp/foo.3/bar.nii.gz').groups()
 ('/tmp/foo.3/bar', '.nii.gz')
 """
 

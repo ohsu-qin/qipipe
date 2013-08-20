@@ -7,7 +7,7 @@ from nipype.interfaces.dcmstack import DcmStack
 from ..helpers.project import project
 from ..interfaces import (FixDicom, Compress, Uncompress, Copy, MapCTP, XNATFind, XNATUpload)
 from ..staging.staging_error import StagingError
-from ..staging.staging_helper import (subject_for_directory, iter_new_visits,
+from ..staging.staging_helper import (subject_for_directory, iter_visits, iter_new_visits,
     group_dicom_files_by_series)
 from ..helpers import xnat_helper
 from .workflow_base import WorkflowBase
@@ -114,17 +114,22 @@ class StagingWorkflow(WorkflowBase):
         :param opts: the following workflow execution options:
         :keyword dest: the TCIA upload destination directory (default current
             working directory)
+        :keyword ignore_existing: flag indicating whether to ignore existing
+            XNAT subjects (default True)
         :keyword overwrite: flag indicating whether to replace existing XNAT
             subjects (default False)
         :keyword workflow: the workflow to run (default is the standard
             staging workflow ``workflow`` instance variable)
         :return: the XNAT {subject: {session: [scans]}} dictionary
         """
+        # The visit detection options.
+        stg_opts = {}
+        for opt in ['overwrite', 'ignore_existing']:
+            if opt in opts:
+                stg_opts[opt] = opts[opt]
         # Group the new DICOM files into a
-        # {subject: {session: [(series, dicom_files), ...]}} dictionary..
-        overwrite = opts.get('overwrite', False)
-        stg_dict = self._detect_new_visits(collection, *inputs,
-            overwrite=overwrite)
+        # {subject: {session: [(series, dicom_files), ...]}} dictionary.
+        stg_dict = self._detect_visits(collection, *inputs, **stg_opts)
         if not stg_dict:
             return []
         
@@ -164,14 +169,21 @@ class StagingWorkflow(WorkflowBase):
                 output_dict[sbj][sess] = ser_dict.keys()
         return output_dict
     
-    def _detect_new_visits(self, collection, *inputs, **opts):
+    def _detect_visits(self, collection, *inputs, **opts):
         """
-        Detects which AIRC visits in the given input directories have not yet
-        been stored into XNAT. The new visit images are grouped by series.
+        Detects the AIRC visits in the given input directories. The visit
+        images are grouped by series.
+        
+        By default, only new visits which do not yet exist in XNAT are
+        selected. Set the ``ignore_existing`` flag to False to select
+        all visits. Set the ``overwrite`` flag to True to delete existing
+        XNAT subjects.
         
         :param collection: the AIRC image collection name
         :param inputs: the AIRC source subject directories
         :param opts: the following options:
+        :keyword ignore_existing: flag indicating whether to ignore existing
+            XNAT subjects (default True)
         :keyword overwrite: flag indicating whether to replace existing XNAT
             subjects (default False)
         :return: the {subject: {session: {series: [dicom files]}}} dictionary
@@ -184,16 +196,24 @@ class StagingWorkflow(WorkflowBase):
         
         # Collect the new AIRC visits into (subject, session, dicom_files)
         # tuples.
-        new_visits = list(iter_new_visits(collection, *inputs))
+        if opts.get('ignore_existing', True):
+            visit_gen = iter_new_visits
+        else:
+            visit_gen = iter_visits
+        visits = list(visit_gen(collection, *inputs))
+        
         
         # If there are no new images, then bail.
-        if not new_visits:
-            logger.info("No new images were detected.")
+        if not visits:
+            if ignore_existing:
+                logger.info("No new visits were detected in the input directories.")
+            else:
+                logger.info("No visits were detected in the input directories.")
             return []
-        logger.debug("%d new visits were detected" % len(new_visits))
+        logger.debug("%d visits were detected" % len(visits))
         
         # Group the DICOM files by series.
-        return self._group_sessions_by_series(*new_visits)
+        return self._group_sessions_by_series(*visits)
     
     def _create_subject_map(self, collection, subjects, dest):
         """

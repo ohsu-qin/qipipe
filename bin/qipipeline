@@ -42,6 +42,8 @@ def main(argv=sys.argv):
         opts['modeling'] = args.modeling
     if args.overwrite:
         opts['overwrite'] = True
+    if args.resubmit:
+        opts['ignore_exisiting'] = False
     
     # Run the QIN workflow.
     qip.run(args.collection, *args.subject_dirs, **opts)
@@ -79,13 +81,20 @@ def _parse_arguments():
     parser.add_argument('-w', '--work', help='the work directory (default a new temp directory)',
         metavar='DIR')
     
+    # The option to resubmit the workflow to pick up where it left off.
+    parser.add_argument('--resubmit', help='resubmit a workflow to pick up where it left off',
+        action='store_true')
+    
     # The dangerous overwrite option.
     parser.add_argument('--overwrite', help='replace existing XNAT subjects',
         action='store_true')
     
     # The workflow configurations.
-    parser.add_argument('--staging', help="the staging configuration file",
+    stg_grp = parser.add_mutually_exclusive_group()
+    stg_grp.add_argument('--staging', help="the staging configuration file",
          metavar='FILE', dest='staging')
+    stg_grp.add_argument('--no-stage', help='skip the staging workflow',
+         dest='staging', action='store_false')
     mask_grp = parser.add_mutually_exclusive_group()
     mask_grp.add_argument('--mask', help="the mask configuration file",
         metavar='FILE', dest='mask')
