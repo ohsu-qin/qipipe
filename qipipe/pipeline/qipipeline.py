@@ -27,7 +27,10 @@ def run(*inputs, **opts):
     :return: the :meth:`qipipe.pipeline.qipipeline.QIPipelineWorkflow.run`
         result
     """
-    return QIPipelineWorkflow(**opts).run(*inputs, **opts)
+    wf_gen = QIPipelineWorkflow(**opts)
+    # The base directory is used solely for workflow creation.
+    opts.pop('base_dir', None)
+    return wf_gen.run(*inputs, **opts)
 
 
 class QIPipelineWorkflow(WorkflowBase):
@@ -130,6 +133,7 @@ class QIPipelineWorkflow(WorkflowBase):
             dest = os.path.abspath(opts.pop('dest'))
         else:
             dest = os.path.join(os.getcwd(), 'staged')
+        
         
         # Delegate to staging with the executive workflow. Staging
         # executes the workflow on the new inputs.
