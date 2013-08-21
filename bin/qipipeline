@@ -46,7 +46,7 @@ def main(argv=sys.argv):
     if args.overwrite:
         opts['overwrite'] = True
     if args.resubmit:
-        opts['ignore_exisiting'] = False
+        opts['ignore_existing'] = False
     
     # Run the QIN workflow.
     qip.run(args.collection, *args.subject_dirs, **opts)
