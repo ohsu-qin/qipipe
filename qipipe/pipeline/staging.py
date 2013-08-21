@@ -199,10 +199,10 @@ class StagingWorkflow(WorkflowBase):
         # tuples.
         ignore_existing = opts.get('ignore_existing', True)
         if ignore_existing:
-            visit_gen = iter_new_visits
+            visit_iter = iter_new_visits(collection, *inputs)
         else:
-            visit_gen = iter_visits
-        visits = list(visit_gen(collection, *inputs))
+            visits_iter = iter_visits(collection, *inputs)
+        visits = list(visit_iter)
         
         # If no images were detected, then bail.
         if not visits:
