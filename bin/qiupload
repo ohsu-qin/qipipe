@@ -15,6 +15,9 @@ def main(argv=sys.argv):
     
     # Configure the logger.
     if args.log:
+        log_dir = os.path.dirname(args.log)
+        if log_dir and not os.path.exists(log_dir):
+            os.makedirs(log_dir)
         logging.basicConfig(filename=args.log)
     if args.log_level:
         logging.getLogger().setLevel(args.log_level)
