@@ -201,7 +201,7 @@ class StagingWorkflow(WorkflowBase):
         if ignore_existing:
             visit_iter = iter_new_visits(collection, *inputs)
         else:
-            visits_iter = iter_visits(collection, *inputs)
+            visit_iter = iter_visits(collection, *inputs)
         visits = list(visit_iter)
         
         # If no images were detected, then bail.
