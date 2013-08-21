@@ -132,10 +132,14 @@ class VisitIterator(object):
         :param subject_dirs: the subject directories over which to iterate
         :keyword filter: a *(subject, session)* selection filter
         """
-        # The AIRC collection with the given name.
         self.collection = airc.collection_with_name(collection)
+        """The AIRC collection with the given name."""
+        
         self.subject_dirs = subject_dirs
-        self.filter = opts.get('filter', lambda: True)
+        """The input directories."""
+        
+        self.filter = opts.get('filter', lambda subject, session: True)
+        """The (subject, session) selection filter."""
     
     def __iter__(self):
         return self.next()
