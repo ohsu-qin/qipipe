@@ -114,7 +114,7 @@ class QIPipelineWorkflow(WorkflowBase):
         {subject: {session: results}} dictionary
         for the new staged subject and sessions, where results is
         a dictionary with the following items:
-            
+        
         - ``registration``: the registration XNAT reconstruction name
         
         - ``modeling``: the modeling XNAT assessor name
@@ -133,7 +133,6 @@ class QIPipelineWorkflow(WorkflowBase):
             dest = os.path.abspath(opts.pop('dest'))
         else:
             dest = os.path.join(os.getcwd(), 'staged')
-        
         
         # Delegate to staging with the executive workflow. Staging
         # executes the workflow on the new inputs.
