@@ -127,11 +127,12 @@ class StagingWorkflow(WorkflowBase):
         for opt in ['overwrite', 'ignore_existing']:
             if opt in opts:
                 stg_opts[opt] = opts[opt]
+        
         # Group the new DICOM files into a
         # {subject: {session: [(series, dicom_files), ...]}} dictionary.
         stg_dict = self._detect_visits(collection, *inputs, **stg_opts)
         if not stg_dict:
-            return []
+            return {}
         
         # The staging location.
         if opts.has_key('dest'):
@@ -194,7 +195,7 @@ class StagingWorkflow(WorkflowBase):
             with xnat_helper.connection() as xnat:
                 delete_subjects(*subjects)
         
-        # Collect the new AIRC visits into (subject, session, dicom_files)
+        # Collect the AIRC visits into (subject, session, dicom_files)
         # tuples.
         ignore_existing = opts.get('ignore_existing', True)
         if ignore_existing:
@@ -203,13 +204,13 @@ class StagingWorkflow(WorkflowBase):
             visit_gen = iter_visits
         visits = list(visit_gen(collection, *inputs))
         
-        # If there are no new images, then bail.
+        # If no images were detected, then bail.
         if not visits:
             if ignore_existing:
                 logger.info("No new visits were detected in the input directories.")
             else:
                 logger.info("No visits were detected in the input directories.")
-            return []
+            return {}
         logger.debug("%d visits were detected" % len(visits))
         
         # Group the DICOM files by series.
@@ -223,7 +224,7 @@ class StagingWorkflow(WorkflowBase):
         map_ctp = MapCTP(collection=collection, patient_ids=subjects, dest=dest)
         result = map_ctp.run()
         logger.debug("Created the TCIA subject map %s." % result.outputs.out_file)
-        
+    
     def _stage_session(self, collection, subject, session, ser_dicom_dict,
         dest, workflow=None):
         """
@@ -256,20 +257,20 @@ class StagingWorkflow(WorkflowBase):
         input_spec = exec_wf.get_node('input_spec')
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
-
+        
         if exec_wf == self.workflow:
             stg_input_spec = self.workflow.get_node('input_spec')
         else:
             stg_input_spec = exec_wf.get_node('staging.input_spec')
         stg_input_spec.inputs.collection = collection
-
+        
         if exec_wf == self.workflow:
             stg_iter_series = self.workflow.get_node('iter_series')
         else:
             stg_iter_series = exec_wf.get_node('staging.iter_series')
         stg_iter_series.iterables = ser_iterables
         stg_iter_series.synchronize = True
-
+        
         if exec_wf == self.workflow:
             stg_iter_dicom = self.workflow.get_node('iter_dicom')
         else:
