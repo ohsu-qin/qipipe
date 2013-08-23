@@ -51,11 +51,11 @@ def main(argv=sys.argv):
 
 def _parse_session_labels(labels):
     """
-    Parses the given XNAT session labels into (subject, session) tuples grouped
-    by project.
+    Parses the given XNAT session labels into *(subject, session)* tuples
+    grouped by project.
     
     :param labels: the labels to parse
-    :return: the {project: [(subject, session), ...]} dictionary
+    :return: the *{project: [(subject, session), ...]}* dictionary
     """
     prj_sess_dict = defaultdict(list)
     for label in labels:

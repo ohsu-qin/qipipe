@@ -54,17 +54,10 @@ class QIPipelineWorkflow(WorkflowBase):
     The easiest way to execute the pipeline is to call the
     :meth:`qipipe.pipeline.qipipeline.run` method.
     
-    The pipeline execution workflow is also available as the
-    `workflow` instance variable. The workflow input is a node
-    named ``input_spec`` with the same fields as the staging `input_spec`.
-    
-    In addition, there are two iterable inputs:
-    
-    - The `iter_session` node input field `session_spec` must be set
-      to the (subject, session) input tuples
-    
-    - The `iter_series` node input field `series_spec` must be set
-      to the (subject, session, scan, dicom_files) input tuples
+    The pipeline execution workflow is also available as the ``workflow``
+    instance variable. The workflow input node is named ``input_spec``
+    with the same input fields as the
+    :class:`qipipe.staging.RegistrationWorkflow` workflow ``input_spec``.
     """
     
     def __init__(self, **opts):
@@ -79,6 +72,7 @@ class QIPipelineWorkflow(WorkflowBase):
         the staged scans. If the `modeling` option is set to False, then
         PK modeling is not performed.
         
+        :param opts: the following initialization options:
         :keyword base_dir: the workflow execution directory
             (default a new temp directory)
         :keyword staging: the optional staging configuration file
@@ -111,7 +105,7 @@ class QIPipelineWorkflow(WorkflowBase):
         :mod:`qipipe.staging.airc_collection`.
         
         This method returns a
-        {subject: {session: results}} dictionary
+        *{subject: {session: results}}* dictionary
         for the new staged subject and sessions, where results is
         a dictionary with the following items:
         
@@ -126,7 +120,7 @@ class QIPipelineWorkflow(WorkflowBase):
         :keyword dest: the TCIA upload destination directory
             (default is subdirectory named ``staged`` in the
             current working directory)
-        :return: the new {subject: session: results}  dictionary
+        :return: the new *{subject: session: results}*  dictionary
         """
         # The staging location.
         if opts.has_key('dest'):
@@ -139,10 +133,9 @@ class QIPipelineWorkflow(WorkflowBase):
         stg_dict = staging.run(collection, *inputs, dest=dest,
             base_dir=self.workflow.base_dir, workflow=self.workflow, **opts)
         
-        # Return the new {subject: session: results}  dictionary,
+        # Return the new {subject: {session: results}} dictionary,
         # where results includes the session scans, the registration
-        # XNAT reconstruction name and the modeling XNAT assessor
-        # name.
+        # XNAT reconstruction name and the modeling XNAT assessor name.
         results = {}
         if self.registration_reconstruction:
             results['registration'] = self.registration_reconstruction

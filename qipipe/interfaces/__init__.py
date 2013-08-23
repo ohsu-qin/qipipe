@@ -1,3 +1,7 @@
+"""
+The ``interfaces`` module includes the custom QIN Nipype interface classes.
+"""
+
 from .compress import Compress
 from .copy import Copy
 from .fastfit import Fastfit

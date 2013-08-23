@@ -47,7 +47,7 @@ class TestMaskWorkflow(StagedTestBase):
         Executes :meth:`qipipe.pipeline.mask.run` on the given input.
         
         :param fixture: the test fixture directory
-        :param input_dict: the input {subject: {session: [images]}} to mask
+        :param input_dict: the input *{subject: {session: [images]}}* to mask
         :param base_dir: the workflow exection directory
         :return: the :meth:`qipipe.pipeline.mask.run` result
         """

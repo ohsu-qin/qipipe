@@ -39,8 +39,7 @@ class XNATDownload(BaseInterface):
     
     :Note: only one XNAT operation can run at a time.
     
-    Examples
-    --------
+    Examples:
     >>> # Download the scan NiFTI files.
     >>> from qipipe.interfaces import XNATDownload
     >>> XNATDownload(project='QIN', subject='BreastChemo003',

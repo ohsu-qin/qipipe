@@ -104,7 +104,7 @@ class StagingWorkflow(WorkflowBase):
         :Note: If the `overwrite` option is set, then existing XNAT subjects
             which correspond to subjects in the input directories are deleted.
         
-        If the ``workflow`` parameter is set, then that execution workflow is
+        If the *workflow* parameter is set, then that execution workflow is
         required to include a node named ``input_spec`` with inputs ``subject``
         and ``session`` which connect to the respective inputs in the child
         staging workflow.
@@ -120,7 +120,7 @@ class StagingWorkflow(WorkflowBase):
             subjects (default False)
         :keyword workflow: the workflow to run (default is the standard
             staging workflow ``workflow`` instance variable)
-        :return: the XNAT {subject: {session: [scans]}} dictionary
+        :return: the XNAT *{subject: {session: [scans]}}* dictionary
         """
         # The visit detection options.
         stg_opts = {}
@@ -187,7 +187,7 @@ class StagingWorkflow(WorkflowBase):
             XNAT subjects (default True)
         :keyword overwrite: flag indicating whether to replace existing XNAT
             subjects (default False)
-        :return: the {subject: {session: {series: [dicom files]}}} dictionary
+        :return: the *{subject: {session: {series: [dicom files]}}}* dictionary
         """
         # If the overwrite option is set, then delete existing subjects.
         if opts.get('overwrite'):
@@ -379,8 +379,8 @@ class StagingWorkflow(WorkflowBase):
         """
         Creates the staging dictionary for the new images in the given sessions.
         
-        :param session_specs: the (subject, session, dicom_files) tuples to group
-        :return: the {subject: {session: {series: [dicom files]}}} dictionary
+        :param session_specs: the *(subject, session, dicom_files)* tuples to group
+        :return: the *{subject: {session: {series: [dicom files]}}}* dictionary
         """
         
         # The {subject: {session: {series: [dicom files]}}} output.

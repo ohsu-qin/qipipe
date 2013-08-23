@@ -91,8 +91,8 @@ class StagedTestBase(object):
         parent directory which contains a subject/session/scans images hierarchy.
         
         :param fixture: the input data parent directory
-        :return: the input {subject: {session: [files]}} or
-            input {subject: {session: ([files], mask)}} dictionary
+        :return: the input *{subject: {session: [files]}}* or
+            input *{subject: {session: ([files], mask)}}* dictionary
         """
         # The {subject: {session: [files]}} dictionary return value.
         input_dict = defaultdict(dict)
@@ -120,7 +120,7 @@ class StagedTestBase(object):
         target workflow on the given inputs.
         
         :param fixture: the test fixture directory
-        :param input_dict: the input {subject: {session: [files]}} dictionary
+        :param input_dict: the input *{subject: {session: [files]}}* dictionary
         :param opts: the target workflow options
         :return: the execution result
         :raise NotImplementedError: if the
@@ -138,7 +138,7 @@ class StagedTestBase(object):
         in the test fixture directory.
         
         :param xnat: the :class:`qipipe.helpers.xnat_helpers.XNAT` connection
-        :param input_dict: the input {subject: {session: [files]}} dictionary
+        :param input_dict: the input *{subject: {session: [files]}}* dictionary
         :param result: the workflow execution result
         :raise NotImplementedError: if the
             class:`test.unit.pipeline.StagedTestBase` subclass does not

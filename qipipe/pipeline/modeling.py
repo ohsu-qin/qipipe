@@ -128,6 +128,7 @@ class ModelingWorkflow(WorkflowBase):
         - The ``baseline_end_idx`` defaults to 1 if it is not set in
           either the input options or the configuration.
         
+        :param opts: the following initialization options:
         :keyword cfg_file: the optional workflow inputs configuration file
         :keyword base_dir: the workflow execution directory
             (default a new temp directory)
@@ -181,7 +182,7 @@ class ModelingWorkflow(WorkflowBase):
         This ``run`` method connects the given inputs to the modeling execution
         workflow inputs. The execution workflow is then executed, resulting in
         a new uploaded XNAT analysis resource for each input session. This
-        method returns the uploaded XNAT (subject, session, analysis) name
+        method returns the uploaded XNAT *(subject, session, analysis)* name
         tuples.
         
         If the :mod:`qipipe.pipeline.distributable ``DISTRIBUTABLE`` flag
@@ -189,10 +190,10 @@ class ModelingWorkflow(WorkflowBase):
         
         .. _AIRC Grid Engine: https://everett.ohsu.edu/wiki/GridEngine
         
-        :param input_dict: the input {subject: {session: [images]}} dictionary
-        :param opts: the following workflow options
+        :param input_dict: the input *{subject: {session: [images]}}* dictionary
+        :param opts: the following workflow options:
         :keyword reconstruction: the XNAT reconstruction to model
-        :return: the the output {subject: {session: [files]}} dictionary
+        :return: the output *{subject: {session: [files]}}* dictionary
         """
         output_dict = defaultdict(lambda: defaultdict(list))
         

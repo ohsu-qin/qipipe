@@ -130,6 +130,7 @@ class VisitIterator(object):
         """
         :param collection: the AIRC image collection name
         :param subject_dirs: the subject directories over which to iterate
+        :param opts: the following initialization options:
         :keyword filter: a *(subject, session)* selection filter
         """
         self.collection = airc.collection_with_name(collection)

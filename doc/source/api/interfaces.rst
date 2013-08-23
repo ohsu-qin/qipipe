@@ -2,12 +2,18 @@
 interfaces
 ==========
 
+:mod:`interfaces` Package
+-------------------------
+
+.. automodule:: qipipe.interfaces
+    :members:
+    :show-inheritance:
+
 :mod:`compress`
 ---------------
 
 .. automodule:: qipipe.interfaces.compress
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`copy`
@@ -15,7 +21,6 @@ interfaces
 
 .. automodule:: qipipe.interfaces.copy
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`fastfit`
@@ -23,7 +28,6 @@ interfaces
 
 .. automodule:: qipipe.interfaces.fastfit
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`fix_dicom`
@@ -31,7 +35,6 @@ interfaces
 
 .. automodule:: qipipe.interfaces.fix_dicom
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`group_dicom`
@@ -39,7 +42,13 @@ interfaces
 
 .. automodule:: qipipe.interfaces.group_dicom
     :members:
-    :undoc-members:
+    :show-inheritance:
+
+:mod:`lookup`
+----------------------
+
+.. automodule:: qipipe.interfaces.lookup
+    :members:
     :show-inheritance:
 
 :mod:`map_ctp`
@@ -47,7 +56,6 @@ interfaces
 
 .. automodule:: qipipe.interfaces.map_ctp
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`move`
@@ -55,7 +63,6 @@ interfaces
 
 .. automodule:: qipipe.interfaces.move
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`mri_volcluster`
@@ -63,7 +70,6 @@ interfaces
 
 .. automodule:: qipipe.interfaces.mri_volcluster
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`touch`
@@ -71,7 +77,6 @@ interfaces
 
 .. automodule:: qipipe.interfaces.touch
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`uncompress`
@@ -79,7 +84,6 @@ interfaces
 
 .. automodule:: qipipe.interfaces.uncompress
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`unpack`
@@ -87,7 +91,6 @@ interfaces
 
 .. automodule:: qipipe.interfaces.unpack
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`xnat_download`
@@ -95,7 +98,13 @@ interfaces
 
 .. automodule:: qipipe.interfaces.xnat_download
     :members:
-    :undoc-members:
+    :show-inheritance:
+
+:mod:`xnat_find`
+--------------------
+
+.. automodule:: qipipe.interfaces.xnat_find
+    :members:
     :show-inheritance:
 
 :mod:`xnat_upload`
@@ -103,6 +112,5 @@ interfaces
 
 .. automodule:: qipipe.interfaces.xnat_upload
     :members:
-    :undoc-members:
     :show-inheritance:
 

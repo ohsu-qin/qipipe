@@ -2,12 +2,18 @@
 helpers
 =======
 
+:mod:`pipeline` helpers
+------------------------
+
+.. automodule:: qipipe.helpers
+    :members:
+    :show-inheritance:
+
 :mod:`ast_config`
 -----------------
 
 .. automodule:: qipipe.helpers.ast_config
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`collection_helper`
@@ -15,7 +21,6 @@ helpers
 
 .. automodule:: qipipe.helpers.collection_helper
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`dicom_editor`
@@ -23,7 +28,6 @@ helpers
 
 .. automodule:: qipipe.helpers.dicom_editor
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`dicom_helper`
@@ -31,7 +35,6 @@ helpers
 
 .. automodule:: qipipe.helpers.dicom_helper
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`dicom_reader`
@@ -39,7 +42,6 @@ helpers
 
 .. automodule:: qipipe.helpers.dicom_reader
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`dictionary_hierarchy`
@@ -47,7 +49,6 @@ helpers
 
 .. automodule:: qipipe.helpers.dictionary_hierarchy
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`file_helper`
@@ -55,7 +56,6 @@ helpers
 
 .. automodule:: qipipe.helpers.file_helper
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`image_hierarchy`
@@ -63,7 +63,6 @@ helpers
 
 .. automodule:: qipipe.helpers.image_hierarchy
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`project`
@@ -71,7 +70,6 @@ helpers
 
 .. automodule:: qipipe.helpers.project
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`which`
@@ -79,7 +77,6 @@ helpers
 
 .. automodule:: qipipe.helpers.which
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`xnat_config`
@@ -87,7 +84,6 @@ helpers
 
 .. automodule:: qipipe.helpers.xnat_config
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`xnat_helper`
@@ -95,6 +91,5 @@ helpers
 
 .. automodule:: qipipe.helpers.xnat_helper
     :members:
-    :undoc-members:
     :show-inheritance:
 

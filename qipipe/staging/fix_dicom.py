@@ -10,17 +10,20 @@ def fix_dicom_headers(collection, subject, *dicom_files, **opts):
     """
     Fix the given input OHSU QIN AIRC DICOM files as follows:
 
-    - Replace the ``Patient ID`` value with the subject number, e.g. ``Sarcoma001``
+    - Replace the ``Patient ID`` value with the subject number, e.g.
+        ``Sarcoma001``
 
     - Add the ``Body Part Examined`` tag
 
     - Standardize the file name
 
-    The ``Body Part Examined`` is set as follows:
+    The ``Body Part Examined`` tag is set as follows:
 
-    - If the collection is ``Sarcoma``, then the body part is the :meth:`sarcoma_location`.
+    - If the collection is ``Sarcoma``, then the body part is the
+        :meth:`qipipe.staging.sarcoma_config.sarcoma_location`.
     
-    - Otherwise, the body part is the capitalized collection name, e.g. ``BREAST``.
+    - Otherwise, the body part is the capitalized collection name, e.g.
+        ``BREAST``.
         
     The output file name is standardized as follows:
 

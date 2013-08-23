@@ -1,6 +1,13 @@
 """
 This module wraps the proprietary OHSU AIRC ``fastfit`` software.
 ``fastfit`` optimizes the input pharmacokinetic model.
+
+:Note: this interface is copied from the AIRC cluster
+    ``/usr/global/scripts/fastfit_iface.py`` file. It is included
+    in :mod:`qipipe.interfaces` in order to gather all custom OHSU
+    QIN Python source code in the ``qipipe`` module. If it were not
+    included, then qipipe would not compile in a non-AIRC cluster
+    environment, even if this ``FastFit`` interface is unused.
 """
 import os
 from os import path
@@ -54,20 +61,17 @@ class FastfitInputSpec(MpiCommandLineInputSpec):
                                 argstr='%s')
 
 class Fastfit(MpiCommandLine):
-    '''Interface to the "fastfit" software package.
-    
-    Parameters
-    ----------
-    min_outs : list
-        The minimum outputs expected. Required if the 'model_name' 
-        input is being set dynamically.
-    '''
+    """``Fastfit`` wraps the ``fastfit`` software package."""
     
     _cmd = 'fastfit'
     input_spec = FastfitInputSpec
     output_spec = DynamicTraitedSpec
     
     def __init__(self, min_outs=None, **inputs):
+        """
+        :param min_outs: the minimum outputs expected. Required if the
+            *model_name* input is set dynamically.
+        """
         super(Fastfit, self).__init__(**inputs)
         self._min_outs = min_outs
     
@@ -84,7 +88,7 @@ class Fastfit(MpiCommandLine):
             return spec.argstr % value
             
     def _outputs(self):
-        #Set up dynamic outputs for resulting parameter maps
+        """Sets up tje dynamic outputs for the resulting parameter maps."""
         outputs = super(Fastfit, self)._outputs()
         undefined_traits = {}
         

@@ -83,7 +83,7 @@ class MaskWorkflow(WorkflowBase):
         Runs the mask workflow on the scan NiFTI files for the given
         (subject, session) inputs.
         
-        :param input_dict: the input {subject: {session: [images]}} dictionary
+        :param input_dict: the input *{subject: {session: [images]}}* dictionary
         :return: the mask XNAT reconstruction name
         """
         sbj_cnt = len(input_dict)

@@ -37,7 +37,6 @@ def run(input_dict, **opts):
 class RegistrationWorkflow(WorkflowBase):
     """
     The RegistrationWorkflow class builds and executes the registration workflow.
-    
     The workflow registers the images as follows:
     
     - Make a fixed reference image
@@ -49,15 +48,15 @@ class RegistrationWorkflow(WorkflowBase):
     The registration workflow input is the ``input_spec`` node consisting of the
     following input fields:
     
-    - `subject`: the subject name
+    - ``subject``: the subject name
     
-    - `session`: the session name
+    - ``session``: the session name
     
-    - `mask`: the mask to apply to the images
+    - ``mask``: the mask to apply to the images
     
-    - `images`: the session images to register
+    - ``images``: the session images to register
     
-    In addition, the iterable `iter_image` node input field `image` must
+    In addition, the iterable ``iter_image`` node input field ``image`` must
     be set to the input session images.
     
     The mask can be obtained by running the
@@ -66,32 +65,12 @@ class RegistrationWorkflow(WorkflowBase):
     The registration workflow output is the ``output_spec`` node consisting of
     the following output fields:
     
-    - `out_file`: the realigned image file
-    
-    - `reconstruction`: the registration XNAT reconstruction name
-    
-    The `reconstruction` output value is a unique value used for all workflow
-    runs against this
-    :class:`qipipe.pipeline.registration.RegistrationWorkflow` instance.
-    Thus, if the workflow execution iterates over multiple sessions, the
-    resulting resliced images for each session are uploaded to the
-    XNAT reconstruction whose name is the concatenation of the project,
-    subject, session and reconstruction names, e.g.:
-        qin_subject011_session01_reg_jZf4D9
-        qin_subject011_session02_reg_jZf4D9
-        qin_subject012_session01_reg_jZf4D9
-    
-    Note:: since the XNAT `reconstruction` name is unique, a
-        :class:`qipipe.pipeline.registration.RegistrationWorkflow`
-        instance can be used for only one registration workflow
-        execution. Separate registrations require separate
-        :class:`qipipe.pipeline.registration.RegistrationWorkflow`
-        instances.
-    
+    - ``out_file``: the realigned image file
+   
     There are two registration workflow paths:
     
     - a path which uses the images list as an input to create the mask and
-        registration reference image
+      registration reference image
     
     - a path which uses each image as an input to realign the image
     
@@ -116,6 +95,12 @@ class RegistrationWorkflow(WorkflowBase):
     
     - ``fsl.FNIRT``: the FSL `FNIRT interface`_ options
     
+    :Note: Since the XNAT ``reconstruction`` name is unique, a
+        :class:`qipipe.pipeline.registration.RegistrationWorkflow` instance
+        can be used for only one registration workflow. Different registration
+        inputs require different
+        :class:`qipipe.pipeline.registration.RegistrationWorkflow` instances.
+    
     .. _ANTS: http://stnava.github.io/ANTs/
     .. _ApplyTransform interface: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.ants.resampling.html
     .. _Average interface: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.ants.utils.html
@@ -131,6 +116,7 @@ class RegistrationWorkflow(WorkflowBase):
         If the optional configuration file is specified, then the workflow
         settings in that file override the default settings.
         
+        :param opts: the following initialization options:
         :keyword base_dir: the workflow execution directory
             (default a new temp directory)
         :keyword cfg_file: the optional workflow inputs configuration file
@@ -156,7 +142,7 @@ class RegistrationWorkflow(WorkflowBase):
         directory). The workflow is run on these images, resulting in a new XNAT
         reconstruction object for each session which contains the realigned images.
         
-        :param input_dict: the input {subject: {session: ([images], mask)}} to register
+        :param input_dict: the input *{subject: {session: ([images], mask)}}* to register
         :param mask: the mask file
         :return: the registration XNAT reconstruction name
         """
@@ -233,7 +219,7 @@ class RegistrationWorkflow(WorkflowBase):
         # Validate the mask input.
         if not mask:
             raise ValueError("The mask option is required for registration.")
-
+        
         # Set the workflow inputs.
         input_spec = workflow.get_node('input_spec')
         input_spec.inputs.subject = subject
@@ -316,7 +302,7 @@ class RegistrationWorkflow(WorkflowBase):
             self._depict_workflow(reg_wf)
         
         return reg_wf
-
+    
     def _create_realign_workflow(self, base_dir, technique='ANTS'):
         """
         Creates the workflow which registers and resamples images.

@@ -12,7 +12,7 @@ def read_config(*filenames):
     :param filenames: the input configuration file names
     :return: the configuration
     :rtype: :class:`qipipe.helpers.ast_config.ASTConfig`
-    :raise ValueError: if none of the files could not be read
+    :raise IOError: if no configuration files could not be read
     """
     cfg = ASTConfig()
     filenames = [os.path.abspath(fname) for fname in filenames]

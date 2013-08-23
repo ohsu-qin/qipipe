@@ -382,8 +382,7 @@ class XNAT(object):
         a synonym for the XNAT session data type, e.g. ``MR`` is a synonym for
         ``xnat:mrSessionData``. The default modality is ``MR``.
         
-        Example
-        -------
+        Example:
         >>> from qipipe.helpers import xnat_helper
         >>> with xnat_helper.connection() as xnat:
         ...     subject = xnat.find('QIN', 'Sarcoma003')

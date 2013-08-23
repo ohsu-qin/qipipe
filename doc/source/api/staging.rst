@@ -7,7 +7,6 @@ staging
 
 .. automodule:: qipipe.staging
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`airc_collection`
@@ -15,7 +14,6 @@ staging
 
 .. automodule:: qipipe.staging.airc_collection
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`ctp_config`
@@ -23,7 +21,6 @@ staging
 
 .. automodule:: qipipe.staging.ctp_config
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`fix_dicom`
@@ -31,7 +28,6 @@ staging
 
 .. automodule:: qipipe.staging.fix_dicom
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`map_ctp`
@@ -39,7 +35,6 @@ staging
 
 .. automodule:: qipipe.staging.map_ctp
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`sarcoma_config`
@@ -47,7 +42,6 @@ staging
 
 .. automodule:: qipipe.staging.sarcoma_config
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`staging_error`
@@ -55,7 +49,6 @@ staging
 
 .. automodule:: qipipe.staging.staging_error
     :members:
-    :undoc-members:
     :show-inheritance:
 
 :mod:`staging_helper`
@@ -63,6 +56,5 @@ staging
 
 .. automodule:: qipipe.staging.staging_helper
     :members:
-    :undoc-members:
     :show-inheritance:
 

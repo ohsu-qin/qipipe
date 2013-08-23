@@ -57,7 +57,7 @@ def main(argv=sys.argv):
 
 def _parse_session_labels(labels):
     """
-    Parses the given XNAT session labels into (subject, session) tuples grouped
+    Parses the given XNAT session labels into *(subject, session)* tuples grouped
     by project.
     
     :param labels: the labels to parse
@@ -72,11 +72,11 @@ def _parse_session_labels(labels):
 
 def _parse_session_label(label):
     """
-    Parses the given XNAT session label into project, subject and session based
-    on the ``qipipe`` naming standard.
+    Parses the given XNAT session label into *project*, *subject* and *session*
+    based on the ``qipipe`` naming standard.
     
     :param label: the label to parse
-    :return: the [project, subject, session] list
+    :return: the *[project, subject, session]* list
     """
     match = SESSION_LBL_PAT.match(label)
     if not match:
