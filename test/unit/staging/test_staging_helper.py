@@ -2,8 +2,8 @@ from nose.tools import *
 import os, glob
 from qipipe.staging.staging_helper import *
 
-import logging
-logger = logging.getLogger(__name__)
+from qipipe.helpers.logging_helper import logger
+
 
 # The test parent directory.
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))

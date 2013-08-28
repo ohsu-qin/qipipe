@@ -2,8 +2,8 @@ import sys, os, re, glob, shutil
 from nose.tools import *
 import nipype.pipeline.engine as pe
 
-import logging
-logger = logging.getLogger(__name__)
+from qipipe.helpers.logging_helper import logger
+
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from test.helpers.project import project
@@ -34,7 +34,7 @@ class TestRegistrationWorkflow(StagedTestBase):
     """
     
     def __init__(self):
-        super(TestRegistrationWorkflow, self).__init__(logger, FIXTURES, RESULTS, use_mask=True)
+        super(TestRegistrationWorkflow, self).__init__(logger(__name__), FIXTURES, RESULTS, use_mask=True)
     
     def test_breast_with_ants(self):
         self._test_breast()
@@ -54,7 +54,7 @@ class TestRegistrationWorkflow(StagedTestBase):
         :param base_dir: the workflow exection directory
         :return: the :meth:`qipipe.pipeline.registration.run` result
         """
-        logger.debug("Testing the registration workflow on %s..." % fixture)
+        logger(__name__).debug("Testing the registration workflow on %s..." % fixture)
         # Add in the mask.
         return registration.run(input_dict, cfg_file=REG_CONF, base_dir=base_dir)
     

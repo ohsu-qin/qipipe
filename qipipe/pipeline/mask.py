@@ -1,4 +1,5 @@
 import os, tempfile
+import logging
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Function)
 from nipype.interfaces import fsl
@@ -7,9 +8,8 @@ from ..helpers.project import project
 from ..helpers import xnat_helper
 from ..interfaces import (Unpack, XNATUpload, MriVolCluster)
 from .workflow_base import WorkflowBase
+from ..helpers.logging_helper import logger
 
-import logging
-logger = logging.getLogger(__name__)
 
 MASK_RECON = 'mask'
 """The XNAT mask reconstruction name."""
@@ -73,7 +73,7 @@ class MaskWorkflow(WorkflowBase):
             (default is a new temp directory)
         :keyword cfg_file: the optional workflow inputs configuration file
         """
-        super(MaskWorkflow, self).__init__(logger, cfg_file)
+        super(MaskWorkflow, self).__init__(logger(__name__), cfg_file)
         
         self.workflow = self._create_workflow(base_dir)
         """The mask creation workflow."""
@@ -88,21 +88,21 @@ class MaskWorkflow(WorkflowBase):
         """
         sbj_cnt = len(input_dict)
         sess_cnt = sum(map(len, input_dict.values()))
-        logger.debug("Masking %d sessions from %d subjects..." %
+        self.logger.debug("Masking %d sessions from %d subjects..." %
             (sess_cnt, sbj_cnt))
         input_spec = self.workflow.get_node('input_spec')
         in_fields = ['subject' 'session', 'images']
         # The subject workflow.
         for sbj, sess_dict in input_dict.iteritems():
             # The session workflow.
-            logger.debug("Masking subject %s..." % sbj)
+            self.logger.debug("Masking subject %s..." % sbj)
             for sess, images in sess_dict.iteritems():
-                logger.debug("Masking %d %s %s images..." %
+                self.logger.debug("Masking %d %s %s images..." %
                     (len(images), sbj, sess))
                 mask = self._mask_session(sbj, sess, images)
-                logger.debug("Masked the %s %s images." % (sbj, sess))
-            logger.debug("Masked the subject %s images." % sbj)
-        logger.debug("Masked %d sessions from %d subjects." %
+                self.logger.debug("Masked the %s %s images." % (sbj, sess))
+            self.logger.debug("Masked the subject %s images." % sbj)
+        self.logger.debug("Masked %d sessions from %d subjects." %
             (sess_cnt, sbj_cnt))
         
         # Execute the workflow.
@@ -127,7 +127,7 @@ class MaskWorkflow(WorkflowBase):
         :param base_dir: the workflow execution directory
         :return: the Workflow object
         """
-        logger.debug('Creating the mask reusable workflow...')
+        self.logger.debug('Creating the mask reusable workflow...')
         
         if not base_dir:
             base_dir = tempfile.mkdtemp()
@@ -197,9 +197,9 @@ class MaskWorkflow(WorkflowBase):
         
         self._configure_nodes(workflow)
         
-        logger.debug("Created the %s workflow." % workflow.name)
+        self.logger.debug("Created the %s workflow." % workflow.name)
         # If debug is set, then diagram the workflow graph.
-        if logger.level <= logging.DEBUG:
+        if self.logger.level <= logging.DEBUG:
             self._depict_workflow(workflow)
         
         return workflow

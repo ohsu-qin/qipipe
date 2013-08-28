@@ -2,8 +2,8 @@ import os, re, ast
 from ConfigParser import ConfigParser as Config
 from qipipe.helpers.collection_helper import to_series
 
-import logging
-logger = logging.getLogger(__name__)
+from .logging_helper import logger
+
 
 def read_config(*filenames):
     """
@@ -19,7 +19,7 @@ def read_config(*filenames):
     cfg_files = cfg.read(filenames)
     if not cfg_files:
         raise ValueError("Configuration file could not be read: %s" % filenames)
-    logger.debug("Loaded configuration from %s with sections %s." %
+    logger(__name__).debug("Loaded configuration from %s with sections %s." %
         (to_series(cfg_files), to_series(cfg.sections())))
     
     return cfg
@@ -136,7 +136,7 @@ class ASTConfig(Config):
             try:
                 return ast.literal_eval(ast_value)
             except Exception:
-                logger.error("Cannot load the configuration entry %s: %s parsed as %s" % (name, s, ast_value))
+                logger(__name__).error("Cannot load the configuration entry %s: %s parsed as %s" % (name, s, ast_value))
                 raise
     
     def _to_ast(self, s):

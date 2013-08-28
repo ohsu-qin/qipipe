@@ -5,7 +5,7 @@ Uploads files to XNAT.
 
 import sys, os, re
 import argparse
-import logging
+from qipipe.helpers import logging
 from collections import defaultdict
 # Defer importing the application modules until the logging level has been set.
 

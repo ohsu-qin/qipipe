@@ -3,8 +3,8 @@ from collections import defaultdict
 from nose.tools import *
 import nipype.pipeline.engine as pe
 
-import logging
-logger = logging.getLogger(__name__)
+from qipipe.helpers.logging_helper import logger
+
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from test.helpers.project import project

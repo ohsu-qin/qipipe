@@ -4,15 +4,14 @@ Prints tab-delimited DICOM tag values.
 """
 
 import sys, os
+import logging
 import argparse
 from collections import defaultdict
 import dicom
 from qipipe.helpers.collection_helper import to_series
 from qipipe.helpers.dicom_reader import read_dicom_header
 from qipipe.helpers.dicom_helper import (ImageHierarchy, iter_dicom_headers, select_dicom_tags)
-
-import logging
-logger = logging.getLogger(__name__)
+from qipipe.helpers.logging_helper import logger
 
 def main(argv=sys.argv):
     # Parse the command line arguments.
@@ -85,7 +84,7 @@ def _print_tag_values(tags, *files, **opts):
         print >> output, '\t'.join(tags)
     
     # Print the tags in each DICOM file.
-    logger.debug('Printing the DICOM tag values...')
+    logger(__name__).debug('Printing the DICOM tag values...')
     for ds in iter_dicom_headers(*files):
         # The DICOM tag value dictionary.
         tdict = _read_tags(ds, *tags)

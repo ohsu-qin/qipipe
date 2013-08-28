@@ -4,8 +4,8 @@ from qipipe.staging import airc_collection as airc
 from qipipe.staging.staging_helper import SUBJECT_FMT
 from qipipe.helpers import xnat_helper
 
-import logging
-logger = logging.getLogger(__name__)
+from qipipe.helpers.logging_helper import logger
+
 
 def generate_subject_name(name):
     """
@@ -28,4 +28,4 @@ def delete_subjects(project, *subject_names):
             sbj = xnat.get_subject(project, sbj_lbl)
             if sbj.exists():
                 sbj.delete()
-                logger.debug("Deleted the XNAT test subject %s." % sbj_lbl)
+                logger(__name__).debug("Deleted the XNAT test subject %s." % sbj_lbl)

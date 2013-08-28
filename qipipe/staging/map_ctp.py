@@ -6,8 +6,8 @@ import sys, os, re
 from .ctp_config import ctp_collection_for
 from ..helpers.dicom_helper import iter_dicom_headers
 
-import logging
-logger = logging.getLogger(__name__)
+from ..helpers.logging_helper import logger
+
 
 __all__ = ['property_filename', 'CTPPatientIdMap']
 
@@ -63,7 +63,7 @@ class CTPPatientIdMap(dict):
             pt_nbr = int(match.group(2))
             ctp_id = CTPPatientIdMap.CTP_FMT % (ctp_coll, pt_nbr)
             self[in_pt_id] = ctp_id
-            logger.debug(CTPPatientIdMap.MSG_FMT % (in_pt_id, ctp_id))
+            logger(__name__).debug(CTPPatientIdMap.MSG_FMT % (in_pt_id, ctp_id))
     
     def write(self, dest=sys.stdout):
         """

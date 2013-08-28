@@ -1,8 +1,8 @@
 from nose.tools import *
 import os, re, glob, shutil
 
-import logging
-logger = logging.getLogger(__name__)
+from qipipe.helpers.logging_helper import logger
+
 
 # The test parent directory.
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -25,7 +25,7 @@ class TestGroupDicom:
     """GroupDicom interface unit tests."""
     
     def test_link_dicom(self):
-        logger.debug("Testing the GroupDicom interface on %s..." % FIXTURE)
+        logger(__name__).debug("Testing the GroupDicom interface on %s..." % FIXTURE)
         shutil.rmtree(RESULTS, True)
         sbj_dirs = glob.glob(FIXTURE + '/*')
         for d in sbj_dirs:
@@ -36,7 +36,7 @@ class TestGroupDicom:
             assert_equal(ser_dirs, result.outputs.series_dirs, "The GroupDicom output is incorrect: %s" % ser_dirs)
         # Cleanup.
         shutil.rmtree(RESULTS, True)
-        logger.debug("GroupDicom interface test completed")
+        logger(__name__).debug("GroupDicom interface test completed")
 
 if __name__ == "__main__":
     import nose

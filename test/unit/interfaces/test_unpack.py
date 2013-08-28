@@ -2,8 +2,8 @@ import os, sys, re
 from nose.tools import *
 from nipype.interfaces.base import Undefined
 
-import logging
-logger = logging.getLogger(__name__)
+from qipipe.helpers.logging_helper import logger
+
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.interfaces.unpack import Unpack

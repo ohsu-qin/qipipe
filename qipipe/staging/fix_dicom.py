@@ -3,8 +3,8 @@ from ..helpers.dicom_helper import edit_dicom_headers
 from .sarcoma_config import sarcoma_location
 from .staging_error import StagingError
 
-import logging
-logger = logging.getLogger(__name__)
+from ..helpers.logging_helper import logger
+
 
 def fix_dicom_headers(collection, subject, *dicom_files, **opts):
     """
@@ -63,7 +63,7 @@ def fix_dicom_headers(collection, subject, *dicom_files, **opts):
         if f != std_name:
             os.rename(f, std_name)
             out_files.append(std_name)
-        logger.debug("The DICOM headers in %s were fixed and saved as %s." % (f, std_name))
+        logger(__name__).debug("The DICOM headers in %s were fixed and saved as %s." % (f, std_name))
 
     return out_files
     

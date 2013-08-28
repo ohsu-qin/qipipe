@@ -2,8 +2,8 @@ import sys, os, re, glob, shutil
 from nose.tools import *
 import nipype.pipeline.engine as pe
 
-import logging
-logger = logging.getLogger(__name__)
+from qipipe.helpers.logging_helper import logger
+
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.pipeline import modeling
@@ -54,7 +54,7 @@ class TestModelingWorkflow(StagedTestBase):
     """
     
     def __init__(self):
-        super(TestModelingWorkflow, self).__init__(logger, FIXTURES, RESULTS)
+        super(TestModelingWorkflow, self).__init__(logger(__name__), FIXTURES, RESULTS)
     
     def test_breast(self):
         self._test_breast()
@@ -71,7 +71,7 @@ class TestModelingWorkflow(StagedTestBase):
         :param opts: the :meth:`qipipe.pipeline.modeling.run` options
         :return: the :meth:`qipipe.pipeline.modeling.run` result
         """
-        logger.debug("Testing the modeling workflow on %s..." % fixture)
+        logger(__name__).debug("Testing the modeling workflow on %s..." % fixture)
         # Run the workflow.
         return modeling.run(*inputs, **opts)
     

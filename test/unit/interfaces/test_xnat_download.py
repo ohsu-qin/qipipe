@@ -1,8 +1,8 @@
 from nose.tools import *
 import sys, os, glob, re, shutil
 
-import logging
-logger = logging.getLogger(__name__)
+from qipipe.helpers.logging_helper import logger
+
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from test.helpers.project import project
@@ -58,14 +58,14 @@ class TestXNATDownload:
                         file_obj = scan_obj.resource(FORMAT).file(fname)
                         # Upload the file.
                         file_obj.insert(f, experiments='xnat:MRSessionData', format=FORMAT)
-        logger.debug("Uploaded the test %s %s files %s." % (SUBJECT, SESSION, list(self._file_names)))
+        logger(__name__).debug("Uploaded the test %s %s files %s." % (SUBJECT, SESSION, list(self._file_names)))
     
     def tearDown(self):
         delete_subjects(project(), SUBJECT)
         shutil.rmtree(RESULTS, True)
     
     def test_download(self):
-        logger.debug("Testing the XNATDownload interface on %s..." % SUBJECT)
+        logger(__name__).debug("Testing the XNATDownload interface on %s..." % SUBJECT)
         # Download the files.
         download = XNATDownload(project=project(), subject=SUBJECT, session=SESSION,
             scan=9, format=FORMAT, dest=RESULTS)

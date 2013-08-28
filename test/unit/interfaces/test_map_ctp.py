@@ -1,8 +1,8 @@
 import sys, os, re, shutil
 from nose.tools import *
 
-import logging
-logger = logging.getLogger(__name__)
+from qipipe.helpers.logging_helper import logger
+
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.interfaces import MapCTP
@@ -27,7 +27,7 @@ class TestMapCTP:
         shutil.rmtree(RESULTS, True)
     
     def test_map_ctp(self):
-        logger.debug("Testing Map CTP on %s..." % SUBJECTS)
+        logger(__name__).debug("Testing Map CTP on %s..." % SUBJECTS)
         map_ctp = MapCTP(collection=COLLECTION, patient_ids=SUBJECTS, dest=RESULTS)
         result = map_ctp.run()
         prop_file = result.outputs.out_file

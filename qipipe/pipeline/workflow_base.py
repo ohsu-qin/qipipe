@@ -1,6 +1,7 @@
 import os, re, tempfile
 from collections import defaultdict
-import logging
+from ..helpers.logging_helper import logger
+
 import nipype.pipeline.engine as pe
 from ..helpers.project import project
 from ..helpers import xnat_helper
@@ -128,7 +129,7 @@ class WorkflowBase(object):
         self.logger.debug("Executing the workflow %s in %s..." %
             (workflow.name, workflow.base_dir))
         with xnat_helper.connection():
-            workflow.run(**args)
+            pass #workflow.run(**args)
         
     def _configure_plugin(self, workflow):
         """

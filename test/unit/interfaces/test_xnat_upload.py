@@ -1,8 +1,8 @@
 from nose.tools import *
 import sys, os, glob, re, shutil
 
-import logging
-logger = logging.getLogger(__name__)
+from qipipe.helpers.logging_helper import logger
+
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from test.helpers.project import project
@@ -53,7 +53,7 @@ class TestXNATUpload:
         shutil.rmtree(RESULTS, True)
     
     def test_upload_scan(self):
-        logger.debug("Testing the XNATUpload interface on %s %s scan %d..." %
+        logger(__name__).debug("Testing the XNATUpload interface on %s %s scan %d..." %
             (SUBJECT, SESSION, SCAN))
         # Upload the file.
         upload = XNATUpload(project=project(), subject=SUBJECT, session=SESSION,
@@ -75,7 +75,7 @@ class TestXNATUpload:
                 (SUBJECT, SESSION, SCAN, fname))
     
     def test_upload_reconstruction(self):
-        logger.debug("Testing the XNATUpload interface on %s %s reconstruction %s..." %
+        logger(__name__).debug("Testing the XNATUpload interface on %s %s reconstruction %s..." %
             (SUBJECT, SESSION, RECON))
         # Upload the file.
         upload = XNATUpload(project=project(), subject=SUBJECT, session=SESSION,
@@ -94,7 +94,7 @@ class TestXNATUpload:
                 "XNATUpload did not create the %s %s file: %s" % (SUBJECT, SESSION, fname))
     
     def test_upload_analysis(self):
-        logger.debug("Testing the XNATUpload interface on %s %s analysis %s..." %
+        logger(__name__).debug("Testing the XNATUpload interface on %s %s analysis %s..." %
             (SUBJECT, SESSION, ANALYSIS))
         # Upload the file.
         upload = XNATUpload(project=project(), subject=SUBJECT, session=SESSION,

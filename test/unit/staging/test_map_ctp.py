@@ -1,8 +1,8 @@
 from nose.tools import *
 import os, glob, shutil
 
-import logging
-logger = logging.getLogger(__name__)
+from qipipe.helpers.logging_helper import logger
+
 
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
@@ -21,7 +21,7 @@ class TestMapCTP:
     """Map CTP unit tests."""
     
     def test_map_ctp(self):
-        logger.debug("Testing Map CTP on %s..." % SUBJECTS)
+        logger(__name__).debug("Testing Map CTP on %s..." % SUBJECTS)
         ctp_map = CTPPatientIdMap()
         ctp_map.add_subjects(COLLECTION, *SUBJECTS)
         for sbj in SUBJECTS:

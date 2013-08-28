@@ -2,8 +2,8 @@ from nose.tools import *
 import sys, os, glob, re, shutil
 from nipype.interfaces.traits_extension import isdefined
 
-import logging
-logger = logging.getLogger(__name__)
+from qipipe.helpers.logging_helper import logger
+
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from test.helpers.project import project
@@ -63,7 +63,7 @@ class TestXNATFind(object):
         self._test_find(SUBJECT, SESSION, assessor=ASSESSOR)
     
     def _test_find(self, *args, **opts):
-        logger.debug("Testing the XNATFind interface on %s %s..." %
+        logger(__name__).debug("Testing the XNATFind interface on %s %s..." %
             (args, opts))
         
         # Add the arguments to the inputs.

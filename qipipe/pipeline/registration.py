@@ -1,4 +1,5 @@
 import os, re, tempfile
+import logging
 from collections import defaultdict
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Merge, Function)
@@ -10,9 +11,8 @@ from ..interfaces import (XNATDownload, XNATUpload)
 from ..helpers import (xnat_helper, file_helper)
 from .workflow_base import WorkflowBase
 from .mask import MaskWorkflow
+from ..helpers.logging_helper import logger
 
-import logging
-logger = logging.getLogger(__name__)
 
 REG_PREFIX = 'reg'
 """The XNAT registration reconstruction name prefix."""
@@ -65,8 +65,13 @@ class RegistrationWorkflow(WorkflowBase):
     The registration workflow output is the ``output_spec`` node consisting of
     the following output fields:
     
-    - ``out_file``: the realigned image file
-   
+    - ``images``: the realigned image files
+    
+    In addition, the workflow implements an ``iter_realigned`` output node
+    consisting of the following output fields:
+    
+    - ``image``: the realigned image file for the iterated input image file
+    
     There are two registration workflow paths:
     
     - a path which uses the images list as an input to create the mask and
@@ -123,7 +128,8 @@ class RegistrationWorkflow(WorkflowBase):
         :keyword technique: the case-insensitive workflow technique
             (``ANTS`` or ``FNIRT``, default ``ANTS``)
         """
-        super(RegistrationWorkflow, self).__init__(logger, opts.pop('cfg_file', None))
+        super(RegistrationWorkflow, self).__init__(logger(__name__),
+            opts.pop('cfg_file', None))
         
         self.reconstruction = self._generate_reconstruction_name()
         """The XNAT reconstruction name used for all runs against this workflow
@@ -157,20 +163,20 @@ class RegistrationWorkflow(WorkflowBase):
         images_list = [images for images, _ in sbj_tuples]
         # The number of images.
         img_cnt = sum(map(len, images_list))
-        logger.debug("Registering %d images in %d sessions..." %
+        self.logger.debug("Registering %d images in %d sessions..." %
             (img_cnt, sess_cnt))
         # The subject workflow.
         for sbj, sess_dict in input_dict.iteritems():
             # The session workflow.
-            logger.debug("Registering subject %s..." % sbj)
+            self.logger.debug("Registering subject %s..." % sbj)
             for sess, sess_inputs in sess_dict.iteritems():
                 images, mask = sess_inputs
-                logger.debug("Registering %d images in %s session %s"
+                self.logger.debug("Registering %d images in %s session %s"
                     " with mask %s..." % (len(images), sbj, sess, mask))
                 self._register(sbj, sess, images, mask)
-                logger.debug("Registered %s session %s." % (sbj, sess))
-            logger.debug("Registered subject %s." % sbj)
-        logger.debug("Registered %d new %s series from %d subjects in %s." %
+                self.logger.debug("Registered %s session %s." % (sbj, sess))
+            self.logger.debug("Registered subject %s." % sbj)
+        self.logger.debug("Registered %d new %s series from %d subjects in %s." %
             (series_cnt, collection, len(subjects), dest))
         
         return self.reconstruction
@@ -200,10 +206,10 @@ class RegistrationWorkflow(WorkflowBase):
         
         # Execute the registration workflow.
         self._set_registration_input(self.workflow, subject, session, images, mask)
-        logger.debug("Executing the %s workflow on %s %s..." %
+        self.logger.debug("Executing the %s workflow on %s %s..." %
             (self.workflow.name, subject, session))
         self._run_workflow(self.workflow)
-        logger.debug("%s %s is registered as reconstruction %s." %
+        self.logger.debug("%s %s is registered as reconstruction %s." %
             (subject, session, recon))
     
     def _set_registration_input(self, workflow, subject, session, images, mask):
@@ -251,7 +257,7 @@ class RegistrationWorkflow(WorkflowBase):
             ('``ANTS`` or ``FNIRT``, default ``ANTS``)
         :return: the Workflow object
         """
-        logger.debug("Creating a base registration workflow...")
+        self.logger.debug("Creating a base registration workflow...")
         
         # The reusable workflow.
         if not base_dir:
@@ -289,16 +295,21 @@ class RegistrationWorkflow(WorkflowBase):
         reg_wf.connect(input_spec, 'session', upload_reg, 'session')
         reg_wf.connect(realign_wf, 'output_spec.out_file', upload_reg, 'in_files')
         
-        # The workflow output is the realigned image file.
+        # The realigned image file iterator.
         realign_output = realign_wf.get_node('output_spec')
-        output_spec = pe.Node(IdentityInterface(fields=['out_file']), name='output_spec')
-        reg_wf.connect(realign_wf, 'output_spec.out_file', output_spec, 'out_file')
+        iter_realigned = pe.Node(IdentityInterface(fields=['image']), name='iter_realigned')
+        reg_wf.connect(realign_wf, 'output_spec.out_file', iter_realigned, 'image')
+        
+        # The workflow output is the realigned image files.
+        output_spec = pe.JoinNode(IdentityInterface(fields=['images']),
+            joinsource='iter_image', joinfield='images', name='output_spec')
+        reg_wf.connect(iter_realigned, 'image', output_spec, 'images')
         
         self._configure_nodes(reg_wf, average)
         
-        logger.debug("Created the %s workflow." % reg_wf.name)
+        self.logger.debug("Created the %s workflow." % reg_wf.name)
         # If debug is set, then diagram the workflow graph.
-        if logger.level <= logging.DEBUG:
+        if self.logger.level <= logging.DEBUG:
             self._depict_workflow(reg_wf)
         
         return reg_wf
@@ -311,7 +322,7 @@ class RegistrationWorkflow(WorkflowBase):
         :param technique: the registration technique (``ANTS`` or ``FNIRT``)
         :return: the Workflow object
         """
-        logger.debug('Creating the realign workflow...')
+        self.logger.debug('Creating the realign workflow...')
         
         realign_wf = pe.Workflow(name='realign', base_dir=base_dir)
         

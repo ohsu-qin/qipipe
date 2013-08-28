@@ -5,8 +5,8 @@ import glob
 from dicom import datadict as dd
 from .dicom_helper import iter_dicom
 
-import logging
-logger = logging.getLogger(__name__)
+from .logging_helper import logger
+
 
 # Turn off pydicom debugging.
 import dicom
@@ -30,7 +30,7 @@ def edit_dicom_headers(dest, *dicom_files, **tag_values):
     tvr = {t: dd.get_entry(t)[0] for t in tv.iterkeys()}
     files = []
     
-    logger.info("Editing the DICOM files with the following tag values: %s..." % tag_values)
+    logger(__name__).info("Editing the DICOM files with the following tag values: %s..." % tag_values)
     # Open the DICOM store on each DICOM file (skipping non-DICOM files),
     # set the tag values and save to a new file in the destination directory.
     for ds in iter_dicom(*dicom_files):
@@ -44,7 +44,7 @@ def edit_dicom_headers(dest, *dicom_files, **tag_values):
         out_file = os.path.join(dest, fname)
         ds.save_as(out_file)
         files.append(out_file)
-        logger.debug("Saved the edited DICOM file as %s." % out_file)
-    logger.info("The edited DICOM files were saved in %s." % dest)
+        logger(__name__).debug("Saved the edited DICOM file as %s." % out_file)
+    logger(__name__).info("The edited DICOM files were saved in %s." % dest)
     
     return files

@@ -8,8 +8,8 @@ from ..helpers.dicom_helper import iter_dicom_headers
 from .staging_error import StagingError
 from . import airc_collection as airc
 
-import logging
-logger = logging.getLogger(__name__)
+from ..helpers.logging_helper import logger
+
 
 SUBJECT_FMT = '%s%03d'
 """The QIN subject name format with arguments (collection, subject number)."""
@@ -44,7 +44,7 @@ def get_subjects(collection, source, pattern=None):
         ``subject_pattern``)
     :return: the subject name => directory dictionary
     """
-    logger.debug("Detecting %s subjects from %s..." % (collection, source))
+    logger(__name__).debug("Detecting %s subjects from %s..." % (collection, source))
     airc_coll = airc.collection_with_name(collection)
     pat = pattern or airc_coll.subject_pattern
     sbj_dir_dict = {}
@@ -55,7 +55,7 @@ def get_subjects(collection, source, pattern=None):
             subject = SUBJECT_FMT % (collection, int(match.group(1)))
             # The subject source directory.
             sbj_dir_dict[subject] = os.path.join(source, d)
-            logger.debug("Discovered XNAT test subject %s subdirectory: %s" % (subject, d))
+            logger(__name__).debug("Discovered XNAT test subject %s subdirectory: %s" % (subject, d))
     
     return sbj_dir_dict
 
@@ -115,7 +115,7 @@ def _is_new_session(subject, session):
     with xnat_helper.connection() as xnat:
         exists = xnat.get_session(project(), subject, session).exists()
     if exists:
-        logger.debug("Skipping the %s %s %s session since it has already been"
+        logger(__name__).debug("Skipping the %s %s %s session since it has already been"
             " loaded to XNAT." % (project(), subject, session))
     
     return not exists
@@ -156,7 +156,7 @@ class VisitIterator(object):
         with xnat_helper.connection() as xnat:
             for d in self.subject_dirs:
                 d = os.path.abspath(d)
-                logger.debug("Discovering sessions in %s..." % d)
+                logger(__name__).debug("Discovering sessions in %s..." % d)
                 # Make the XNAT subject name.
                 sbj_nbr = self.collection.path2subject_number(d)
                 sbj = SUBJECT_FMT % (self.collection.name, sbj_nbr)
@@ -178,5 +178,5 @@ class VisitIterator(object):
                             dpat = os.path.join(visit_dir, self.collection.dicom_pattern)
                             # The visit directory DICOM file iterator.
                             dicom_file_iter = glob.iglob(dpat)
-                            logger.debug("Discovered session %s in %s" % (sess, visit_dir))
+                            logger(__name__).debug("Discovered session %s in %s" % (sess, visit_dir))
                             yield (sbj, sess, dicom_file_iter)

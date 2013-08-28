@@ -2,8 +2,8 @@ import sys, os, glob, shutil
 from nose.tools import *
 import nipype.pipeline.engine as pe
 
-import logging
-logger = logging.getLogger(__name__)
+from qipipe.helpers.logging_helper import logger
+
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from test.helpers.project import project
@@ -53,7 +53,7 @@ class TestStagingWorkflow(object):
         :param collection: the AIRC collection name
         """
         fixture = os.path.join(FIXTURES, collection.lower())
-        logger.debug("Testing the staging workflow on %s..." % fixture)
+        logger(__name__).debug("Testing the staging workflow on %s..." % fixture)
 
         # The staging destination and work area.
         dest = os.path.join(RESULTS, 'data')

@@ -1,8 +1,8 @@
 import os, sys, shutil, distutils
 from nose.tools import *
 
-import logging
-logger = logging.getLogger(__name__)
+from qipipe.helpers.logging_helper import logger
+
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from test.helpers.project import project
@@ -66,7 +66,7 @@ class TestQIPipeline(object):
             os.symlink(src, dest)
             self._test_collection('Breast', fixture)
         else:
-            logger.info("Skipping the QIN pipeline unit Breast test, since the "
+            logger(__name__).info("Skipping the QIN pipeline unit Breast test, since the "
                 "QIN_DATA environment variable is not set.")
     
     def test_sarcoma(self):
@@ -82,7 +82,7 @@ class TestQIPipeline(object):
             os.symlink(src, dest)
             self._test_collection('Sarcoma', fixture)
         else:
-            logger.info("Skipping the QIN pipeline unit Sarcoma test, "
+            logger(__name__).info("Skipping the QIN pipeline unit Sarcoma test, "
                 "since the QIN_DATA environment variable is not set.")
     
     def _test_collection(self, collection, fixture):
@@ -93,7 +93,7 @@ class TestQIPipeline(object):
         :param collection: the AIRC collection name
         :param fixture: the test input
         """
-        logger.debug("Testing the QIN pipeline on %s..." % fixture)
+        logger(__name__).debug("Testing the QIN pipeline on %s..." % fixture)
         
         # The staging destination and work area.
         dest = os.path.join(RESULTS, 'data')
@@ -121,7 +121,7 @@ class TestQIPipeline(object):
             
             # Run the staging, mask and registration workflows, but not
             # the modeling.
-            logger.debug("Executing the QIN pipeline...")
+            logger(__name__).debug("Executing the QIN pipeline...")
             output_dict = qip.run(collection, *sources, **opts)
             # Verify the result.
             recon = qip

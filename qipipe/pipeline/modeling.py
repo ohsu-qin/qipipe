@@ -1,4 +1,5 @@
 import os, tempfile
+import logging
 from collections import defaultdict
 from nipype.pipeline import engine as pe
 from nipype.interfaces.dcmstack import (DcmStack, MergeNifti, CopyMeta)
@@ -8,9 +9,8 @@ from ..helpers import file_helper
 from ..helpers.project import project
 from .workflow_base import WorkflowBase
 from .distributable import DISTRIBUTABLE
+from ..helpers.logging_helper import logger
 
-import logging
-logger = logging.getLogger(__name__)
 
 PK_PREFIX = 'pk'
 """The XNAT modeling assessor object label prefix."""
@@ -32,10 +32,11 @@ def run(input_dict, **opts):
 
 class ModelingWorkflow(WorkflowBase):
     """
-    The ModelingWorkflow builds and executes the Nipype pharmacokinetic mapping
-    workflow.
+    The ModelingWorkflow builds and executes the Nipype pharmacokinetic
+    mapping workflow.
     
-    The workflow calculates the modeling parameters for input images as follows:
+    The workflow calculates the modeling parameters for input images as
+    follows:
     
     - Compute the |R10| value, if it is not given in the options
     
@@ -47,8 +48,8 @@ class ModelingWorkflow(WorkflowBase):
     
     - Upload the modeling result to XNAT
     
-    The modeling reusable workflow input is the `input_spec` node consisting
-    of the following input fields:
+    The modeling workflow input is the `input_spec` node consisting of the
+    following input fields:
     
     - `subject`: the subject name
     
@@ -141,7 +142,7 @@ class ModelingWorkflow(WorkflowBase):
             baseline image (default is 1)
         """
         cfg_file = opts.pop('cfg_file', None)
-        super(ModelingWorkflow, self).__init__(logger, cfg_file)
+        super(ModelingWorkflow, self).__init__(logger(__name__), cfg_file)
         
         self.assessor = "%s_%s" % (PK_PREFIX, file_helper.generate_file_name())
         """
@@ -198,21 +199,21 @@ class ModelingWorkflow(WorkflowBase):
         output_dict = defaultdict(lambda: defaultdict(list))
         
         series_cnt = sum(map(len, input_dict.itervalues()))
-        logger.debug("Modeling %d series from %d subjects in %s..." %
+        self.logger.debug("Modeling %d series from %d subjects in %s..." %
             (series_cnt, len(input_dict.keys()), dest))
         # The subject workflow.
         for sbj, sess_dict in input_dict.iteritems():
             # The session workflow.
-            logger.debug("Masking subject %s..." % sbj)
+            self.logger.debug("Masking subject %s..." % sbj)
             for sess, ser_specs in sess_dict.iteritems():
-                logger.debug("Masking %s %s..." % (sbj, sess))
+                self.logger.debug("Masking %s %s..." % (sbj, sess))
                 # The series workflow.
                 for ser, images in ser_specs:
                     files = self._model(sbj, sess, ser, images)
                     mask_dict[sbj][sess].append(mask)
-                logger.debug("Masked %s %s." % (sbj, sess))
-            logger.debug("Masked subject %s." % sbj)
-        logger.debug("Masked %d %s series from %d subjects in %s." %
+                self.logger.debug("Masked %s %s." % (sbj, sess))
+            self.logger.debug("Masked subject %s." % sbj)
+        self.logger.debug("Masked %d %s series from %d subjects in %s." %
             (series_cnt, collection, len(subjects), dest))
         # The execution workflow iterates over the inputs.
         in_fields = ['subject' 'session', 'images']
@@ -235,7 +236,7 @@ class ModelingWorkflow(WorkflowBase):
         :param opts: the additional workflow initialization options
         :return: the Nipype workflow
         """
-        logger.debug("Building the modeling workflow...")
+        self.logger.debug("Building the modeling workflow...")
         
         # The base workflow.
         if not base_dir:
@@ -249,7 +250,7 @@ class ModelingWorkflow(WorkflowBase):
         in_fields = ['subject', 'session', 'mask', 'images']
         input_xfc = IdentityInterface(fields=in_fields)
         input_spec = pe.Node(input_xfc, name='input_spec')
-        logger.debug("The modeling workflow input is %s with"
+        self.logger.debug("The modeling workflow input is %s with"
             " fields %s" % (input_spec.name, in_fields))
         reusable_wf.connect(input_spec, 'mask', base_wf, 'input_spec.mask')
         reusable_wf.connect(input_spec, 'images', base_wf, 'input_spec.images')
@@ -272,12 +273,12 @@ class ModelingWorkflow(WorkflowBase):
         for field in base_out_fields:
             base_field = 'output_spec.' + field
             reusable_wf.connect(base_wf, base_field, output_spec, field)
-        logger.debug("The modeling reusable workflow output is %s with"
+        self.logger.debug("The modeling reusable workflow output is %s with"
             " fields %s" % (output_spec.name, out_fields))
         
-        logger.debug("Created the %s workflow." % reusable_wf.name)
+        self.logger.debug("Created the %s workflow." % reusable_wf.name)
         # If debug is set, then diagram the workflow graph.
-        if logger.level <= logging.DEBUG:
+        if self.logger.level <= logging.DEBUG:
             self._depict_workflow(reusable_wf)
         
         return reusable_wf
@@ -320,7 +321,7 @@ class ModelingWorkflow(WorkflowBase):
         input_spec = pe.Node(input_xfc, name='input_spec')
         # Set the config parameters.
         for field in in_fields:
-            if opts.has_key(field):
+            if field in opts:
                 setattr(input_spec.inputs, field, opts[field])
         
         # Merge the DCE data to 4D.
@@ -479,7 +480,7 @@ class ModelingWorkflow(WorkflowBase):
             for field in r1_fields:
                 opts.pop(field, None)
         
-        logger.debug("The PK modeling parameters: %s" % opts)
+        self.logger.debug("The PK modeling parameters: %s" % opts)
         return opts
 
 

@@ -2,9 +2,9 @@ import os, re, gzip, operator
 import dicom
 from dicom.filereader import InvalidDicomError
 from .file_helper import FileIterator
+from .logging_helper import logger
 
-import logging
-logger = logging.getLogger(__name__)
+
 
 def read_dicom_file(fp, *args):
     """
@@ -18,7 +18,7 @@ def read_dicom_file(fp, *args):
     :raise: IOError if the file cannot be read
     """
     if isinstance(fp, str):
-        logger.debug("Opening the DICOM file %s..." % fp)
+        logger(__name__).debug("Opening the DICOM file %s..." % fp)
         _, ext = os.path.splitext(fp)
         if ext == '.gz':
             fp = gzip.open(fp)
@@ -46,7 +46,7 @@ def isdicom(fp):
     try:
         read_dicom_header(fp)
     except InvalidDicomError:
-        logger.debug("%s is not a DICOM file." % fp)
+        logger(__name__).debug("%s is not a DICOM file." % fp)
         return False
     return True
 
@@ -110,7 +110,7 @@ class DicomIterator(FileIterator):
             try:
                 yield read_dicom_file(f, *self.args)
             except InvalidDicomError:
-                logger.info("Skipping non-DICOM file %s" % f)
+                logger(__name__).info("Skipping non-DICOM file %s" % f)
 
 class DicomHeaderIterator(DicomIterator):
     """

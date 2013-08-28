@@ -6,8 +6,8 @@ from pyxnat.core.resources import (Experiment, Reconstruction, Reconstructions,
 from pyxnat.core.errors import DatabaseError
 from .xnat_config import default_configuration
 
-import logging
-logger = logging.getLogger(__name__)
+from .logging_helper import logger
+
 
 @contextmanager
 def connection():
@@ -48,6 +48,8 @@ def canonical_label(*names):
     'QIN_Breast003_Session01'
     >>> canonical_label('QIN', 'Breast003', 'QIN_Breast003_Session01')
     'QIN_Breast003_Session01'
+    >>> canonical_label('QIN', 'Breast003', 'QIN_Breast003_Session01', 'reg_pzR3tW')
+    'QIN_Breast003_Session01_reg_pzR3tW'
     
     :param names: the object names
     :return: the corresponding XNAT label
@@ -63,6 +65,21 @@ def canonical_label(*names):
     else:
         return last
 
+def parse_canonical_label(label):
+    """
+    Returns the names for the given XNAT session
+    label, as defined by :meth:`qipipe.helpers.xnat_helper.canonical_label`.
+    
+    Example:
+    
+    >>> from qipipe.helpers.xnat_helper import parse_label
+    >>> parse_label('QIN_Breast003_Session01)
+    >>> ('QIN', 'Breast003', 'Session01')
+    
+    :param: the XNAT session label
+    :return: the *(project, subject, session)* name tuple
+    """
+    return tuple(label.split('_'))
 
 class XNATError(Exception):
     pass
@@ -94,14 +111,14 @@ class XNAT(object):
             if not config_or_interface:
                 config_or_interface = default_configuration()
             self._config = config_or_interface
-            logger.debug("Connecting to XNAT with config %s..." %
+            logger(__name__).debug("Connecting to XNAT with config %s..." %
                 config_or_interface)
             self.interface = pyxnat.Interface(config=config_or_interface)
     
     def close(self):
         """Drops the XNAT connection."""
         self.interface.disconnect()
-        logger.debug("Closed the XNAT connection.")
+        logger(__name__).debug("Closed the XNAT connection.")
     
     def get_subject(self, project, subject):
         """
@@ -132,6 +149,21 @@ class XNAT(object):
         label = canonical_label(project, subject, session)
         
         return self.get_subject(project, subject).experiment(label)
+    
+    def get_scans(self, project, subject, session):
+        """
+        Returns the XNAT scan numbers for the given XNAT lineage.
+        The session name is qualified by the subject name prefix, if necessary.
+        
+        :param project: the XNAT project id
+        :param subject: the XNAT subject label
+        :param session: the XNAT experiment label
+        :return: the session scan numbers
+        """
+        label = canonical_label(project, subject, session)
+        exp = self.get_subject(project, subject).experiment(label)
+        
+        return [int(scan) for scan in exp.scans().get()] 
     
     def get_scan(self, project, subject, session, scan):
         """
@@ -228,7 +260,7 @@ class XNAT(object):
         if not os.path.exists(dest):
             os.makedirs(dest)
         
-        logger.debug("Downloading the %s %s %s files to %s..." %
+        logger(__name__).debug("Downloading the %s %s %s files to %s..." %
             (subject, session, opts, dest))
         
         # The resource.
@@ -237,7 +269,7 @@ class XNAT(object):
         # Download the files.
         rsc_files = list(rsc.files())
         if not rsc_files:
-            logger.debug("The %s %s %s resource does not contain any files." %
+            logger(__name__).debug("The %s %s %s resource does not contain any files." %
                 (subject, session, opts))
         
         return [self._download_file(f, dest) for f in rsc_files]
@@ -252,9 +284,9 @@ class XNAT(object):
         if not fname:
             raise XNATError("XNAT file object does not have a name: %s" % file_obj)
         tgt = os.path.join(dest, fname)
-        logger.debug("Downloading the XNAT file %s to %s..." % (fname, dest))
+        logger(__name__).debug("Downloading the XNAT file %s to %s..." % (fname, dest))
         file_obj.get(tgt)
-        logger.debug("Downloaded the XNAT file %s." % tgt)
+        logger(__name__).debug("Downloaded the XNAT file %s." % tgt)
         
         return tgt
     
@@ -343,10 +375,10 @@ class XNAT(object):
                 "the options %s" % opts)
         
         # Upload each file.
-        logger.debug("Uploading %d %s %s %s files to XNAT..." %
+        logger(__name__).debug("Uploading %d %s %s %s files to XNAT..." %
             (len(in_files), project, subject, session))
         xnat_files = [self._upload_file(rsc_obj, f, opts) for f in in_files]
-        logger.debug("%d %s %s %s files uploaded to XNAT." %
+        logger(__name__).debug("%d %s %s %s files uploaded to XNAT." %
             (len(in_files), project, subject, session))
         
         return xnat_files
@@ -417,10 +449,10 @@ class XNAT(object):
             if sbj.exists():
                 return sbj
             elif create:
-                logger.debug("Creating the XNAT %s %s subject..." %
+                logger(__name__).debug("Creating the XNAT %s %s subject..." %
                     (project, subject))
                 sbj.insert()
-                logger.debug("Created the XNAT %s %s subject with id %s." %
+                logger(__name__).debug("Created the XNAT %s %s subject with id %s." %
                     (project, subject, sbj.id()))
                 return sbj
             else:
@@ -441,10 +473,10 @@ class XNAT(object):
                 # experiments option.
                 opts['experiments'] = self._standardize_modality(modality)
                 # Create the experiment.
-                logger.debug("Creating the XNAT %s %s %s experiment..." %
+                logger(__name__).debug("Creating the XNAT %s %s %s experiment..." %
                     (project, subject, session))
                 exp.insert()
-                logger.debug("Created the XNAT %s %s %s experiment with "
+                logger(__name__).debug("Created the XNAT %s %s %s experiment with "
                     "id %s." % (project, subject, session, exp.id()))
             else:
                 return
@@ -463,11 +495,11 @@ class XNAT(object):
         ctr = self._xnat_resource_parent(exp, ctr_type, ctr_id)
         if not ctr.exists():
             if create:
-                logger.debug("Creating the XNAT %s %s %s %s %s resource parent "
+                logger(__name__).debug("Creating the XNAT %s %s %s %s %s resource parent "
                     "container..." %
                     (project, subject, session, ctr_type, ctr_id))
                 ctr.insert()
-                logger.debug("Created the XNAT %s %s %s %s %s resource parent "
+                logger(__name__).debug("Created the XNAT %s %s %s %s %s resource parent "
                     "container with id %s." %
                     (project, subject, session, ctr_type, ctr_id, ctr.id()))
             else:
@@ -481,10 +513,10 @@ class XNAT(object):
         rsc = self._xnat_child_resource(ctr, resource, opts.get('inout'))
         if not rsc.exists():
             if create:
-                logger.debug("Creating the XNAT %s %s %s %s %s %s resource..." %
+                logger(__name__).debug("Creating the XNAT %s %s %s %s %s %s resource..." %
                     (project, subject, session, ctr_type, ctr_id, resource))
                 rsc.insert()
-                logger.debug("Created the XNAT %s %s %s %s %s %s resource with "
+                logger(__name__).debug("Created the XNAT %s %s %s %s %s %s resource with "
                     "id %s." %
                     (project, subject, session, ctr_type, ctr_id, resource, rsc.id()))
             else:
@@ -553,13 +585,13 @@ class XNAT(object):
         :param opts: the options to check
         :return: the container (type, value) tuple, or None if no containe was specified
         """
-        if opts.has_key('container_type'):
+        if 'container_type' in opts:
             return (opts['container_type'], None)
         for t in XNAT.CONTAINER_TYPES:
-            if opts.has_key(t):
+            if t in opts:
                 return (t, opts[t])
         for t in XNAT.ASSESSOR_SYNONYMS:
-            if opts.has_key(t):
+            if t in opts:
                 return ('assessor', opts[t])
     
     def _xnat_container_type(self, name):
@@ -693,7 +725,7 @@ class XNAT(object):
         """
         # The XNAT file name.
         _, fname = os.path.split(in_file)
-        logger.debug("Uploading the XNAT file %s from %s..." % (fname, in_file))
+        logger(__name__).debug("Uploading the XNAT file %s from %s..." % (fname, in_file))
         
         # The XNAT file wrapper.
         file_obj = resource.file(fname)
@@ -705,9 +737,9 @@ class XNAT(object):
                 " resource" % (fname, resource.label()))
         
         # Upload the file.
-        logger.debug("Inserting the XNAT file %s into the %s %s %s resource..." %
+        logger(__name__).debug("Inserting the XNAT file %s into the %s %s %s resource..." %
             (fname, rsc_ctr.__class__.__name__.lower(), rsc_ctr.id(), resource.label()))
         file_obj.insert(in_file, **opts)
-        logger.debug("Uploaded the XNAT file %s." % fname)
+        logger(__name__).debug("Uploaded the XNAT file %s." % fname)
         
         return fname
