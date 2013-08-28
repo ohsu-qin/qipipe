@@ -405,6 +405,8 @@ class StagingWorkflow(WorkflowBase):
             joinsource='iter_series', joinfield='images', name='output_spec')
         workflow.connect(stack, 'out_file', output_spec, 'images')
         
+        self._configure_nodes(workflow)
+        
         self.logger.debug("Created the %s workflow." % workflow.name)
         # If debug is set, then diagram the workflow graph.
         if self.logger.level <= logging.DEBUG:

@@ -276,6 +276,8 @@ class ModelingWorkflow(WorkflowBase):
         self.logger.debug("The modeling reusable workflow output is %s with"
             " fields %s" % (output_spec.name, out_fields))
         
+        self._configure_nodes(reusable_wf)
+        
         self.logger.debug("Created the %s workflow." % reusable_wf.name)
         # If debug is set, then diagram the workflow graph.
         if self.logger.level <= logging.DEBUG:

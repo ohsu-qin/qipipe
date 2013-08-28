@@ -148,8 +148,10 @@ class QIPipelineWorkflow(WorkflowBase):
             sbj_sess_dict = self._run_with_scan_download(*inputs)
         else:
             exec_wf = self.workflow
-            coll = opts.get('collection')
-            stg_dict = staging.run(coll, *inputs, dest=dest,
+            if 'collection' not in opts:
+                raise ValueError("QIPipeline is missing the collection argument")
+            collection = opts.pop('collection')
+            stg_dict = staging.run(collection, *inputs, dest=dest,
                 base_dir=exec_wf.base_dir, workflow=exec_wf, **opts)
             sbj_sess_dict = {sbj: sess_dict.keys()
                 for sbj, sess_dict in stg_dict.iteritems()}
@@ -378,6 +380,8 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(input_spec, 'session', mdl_wf, 'input_spec.session')
             exec_wf.connect(mask_wf, 'output_spec.mask', mdl_wf, 'input_spec.mask')
             exec_wf.connect(reg_wf, 'output_spec.images', mdl_wf, 'input_spec.images')
+        
+        self._configure_nodes(exec_wf)
         
         self.logger.debug("Created the %s workflow." % exec_wf.name)
         # If debug is set, then diagram the workflow graph.

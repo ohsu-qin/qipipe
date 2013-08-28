@@ -305,7 +305,7 @@ class RegistrationWorkflow(WorkflowBase):
             joinsource='iter_image', joinfield='images', name='output_spec')
         reg_wf.connect(iter_realigned, 'image', output_spec, 'images')
         
-        self._configure_nodes(reg_wf, average)
+        self._configure_nodes(reg_wf)
         
         self.logger.debug("Created the %s workflow." % reg_wf.name)
         # If debug is set, then diagram the workflow graph.
