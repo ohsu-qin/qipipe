@@ -63,14 +63,12 @@ class QIPipelineWorkflow(WorkflowBase):
     
     def __init__(self, **opts):
         """
-        Builds the pipeline workflow.
-        
         The default workflow settings can be overriden by a configuration
-        file specified in the `staging`, `mask`, `registration` or
-        `modeling` option. If the `mask` option is set to False, then
-        only staging is performed. If the `registration` option is set
+        file specified in the *staging*, *mask*, *registration* or
+        *modeling* option. If the *mask* option is set to False, then
+        only staging is performed. If the *registration* option is set
         to false, then  registration is skipped and modeling is performed on
-        the staged scans. If the `modeling` option is set to False, then
+        the staged scans. If the *modeling* option is set to False, then
         PK modeling is not performed.
         
         :param opts: the following initialization options:
@@ -425,7 +423,7 @@ class QIPipelineWorkflow(WorkflowBase):
         
         # The workflow output.
         output_spec = pe.JoinNode(IdentityInterface(fields=['images']),
-            joinsource='iter_image', joinfield='images', name='output_spec')
+            joinsource='iter_scan', joinfield='images', name='output_spec')
         dl_wf.connect(iter_image, 'image', output_spec, 'images')
         
         self.logger.debug("Created the session download workflow.")
