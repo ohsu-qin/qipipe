@@ -1,8 +1,8 @@
 from nose.tools import *
 import sys, os
 
-import logging
-logger = logging.getLogger(__name__)
+from qipipe.helpers.logging_helper import logger
+
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.helpers.ast_config import read_config
@@ -10,14 +10,14 @@ from qipipe.helpers.ast_config import read_config
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 """The test parent directory."""
 
-FIXTURE = os.path.join(ROOT, 'fixtures', 'helpers', 'tuning.cfg')
+FIXTURE = os.path.join(ROOT, 'fixtures', 'helpers', 'ast_config', 'tuning.cfg')
 """The test fixture configuration file."""
 
 
 class TestASTConfig:
     """The ASTConfig unit tests."""
     def test_config(self):
-        logger.debug("Testing the JSON configuration loader on %s..." % FIXTURE)
+        logger(__name__).debug("Testing the JSON configuration loader on %s..." % FIXTURE)
         cfg = read_config(FIXTURE)
         assert_is_not_none(cfg.has_section('Tuning'), "The configuration is missing the Tuning section")
         opts = cfg['Tuning']
