@@ -129,7 +129,32 @@ class WorkflowBase(object):
         self.logger.debug("Executing the workflow %s in %s..." %
             (workflow.name, workflow.base_dir))
         with xnat_helper.connection():
-            workflow.run(**args)
+            pass #workflow.run(**args)
+    
+    def _inspect_workflow_inputs(self, workflow):
+        """
+        Collects the given workflow nodes' inputs for debugging.
+        
+        :return: a {node name: parameters} dictionary, where *parameters*
+            is a node parameter {name: value} dictionary
+        """
+        return {node_name: self._inspect_node_inputs(workflow.get_node(node_name))
+            for node_name in workflow.list_node_names()}
+    
+    def _inspect_node_inputs(self, node):
+        """
+        Collects the given node inputs and plugin arguments for debugging.
+        
+        :return: the node parameter {name: value} dictionary
+        """
+        fields = node.inputs.copyable_trait_names()
+        param_dict = {}
+        for field in fields:
+            value = getattr(node.inputs, field)
+            if value != None:
+                param_dict[field] = value
+        
+        return param_dict
         
     def _configure_plugin(self, workflow):
         """
@@ -165,59 +190,54 @@ class WorkflowBase(object):
                 (workflow.name, detail))
         
         return args
-    
-    def _inspect_workflow_inputs(self, workflow):
-        """
-        Collects the given workflow nodes' inputs for debugging.
         
-        :return: a {node name: parameters} dictionary, where *parameters*
-            is a node parameter {name: value} dictionary
-        """
-        return {node_name: self._inspect_node_inputs(workflow.get_node(node_name))
-            for node_name in workflow.list_node_names()}
-    
-    def _inspect_node_inputs(self, node):
-        """
-        Collects the given node inputs and plugin arguments for debugging.
-        
-        :return: the node parameter {name: value} dictionary
-        """
-        fields = node.inputs.copyable_trait_names()
-        param_dict = {}
-        for field in fields:
-            value = getattr(node.inputs, field)
-            if value != None:
-                param_dict[field] = value
-        
-        return param_dict
-        
-    def _configure_nodes(self, workflow, *nodes):
+    def _configure_nodes(self, workflow):
         """
         Sets the input parameters defined for the given workflow in
         this WorkflowBase's configuration.
         
+        :Note: nested workflow nodes are not configured, e.g. if the
+        ``registration`` workflow connects a `realign`` workflow
+        node ``fnirt``, then the nested ``realign.fnirt`` node in
+        ``registration`` is not configured.
+        
         See :meth:`qipipe.pipeline.WorkflowBase._node_input_configuration`
         
         :param workflow: the workflow containing the nodes
-        :param nodes: the nodes to configure (default all nodes)
         """
+        # The default Grid Engine setting.
+        if DISTRIBUTABLE and 'SGE' in self.configuration:
+            def_plugin_args = self.configuration['SGE'].get('plugin_args')
+            self.logger.debug("Workflow %s default node plug-in parameters:"
+                " %s." % (workflow.name, def_plugin_args))
+        else:
+            def_plugin_args = None
+        
         # A {node: {field: value}} dictionary to format a debug log message.
         input_dict = defaultdict(dict)
-        if not nodes:
-            nodes = [workflow.get_node(name)
-                for name in workflow.list_node_names()]
+        # The nodes defined in this workflow start with the workflow name.
+        prefix = workflow.name + '.'
+        # Configure all node inputs.
+        nodes = [workflow.get_node(name)
+            for name in workflow.list_node_names()]
         for node in nodes:
             cfg = self._interface_configuration(node.interface.__class__)
             for attr, value in cfg.iteritems():
                 if attr == 'plugin_args':
                     if DISTRIBUTABLE:
                         setattr(node, attr, value)
+                        self.logger.debug("%s workflow node %s plugin"
+                            " arguments: %s" % (workflow.name, node, value))
                 elif value != getattr(node.inputs, attr):
                     # The config value differs from the default value.
                     # Set the field to the config value and collect it
                     # for the debug log message.
                     setattr(node.inputs, attr, value)
                     input_dict[node.name][attr] = value
+            if (def_plugin_args and 'plugin_args' not in cfg
+                and str(node).startswith(prefix)):
+                node.plugin_args = def_plugin_args
+        
         # If a field was set to a config value, then print the config
         # setting to the log.
         if input_dict:
