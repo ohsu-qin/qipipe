@@ -104,7 +104,7 @@ class QIPipelineWorkflow(WorkflowBase):
         
         - Otherwise, if the *staging* option is set to False, then the
           series scan stack images are downloaded for the given
-            XNAT session label inputs.
+          XNAT session label inputs.
         
         - Otherwise, the DICOM files are staged for the given subject
           directory inputs.

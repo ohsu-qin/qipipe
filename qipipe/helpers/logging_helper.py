@@ -52,8 +52,6 @@ def configure(cfg_file=None, **opts):
     :meth:`qipipe.helpers.logging_helper.config` method ensures
     that the log file parent directory exists.
     
-    ---------
-    
     Examples:
     
     - Write to the log:

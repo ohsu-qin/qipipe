@@ -42,6 +42,7 @@ class ASTConfig(Config):
         two_tailed = false
         threshold = 4.0
         plugin_args = {'qsub_args': '-pe mpi 48-120'}
+    
     then:
     
     >>> cfg = ASTConfig('tuning.cfg')
