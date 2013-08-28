@@ -178,17 +178,6 @@ class WorkflowBase(object):
         else:
             args = {}
         
-        # Print the node plugin arguments.
-        detail = {}
-        for node_name in workflow.list_node_names():
-            node = workflow.get_node(node_name)
-            if node.plugin_args:
-                detail[node_name] = node.plugin_args
-        # Print a debug message.
-        if detail:
-            self.logger.debug("Workflow %s node plug-in arguments: %s." %
-                (workflow.name, detail))
-        
         return args
         
     def _configure_nodes(self, workflow):
