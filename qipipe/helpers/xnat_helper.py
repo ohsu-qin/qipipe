@@ -338,7 +338,7 @@ class XNAT(object):
         :keyword modality: the session modality
         :keyword format: the image format
         :keyword resource: the resource name (default is the format)
-        :keyword inout: the container `in``/``out`` option
+        :keyword inout: the container ``in``/``out`` option
             (default ``out`` for a container type that requires this option)
         :keyword overwrite: flag indicating whether to replace an existing file (default False)
         :return: the new XNAT file names
@@ -572,7 +572,7 @@ class XNAT(object):
         """
         Determines the resource container item from the given options as follows:
         
-        - If there is a `container_type` option, then that type is returned without a value.
+        - If there is a *container_type* option, then that type is returned without a value.
         
         - Otherwise, if the options include a container type in :object:`XNAT.CONTAINER_TYPES`,
           then the option type and value are returned.

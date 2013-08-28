@@ -118,7 +118,7 @@ class StagingWorkflow(WorkflowBase):
                     session/
                         file.nii.gz ...
         
-        :Note: If the `overwrite` option is set, then existing XNAT subjects
+        :Note: If the *overwrite* option is set, then existing XNAT subjects
             which correspond to subjects in the input directories are deleted.
         
         If the *workflow* parameter is set, then that execution workflow is
