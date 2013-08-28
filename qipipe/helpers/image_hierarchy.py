@@ -17,7 +17,8 @@ def read_image_hierarchy(*files):
     return h
 
 class ImageHierarchy(DictionaryHierarchy):
-    TAGS = ('Patient ID', 'Study Instance UID', 'Series Instance UID', 'Instance Number')
+    TAGS = ('Patient ID', 'Study Instance UID', 'Series Instance UID',
+        'Instance Number')
     
     """
     ImageHierarchy wraps the DICOM image subject-study-series-image hierarchy.
@@ -29,7 +30,8 @@ class ImageHierarchy(DictionaryHierarchy):
     
     def add(self, ds):
         """
-        Adds the subject-study-series-image hierarchy entries from the given DICOM dataset.
+        Adds the subject-study-series-image hierarchy entries from the given
+        DICOM dataset.
 
         :param ds: the DICOM dataset
         """

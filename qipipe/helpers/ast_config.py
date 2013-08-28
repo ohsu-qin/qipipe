@@ -106,7 +106,7 @@ class ASTConfig(Config):
     
     def next(self):
         """
-        :yield: the next (section, {item: value} dictionary) tuple
+        :yield: the next *(section, {item: value})* tuple
         """
         for s in self.sections():
             yield (s, self[s])
@@ -123,7 +123,8 @@ class ASTConfig(Config):
         :param section: the configuration section name
         :return: the section option => value dictionary
         """
-        return {name: self._parse_entry(name, value) for name, value in self.items(section)}
+        return {name: self._parse_entry(name, value)
+            for name, value in self.items(section)}
     
     def _parse_entry(self, name, s):
         """
@@ -137,7 +138,8 @@ class ASTConfig(Config):
             try:
                 return ast.literal_eval(ast_value)
             except Exception:
-                logger(__name__).error("Cannot load the configuration entry %s: %s parsed as %s" % (name, s, ast_value))
+                logger(__name__).error("Cannot load the configuration entry"
+                    " %s: %s parsed as %s" % (name, s, ast_value))
                 raise
     
     def _to_ast(self, s):

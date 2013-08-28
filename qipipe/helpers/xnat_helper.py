@@ -527,8 +527,8 @@ class XNAT(object):
     
     def _standardize_modality(self, modality):
         """
-        Example
-        -------
+        Example:
+        
         >>> from qipipe.helpers import xnat_helper
         >>> xnat._standardize_modality('MR')
         xnat:mrSessionData
@@ -555,7 +555,7 @@ class XNAT(object):
         :param opts: the :meth:`XNAT.download` options
         :keyword format: the image file format
             (``NIFTI`` or ``DICOM``, default ``NIFTI``)
-        :return: the container (type, value) tuple
+        :return: the container *(type, value)* tuple
         """
         # The image format.
         format = opts.get('format') or 'NIFTI'
@@ -606,15 +606,17 @@ class XNAT(object):
         elif name in XNAT.CONTAINER_TYPES:
             return name
         else:
-            raise XNATError("XNAT upload session child container not recognized: %s" % name)
+            raise XNATError("XNAT upload session child container not recognized:"
+                " %s" % name)
     
     def _xnat_resource_parent(self, experiment, container_type, name=None):
         """
-        Returns the resource parent for the given experiment and container type.
-        The resource parent is the experiment child with the given container type,
-        e.g a MR session scan or registration reconstruction. If there is a name,
-        then the parent is the object with that name, e.g. ``reconstruction('reg_1')``.
-        Otherwise, the parent is a container group, e.g. ``reconstructions``.
+        Returns the resource parent for the given experiment and container
+        type. The resource parent is the experiment child with the given
+        container type, e.g a MR session scan or registration reconstruction.
+        If there is a name, then the parent is the object with that name, e.g.
+        ``reconstruction('reg_1')``. Otherwise, the parent is a container group,
+        e.g. ``reconstructions``.
         
         :param experiment: the XNAT experiment
         :param container_type: the container type in L{XNAT.CONTAINER_TYPES}
@@ -641,13 +643,15 @@ class XNAT(object):
             return experiment.reconstructions()
         elif container_type == 'assessor':
             return experiment.assessors()
-        raise XNATError("XNAT resource container type not recognized: %s" % container_type)
+        raise XNATError("XNAT resource container type not recognized: %s" %
+            container_type)
     
     def _xnat_child_resource(self, parent, name=None, inout=None):
         """
         :param parent: the XNAT resource parent object
         :param name: the resource name, e.g. ``NIFTI``
-        :param inout: the container in/out option described in :meth:`XNAT.download`
+        :param inout: the container in/out option described in
+            :meth:`qipipe.helpers.xnat_helper.XNAT.download`
             (default ``out`` for a container type that requires this option)
         :return: the XNAT resource object
         :raise XNATError: if the inout option is invalid
@@ -659,7 +663,8 @@ class XNAT(object):
                 elif inout in ['out', None]:
                     rsc = parent.out_resource(name)
                 else:
-                    raise XNATError("Unsupported resource inout option: %s" % inout)
+                    raise XNATError("Unsupported resource inout option: %s" %
+                        inout)
                 return rsc
             else:
                 return parent.resource(name)
@@ -725,7 +730,8 @@ class XNAT(object):
         """
         # The XNAT file name.
         _, fname = os.path.split(in_file)
-        logger(__name__).debug("Uploading the XNAT file %s from %s..." % (fname, in_file))
+        logger(__name__).debug("Uploading the XNAT file %s from %s..." %
+            (fname, in_file))
         
         # The XNAT file wrapper.
         file_obj = resource.file(fname)
@@ -737,7 +743,8 @@ class XNAT(object):
                 " resource" % (fname, resource.label()))
         
         # Upload the file.
-        logger(__name__).debug("Inserting the XNAT file %s into the %s %s %s resource..." %
+        logger(__name__).debug("Inserting the XNAT file %s into the %s %s %s"
+            " resource..." %
             (fname, rsc_ctr.__class__.__name__.lower(), rsc_ctr.id(), resource.label()))
         file_obj.insert(in_file, **opts)
         logger(__name__).debug("Uploaded the XNAT file %s." % fname)

@@ -4,8 +4,8 @@ __all__ = ['default_configuration']
 
 def default_configuration():
     """
-    Returns the XNAT configuration file location determined as the first file found
-    in the following precedence order:
+    Returns the XNAT configuration file location determined as the first file
+    found in the following precedence order:
     
     1. ``xnat.cfg`` in the home ``.xnat`` subdirectory
     

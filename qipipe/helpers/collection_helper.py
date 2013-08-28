@@ -9,9 +9,12 @@ def is_nonstring_iterable(obj):
 
 def to_series(items, conjunction='and'):
     """
-    Formats the given items as a series string, e.g.:
+    Formats the given items as a series string.
     
-    to_series([1, 2, 3]) #=> '1, 2 and 3'
+    Example:
+    
+    >>> to_series([1, 2, 3])
+    '1, 2 and 3'
     
     :param items: the items to format in a series
     :param conjunction: the series conjunction

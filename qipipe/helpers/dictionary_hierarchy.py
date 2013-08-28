@@ -14,22 +14,22 @@ class DictionaryHierarchy(object):
     
     For example, the hierarchy of a nested dictionary given by::
     
-        1 : '1'
+        1 : 'a'
         2 : 
-          3 : '3'
-          4 : '4', '5'
+          3 : 'b'
+          4 : 'c', 'd'
           6 :
-            7 : '7'
-        8 : '8'
+            7 : 'e'
+        8 : 'f'
     
     results in the following paths::
     
-        1, '1'
-        2, 3, '3'
-        2, 4, '4'
-        2, 4, '5'
-        2, 6, 7, '7'
-        8, '8'
+        1, 'a'
+        2, 3, 'b'
+        2, 4, 'c'
+        2, 4, 'd'
+        2, 6, 7, 'e'
+        8, 'f'
     """
 
     def __init__(self, root):

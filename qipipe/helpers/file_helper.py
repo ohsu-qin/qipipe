@@ -7,7 +7,8 @@ import calendar
 
 def generate_file_name(ext=None):
     """
-    Makes a valid file name which is unique to within one millisecond of calling this function.
+    Makes a valid file name which is unique to within one millisecond of calling
+    this function.
     
     :param ext: the optional file extension, with leading period delimiter
     :return: the file name
@@ -35,7 +36,8 @@ class FileIterator(object):
 
     def __init__(self, *filespecs):
         """
-        :param filespecs: the files, directories or file generators over which to iterate
+        :param filespecs: the files, directories or file generators over which
+            to iterate
         """
         self._filespecs = filespecs
     
@@ -72,5 +74,6 @@ class FileIterator(object):
                 for f in spec:
                     yield f
             else:
-                raise FileIteratorError("File iteration item is not supported: %s" % spec.__class__)
+                raise FileIteratorError("File iteration item is not supported:"
+                    " %s" % spec.__class__)
         
