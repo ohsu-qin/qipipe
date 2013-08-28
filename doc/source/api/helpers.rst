@@ -65,6 +65,13 @@ helpers
     :members:
     :show-inheritance:
 
+:mod:`logging_helper`
+----------------------
+
+.. automodule:: qipipe.helpers.logging_helper
+    :members:
+    :show-inheritance:
+
 :mod:`project`
 ----------------------
 
