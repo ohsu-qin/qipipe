@@ -72,9 +72,8 @@ def configure(cfg_file=None, **opts):
     
     - Write debug messages to the file log:
       
-      >>> import logging
       >>> from qipipe.helpers import logging_helper
-      >>> logging_helper.configure(level=logging.DEBUG)
+      >>> logging_helper.configure(level='DEBUG')
     
     - Set the log file:
       
@@ -111,7 +110,12 @@ def configure(cfg_file=None, **opts):
     if 'filename' in opts:
         cfg['handlers']['file_handler']['filename'] = opts.pop('filename')
     if 'level' in opts:
-        cfg['handlers']['file_handler']['level'] = opts.pop('level')
+        # The log level is set in both the logger and the handler,
+        # and the more restrictive level applies. Therefore, set
+        # the log level in both places.
+        level = opts.pop('level')
+        cfg['loggers']['qipipe']['level'] = level
+        cfg['handlers']['file_handler']['level'] = level
     # Add the other options, if any.
     _update_config(cfg, opts)
     
@@ -124,7 +128,7 @@ def configure(cfg_file=None, **opts):
     
     # Configure the logger.
     logging.config.dictConfig(cfg)
-    
+
 
 LOG_CFG_ENV_VAR = 'QIN_LOG_CFG'
 """The user-defined environment variable logging configuration path."""
