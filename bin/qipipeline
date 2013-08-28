@@ -4,10 +4,11 @@ Runs the QIN pipeline.
 """
 
 import sys, os
-import argparse
 import logging
-# Defer importing the application modules until the logging level has been set.
-
+import argparse
+from qipipe.pipeline import qipipeline as qip
+from qipipe.helpers import logging_helper
+from qipipe.helpers.project import project
 
 def main(argv=sys.argv):
     # Parse the command line arguments.
@@ -18,30 +19,29 @@ def main(argv=sys.argv):
         log_dir = os.path.dirname(args.log)
         if log_dir and not os.path.exists(log_dir):
             os.makedirs(log_dir)
-        logging.basicConfig(filename=args.log)
-    if args.log_level:
-        logging.getLogger().setLevel(args.log_level)
-    
-    # Import the application now, after logging has been set.
-    from qipipe.pipeline import qipipeline as qip
-    from qipipe.helpers.project import project
+        log_cfg = dict(filename=args.log)
+        if args.log_level:
+            log_cfg['level'] = args.log_level
+        logging_helper.configure(**log_cfg)
     
     # Set the project.
     project(args.project)
     
     # The options.
     opts = {}
+    if args.collection:
+        opts['collection'] = args.collection
     if args.output:
         opts['dest'] = args.output
     if args.work:
         opts['base_dir'] = args.work
-    if args.staging != None:
+    if args.staging == False:
         opts['staging'] = args.staging
-    if args.mask != None:
+    if args.mask:
         opts['mask'] = args.mask
     if args.registration != None:
         opts['registration'] = args.registration
-    if args.modeling != None:
+    if args.modeling == False:
         opts['modeling'] = args.modeling
     if args.overwrite:
         opts['overwrite'] = True
@@ -49,16 +49,16 @@ def main(argv=sys.argv):
         opts['ignore_existing'] = False
     
     # Run the QIN workflow.
-    qip.run(args.collection, *args.subject_dirs, **opts)
-
+    qip.run(*args.inputs, **opts)
+    
     return 0
 
 def _parse_arguments():
     """Parses the command line arguments."""
     parser = argparse.ArgumentParser()
-
+    
     # The AIRC collection to process.
-    coll_grp = parser.add_mutually_exclusive_group(required=True)
+    coll_grp = parser.add_mutually_exclusive_group()
     coll_grp.add_argument('-b', '--breast', help='the breast TCIA collection',
         dest='collection', action='store_const', const='Breast')
     coll_grp.add_argument('-s', '--sarcoma', help='the sarcoma TCIA collection',
@@ -92,34 +92,26 @@ def _parse_arguments():
     parser.add_argument('--overwrite', help='replace existing XNAT subjects',
         action='store_true')
     
-    # The workflow configurations.
-    stg_grp = parser.add_mutually_exclusive_group()
-    stg_grp.add_argument('--staging', help="the staging configuration file",
-         metavar='FILE', dest='staging')
-    stg_grp.add_argument('--no-stage', help='skip the staging workflow',
-         dest='staging', action='store_false')
-    mask_grp = parser.add_mutually_exclusive_group()
-    mask_grp.add_argument('--mask', help="the mask configuration file",
-        metavar='FILE', dest='mask')
-    mask_grp.add_argument('--no-mask', help='only perform the staging workflow',
-        dest='mask', action='store_false')
+    # The XNAT objects, or False to disable.
+    parser.add_argument('--no-staging', help='disable the staging workflow',
+        dest='staging', action='store_false')
+    parser.add_argument('--mask', help="the mask XNAT reconstruction name",
+        metavar='RECON', dest='mask')
     reg_grp = parser.add_mutually_exclusive_group()
-    reg_grp.add_argument('--registration', help="the registration configuration file",
-        metavar='FILE', dest='registration')
-    reg_grp.add_argument('--no-registration', help="don't' perform the registration workflow",
+    reg_grp.add_argument('--registration', help='the XNAT registration reconstruction name',
+        metavar='RECON', dest='registration')
+    reg_grp.add_argument('--no-registration', help='skip registration',
         dest='registration', action='store_false')
-    modeling_grp = parser.add_mutually_exclusive_group()
-    modeling_grp.add_argument('--modeling', help="the modeling configuration file",
-        metavar='FILE', dest='modeling')
-    modeling_grp.add_argument('--no-modeling', help="don't perform the modeling workflow",
+    parser.add_argument('--no-modeling', help='disable the modeling workflow',
         dest='modeling', action='store_false')
     
-    # The input subject directories to process.
-    parser.add_argument('subject_dirs', help='the input AIRC DICOM subject directories',
-        metavar='DIR', nargs='+')
-
-    return parser.parse_args()
-
+    # The input subject directories or XNAT labels to process.
+    parser.add_argument('inputs', help='the input AIRC DICOM subject directory'
+        ' or XNAT session label if staging is not performed',
+        metavar='INPUT', nargs='+')
     
+    return parser.parse_args()
+    
+
 if __name__ == '__main__':
     sys.exit(main())
