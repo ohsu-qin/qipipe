@@ -4,7 +4,6 @@ Runs the QIN pipeline.
 """
 
 import sys, os
-import logging
 import argparse
 from qipipe.pipeline import qipipeline as qip
 from qipipe.helpers import logging_helper
@@ -15,14 +14,15 @@ def main(argv=sys.argv):
     args = _parse_arguments()
     
     # Configure the logger.
+    log_cfg = {}
     if args.log:
         log_dir = os.path.dirname(args.log)
         if log_dir and not os.path.exists(log_dir):
             os.makedirs(log_dir)
-        log_cfg = dict(filename=args.log)
-        if args.log_level:
-            log_cfg['level'] = args.log_level
-        logging_helper.configure(**log_cfg)
+        log_cfg['filename'] = args.log
+    if args.log_level:
+        log_cfg['level'] = args.log_level
+    logging_helper.configure(**log_cfg)
     
     # Set the project.
     project(args.project)
@@ -71,11 +71,11 @@ def _parse_arguments():
     # The logging level.
     verbosity_grp = parser.add_mutually_exclusive_group()
     verbosity_grp.add_argument('-q', '--quiet', help="don't print messages",
-        dest='log_level', action='store_const', const=logging.ERROR)
+        dest='log_level', action='store_const', const='ERROR')
     verbosity_grp.add_argument('-v', '--verbose', help='print informational messages',
-        dest='log_level', action='store_const', const=logging.INFO)
+        dest='log_level', action='store_const', const='INFO')
     verbosity_grp.add_argument('-d', '--debug', help='print debug messages',
-        dest='log_level', action='store_const', const=logging.DEBUG)
+        dest='log_level', action='store_const', const='DEBUG')
     
     # The log, output and work options.
     parser.add_argument('-l', '--log', help='the log file', metavar='FILE')
