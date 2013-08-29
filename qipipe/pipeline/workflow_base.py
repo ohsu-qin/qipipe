@@ -182,7 +182,7 @@ class WorkflowBase(object):
                 plugin_args = args['plugin_args']
                 # Add the negated binary flag, if necessary.
                 if not s.find(' - b '):
-                    plugin_args = += ' -b n'
+                    plugin_args += ' -b n'
             self.logger.debug("Workflow %s plug-in parameters: %s." %
                 (workflow.name, args))
         else:
