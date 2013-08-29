@@ -1,12 +1,11 @@
 from nose.tools import *
 import sys, os, glob, re, shutil
-from qipipe.helpers.logging_helper import logger
-
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from test.helpers.project import project
+from qipipe.helpers.logging_helper import logger
 from qipipe.interfaces import XNATDownload
 from qipipe.helpers import xnat_helper
+from test.helpers.project import project
 from test.helpers.xnat_test_helper import (delete_subjects, generate_subject_name)
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))

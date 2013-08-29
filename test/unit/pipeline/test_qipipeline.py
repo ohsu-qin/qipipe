@@ -4,7 +4,6 @@ from qipipe.helpers.logging_helper import logger
 
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from test.helpers.project import project
 from qipipe.pipeline import qipipeline as qip
 from qipipe.helpers.dicom_helper import iter_dicom
 from qipipe.helpers import xnat_helper
@@ -12,6 +11,7 @@ from qipipe.staging import airc_collection as airc
 from test.helpers.xnat_test_helper import delete_subjects
 from qipipe.staging.staging_helper import get_subjects
 from qipipe.helpers.ast_config import read_config
+from test.helpers.project import project
 from test.unit.pipeline.test_mask import MASK_CONF
 from test.unit.pipeline.test_registration import REG_CONF
 from test.unit.pipeline.test_modeling import MODELING_CONF

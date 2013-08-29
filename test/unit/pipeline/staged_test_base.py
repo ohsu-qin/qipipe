@@ -2,13 +2,12 @@ import sys, os, re, glob, shutil
 from collections import defaultdict
 from nose.tools import *
 import nipype.pipeline.engine as pe
-from qipipe.helpers.logging_helper import logger
-
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from test.helpers.project import project
+from qipipe.helpers.logging_helper import logger
 from qipipe.pipeline import registration
 from qipipe.helpers import xnat_helper
+from test.helpers.project import project
 from test.helpers.xnat_test_helper import delete_subjects
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -82,7 +81,7 @@ class StagedTestBase(object):
             # Verify the result.
             self._verify_result(xnat, input_dict, result)
             # Clean up.
-            #delete_subjects(project(), *subjects)
+            delete_subjects(project(), *subjects)
     
     def _group_files(self, fixture):
         """

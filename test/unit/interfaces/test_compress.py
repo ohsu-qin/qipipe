@@ -1,7 +1,5 @@
 import os, sys, shutil
 from nose.tools import *
-from qipipe.helpers.logging_helper import logger
-
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.interfaces.compress import Compress
@@ -28,7 +26,8 @@ class TestCompress:
         compress = Compress(in_file=FIXTURE, dest=RESULTS)
         target = os.path.join(RESULTS, 'small.txt.gz')
         result = compress.run()
-        assert_equal(target, result.outputs.out_file, "Compress output file name incorrect: %s" % result.outputs.out_file)
+        assert_equal(target, result.outputs.out_file, "Compress output file"
+            " name incorrect: %s" % result.outputs.out_file)
         assert_true(os.path.exists(target))
         shutil.rmtree(RESULTS, True)
 

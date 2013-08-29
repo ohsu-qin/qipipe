@@ -1,12 +1,11 @@
 import sys, os, re, glob, shutil
 from nose.tools import *
 import nipype.pipeline.engine as pe
-from qipipe.helpers.logging_helper import logger
-
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from test.helpers.project import project
+from qipipe.helpers.logging_helper import logger
 from qipipe.pipeline import registration
+from test.helpers.project import project
 from test.unit.pipeline.staged_test_base import (StagedTestBase, ROOT)
 
 REG_CONF = os.path.join(ROOT, 'conf', 'registration.cfg')

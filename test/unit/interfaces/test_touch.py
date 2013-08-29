@@ -1,7 +1,5 @@
 import os, sys, shutil
 from nose.tools import *
-from qipipe.helpers.logging_helper import logger
-
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.interfaces.touch import Touch

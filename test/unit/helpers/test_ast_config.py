@@ -1,9 +1,8 @@
 from nose.tools import *
 import sys, os
-from qipipe.helpers.logging_helper import logger
-
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+from qipipe.helpers.logging_helper import logger
 from qipipe.helpers.ast_config import read_config
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))

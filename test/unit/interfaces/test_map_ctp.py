@@ -1,9 +1,8 @@
 import sys, os, re, shutil
 from nose.tools import *
-from qipipe.helpers.logging_helper import logger
-
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+from qipipe.helpers.logging_helper import logger
 from qipipe.interfaces import MapCTP
 from test.unit.staging.test_map_ctp import (COLLECTION, SUBJECTS, PAT)
 

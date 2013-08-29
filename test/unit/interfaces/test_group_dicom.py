@@ -1,7 +1,5 @@
 from nose.tools import *
-import os, re, glob, shutil
-from qipipe.helpers.logging_helper import logger
-
+import sys, os, glob, shutil
 
 # The test parent directory.
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -15,10 +13,9 @@ cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_fi
     execution=dict(crashdump_dir=RESULTS, create_report=False))
 config.update_config(cfg)
 
-import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+from qipipe.helpers.logging_helper import logger
 from qipipe.interfaces import GroupDicom
-
 
 class TestGroupDicom:
     """GroupDicom interface unit tests."""

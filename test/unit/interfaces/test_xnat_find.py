@@ -1,14 +1,13 @@
 from nose.tools import *
 import sys, os, glob, re, shutil
 from nipype.interfaces.traits_extension import isdefined
-from qipipe.helpers.logging_helper import logger
-
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from test.helpers.project import project
+from qipipe.helpers.logging_helper import logger
 from qipipe.interfaces import XNATFind
 from qipipe.helpers import xnat_helper
 from qipipe.helpers import xnat_helper
+from test.helpers.project import project
 from test.unit.helpers.test_xnat_helper import (FIXTURES, RESULTS)
 from test.helpers.xnat_test_helper import (delete_subjects, generate_subject_name)
 
