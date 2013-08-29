@@ -36,6 +36,9 @@ class WorkflowBase(object):
     None
     """
     
+    SGE_BINARY_PAT = re.compile(' -b [ny]')
+    """Regexp matcher for the SGE plugin binary switch option."""
+    
     def __init__(self, logger, cfg_file=None):
         """
         Initializes this workflow wrapper object.
@@ -82,7 +85,7 @@ class WorkflowBase(object):
             return dict(cfg)
         else:
             return {}
-        
+    
     def _download_scans(self, xnat, subject, session, dest):
         """
         Download the NIFTI scan files for the given session.
@@ -106,7 +109,7 @@ class WorkflowBase(object):
         workflow.write_graph(dotfilename=grf)
         self.logger.debug("The %s workflow graph is depicted at %s.png." %
             (workflow.name, grf))
-        
+    
     def _run_workflow(self, workflow):
         """
         Executes the given workflow.
@@ -155,7 +158,7 @@ class WorkflowBase(object):
                 param_dict[field] = value
         
         return param_dict
-        
+    
     def _configure_plugin(self, workflow):
         """
         Sets the ``execution`` and ``SGE`` parameters for the given workflow.
@@ -164,22 +167,29 @@ class WorkflowBase(object):
         :param workflow: the workflow to run
         :return: the workflow execution arguments
         """
-        # The workflow submission arguments.
+        # The workflow submission arguments:
+        
         # The execution setting.
         if 'Execution' in self.configuration:
             workflow.config['execution'] = self.configuration['Execution']
             self.logger.debug("Workflow %s execution parameter: %s." %
                 (workflow.name, workflow.config['execution']))
+        
         # The Grid Engine setting.
         if 'SGE' in self.configuration:
             args = dict(plugin='SGE', **self.configuration['SGE'])
+            if 'plugin_args' in args:
+                plugin_args = args['plugin_args']
+                # Add the negated binary flag, if necessary.
+                if not s.find(' - b '):
+                    plugin_args = += ' -b n'
             self.logger.debug("Workflow %s plug-in parameters: %s." %
                 (workflow.name, args))
         else:
             args = {}
         
         return args
-        
+    
     def _configure_nodes(self, workflow):
         """
         Sets the input parameters defined for the given workflow in
@@ -197,20 +207,26 @@ class WorkflowBase(object):
         # The default Grid Engine setting.
         if DISTRIBUTABLE and 'SGE' in self.configuration:
             def_plugin_args = self.configuration['SGE'].get('plugin_args')
-            self.logger.debug("Workflow %s default node plug-in parameters:"
-                " %s." % (workflow.name, def_plugin_args))
+            if def_plugin_args:
+                # Remove the negated binary flag, if necessary.
+                def_plugin_args = SGE_BINARY_PAT.sub('', def_plugin_args)
+                self.logger.debug("Workflow %s default node plug-in parameters:"
+                    " %s." % (workflow.name, def_plugin_args))
         else:
             def_plugin_args = None
         
-        # A {node: {field: value}} dictionary to format a debug log message.
-        input_dict = defaultdict(dict)
         # The nodes defined in this workflow start with the workflow name.
         prefix = workflow.name + '.'
         # Configure all node inputs.
         nodes = [workflow.get_node(name)
             for name in workflow.list_node_names()]
         for node in nodes:
+            # An input {field: value} dictionary to format a debug log message.
+            input_dict = {}
+            # The node interface class configuration entry.
             cfg = self._interface_configuration(node.interface.__class__)
+            
+            # Set the node inputs or plug-in argument.
             for attr, value in cfg.iteritems():
                 if attr == 'plugin_args':
                     if DISTRIBUTABLE:
@@ -222,21 +238,21 @@ class WorkflowBase(object):
                     # Set the field to the config value and collect it
                     # for the debug log message.
                     setattr(node.inputs, attr, value)
-                    input_dict[node.name][attr] = value
+                    input_dict[attr] = value
+            
+            # If the node does not have plug-in arguments and the configuration
+            # specifies a default, then set the node plug-in arguments to the
+            # default.
             if (def_plugin_args and 'plugin_args' not in cfg
                 and str(node).startswith(prefix)):
                 node.plugin_args = def_plugin_args
-        
-        # If a field was set to a config value, then print the config
-        # setting to the log.
-        if input_dict:
-            # A prefix to strip off the node name.
-            prefix = workflow.name + '.'
-            self.logger.debug("The following %s workflow inputs were set "
-                "from the configuration:" % workflow.name)
-            for node_name, values in input_dict.iteritems():
-                name = node_name.replace(prefix, '')
-                self.logger.debug("  %s: %s" % (name, values))
+            
+            # If a field was set to a config value, then print the config
+            # setting to the log.
+            if input_dict:
+                self.logger.debug("The following %s workflow node %s inputs"
+                    " were set from the configuration: %s" %
+                    (workflow.name, node, input_dict))
     
     def _interface_configuration(self, klass):
         """
@@ -245,12 +261,12 @@ class WorkflowBase(object):
         configuration topic matches the module path of the interface class
         name. The topic can elide the ``interfaces`` or ``interface`` prefix,
         e.g.:
-        
+            
             [nipype.interfaces.ants.AverageImages]
             [ants.AverageImages]
-
+        
         both refer to the ANTS AverageImages interface.
-
+        
         :param node: the interface class to check
         :return: the corresponding {field: value} dictionary
         """
