@@ -1,7 +1,6 @@
 from nose.tools import *
 import sys, os, glob, re, shutil
 from nipype.interfaces.traits_extension import isdefined
-
 from qipipe.helpers.logging_helper import logger
 
 

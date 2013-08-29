@@ -1,9 +1,8 @@
 import sys, os, glob, shutil
 from nose.tools import *
 import nipype.pipeline.engine as pe
-
+from qipipe.helpers import logging_helper
 from qipipe.helpers.logging_helper import logger
-
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from test.helpers.project import project
@@ -21,15 +20,14 @@ FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
 RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'staging')
 """The test results directory."""
 
-from nipype import config
-cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
-    execution=dict(crashdump_dir=RESULTS, create_report=False, keep_inputs=True))
-config.update_config(cfg)
+LOG = os.path.join(RESULTS, 'log', 'qipipe.log')
+"""The log file."""
 
 class TestStagingWorkflow(object):
     """Staging workflow unit tests."""
     
     def setUp(self):
+        logging_helper.configure(filename=None, level='DEBUG')
         shutil.rmtree(RESULTS, True)
     
     def tearDown(self):

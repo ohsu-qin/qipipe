@@ -2,7 +2,6 @@ import sys, os, re, glob, shutil
 from collections import defaultdict
 from nose.tools import *
 import nipype.pipeline.engine as pe
-
 from qipipe.helpers.logging_helper import logger
 
 

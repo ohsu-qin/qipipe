@@ -1,6 +1,5 @@
 from nose.tools import *
 import os, glob, shutil
-
 from qipipe.helpers.logging_helper import logger
 
 

@@ -1,7 +1,6 @@
 from nose.tools import *
 import os, glob
 from qipipe.staging.staging_helper import *
-
 from qipipe.helpers.logging_helper import logger
 
 
