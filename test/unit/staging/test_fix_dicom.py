@@ -1,5 +1,5 @@
-from nose.tools import *
 import os, glob, shutil
+from nose.tools import *
 
 from qipipe.staging.fix_dicom import fix_dicom_headers
 from qipipe.helpers.dicom_helper import iter_dicom

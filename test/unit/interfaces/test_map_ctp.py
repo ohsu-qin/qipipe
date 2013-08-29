@@ -1,4 +1,4 @@
-import sys, os, re, shutil
+import os, re, shutil
 from nose.tools import *
 from qipipe.helpers.logging_helper import logger
 from qipipe.interfaces import MapCTP

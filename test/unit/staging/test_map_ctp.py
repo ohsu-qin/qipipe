@@ -1,9 +1,6 @@
-from nose.tools import *
 import os, glob, shutil
+from nose.tools import *
 from qipipe.helpers.logging_helper import logger
-
-
-import sys
 from qipipe.staging.map_ctp import CTPPatientIdMap
 
 COLLECTION = 'Sarcoma'

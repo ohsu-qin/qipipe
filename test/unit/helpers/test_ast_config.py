@@ -1,5 +1,5 @@
+import os
 from nose.tools import *
-import sys, os
 from qipipe.helpers.logging_helper import logger
 from qipipe.helpers.ast_config import read_config
 from test import ROOT

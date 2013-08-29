@@ -1,8 +1,6 @@
 import os
 import glob
 from nose.tools import *
-
-import sys
 from qipipe.helpers import dicom_helper as dcm
 
 FIXTURE = os.path.join(os.path.dirname(__file__), '..', '..', 'fixtures', 'helpers', 'edit_dicom')

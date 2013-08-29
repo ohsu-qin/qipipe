@@ -1,8 +1,6 @@
 import os
 import glob
 from nose.tools import *
-
-import sys
 from qipipe.helpers.collection_helper import *
 
 

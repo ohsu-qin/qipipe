@@ -1,5 +1,5 @@
+import os, shutil
 from nose.tools import *
-import sys, os, shutil
 import nipype.pipeline.engine as pe
 from qipipe.helpers import logging_helper
 from qipipe.helpers.logging_helper import logger

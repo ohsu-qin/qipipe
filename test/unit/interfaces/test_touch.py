@@ -1,4 +1,4 @@
-import os, sys, shutil
+import os, shutil
 from nose.tools import *
 from qipipe.interfaces.touch import Touch
 from test import ROOT

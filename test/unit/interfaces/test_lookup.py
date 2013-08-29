@@ -1,4 +1,4 @@
-import os, sys, re
+import os, re
 from nose.tools import *
 from nipype.interfaces.base import Undefined
 from qipipe.helpers.logging_helper import logger

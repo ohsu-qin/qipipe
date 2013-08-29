@@ -1,5 +1,5 @@
+import os, glob, re, shutil
 from nose.tools import *
-import sys, os, glob, re, shutil
 from qipipe.helpers.logging_helper import logger
 from qipipe.interfaces import XNATDownload
 from qipipe.helpers import xnat_helper

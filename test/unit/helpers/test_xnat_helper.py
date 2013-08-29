@@ -1,5 +1,5 @@
+import os, shutil
 from nose.tools import *
-import sys, os, shutil
 from qipipe.helpers import xnat_helper
 from test import ROOT
 from test.helpers.project import project

@@ -1,7 +1,5 @@
-from nose.tools import *
 import os, glob, shutil
-
-import sys
+from nose.tools import *
 from qipipe.helpers.dicom_helper import edit_dicom_headers
 from qipipe.helpers.dicom_helper import iter_dicom
 from dicom import datadict as dd

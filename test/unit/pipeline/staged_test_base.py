@@ -1,4 +1,4 @@
-import sys, os, re, glob, shutil
+import os, re, glob, shutil
 from collections import defaultdict
 from nose.tools import *
 import nipype.pipeline.engine as pe

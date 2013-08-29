@@ -1,7 +1,6 @@
+import os
 from nose.tools import *
 from collections import OrderedDict
-
-import os, sys
 from qipipe.helpers import dictionary_hierarchy as hierarchy
 
 class TestHierarchy:
