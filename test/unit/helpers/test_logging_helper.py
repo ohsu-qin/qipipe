@@ -1,5 +1,6 @@
 from nose.tools import *
 import sys, os, shutil
+import nipype.pipeline.engine as pe
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.helpers import logging_helper
@@ -21,7 +22,6 @@ class TestLoggingHelper:
     """The logging unit tests."""
     
     def setUp(self):
-        self._logger = logger(__name__)
         shutil.rmtree(RESULTS, True)
     
     def tearDown(self):
@@ -29,37 +29,25 @@ class TestLoggingHelper:
     
     def test_filename(self):
         logging_helper.configure(filename=RESULT)
-        self._logger.info("Test log message.")
+        logger('qipipe').info("Test info log message.")
+        logger('qipipe').debug("Test debug log message.")
         assert_true(os.path.exists(RESULT),
             "The log file was not created: %s" % RESULT)
         with open(RESULT) as fs:
             msgs = fs.readlines()
+        assert_true(not not msgs, "No log messages in %s" % RESULT)
         assert_equal(1, len(msgs), "Extraneous log messages in %s" % RESULT)
     
     def test_level(self):
-        logging_helper.configure(filename=RESULT)
-        self._logger.info("Test log message.")
+        logging_helper.configure(filename=RESULT, level='DEBUG')
+        logger('qipipe').info("Test info log message.")
+        logger('qipipe').debug("Test debug log message.")
         assert_true(os.path.exists(RESULT),
             "The log file was not created: %s" % RESULT)
         with open(RESULT) as fs:
             msgs = fs.readlines()
-        assert_equal(1, len(msgs), "Extraneous log messages in %s" % RESULT)
-    
-    def test_qipipe_logger(self):
-        logging_helper.configure(filename=RESULT)
-        logger('qipipe').info("Test log message.")
-        assert_true(os.path.exists(RESULT),
-            "The log file was not created: %s" % RESULT)
-        with open(RESULT) as fs:
-            msgs = fs.readlines()
-        assert_equal(1, len(msgs), "Extraneous log messages in %s" % RESULT)
-    
-    def test_console_only(self):
-        logging_helper.configure(root=dict(handlers=['console']),
-                          handlers=dict(console=dict(level='INFO')))
-        self._logger.info("Test log message.")
-        assert_false(os.path.exists(RESULT),
-            "The log file was incorrectly created: %s" % RESULT)
+        assert_true(not not msgs, "No log messages in %s" % RESULT)
+        assert_equal(2, len(msgs), "Extraneous log messages in %s" % RESULT)
 
 if __name__ == "__main__":
     import nose
