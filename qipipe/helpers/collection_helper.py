@@ -30,6 +30,7 @@ def to_series(items, conjunction='and'):
     else:
         return (' ' + conjunction + ' ').join([prefix, suffix])
 
+
 class ImmutableDict(dict):
     """
     ImmutableDict is a dictionary that cannot be changed after creation.
@@ -38,7 +39,7 @@ class ImmutableDict(dict):
     key or set member. See http://www.python.org/dev/peps/pep-0351 for the rationale.
     """
     
-    def __int__(*args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super(ImmutableDict, self).__init__(*args, **kwargs)
     
     def __setitem__(self, key, value):
