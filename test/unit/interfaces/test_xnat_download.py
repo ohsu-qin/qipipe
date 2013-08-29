@@ -3,11 +3,9 @@ import sys, os, glob, re, shutil
 from qipipe.helpers.logging_helper import logger
 from qipipe.interfaces import XNATDownload
 from qipipe.helpers import xnat_helper
+from test import ROOT
 from test.helpers.project import project
 from test.helpers.xnat_test_helper import (delete_subjects, generate_subject_name)
-
-ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
-"""The test parent directory."""
 
 FIXTURE = os.path.join(ROOT, 'fixtures', 'interfaces', 'xnat', 'Sarcoma001', 'Session01')
 """The test fixture directory."""

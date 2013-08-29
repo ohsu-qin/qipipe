@@ -6,6 +6,7 @@ import nipype.pipeline.engine as pe
 from qipipe.helpers.logging_helper import logger
 from qipipe.pipeline import registration
 from qipipe.helpers import xnat_helper
+from test import ROOT
 from test.helpers.project import project
 from test.helpers.xnat_test_helper import delete_subjects
 

@@ -1,12 +1,9 @@
 from nose.tools import *
 import os, glob, shutil
 
-import sys
 from qipipe.staging.fix_dicom import fix_dicom_headers
 from qipipe.helpers.dicom_helper import iter_dicom
-
-# The test parent directory.
-ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
+from test import ROOT
 
 # The test fixture.
 FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'sarcoma', 'Subj_1')

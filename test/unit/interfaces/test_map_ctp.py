@@ -2,10 +2,8 @@ import sys, os, re, shutil
 from nose.tools import *
 from qipipe.helpers.logging_helper import logger
 from qipipe.interfaces import MapCTP
+from test import ROOT
 from test.unit.staging.test_map_ctp import (COLLECTION, SUBJECTS, PAT)
-
-ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
-"""The test parent directory."""
 
 RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'map_ctp')
 """The test results directory."""

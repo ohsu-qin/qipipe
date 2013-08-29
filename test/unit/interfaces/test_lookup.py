@@ -2,11 +2,8 @@ import os, sys, re
 from nose.tools import *
 from nipype.interfaces.base import Undefined
 from qipipe.helpers.logging_helper import logger
-
 from qipipe.interfaces.lookup import Lookup
-
-ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
-"""The test parent directory."""
+from test import ROOT
 
 RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'lookup')
 """The test results directory."""

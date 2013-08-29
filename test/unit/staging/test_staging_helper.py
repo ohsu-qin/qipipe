@@ -2,10 +2,8 @@ from nose.tools import *
 import os, glob
 from qipipe.staging.staging_helper import *
 from qipipe.helpers.logging_helper import logger
+from test import ROOT
 
-
-# The test parent directory.
-ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 # The test fixture.
 FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'sarcoma', 'Subj_1')
 

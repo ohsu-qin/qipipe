@@ -1,8 +1,7 @@
 from nose.tools import *
 import sys, os, glob, shutil
+from test import ROOT
 
-# The test parent directory.
-ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 # The test fixture.
 FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'breast')
 # The test results parent directory.

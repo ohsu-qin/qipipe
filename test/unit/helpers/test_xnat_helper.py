@@ -1,11 +1,9 @@
 from nose.tools import *
 import sys, os, shutil
 from qipipe.helpers import xnat_helper
+from test import ROOT
 from test.helpers.project import project
 from test.helpers.xnat_test_helper import (delete_subjects, generate_subject_name)
-
-ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
-"""The test parent directory."""
 
 FIXTURES = os.path.join(ROOT, 'fixtures', 'helpers', 'xnat')
 """The test fixture parent directory."""

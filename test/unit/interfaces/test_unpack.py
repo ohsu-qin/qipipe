@@ -2,9 +2,7 @@ import os, sys, re
 from nose.tools import *
 from nipype.interfaces.base import Undefined
 from qipipe.interfaces.unpack import Unpack
-
-ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
-"""The test parent directory."""
+from test import ROOT
 
 RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'unpack')
 """The test results directory."""

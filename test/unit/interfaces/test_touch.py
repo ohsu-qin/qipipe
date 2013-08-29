@@ -1,9 +1,7 @@
 import os, sys, shutil
 from nose.tools import *
 from qipipe.interfaces.touch import Touch
-
-ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
-"""The test parent directory."""
+from test import ROOT
 
 RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'touch')
 """The test results directory."""

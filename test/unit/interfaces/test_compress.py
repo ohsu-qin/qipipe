@@ -1,9 +1,7 @@
 import os, sys, shutil
 from nose.tools import *
 from qipipe.interfaces.compress import Compress
-
-ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
-"""The test parent directory."""
+from test import ROOT
 
 FIXTURE = os.path.join(ROOT, 'fixtures', 'interfaces', 'compress', 'small.txt')
 """The test fixture file."""

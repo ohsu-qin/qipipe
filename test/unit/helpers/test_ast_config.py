@@ -2,9 +2,7 @@ from nose.tools import *
 import sys, os
 from qipipe.helpers.logging_helper import logger
 from qipipe.helpers.ast_config import read_config
-
-ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
-"""The test parent directory."""
+from test import ROOT
 
 FIXTURE = os.path.join(ROOT, 'fixtures', 'helpers', 'ast_config', 'tuning.cfg')
 """The test fixture configuration file."""

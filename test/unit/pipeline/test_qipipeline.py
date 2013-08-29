@@ -9,13 +9,11 @@ from qipipe.staging import airc_collection as airc
 from test.helpers.xnat_test_helper import delete_subjects
 from qipipe.staging.staging_helper import get_subjects
 from qipipe.helpers.ast_config import read_config
+from test import ROOT
 from test.helpers.project import project
 from test.unit.pipeline.test_mask import MASK_CONF
 from test.unit.pipeline.test_registration import REG_CONF
 from test.unit.pipeline.test_modeling import MODELING_CONF
-
-ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
-"""The test parent directory."""
 
 REG_CONF = os.path.join(ROOT, 'conf', 'registration.cfg')
 """The test registration configuration."""

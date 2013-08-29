@@ -5,9 +5,7 @@ import sys
 from qipipe.helpers.dicom_helper import edit_dicom_headers
 from qipipe.helpers.dicom_helper import iter_dicom
 from dicom import datadict as dd
-
-ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
-"""The test parent directory."""
+from test import ROOT
 
 FIXTURE = os.path.join(ROOT, 'fixtures', 'helpers', 'edit_dicom')
 """The test fixture."""
