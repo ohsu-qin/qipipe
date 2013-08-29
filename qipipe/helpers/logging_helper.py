@@ -15,6 +15,10 @@ def logger(name):
     :param name: the caller's context ``__name__``
     :return: the Python Logger instance
     """
+    # Configure on demand.
+    if not hasattr(logger, 'configured'):
+        configure()
+    
     return logging.getLogger(name)
 
 def configure(cfg_file=None, **opts):
@@ -106,14 +110,23 @@ def configure(cfg_file=None, **opts):
     
     # The options override the configuration files.
     if 'filename' in opts:
-        cfg['handlers']['file_handler']['filename'] = opts.pop('filename')
+        # TODO - document this
+        fname = opts.pop('filename')
+        if fname:
+            cfg['handlers']['file_handler']['filename'] = fname
+        else:
+            cfg['handlers']['file_handler']['filename'] = '/dev/null'
+            cfg['loggers']['qipipe']['handlers'] = ['console']
     if 'level' in opts:
         # The log level is set in both the logger and the handler,
         # and the more restrictive level applies. Therefore, set
         # the log level in both places.
         level = opts.pop('level')
         cfg['loggers']['qipipe']['level'] = level
-        cfg['handlers']['file_handler']['level'] = level
+        if 'file_handler' in cfg['loggers']['qipipe']['handlers']:
+            cfg['handlers']['file_handler']['level'] = level
+        else:
+            cfg['handlers']['console']['level'] = level
     # Add the other options, if any.
     _update_config(cfg, opts)
     
@@ -126,6 +139,9 @@ def configure(cfg_file=None, **opts):
     
     # Configure the logger.
     logging.config.dictConfig(cfg)
+    
+    # Set the logger configured flag.
+    setattr(logger, 'configured', True)
 
 
 LOG_CFG_ENV_VAR = 'QIN_LOG_CFG'
