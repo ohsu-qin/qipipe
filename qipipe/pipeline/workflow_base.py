@@ -36,7 +36,7 @@ class WorkflowBase(object):
     None
     """
     
-    SGE_BINARY_PAT = re.compile(' -b [ny]')
+    SGE_BINARY_PAT = re.compile('-b [ny]')
     """Regexp matcher for the SGE plugin binary switch option."""
     
     def __init__(self, logger, cfg_file=None):
