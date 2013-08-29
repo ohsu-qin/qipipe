@@ -5,7 +5,6 @@ from qipipe.staging.staging_helper import SUBJECT_FMT
 from qipipe.helpers import xnat_helper
 from qipipe.helpers.logging_helper import logger
 
-
 def generate_subject_name(name):
     """
     Makes a subject name that is unique to the given test name.
