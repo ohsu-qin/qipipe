@@ -1,5 +1,5 @@
 import os, re, shutil
-from nose.tools import *
+from nose.tools import (assert_equal, assert_true)
 from qipipe.helpers.logging_helper import logger
 from qipipe.interfaces import MapCTP
 from test import ROOT

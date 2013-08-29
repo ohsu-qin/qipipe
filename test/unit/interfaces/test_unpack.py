@@ -1,5 +1,5 @@
 import os, re
-from nose.tools import *
+from nose.tools import assert_equal
 from nipype.interfaces.base import Undefined
 from qipipe.interfaces.unpack import Unpack
 from test import ROOT

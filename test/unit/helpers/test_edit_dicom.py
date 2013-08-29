@@ -1,5 +1,5 @@
 import os, glob, shutil
-from nose.tools import *
+from nose.tools import (assert_equal, assert_true)
 from qipipe.helpers.dicom_helper import edit_dicom_headers
 from qipipe.helpers.dicom_helper import iter_dicom
 from dicom import datadict as dd

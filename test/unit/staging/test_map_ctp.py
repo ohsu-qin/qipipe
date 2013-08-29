@@ -1,5 +1,5 @@
 import os, glob, shutil
-from nose.tools import *
+from nose.tools import assert_equal
 from qipipe.helpers.logging_helper import logger
 from qipipe.staging.map_ctp import CTPPatientIdMap
 

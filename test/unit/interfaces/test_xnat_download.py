@@ -1,5 +1,5 @@
 import os, glob, re, shutil
-from nose.tools import *
+from nose.tools import (assert_equal, assert_true)
 from qipipe.helpers.logging_helper import logger
 from qipipe.interfaces import XNATDownload
 from qipipe.helpers import xnat_helper

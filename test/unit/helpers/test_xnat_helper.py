@@ -1,5 +1,5 @@
 import os, shutil
-from nose.tools import *
+from nose.tools import (assert_equal, assert_true)
 from qipipe.helpers import xnat_helper
 from test import ROOT
 from test.helpers.project import project

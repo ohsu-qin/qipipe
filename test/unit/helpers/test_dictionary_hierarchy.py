@@ -1,5 +1,5 @@
 import os
-from nose.tools import *
+from nose.tools import assert_equal
 from collections import OrderedDict
 from qipipe.helpers import dictionary_hierarchy as hierarchy
 

@@ -1,6 +1,5 @@
-import os, glob, shutil
-from nose.tools import *
-import nipype.pipeline.engine as pe
+import os, shutil
+from nose.tools import assert_true
 
 from qipipe.pipeline import staging
 from qipipe.helpers import xnat_helper
@@ -51,7 +50,6 @@ class TestStagingWorkflow(object):
 
         # The staging destination and work area.
         dest = os.path.join(RESULTS, 'data')
-        work = os.path.join(RESULTS, 'work')
 
         # The test subject => directory dictionary.
         sbj_dir_dict = get_subjects(collection, fixture)

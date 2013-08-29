@@ -1,5 +1,5 @@
 import os, glob
-from nose.tools import *
+from nose.tools import assert_equal
 from qipipe.staging.staging_helper import *
 from qipipe.helpers.logging_helper import logger
 from test import ROOT

@@ -1,6 +1,6 @@
 import os
 import glob
-from nose.tools import *
+from nose.tools import (assert_equal, assert_true, assert_false)
 from qipipe.helpers.collection_helper import *
 
 

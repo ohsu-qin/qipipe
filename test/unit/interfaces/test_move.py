@@ -1,5 +1,5 @@
 import os, shutil
-from nose.tools import *
+from nose.tools import (assert_equal, assert_true)
 from qipipe.interfaces.move import Move
 from test import ROOT
 

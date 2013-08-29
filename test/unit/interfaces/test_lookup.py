@@ -1,5 +1,5 @@
 import os, re
-from nose.tools import *
+from nose.tools import assert_equal
 from nipype.interfaces.base import Undefined
 from qipipe.helpers.logging_helper import logger
 from qipipe.interfaces.lookup import Lookup
