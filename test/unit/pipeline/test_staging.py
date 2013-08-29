@@ -2,17 +2,13 @@ import sys, os, glob, shutil
 from nose.tools import *
 import nipype.pipeline.engine as pe
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from qipipe.helpers import logging_helper
-from qipipe.helpers.logging_helper import logger
 from qipipe.pipeline import staging
 from qipipe.helpers import xnat_helper
 from qipipe.staging.staging_helper import get_subjects
+from test.helpers.logging_helper import logger
 from test.helpers.project import project
 from test.helpers.xnat_test_helper import delete_subjects
-
-ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
-"""The test parent directory."""
+from test import ROOT
 
 FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
 """The test fixture directory."""
@@ -23,11 +19,11 @@ RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'staging')
 LOG = os.path.join(RESULTS, 'log', 'qipipe.log')
 """The log file."""
 
+
 class TestStagingWorkflow(object):
     """Staging workflow unit tests."""
     
     def setUp(self):
-        logging_helper.configure(filename=None, level='DEBUG')
         shutil.rmtree(RESULTS, True)
     
     def tearDown(self):

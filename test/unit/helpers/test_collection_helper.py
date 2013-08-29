@@ -3,7 +3,6 @@ import glob
 from nose.tools import *
 
 import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from qipipe.helpers.collection_helper import *
 
 

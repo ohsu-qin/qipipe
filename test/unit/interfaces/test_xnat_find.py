@@ -1,8 +1,6 @@
 from nose.tools import *
 import sys, os, glob, re, shutil
 from nipype.interfaces.traits_extension import isdefined
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.helpers.logging_helper import logger
 from qipipe.interfaces import XNATFind
 from qipipe.helpers import xnat_helper

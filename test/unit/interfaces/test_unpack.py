@@ -1,8 +1,6 @@
 import os, sys, re
 from nose.tools import *
 from nipype.interfaces.base import Undefined
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.interfaces.unpack import Unpack
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))

@@ -12,8 +12,6 @@ from nipype import config
 cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
     execution=dict(crashdump_dir=RESULTS, create_report=False))
 config.update_config(cfg)
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.helpers.logging_helper import logger
 from qipipe.interfaces import GroupDicom
 

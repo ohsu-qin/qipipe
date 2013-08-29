@@ -1,7 +1,5 @@
 from nose.tools import *
 import sys, os, shutil
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.helpers import xnat_helper
 from test.helpers.project import project
 from test.helpers.xnat_test_helper import (delete_subjects, generate_subject_name)

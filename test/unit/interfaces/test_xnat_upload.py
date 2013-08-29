@@ -1,7 +1,5 @@
 from nose.tools import *
 import sys, os, glob, re, shutil
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.helpers.logging_helper import logger
 from qipipe.interfaces import XNATUpload
 from qipipe.helpers import xnat_helper

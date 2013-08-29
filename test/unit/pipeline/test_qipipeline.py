@@ -2,8 +2,6 @@ import os, sys, shutil, distutils
 from nose.tools import *
 from qipipe.helpers.logging_helper import logger
 
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.pipeline import qipipeline as qip
 from qipipe.helpers.dicom_helper import iter_dicom
 from qipipe.helpers import xnat_helper

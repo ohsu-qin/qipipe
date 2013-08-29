@@ -4,7 +4,6 @@ from qipipe.helpers.logging_helper import logger
 
 
 import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from qipipe.staging.map_ctp import CTPPatientIdMap
 
 COLLECTION = 'Sarcoma'

@@ -3,17 +3,11 @@ from collections import defaultdict
 from nose.tools import *
 import nipype.pipeline.engine as pe
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.helpers.logging_helper import logger
 from qipipe.pipeline import registration
 from qipipe.helpers import xnat_helper
 from test.helpers.project import project
 from test.helpers.xnat_test_helper import delete_subjects
-
-ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
-"""The test parent directory."""
-
-from nipype import config
 
 class StagedTestBase(object):
     """

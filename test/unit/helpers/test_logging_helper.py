@@ -1,8 +1,6 @@
 from nose.tools import *
 import sys, os, shutil
 import nipype.pipeline.engine as pe
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.helpers import logging_helper
 from qipipe.helpers.logging_helper import logger
 

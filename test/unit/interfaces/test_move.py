@@ -1,7 +1,5 @@
 import os, sys, shutil
 from nose.tools import *
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from qipipe.interfaces.move import Move
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))

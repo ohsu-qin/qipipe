@@ -2,7 +2,6 @@ from nose.tools import *
 import os, glob, shutil
 
 import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from qipipe.staging.fix_dicom import fix_dicom_headers
 from qipipe.helpers.dicom_helper import iter_dicom
 
