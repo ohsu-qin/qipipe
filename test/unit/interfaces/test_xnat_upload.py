@@ -32,11 +32,6 @@ ANALYSIS = 'pk'
 ANALYSIS_FIXTURE = os.path.join(FIXTURES, 'dummy_analysis.csv')
 """The analysis test fixture."""
 
-from nipype import config
-cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
-    execution=dict(crashdump_dir=RESULTS, create_report=False))
-config.update_config(cfg)
-
 
 class TestXNATUpload:
     """The XNAT upload interface unit tests."""

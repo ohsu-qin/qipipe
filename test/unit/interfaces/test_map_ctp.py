@@ -8,11 +8,6 @@ from test.unit.staging.test_map_ctp import (COLLECTION, SUBJECTS, PAT)
 RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'map_ctp')
 """The test results directory."""
 
-from nipype import config
-cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
-    execution=dict(crashdump_dir=RESULTS, create_report=False))
-config.update_config(cfg)
-
 
 class TestMapCTP:
     """Map CTP unit tests."""

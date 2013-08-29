@@ -1,18 +1,13 @@
+import os, glob, shutil
 from nose.tools import *
-import sys, os, glob, shutil
+from qipipe.helpers.logging_helper import logger
+from qipipe.interfaces import GroupDicom
 from test import ROOT
 
 # The test fixture.
 FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'breast')
 # The test results parent directory.
 RESULTS = os.path.join(ROOT, 'results', 'staging', 'breast')
-
-from nipype import config
-cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
-    execution=dict(crashdump_dir=RESULTS, create_report=False))
-config.update_config(cfg)
-from qipipe.helpers.logging_helper import logger
-from qipipe.interfaces import GroupDicom
 
 class TestGroupDicom:
     """GroupDicom interface unit tests."""

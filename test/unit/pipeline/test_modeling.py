@@ -14,11 +14,6 @@ FIXTURES = os.path.join(ROOT, 'fixtures', 'pipeline', 'modeling')
 RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'modeling')
 """The test results directory."""
 
-from nipype import config
-cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
-    execution=dict(crashdump_dir=RESULTS, create_report=False))
-config.update_config(cfg)
-
 
 class TestModelingWorkflow(StagedTestBase):
     """

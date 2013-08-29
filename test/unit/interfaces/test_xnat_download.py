@@ -25,11 +25,6 @@ SCAN = 9
 FORMAT = 'DICOM'
 """The test format."""
 
-from nipype import config
-cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
-    execution=dict(crashdump_dir=RESULTS, create_report=False))
-config.update_config(cfg)
-
 
 class TestXNATDownload:
     """The  XNAT download interface unit tests."""

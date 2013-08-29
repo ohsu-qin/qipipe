@@ -24,11 +24,6 @@ RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'qipipeline')
 FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
 """The test fixture directory."""
 
-from nipype import config
-cfg = dict(logging=dict(workflow_level='DEBUG', log_directory=RESULTS, log_to_file=True),
-    execution=dict(crashdump_dir=RESULTS, create_report=False))
-config.update_config(cfg)
-
 class TestQIPipeline(object):
     """
     QIN Pipeline unit tests.
