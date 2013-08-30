@@ -3,34 +3,38 @@
 Prints tab-delimited DICOM tag values.
 """
 
-import sys, os
+import sys
+import os
 import logging
 import argparse
 from collections import defaultdict
 import dicom
 from qipipe.helpers.collection_helper import to_series
 from qipipe.helpers.dicom_reader import read_dicom_header
-from qipipe.helpers.dicom_helper import (ImageHierarchy, iter_dicom_headers, select_dicom_tags)
+from qipipe.helpers.dicom_helper import (
+    ImageHierarchy, iter_dicom_headers, select_dicom_tags)
 from qipipe.helpers.logging_helper import logger
 
 
 def main(argv=sys.argv):
     # Parse the command line arguments.
     args = _parse_arguments()
-    
-    # The summary tag list is set here rather than in the argument, since the constant is imported
-    # after parsing the commmand line arguments.
+
+    # The summary tag list is set here rather than in the argument, since the
+    # constant is imported after parsing the commmand line arguments.
     if args.summary:
         tags = ImageHierarchy.TAGS
     else:
         tags = args.tags
         if tags:
             tags = tags.split(',')
-    
+
     # Print the tag value lines.
-    _print_tag_values(tags, output=args.output, header=args.header, *args.files)
-    
+    _print_tag_values(
+        tags, output=args.output, header=args.header, *args.files)
+
     return 0
+
 
 def _parse_arguments():
     """Parses the command line arguments."""
@@ -38,29 +42,37 @@ def _parse_arguments():
 
     tag_grp = parser.add_mutually_exclusive_group()
     tag_grp.add_argument('-s', '--summary',
-        help='print only the Patient ID, Study Instance UID, Series Instance UID and Instance Number tags',
-        action='store_true')
+                         help='print only the Patient ID, Study Instance UID,'
+                              'Series Instance UID and Instance Number tags',
+                         action='store_true')
     tag_grp.add_argument('-t', '--tags',
-        help='the comma-separated tags to print'
-            '(default is all non-pixel, non-bracketed tags whose value does not include a line break)')
+                         help='the comma-separated tags to print'
+                         '(default is all non-pixel, non-bracketed tags whose'
+                         'value does not include a line break)')
 
     verbosity_grp = parser.add_mutually_exclusive_group()
-    verbosity_grp.add_argument('-q', '--quiet', help="don't print messages", dest='log_level',
+    verbosity_grp.add_argument(
+        '-q', '--quiet', help="don't print messages", dest='log_level',
         action='store_const', const=logging.ERROR)
-    verbosity_grp.add_argument('-v', '--verbose', help='print informational messages', dest='log_level',
-        action='store_const', const=logging.INFO)
-    verbosity_grp.add_argument('-d', '--debug', help='print debug messages', dest='log_level',
+    verbosity_grp.add_argument(
+        '-v', '--verbose', help='print informational messages',
+        dest='log_level', action='store_const', const=logging.INFO)
+    verbosity_grp.add_argument(
+        '-d', '--debug', help='print debug messages', dest='log_level',
         action='store_const', const=logging.DEBUG)
 
-    parser.add_argument('-n', '--no-header', help='omit the tag name header line', dest='header',
-        action='store_false')
-    parser.add_argument('-o', '--output', help='print the values to the given file')
-    parser.add_argument('files', help='the DICOM files or directories to list (default stdin)',
+    parser.add_argument(
+        '-n', '--no-header', help='omit the tag name header line',
+        dest='header', action='store_false')
+    parser.add_argument(
+        '-o', '--output', help='print the values to the given file')
+    parser.add_argument(
+        'files', help='the DICOM files or directories to list (default stdin)',
         metavar='FILE', nargs='+')
 
     return parser.parse_args()
-    
-            
+
+
 def _print_tag_values(tags, *files, **opts):
     """
     Prints the tab-delimited tag value lines.
@@ -76,28 +88,31 @@ def _print_tag_values(tags, *files, **opts):
     # the tags before rereading the file to print the tag values.
     if not tags:
         tags = _collect_default_tags(*files)
-    
+
     # The print output.
     output = opts.get('output') or sys.stdout
-    
+
     # Print the header, if necessary.
     if opts['header']:
         print >> output, '\t'.join(tags)
-    
+
     # Print the tags in each DICOM file.
     logger(__name__).debug('Printing the DICOM tag values...')
     for ds in iter_dicom_headers(*files):
         # The DICOM tag value dictionary.
         tdict = _read_tags(ds, *tags)
-        # If there is at least one tag with a valid value, then print the value line.
+        # If there is at least one tag with a valid value, then print the value
+        # line.
         if tags:
-            # Augment the tag dictionary with a default empty string value for a missing tag.
+            # Augment the tag dictionary with a default empty string value for
+            # a missing tag.
             dd = defaultdict(str)
             dd.update(tdict)
             # Collect the (possibly empty) string values for each tag.
             values = [str(dd[t]) for t in tags]
             # Print the tab-delimited tag value line.
             print >> output, '\t'.join(values)
+
 
 def _collect_default_tags(*files):
     """
@@ -110,13 +125,14 @@ def _collect_default_tags(*files):
     for ds in iter_dicom_headers(*files):
         tdict = _read_tags(ds)
         tag_set.update(tdict.iterkeys())
-    
+
     # Sort the tags
     tags = list(tag_set)
     tags.sort()
-    
+
     return tags
-    
+
+
 def _read_tags(ds, *tags):
     """
     Reads the DICOM tags in the given file
