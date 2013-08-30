@@ -5,7 +5,6 @@ from qipipe.pipeline import qipipeline as qip
 from qipipe.helpers.dicom_helper import iter_dicom
 from qipipe.helpers import xnat_helper
 from qipipe.staging import airc_collection as airc
-from test.helpers.xnat_test_helper import delete_subjects
 from qipipe.staging.staging_helper import get_subjects
 from qipipe.helpers.ast_config import read_config
 from test import ROOT
@@ -106,7 +105,7 @@ class TestQIPipeline(object):
         
         with xnat_helper.connection() as xnat:
             # Delete any existing test subjects.
-            delete_subjects(project(), *subjects)
+            xnat_helper.delete_subjects(project(), *subjects)
             
             # Run the staging, mask and registration workflows, but not
             # the modeling.
@@ -136,7 +135,7 @@ class TestQIPipeline(object):
                             "was not created in XNAT" % (sbj, sess, assessor))
             
             # Delete the test subjects.
-            delete_subjects(project(), *subjects)
+            xnat_helper.delete_subjects(project(), *subjects)
 
 
 if __name__ == "__main__":

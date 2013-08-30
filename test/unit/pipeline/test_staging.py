@@ -6,7 +6,6 @@ from qipipe.helpers import xnat_helper
 from qipipe.staging.staging_helper import get_subjects
 from test.helpers.logging_helper import logger
 from test.helpers.project import project
-from test.helpers.xnat_test_helper import delete_subjects
 from test import ROOT
 
 FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
@@ -60,7 +59,7 @@ class TestStagingWorkflow(object):
         
         with xnat_helper.connection() as xnat:
             # Delete any existing test subjects.
-            delete_subjects(project(), *subjects)
+            xnat_helper.delete_subjects(project(), *subjects)
             # Run the pipeline.
             output_dict = staging.run(collection, *sources, dest=dest, base_dir=RESULTS)
             # Verify the result.
@@ -78,7 +77,7 @@ class TestStagingWorkflow(object):
                             " created in XNAT" % (sbj, sess, scan))
                     
             # Delete the test subjects.
-            delete_subjects(project(), *subjects)
+            xnat_helper.delete_subjects(project(), *subjects)
 
 
 if __name__ == "__main__":

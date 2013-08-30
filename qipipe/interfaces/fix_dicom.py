@@ -1,8 +1,8 @@
-import os
 from nipype.interfaces.base import (BaseInterface, BaseInterfaceInputSpec, traits,
-    InputMultiPath, File, Directory, TraitedSpec)
+    File, TraitedSpec)
 from qipipe.staging.staging_error import StagingError
 from qipipe.staging.fix_dicom import fix_dicom_headers
+
 
 class FixDicomInputSpec(BaseInterfaceInputSpec):
     collection = traits.Str(desc='The image collection', mandatory=True)

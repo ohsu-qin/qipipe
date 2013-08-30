@@ -11,13 +11,13 @@ This module wraps the proprietary OHSU AIRC ``fastfit`` software.
 """
 import os
 from os import path
-from glob import glob
 import traits.api as traits
 from nipype.interfaces.base import (DynamicTraitedSpec,
                                     CommandLine, 
                                     CommandLineInputSpec,
                                     isdefined)
 from nipype.interfaces.traits_extension import Undefined
+
 
 class MpiCommandLineInputSpec(CommandLineInputSpec):
     use_mpi = traits.Bool(False, 
@@ -108,7 +108,7 @@ class Fastfit(MpiCommandLine):
                     for out in self._min_outs)
                ):
                 raise ValueError("The model %s does not provide the "
-                                 "minimum outputs" % model_name)
+                                 "minimum outputs" % self.inputs.model_name)
             for param_name in self._opt_params:
                 if not param_name in fixed_params:
                     outputs.add_trait(param_name, traits.File(exists=True))

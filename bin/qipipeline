@@ -9,6 +9,7 @@ from qipipe.pipeline import qipipeline as qip
 from qipipe.helpers import logging_helper
 from qipipe.helpers.project import project
 
+
 def main(argv=sys.argv):
     # Parse the command line arguments.
     args = _parse_arguments()

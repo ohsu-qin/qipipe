@@ -1,12 +1,11 @@
-import os, tempfile
+import tempfile
 import logging
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Function)
 from nipype.interfaces import fsl
 from nipype.interfaces.dcmstack import MergeNifti
 from ..helpers.project import project
-from ..helpers import xnat_helper
-from ..interfaces import (Unpack, XNATUpload, MriVolCluster)
+from ..interfaces import (XNATUpload, MriVolCluster)
 from .workflow_base import WorkflowBase
 from ..helpers.logging_helper import logger
 
@@ -90,8 +89,6 @@ class MaskWorkflow(WorkflowBase):
         sess_cnt = sum(map(len, input_dict.values()))
         self.logger.debug("Masking %d sessions from %d subjects..." %
             (sess_cnt, sbj_cnt))
-        input_spec = self.workflow.get_node('input_spec')
-        in_fields = ['subject' 'session', 'images']
         # The subject workflow.
         for sbj, sess_dict in input_dict.iteritems():
             # The session workflow.
@@ -99,7 +96,7 @@ class MaskWorkflow(WorkflowBase):
             for sess, images in sess_dict.iteritems():
                 self.logger.debug("Masking %d %s %s images..." %
                     (len(images), sbj, sess))
-                mask = self._mask_session(sbj, sess, images)
+                self._mask_session(sbj, sess, images)
                 self.logger.debug("Masked the %s %s images." % (sbj, sess))
             self.logger.debug("Masked the subject %s images." % sbj)
         self.logger.debug("Masked %d sessions from %d subjects." %
@@ -117,6 +114,7 @@ class MaskWorkflow(WorkflowBase):
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
         input_spec.inputs.images = images
+        
         # Execute the workflow.
         self._run_workflow(self.workflow)
     

@@ -13,6 +13,7 @@ from qipipe.helpers.dicom_reader import read_dicom_header
 from qipipe.helpers.dicom_helper import (ImageHierarchy, iter_dicom_headers, select_dicom_tags)
 from qipipe.helpers.logging_helper import logger
 
+
 def main(argv=sys.argv):
     # Parse the command line arguments.
     args = _parse_arguments()

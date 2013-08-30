@@ -1,6 +1,5 @@
-import os
-from nipype.interfaces.base import (traits, BaseInterfaceInputSpec, TraitedSpec,
-    BaseInterface, InputMultiPath, File)
+from nipype.interfaces.base import (traits, BaseInterfaceInputSpec,
+    TraitedSpec, BaseInterface)
 from nipype.interfaces.traits_extension import isdefined
 from ..helpers import xnat_helper
 

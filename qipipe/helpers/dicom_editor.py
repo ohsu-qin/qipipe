@@ -1,16 +1,11 @@
-import sys
 import os
-import re
-import glob
 from dicom import datadict as dd
 from .dicom_helper import iter_dicom
-
 from .logging_helper import logger
 
-
-# Turn off pydicom debugging.
-import dicom
-dicom.debug(False)
+# Uncomment to debug pydicom.
+# import dicom
+# dicom.debug(True)
 
 def edit_dicom_headers(dest, *dicom_files, **tag_values):
     """

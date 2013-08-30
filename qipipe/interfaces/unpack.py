@@ -1,6 +1,5 @@
-from nipype.interfaces.base import (traits, Undefined, DynamicTraitedSpec, isdefined)
+from nipype.interfaces.base import (traits, DynamicTraitedSpec, isdefined)
 from nipype.interfaces.io import (IOBase, add_traits)
-from ..helpers.collection_helper import is_nonstring_iterable
     
 class Unpack(IOBase):
     """
@@ -57,8 +56,6 @@ class Unpack(IOBase):
                         "to the constructor." % (self.__class__.__name__, key))
                     raise ValueError(msg)
         
-        # The transform keyword arguments.
-        kwargs = {key: getattr(self.inputs, key) for key in self.input_names}
         # The input list.
         in_list = getattr(self.inputs, self.input_names[0])
         # The output name => value dictionary result.

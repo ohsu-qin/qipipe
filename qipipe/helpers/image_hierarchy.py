@@ -2,6 +2,7 @@ from collections import defaultdict
 from .dictionary_hierarchy import DictionaryHierarchy
 from .dicom_reader import (iter_dicom_headers, select_dicom_tags)
 
+
 def read_image_hierarchy(*files):
     """
     Returns the ImageHierarchy for the DICOM files in the given locations.
@@ -15,6 +16,7 @@ def read_image_hierarchy(*files):
     for ds in iter_dicom_headers(*files):
         h.add(ds)
     return h
+
 
 class ImageHierarchy(DictionaryHierarchy):
     TAGS = ('Patient ID', 'Study Instance UID', 'Series Instance UID',

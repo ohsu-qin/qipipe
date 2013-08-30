@@ -5,7 +5,6 @@ from .file_helper import FileIterator
 from .logging_helper import logger
 
 
-
 def read_dicom_file(fp, *args):
     """
     Reads the given DICOM file. If the file extension ends in ``.gz``, then the

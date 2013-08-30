@@ -3,7 +3,7 @@ from ConfigParser import ConfigParser as Config
 
 _CFG_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'conf', 'ctp.cfg')
 
-def ctp_collection_for(name):
+def ctp_collection_for_name(name):
     """
     :param name: the QIN collection name
     :return: the CTP collection name

@@ -3,7 +3,7 @@ from nose.tools import (assert_equal, assert_true)
 from qipipe.helpers import xnat_helper
 from test import ROOT
 from test.helpers.project import project
-from test.helpers.xnat_test_helper import (delete_subjects, generate_subject_name)
+from test.helpers.xnat_test_helper import generate_subject_name
 
 FIXTURES = os.path.join(ROOT, 'fixtures', 'helpers', 'xnat')
 """The test fixture parent directory."""
@@ -21,16 +21,17 @@ SESSION = SUBJECT + '_MR1'
 
 SCAN = 1
 
+
 class TestXNATHelper(object):
     """The XNAT helper unit tests."""
     
     def setUp(self):
         shutil.rmtree(RESULTS, True)
-        delete_subjects(project(), SUBJECT)
+        xnat_helper.delete_subjects(project(), SUBJECT)
         
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
-        delete_subjects(project(), SUBJECT)
+        xnat_helper.delete_subjects(project(), SUBJECT)
         
     def test_round_trip(self):
         with xnat_helper.connection() as xnat:

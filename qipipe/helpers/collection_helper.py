@@ -1,5 +1,6 @@
 from collections import Iterable
 
+
 def is_nonstring_iterable(obj):
     """
     :param obj: the object to check

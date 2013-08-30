@@ -1,16 +1,14 @@
 import os, re, tempfile
 import logging
-from collections import defaultdict
 from nipype.pipeline import engine as pe
-from nipype.interfaces.utility import (IdentityInterface, Merge, Function)
+from nipype.interfaces.utility import (IdentityInterface, Function)
 from nipype.interfaces.ants import (AverageImages, Registration, ApplyTransforms)
 from nipype.interfaces import fsl
-from nipype.interfaces.dcmstack import (DcmStack, CopyMeta)
+from nipype.interfaces.dcmstack import CopyMeta
 from ..helpers.project import project
-from ..interfaces import (XNATDownload, XNATUpload)
-from ..helpers import (xnat_helper, file_helper)
+from ..interfaces import XNATUpload
+from ..helpers import file_helper
 from .workflow_base import WorkflowBase
-from .mask import MaskWorkflow
 from ..helpers.logging_helper import logger
 
 
@@ -148,7 +146,8 @@ class RegistrationWorkflow(WorkflowBase):
         directory). The workflow is run on these images, resulting in a new XNAT
         reconstruction object for each session which contains the realigned images.
         
-        :param input_dict: the input *{subject: {session: ([images], mask)}}* to register
+        :param input_dict: the input *{subject: {session: ([images], mask)}}* to
+            register
         :param mask: the mask file
         :return: the registration XNAT reconstruction name
         """
@@ -163,21 +162,21 @@ class RegistrationWorkflow(WorkflowBase):
         images_list = [images for images, _ in sbj_tuples]
         # The number of images.
         img_cnt = sum(map(len, images_list))
+        
+        # Register the images.
         self.logger.debug("Registering %d images in %d sessions..." %
             (img_cnt, sess_cnt))
-        # The subject workflow.
         for sbj, sess_dict in input_dict.iteritems():
-            # The session workflow.
             self.logger.debug("Registering subject %s..." % sbj)
             for sess, sess_inputs in sess_dict.iteritems():
                 images, mask = sess_inputs
-                self.logger.debug("Registering %d images in %s session %s"
-                    " with mask %s..." % (len(images), sbj, sess, mask))
+                self.logger.debug("Registering %d %s %s images" %
+                    (len(images), sbj, sess))
                 self._register(sbj, sess, images, mask)
-                self.logger.debug("Registered %s session %s." % (sbj, sess))
+                self.logger.debug("Registered %s %s." % (sbj, sess))
             self.logger.debug("Registered subject %s." % sbj)
-        self.logger.debug("Registered %d new %s series from %d subjects in %s." %
-            (series_cnt, collection, len(subjects), dest))
+        self.logger.debug("Registered %d images from %d sessions." %
+            (img_cnt, sess_cnt))
         
         return self.reconstruction
     
@@ -193,7 +192,7 @@ class RegistrationWorkflow(WorkflowBase):
     
     def _register(self, subject, session, images, mask):
         """
-        Runs a registration execution workflow on the given session images.
+        Runs the registration workflow on the given session images.
         
         :param subject: the subject name
         :param session: the session name
@@ -203,20 +202,20 @@ class RegistrationWorkflow(WorkflowBase):
         # Sort the images by series number, since the fixed reference image
         # is an average of several middle series.
         images = sorted(images)
-        
+
+        # Set the workflow input.
+        self._set_registration_input(subject, session, images, mask)
         # Execute the registration workflow.
-        self._set_registration_input(self.workflow, subject, session, images, mask)
         self.logger.debug("Executing the %s workflow on %s %s..." %
             (self.workflow.name, subject, session))
         self._run_workflow(self.workflow)
-        self.logger.debug("%s %s is registered as reconstruction %s." %
-            (subject, session, recon))
+        self.logger.debug("Executed the %s workflow on %s %s." %
+            (self.workflow.name, subject, session))
     
-    def _set_registration_input(self, workflow, subject, session, images, mask):
+    def _set_registration_input(self, subject, session, images, mask):
         """
         Sets the registration input.
         
-        :param workflow: the registration execution workflow
         :param subject: the subject name
         :param session: the session name
         :param images: the scan images to register
@@ -227,14 +226,14 @@ class RegistrationWorkflow(WorkflowBase):
             raise ValueError("The mask option is required for registration.")
         
         # Set the workflow inputs.
-        input_spec = workflow.get_node('input_spec')
+        input_spec = self.workflow.get_node('input_spec')
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
         input_spec.inputs.images = images
         input_spec.inputs.mask = mask
         
         # The images are iterable in the realign workflow.
-        iter_image = workflow.get_node('iter_image')
+        iter_image = self.workflow.get_node('iter_image')
         abs_images = [os.path.abspath(fname) for fname in images]
         iter_image.iterables = ('image', abs_images)
     
@@ -296,7 +295,6 @@ class RegistrationWorkflow(WorkflowBase):
         reg_wf.connect(realign_wf, 'output_spec.out_file', upload_reg, 'in_files')
         
         # The realigned image file iterator.
-        realign_output = realign_wf.get_node('output_spec')
         iter_realigned = pe.Node(IdentityInterface(fields=['image']), name='iter_realigned')
         reg_wf.connect(realign_wf, 'output_spec.out_file', iter_realigned, 'image')
         

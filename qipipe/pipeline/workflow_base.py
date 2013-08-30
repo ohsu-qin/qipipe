@@ -1,13 +1,10 @@
 import os, re, tempfile
-from collections import defaultdict
-from ..helpers.logging_helper import logger
-
-import nipype.pipeline.engine as pe
 from ..helpers.project import project
 from ..helpers import xnat_helper
 from ..helpers.collection_helper import EMPTY_DICT
 from ..helpers.ast_config import read_config
 from .distributable import DISTRIBUTABLE
+
 
 class WorkflowBase(object):
     """
@@ -181,7 +178,7 @@ class WorkflowBase(object):
             if 'plugin_args' in args:
                 plugin_args = args['plugin_args']
                 # Add the negated binary flag, if necessary.
-                if not s.find(' - b '):
+                if not plugin_args.find(' - b '):
                     plugin_args += ' -b n'
             self.logger.debug("Workflow %s plug-in parameters: %s." %
                 (workflow.name, args))
@@ -209,7 +206,7 @@ class WorkflowBase(object):
             def_plugin_args = self.configuration['SGE'].get('plugin_args')
             if def_plugin_args:
                 # Remove the negated binary flag, if necessary.
-                def_plugin_args = SGE_BINARY_PAT.sub('', def_plugin_args)
+                def_plugin_args = WorkflowBase.SGE_BINARY_PAT.sub('', def_plugin_args)
                 self.logger.debug("Workflow %s default node plug-in parameters:"
                     " %s." % (workflow.name, def_plugin_args))
         else:

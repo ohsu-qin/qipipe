@@ -2,7 +2,7 @@ import os, tempfile
 import logging
 from collections import defaultdict
 from nipype.pipeline import engine as pe
-from nipype.interfaces.utility import (IdentityInterface, Merge)
+from nipype.interfaces.utility import IdentityInterface
 from . import staging
 from .workflow_base import WorkflowBase
 from .staging import StagingWorkflow
@@ -13,6 +13,7 @@ from ..interfaces import XNATDownload
 from ..helpers import xnat_helper
 from ..helpers.project import project
 from ..helpers.logging_helper import logger
+
 
 def run(*inputs, **opts):
     """
@@ -120,6 +121,12 @@ class QIPipelineWorkflow(WorkflowBase):
         
         - ``modeling``: the modeling XNAT assessor name
         
+        If the :mod:`qipipe.pipeline.distributable' ``DISTRIBUTABLE`` flag
+        is set, then the execution is distributed using the
+        `AIRC Grid Engine`_.
+        
+        .. _AIRC Grid Engine: https://everett.ohsu.edu/wiki/GridEngine
+        
         :param inputs: the AIRC subject directories or XNAT session
             names
         :param opts: the meth:`qipipe.pipeline.staging.run` options,
@@ -195,8 +202,8 @@ class QIPipelineWorkflow(WorkflowBase):
                 # Get the scan numbers.
                 scans = xnat.get_scans(prj, sbj, sess)
                 if not scans:
-                    raise IOError("There is no uploaded XNAT session with"
-                        " label: %s" % label)
+                    raise IOError("The QIN pipeline did not find a %s %s %s"
+                        " scan." % (prj, sbj, sess))
                 # Set the workflow input.
                 input_spec.inputs.subject = sbj
                 input_spec.inputs.session = sess
@@ -361,6 +368,9 @@ class QIPipelineWorkflow(WorkflowBase):
         if mask_wf:
             exec_wf.connect(input_spec, 'subject', mask_wf, 'input_spec.subject')
             exec_wf.connect(input_spec, 'session', mask_wf, 'input_spec.session')
+            # If the input DICOM files will be staged and the mask will be created
+            # rather than downloaded, then connect the staged output to the mask
+            # input.
             if stg_wf and not mask_opt:
                 exec_wf.connect(stg_wf, 'output_spec.images', mask_wf, 'input_spec.images')
         
@@ -368,6 +378,10 @@ class QIPipelineWorkflow(WorkflowBase):
         if reg_wf:
             exec_wf.connect(input_spec, 'subject', reg_wf, 'input_spec.subject')
             exec_wf.connect(input_spec, 'session', reg_wf, 'input_spec.session')
+            # If registration will be performed to create the realigned images,
+            # then connect the mask output to the registration mask input.
+            # Furthermore, if the input DICOM files will be staged, then connect
+            # the staged output to the registration input. 
             if not reg_opt:
                 exec_wf.connect(mask_wf, 'output_spec.mask', reg_wf, 'input_spec.mask')
                 if stg_wf:
@@ -454,10 +468,6 @@ class QIPipelineWorkflow(WorkflowBase):
         self.logger.debug("The %s input node is %s with fields %s" %
             (dl_wf.name, input_spec.name, in_fields))
         
-        # The input scan iterator.
-        iter_scan = pe.Node(IdentityInterface(fields=['scan']),
-            name='iter_scan')
-        
         # Download each XNAT series stack file.
         dl_xfc = XNATDownload(project=project(), reconstruction=recon)
         download_mask = pe.Node(dl_xfc, name='download_mask')
@@ -493,13 +503,9 @@ class QIPipelineWorkflow(WorkflowBase):
         self.logger.debug("The %s input node is %s with fields %s" %
             (dl_wf.name, input_spec.name, in_fields))
         
-        # The input scan iterator.
-        iter_scan = pe.Node(IdentityInterface(fields=['scan']),
-            name='iter_scan')
-        
         # Download the XNAT registration files.
         dl_xfc = XNATDownload(project=project(), reconstruction=recon)
-        download_reg = pe.Node(dl_xfc, name='download_mask')
+        download_reg = pe.Node(dl_xfc, name='download_reg')
         dl_wf.connect(input_spec, 'subject', download_reg, 'subject')
         dl_wf.connect(input_spec, 'session', download_reg, 'session')
         

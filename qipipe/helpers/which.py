@@ -1,5 +1,6 @@
 import os
 
+
 def which(program):
     """
     Returns whether the given program is executable.

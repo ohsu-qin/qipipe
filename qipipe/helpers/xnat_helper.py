@@ -1,9 +1,8 @@
-import os, re
-from contextlib import (contextmanager, closing)
+import os
+from contextlib import contextmanager
 import pyxnat
 from pyxnat.core.resources import (Experiment, Reconstruction, Reconstructions,
     Assessor, Assessors)
-from pyxnat.core.errors import DatabaseError
 from .xnat_config import default_configuration
 
 from .logging_helper import logger
@@ -17,9 +16,10 @@ def connection():
     block finishes.
     
     Example:
-        >>> from qipipe.helpers import xnat_helper
-        >>> with xnat_helper.connection() as xnat:
-        ...    sbj = xnat.get_subject(project(), 'Breast003')
+    
+    >>> from qipipe.helpers import xnat_helper
+    >>> with xnat_helper.connection() as xnat:
+    ...    sbj = xnat.get_subject('QIN', 'Breast003')
     
     :return: the XNAT instance
     :rtype: :class:`qipipe.helpers.xnat_helper.XNAT`
@@ -72,14 +72,30 @@ def parse_canonical_label(label):
     
     Example:
     
-    >>> from qipipe.helpers.xnat_helper import parse_label
-    >>> parse_label('QIN_Breast003_Session01)
+    >>> from qipipe.helpers.xnat_helper import parse_canonical_label
+    >>> parse_canonical_label('QIN_Breast003_Session01')
     >>> ('QIN', 'Breast003', 'Session01')
     
     :param: the XNAT session label
     :return: the *(project, subject, session)* name tuple
     """
     return tuple(label.split('_'))
+
+def delete_subjects(project, *subjects):
+    """
+    Deletes the given XNAT subjects, if they exist.
+
+    :param project: the XNAT project id
+    :param subjects: the XNAT subject names
+    """
+    with connection() as xnat:
+        for sbj in subjects:
+            sbj_obj = xnat.get_subject(project, sbj)
+            if sbj_obj.exists():
+                sbj_obj.delete()
+                logger(__name__).debug("Deleted the XNAT test subject %s." %
+                    sbj)
+
 
 class XNATError(Exception):
     pass
@@ -292,46 +308,55 @@ class XNAT(object):
     
     def upload(self, project, subject, session, *in_files, **opts):
         """
-        Imports the given files into the XNAT resource with the following hierarchy:
+        Imports the given files into XNAT. The target XNAT resource has the
+        following hierarchy::
             
-            /project/PROJECT/subject/SUBJECT/experiment/SESSION/CTR_TYPE/CONTAINER/resource/RESOURCE
+            /project/PROJECT/
+                subject/SUBJECT/
+                    experiment/SESSION/
+                        CTR_TYPE/CONTAINER/
+                            resource/RESOURCE
         
         where:
         
-        -  the XNAT experiment name is the `session` parameter
+        -  the XNAT experiment name is the *session* parameter
         
         -  CTR_TYPE is the experiment child type, e.g. ``scan``
         
         -  the default RESOURCE is the file format, e.g. ``NIFTI`` or ``DICOM``
         
-        The keyword options include the session child container, scan ``modality``,
-        ``resource`` name and file ``format``. The required container keyword argument associates
-        the container type to the container name, e.g. ``scan=1``. The container type is ``scan``,
-        ``reconstruction`` or ``analysis``. The ``analysis`` container type value corresponds to
-        the XNAT ``assessor`` Image Assessment type. ``analysis``, ``assessment`` and ``assessor``
-        are synonymous. The container name can be a string or integer, e.g. the scan number.
+        The keyword options include the session child container, scan
+        *modality*, *resource* name and file *format*. The required container
+        keyword argument associates the container type to the container name,
+        e.g. ``scan=1``. The container type is ``scan``, ``reconstruction`` or
+        ``analysis``. The ``analysis`` container type value corresponds to
+        the XNAT ``assessor`` Image Assessment type. ``analysis``,
+        ``assessment`` and ``assessor`` are synonymous. The container name can
+        be a string or integer, e.g. the scan number.
         
-        If the XNAT file extension is ``.nii``, ``.nii.gz``, ``.dcm`` or ``.dcm.gz``, then the
-        default XNAT image format is inferred from the extension.
+        If the XNAT file extension is ``.nii``, ``.nii.gz``, ``.dcm`` or
+        ``.dcm.gz``, then the default XNAT image format is inferred from the
+        extension.
         
-        If the session does not yet exist as a XNAT experiment, then the modality keyword argument
-        is required. The modality is any supported XNAT modality, e.g. ``MR`` or  or ``CT``. A
-        capitalized modality value is a synonym for the XNAT session data type, e.g. ``MR`` is a
-        synonym for ``xnat:mrSessionData``.
+        If the session does not yet exist as a XNAT experiment, then the
+        modality keyword argument is required. The modality is any supported
+        XNAT modality, e.g. ``MR`` or  or ``CT``. A capitalized modality value
+        is a synonym for the XNAT session data type, e.g. ``MR`` is a synonym
+        for ``xnat:mrSessionData``.
         
-        Example:
+        Example::
         
-        >>> from qipipe.helpers import xnat_helper
-        >>> xnat = xnat_helper.facade()
-        >>> xnat.upload(project(), 'Sarcoma003', 'Sarcoma003_Session01', scan=4, modality='MR',
-        >>>    format='NIFTI', *in_files)
+            from qipipe.helpers import xnat_helper
+            with xnat_helper.connection() as xnat:
+                xnat.upload(project(), 'Sarcoma003', 'Sarcoma003_Session01',
+                    scan=4, modality='MR', format='NIFTI', '/path/to/image.nii')
         
         :param project: the XNAT project id
         :param subject: the XNAT subject name
         :param session: the session (XNAT experiment) name
         :param in_files: the input files to upload
-        :param opts: the following session child container, file format, scan modality and optional
-            additional XNAT file creation options:
+        :param opts: the following session child container, file format, scan
+            modality and optional additional XNAT file creation options:
         :keyword scan: the scan number
         :keyword reconstruction: the reconstruction name
         :keyword analysis: the analysis name
@@ -340,11 +365,14 @@ class XNAT(object):
         :keyword resource: the resource name (default is the format)
         :keyword inout: the container ``in``/``out`` option
             (default ``out`` for a container type that requires this option)
-        :keyword overwrite: flag indicating whether to replace an existing file (default False)
+        :keyword overwrite: flag indicating whether to replace an existing file
+            (default False)
         :return: the new XNAT file names
         :raise XNATError: if the project does not exist
-        :raise ValueError: if the session child resource container type option is missing
-        :raise ValueError: if the XNAT experiment does not exist and the modality option is missing
+        :raise ValueError: if the session child resource container type option
+            is missing
+        :raise ValueError: if the XNAT experiment does not exist and the
+            modality option is missing
         """
         # Validate that there is sufficient information to infer a resource
         # parent container.
@@ -524,15 +552,16 @@ class XNAT(object):
         
         return rsc
     
-    
     def _standardize_modality(self, modality):
         """
-        Example:
+        Examples:
         
         >>> from qipipe.helpers import xnat_helper
-        >>> xnat._standardize_modality('MR')
+        >>> xnat_helper.connection()._standardize_modality('MR')
         xnat:mrSessionData
-        >>> xnat._standardize_modality('ctSessionData')
+        
+        >>> from qipipe.helpers import xnat_helper
+        >>> xnat_helper.connection()._standardize_modality('ctSessionData')
         xnat:ctSessionData
         
         :param modality: the modality option described in
@@ -668,7 +697,7 @@ class XNAT(object):
                 return rsc
             else:
                 return parent.resource(name)
-        elif _is_inout_container(parent):
+        elif self._is_inout_container(parent):
             if inout == 'in':
                 return parent.in_resources()
             elif inout in ['out', None]:

@@ -1,10 +1,9 @@
-import os, tempfile
+import tempfile
 import logging
-from collections import defaultdict
 from nipype.pipeline import engine as pe
 from nipype.interfaces.dcmstack import (DcmStack, MergeNifti, CopyMeta)
 from nipype.interfaces.utility import (IdentityInterface, Function)
-from ..interfaces import (Unpack, XNATDownload, XNATUpload, Fastfit)
+from ..interfaces import (XNATUpload, Fastfit)
 from ..helpers import file_helper
 from ..helpers.project import project
 from .workflow_base import WorkflowBase
@@ -160,72 +159,91 @@ class ModelingWorkflow(WorkflowBase):
     
     def run(self, input_dict, **opts):
         """
-        Builds the modeling workflow described in
+        Executes the modeling workflow described in
         :class:`qipipe.pipeline.modeling.ModelingWorkflow`
-        and executes it on the given inputs.
+        on the given inputs.
         
-        Each input is a (subject, session) tuple. The modeling input images
-        to download are determined as follows:
-        
-        - If the `reconstruction` parameter is set, then the images for
-            that reconstruction are downloaded. The reconstruction is typically
-            a registration output.
-        
-        - Otherwise, the NiFTI scan series stack images are downloaded.
-        
-        Examples::
-            
-            modeling.run(('Breast003', 'Session02'))
-            
-            inputs = [('Sarcoma001', 'Session01'), ('Sarcoma001', 'Session02')]
-            modeling.run(*inputs, reconstruction='reg_Z4aU8')
-        
-        This ``run`` method connects the given inputs to the modeling execution
-        workflow inputs. The execution workflow is then executed, resulting in
-        a new uploaded XNAT analysis resource for each input session. This
+        This run method connects the given inputs to the modeling workflow
+        inputs. The execution workflow is then executed, resulting in a
+        new uploaded XNAT analysis resource for each input session. This
         method returns the uploaded XNAT *(subject, session, analysis)* name
         tuples.
         
-        If the :mod:`qipipe.pipeline.distributable ``DISTRIBUTABLE`` flag
-        is set, then the execution is distributed using the `AIRC Grid Engine`_.
-        
-        .. _AIRC Grid Engine: https://everett.ohsu.edu/wiki/GridEngine
-        
-        :param input_dict: the input *{subject: {session: [images]}}* dictionary
+        :param input_dict: the input *{subject: {session: ([images], mask)}}*
+            to model
         :param opts: the following workflow options:
         :keyword reconstruction: the XNAT reconstruction to model
-        :return: the output *{subject: {session: [files]}}* dictionary
+        :return: the modeling result XNAT assessor name
         """
-        output_dict = defaultdict(lambda: defaultdict(list))
+        # The number of sessions.
+        sess_cnt = sum(map(len, input_dict.values()))
+        # The [[(images, mask])]] list.
+        sess_tuples = [sess_dict.values()
+            for sess_dict in input_dict.itervalues()]
+        # The flattened [(images, mask])] list.
+        sbj_tuples = reduce(lambda x,y: x+y, sess_tuples)
+        # The [images] list of lists.
+        images_list = [images for images, _ in sbj_tuples]
+        # The number of images.
+        img_cnt = sum(map(len, images_list))
         
-        series_cnt = sum(map(len, input_dict.itervalues()))
-        self.logger.debug("Modeling %d series from %d subjects in %s..." %
-            (series_cnt, len(input_dict.keys()), dest))
-        # The subject workflow.
+        # Model the images.
+        self.logger.debug("Modeling %d images in %d sessions..." %
+            (img_cnt, sess_cnt))
         for sbj, sess_dict in input_dict.iteritems():
-            # The session workflow.
-            self.logger.debug("Masking subject %s..." % sbj)
-            for sess, ser_specs in sess_dict.iteritems():
-                self.logger.debug("Masking %s %s..." % (sbj, sess))
-                # The series workflow.
-                for ser, images in ser_specs:
-                    files = self._model(sbj, sess, ser, images)
-                    mask_dict[sbj][sess].append(mask)
-                self.logger.debug("Masked %s %s." % (sbj, sess))
-            self.logger.debug("Masked subject %s." % sbj)
-        self.logger.debug("Masked %d %s series from %d subjects in %s." %
-            (series_cnt, collection, len(subjects), dest))
-        # The execution workflow iterates over the inputs.
-        in_fields = ['subject' 'session', 'images']
-        input_spec.iterables = (in_fields, inputs)
-        input_spec.synchronize = True
-        
-        # Run the workflow.
-        self._run_workflow(exec_wf)
+            self.logger.debug("Modeling subject %s..." % sbj)
+            for sess, sess_inputs in sess_dict.iteritems():
+                images, mask = sess_inputs
+                self.logger.debug("Modeling %d %s %s images..." %
+                    (len(images), sbj, sess))
+                self._model(sbj, sess, images, mask)
+                self.logger.debug("Modeled %s %s." % (sbj, sess))
+            self.logger.debug("Modeled subject %s." % sbj)
+        self.logger.debug("Modeled %d images from %d sessions." %
+            (img_cnt, sess_cnt))
         
         # Return the analysis name.
-        output_spec = self.execution_workflow.get_node('output_spec')
-        return output_spec.outputs.analysis
+        return self.assessor
+    
+    def _model(self, subject, session, images, mask):
+        """
+        Runs the modeling workflow on the given session images.
+        
+        :param subject: the subject name
+        :param session: the session name
+        :param images: the input session images
+        :param mask: the image mask
+        """
+        # Set the workflow input.
+        self._set_modeling_input(self.workflow, subject, session, images,
+            mask)
+        # Execute the modeling workflow.
+        self.logger.debug("Executing the %s workflow on %s %s..." %
+            (self.workflow.name, subject, session))
+        self._run_workflow(self.workflow)
+        self.logger.debug("Executed the %s workflow on %s %s." %
+            (self.workflow.name, subject, session))
+    
+    def _set_modeling_input(self, subject, session, images, mask):
+        """
+        Sets the modeling input.
+        
+        :param subject: the subject name
+        :param session: the session name
+        :param images: the images to model
+        :param mask: the image mask
+        """
+        # Validate the mask input.
+        if not mask:
+            raise ValueError("The mask option is required for modeling.")
+        
+        # Set the workflow inputs.
+        input_spec = self.workflow.get_node('input_spec')
+        input_spec.inputs.subject = subject
+        input_spec.inputs.session = session
+        input_spec.inputs.images = images
+        input_spec.inputs.mask = mask
+        
     
     def _create_workflow(self, base_dir=None, **opts):
         """
@@ -247,7 +265,7 @@ class ModelingWorkflow(WorkflowBase):
         base_wf = self._create_base_workflow(base_dir=base_dir, **opts)
         
         # The workflow input fields.
-        in_fields = ['subject', 'session', 'mask', 'images']
+        in_fields = ['subject', 'session', 'images', 'mask']
         input_xfc = IdentityInterface(fields=in_fields)
         input_spec = pe.Node(input_xfc, name='input_spec')
         self.logger.debug("The modeling workflow input is %s with"
@@ -529,7 +547,6 @@ def _make_r1_series(time_series, r1_0, mask_file, **kwargs):
     import os
     from os import path
     import nibabel as nb
-    import numpy as np
     from dce_to_r1 import dce_to_r1
     from dcmstack.dcmmeta import NiftiWrapper
     

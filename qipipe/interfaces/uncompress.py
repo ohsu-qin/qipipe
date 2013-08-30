@@ -1,7 +1,6 @@
 import os, gzip
-from nipype.interfaces.base import (traits,
-    BaseInterfaceInputSpec, TraitedSpec, BaseInterface,
-    File, Directory)
+from nipype.interfaces.base import (BaseInterfaceInputSpec, TraitedSpec,
+    BaseInterface, File, Directory)
 
 class UncompressInputSpec(BaseInterfaceInputSpec):
     in_file = File(exists=True, mandatory=True,

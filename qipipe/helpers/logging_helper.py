@@ -3,14 +3,14 @@ import logging
 import logging.config
 import yaml
 
+
 def logger(name):
     """
     This method is the preferred way to obtain a logger.
     
     Example:
     >>> from qipipe.helpers.logging_helper import logger
-
-    >>> logger(__name__).debug("Starting %s" % task_name)
+    >>> logger(__name__).debug("Starting my application...")
     
     :param name: the caller's context ``__name__``
     :return: the Python Logger instance
@@ -67,10 +67,10 @@ def configure(cfg_file=None, **opts):
       
       >>> from qipipe.helpers.logging_helper import logger
       >>> class MyApp(object):
-      >>>     def __init__(self):
-      >>>         self._logger = logger(__name__)
-      >>>     def start(self):
-      >>>         self._logger.debug("Started the application...")
+      ...     def __init__(self):
+      ...         self._logger = logger(__name__)
+      ...     def start(self):
+      ...         self._logger.debug("Started the application...")
     
     - Write debug messages to the file log:
       
@@ -80,12 +80,12 @@ def configure(cfg_file=None, **opts):
     - Set the log file:
       
       >>> from qipipe.helpers import logging_helper
-      >>> logging_helper.configure(filename='log/myapp.log`)
+      >>> logging_helper.configure(filename='log/myapp.log')
     
     - Define your own logging configuration:
       
       >>> from qipipe.helpers import logging_helper
-      >>> logging_helper.configure('/path/to/my/conf/logging.yaml`)
+      >>> logging_helper.configure('/path/to/my/conf/logging.yaml')
     
     - Simplify the console log message format::
         

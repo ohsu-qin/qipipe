@@ -1,18 +1,18 @@
-import os, glob
+import os
 import logging
 from collections import defaultdict
 from nipype.pipeline import engine as pe
-from nipype.interfaces.io import DataSink
-from nipype.interfaces.utility import (IdentityInterface, Function)
+from nipype.interfaces.utility import IdentityInterface
 from nipype.interfaces.dcmstack import DcmStack
 from ..helpers.project import project
-from ..interfaces import (FixDicom, Compress, Uncompress, Copy, MapCTP, XNATFind, XNATUpload)
+from ..interfaces import (FixDicom, Compress, MapCTP, XNATUpload)
 from ..staging.staging_error import StagingError
-from ..staging.staging_helper import (subject_for_directory, iter_visits, iter_new_visits,
-    group_dicom_files_by_series)
+from ..staging.staging_helper import (subject_for_directory, iter_visits,
+    iter_new_visits, group_dicom_files_by_series)
 from ..helpers import xnat_helper
 from .workflow_base import WorkflowBase
 from ..helpers.logging_helper import logger
+
 
 def run(*inputs, **opts):
     """
@@ -216,8 +216,8 @@ class StagingWorkflow(WorkflowBase):
         # If the overwrite option is set, then delete existing subjects.
         if opts.get('overwrite'):
             subjects = [subject_for_directory(collection, d) for d in inputs]
-            with xnat_helper.connection() as xnat:
-                delete_subjects(*subjects)
+            with xnat_helper.connection():
+                xnat_helper.delete_subjects(*subjects)
         
         # Collect the AIRC visits into (subject, session, dicom_files)
         # tuples.

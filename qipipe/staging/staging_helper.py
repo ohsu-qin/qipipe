@@ -5,7 +5,6 @@ from collections import defaultdict
 from ..helpers.project import project
 from ..helpers import xnat_helper
 from ..helpers.dicom_helper import iter_dicom_headers
-from .staging_error import StagingError
 from . import airc_collection as airc
 
 from ..helpers.logging_helper import logger
@@ -153,30 +152,34 @@ class VisitIterator(object):
         # The visit subdirectory match pattern.
         vpat = self.collection.session_pattern
 
-        with xnat_helper.connection() as xnat:
-            for d in self.subject_dirs:
-                d = os.path.abspath(d)
-                logger(__name__).debug("Discovering sessions in %s..." % d)
+        # Iterate over the visits.
+        with xnat_helper.connection():
+            for sbj_dir in self.subject_dirs:
+                sbj_dir = os.path.abspath(sbj_dir)
+                logger(__name__).debug("Discovering sessions in %s..." % sbj_dir)
                 # Make the XNAT subject name.
-                sbj_nbr = self.collection.path2subject_number(d)
+                sbj_nbr = self.collection.path2subject_number(sbj_dir)
                 sbj = SUBJECT_FMT % (self.collection.name, sbj_nbr)
                 # The subject subdirectories which match the visit pattern.
-                vmatches = [v for v in os.listdir(d) if re.match(vpat, v)]
-                # Generate the new (subject, session, DICOM files) items in each visit.
-                for v in vmatches:
+                sess_matches = [subdir for subdir in os.listdir(sbj_dir)
+                    if re.match(vpat, subdir)]
+                # Generate the new (subject, session, DICOM files) items in
+                # each visit.
+                for sess_subdir in sess_matches:
                     # The visit directory path.
-                    visit_dir = os.path.join(d, v)
+                    sess_dir = os.path.join(sbj_dir, sess_subdir)
                     # Silently skip non-directories.
-                    if os.path.isdir(visit_dir):
+                    if os.path.isdir(sess_dir):
                         # The visit (session) number.
-                        sess_nbr = self.collection.path2session_number(v)
+                        sess_nbr = self.collection.path2session_number(sess_subdir)
                         # The XNAT session name.
                         sess = SESSION_FMT % sess_nbr
                         # Apply the selection filter.
                         if self.filter(sbj, sess):
                             # The DICOM file match pattern.
-                            dpat = os.path.join(visit_dir, self.collection.dicom_pattern)
+                            dcm_pat = os.path.join(sess_dir, self.collection.dicom_pattern)
                             # The visit directory DICOM file iterator.
-                            dicom_file_iter = glob.iglob(dpat)
-                            logger(__name__).debug("Discovered session %s in %s" % (sess, visit_dir))
-                            yield (sbj, sess, dicom_file_iter)
+                            dcm_file_iter = glob.iglob(dcm_pat)
+                            logger(__name__).debug("Discovered session %s in %s" %
+                                (sess, sess_dir))
+                            yield (sbj, sess, dcm_file_iter)

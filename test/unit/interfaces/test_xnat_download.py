@@ -5,7 +5,7 @@ from qipipe.interfaces import XNATDownload
 from qipipe.helpers import xnat_helper
 from test import ROOT
 from test.helpers.project import project
-from test.helpers.xnat_test_helper import (delete_subjects, generate_subject_name)
+from test.helpers.xnat_test_helper import generate_subject_name
 
 FIXTURE = os.path.join(ROOT, 'fixtures', 'interfaces', 'xnat', 'Sarcoma001', 'Session01')
 """The test fixture directory."""
@@ -30,7 +30,7 @@ class TestXNATDownload:
     """The  XNAT download interface unit tests."""
     
     def setUp(self):
-        delete_subjects(project(), SUBJECT)
+        xnat_helper.delete_subjects(project(), SUBJECT)
         shutil.rmtree(RESULTS, True)
         
         with xnat_helper.connection() as xnat:
@@ -50,7 +50,7 @@ class TestXNATDownload:
         logger(__name__).debug("Uploaded the test %s %s files %s." % (SUBJECT, SESSION, list(self._file_names)))
     
     def tearDown(self):
-        delete_subjects(project(), SUBJECT)
+        xnat_helper.delete_subjects(project(), SUBJECT)
         shutil.rmtree(RESULTS, True)
     
     def test_download(self):

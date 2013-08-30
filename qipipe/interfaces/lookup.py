@@ -1,6 +1,5 @@
-from nipype.interfaces.base import (traits, BaseInterfaceInputSpec, TraitedSpec, isdefined)
-from nipype.interfaces.io import (IOBase, add_traits)
-from ..helpers.collection_helper import is_nonstring_iterable
+from nipype.interfaces.base import (traits, BaseInterfaceInputSpec, TraitedSpec)
+from nipype.interfaces.io import IOBase
 
 
 class LookupInputSpec(BaseInterfaceInputSpec):

@@ -4,11 +4,12 @@ from nose.tools import assert_equal
 import nipype.pipeline.engine as pe
 
 from qipipe.helpers.logging_helper import logger
+from ..helpers import xnat_helper
 from qipipe.pipeline import registration
 from qipipe.helpers import xnat_helper
 from test import ROOT
 from test.helpers.project import project
-from test.helpers.xnat_test_helper import delete_subjects
+
 
 class StagedTestBase(object):
     """
@@ -70,13 +71,13 @@ class StagedTestBase(object):
         subjects = input_dict.keys()
         with xnat_helper.connection() as xnat:
             # Delete the existing subjects.
-            delete_subjects(project(), *subjects)
+            xnat_helper.delete_subjects(project(), *subjects)
             # Run the workflow.
             result = self._run_workflow(fixture, input_dict, **opts)
             # Verify the result.
             self._verify_result(xnat, input_dict, result)
             # Clean up.
-            delete_subjects(project(), *subjects)
+            xnat_helper.delete_subjects(project(), *subjects)
     
     def _group_files(self, fixture):
         """

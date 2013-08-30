@@ -2,9 +2,8 @@
 TCIA CTP preparation utilities.
 """
 
-import sys, os, re
-from .ctp_config import ctp_collection_for
-from ..helpers.dicom_helper import iter_dicom_headers
+import sys, re
+from .ctp_config import ctp_collection_for_name
 
 from ..helpers.logging_helper import logger
 
@@ -55,7 +54,7 @@ class CTPPatientIdMap(dict):
         :raise ValueError: if an input patient id format is not the study followed by the
             patient number
         """
-        ctp_coll = ctp_collection_for(collection)
+        ctp_coll = ctp_collection_for_name(collection)
         for in_pt_id in patient_ids:
             match = CTPPatientIdMap.AIRC_PAT.match(in_pt_id)
             if not match:

@@ -1,11 +1,10 @@
 import os
 from os import path
 import traits.api as traits
-from nipype.interfaces.base import (TraitedSpec,
-                                    DynamicTraitedSpec,
-                                    CommandLine, 
-                                    CommandLineInputSpec)
+from nipype.interfaces.base import (TraitedSpec, CommandLine,
+    CommandLineInputSpec)
 from nipype.interfaces.traits_extension import Undefined
+
 
 class MriVolClusterInputSpec(CommandLineInputSpec):
     in_file = traits.File(desc='Input file', 

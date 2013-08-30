@@ -7,7 +7,7 @@ from qipipe.helpers import xnat_helper
 from qipipe.helpers import xnat_helper
 from test.helpers.project import project
 from test.unit.helpers.test_xnat_helper import (FIXTURES, RESULTS)
-from test.helpers.xnat_test_helper import (delete_subjects, generate_subject_name)
+from test.helpers.xnat_test_helper import generate_subject_name
 
 SUBJECT = generate_subject_name(__name__)
 """The test subject name."""
@@ -29,10 +29,10 @@ class TestXNATFind(object):
     """The XNAT find interface unit tests."""
         
     def setUp(self):
-        delete_subjects(project(), SUBJECT)
+        xnat_helper.delete_subjects(project(), SUBJECT)
         
     def tearDown(self):
-        delete_subjects(project(), SUBJECT)
+        xnat_helper.delete_subjects(project(), SUBJECT)
         shutil.rmtree(RESULTS, True)
     
     def test_find_subject(self):

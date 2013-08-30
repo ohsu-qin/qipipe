@@ -1,7 +1,6 @@
 import os, re
 from ..helpers.dicom_helper import edit_dicom_headers
 from .sarcoma_config import sarcoma_location
-from .staging_error import StagingError
 
 from ..helpers.logging_helper import logger
 

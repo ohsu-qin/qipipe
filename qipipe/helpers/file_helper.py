@@ -5,6 +5,7 @@ import struct
 import time
 import calendar
 
+
 def generate_file_name(ext=None):
     """
     Makes a valid file name which is unique to within one millisecond of calling
@@ -25,8 +26,6 @@ def generate_file_name(ext=None):
     else:
         return fname
 
-class FileIteratorError(Exception):
-    pass
 
 class FileIterator(object):
     """
@@ -48,15 +47,22 @@ class FileIterator(object):
         """
         Iterates over the files as follows:
         
-        - If the current file specification is a file, then yield that file.
+        - If the current file specification is a file object, then yield that
+          file object.
+        
+        - If the current file specification is a non-directory file path,
+          then yield that file path.
         
         - If the current file specification is a directory, then yield each file
-          contained in that directory.
+          contained recursively in that directory.
         
         - If the current file specification is a generator, then yield each
           generated item
         
-        :yield: the next file path
+        :yield: the next file object or path
+        :raise IOError: if an iterated file path is neither a directory nor file
+        :raise ValueError: if an iterated item is not a file object, path
+            or generator
         """
         for spec in self._filespecs:
             if isinstance(spec, file):
@@ -69,11 +75,11 @@ class FileIterator(object):
                         for fn in fnames:
                             yield os.path.join(root, fn)
                 else:
-                    raise FileIteratorError("File not found: %s" % spec)
+                    raise IOError("File not found: %s" % spec)
             elif inspect.isgenerator(spec):
                 for f in spec:
                     yield f
             else:
-                raise FileIteratorError("File iteration item is not supported:"
+                raise ValueError("File iteration item is not supported:"
                     " %s" % spec.__class__)
         

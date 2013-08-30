@@ -1,7 +1,6 @@
 import os
-from nipype.interfaces.base import (traits,
-    BaseInterfaceInputSpec, TraitedSpec, BaseInterface,
-    File)
+from nipype.interfaces.base import (BaseInterfaceInputSpec, TraitedSpec,
+    BaseInterface, File)
 
 
 class TouchInputSpec(BaseInterfaceInputSpec):
