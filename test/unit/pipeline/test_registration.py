@@ -4,7 +4,7 @@ import glob
 import shutil
 from nose.tools import (assert_equal, assert_is_not_none)
 import nipype.pipeline.engine as pe
-from qipipe.helpers.logging_helper import logger
+from test.helpers.logging_helper import logger
 from qipipe.pipeline import registration
 from test.helpers.project import project
 from test.unit.pipeline.staged_test_base import (StagedTestBase, ROOT)

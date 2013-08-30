@@ -1,8 +1,6 @@
-import os
-import shutil
-import distutils
+import os, shutil, distutils
 from nose.tools import (assert_equal, assert_is_not_none, assert_true)
-from qipipe.helpers.logging_helper import logger
+from test.helpers.logging_helper import logger
 from qipipe.pipeline import qipipeline as qip
 from qipipe.helpers.dicom_helper import iter_dicom
 from qipipe.helpers import xnat_helper
@@ -24,9 +22,7 @@ RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'qipipeline')
 FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
 """The test fixture directory."""
 
-
 class TestQIPipeline(object):
-
     """
     QIN Pipeline unit tests.
     
@@ -38,31 +34,29 @@ class TestQIPipeline(object):
     Note:: the modeling workflow is only executed if the ``fastfit`` executable
     is found.
     """
-
+    
     def setUp(self):
         shutil.rmtree(RESULTS, True)
-
+    
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
-
+    
     def test_breast(self):
         data = os.getenv('QIN_DATA')
         if data:
             fixture = os.path.join(RESULTS, 'data', 'breast')
             parent = os.path.join(fixture, 'BreastChemo1')
             os.makedirs(parent)
-            src = os.path.join(
-                data, 'Breast_Chemo_Study', 'BreastChemo3', 'Visit1')
-            assert_true(
-                os.path.exists(src), "Breast test fixture not found: %s" %
+            src = os.path.join(data, 'Breast_Chemo_Study', 'BreastChemo3', 'Visit1')
+            assert_true(os.path.exists(src), "Breast test fixture not found: %s" %
                 src)
             dest = os.path.join(parent, 'Visit1')
             os.symlink(src, dest)
             self._test_collection('Breast', fixture)
         else:
             logger(__name__).info("Skipping the QIN pipeline unit Breast test, since the "
-                                  "QIN_DATA environment variable is not set.")
-
+                "QIN_DATA environment variable is not set.")
+    
     def test_sarcoma(self):
         data = os.getenv('QIN_DATA')
         if data:
@@ -70,16 +64,15 @@ class TestQIPipeline(object):
             parent = os.path.join(fixture, 'Subj_1')
             os.makedirs(parent)
             src = os.path.join(data, 'Sarcoma', 'Subj_1', 'Visit_1')
-            assert_true(
-                os.path.exists(src), "Sarcoma test fixture not found: %s" %
+            assert_true(os.path.exists(src), "Sarcoma test fixture not found: %s" %
                 src)
             dest = os.path.join(parent, 'Visit_1')
             os.symlink(src, dest)
             self._test_collection('Sarcoma', fixture)
         else:
             logger(__name__).info("Skipping the QIN pipeline unit Sarcoma test, "
-                                  "since the QIN_DATA environment variable is not set.")
-
+                "since the QIN_DATA environment variable is not set.")
+    
     def _test_collection(self, collection, fixture):
         """
         Run the pipeline on the given collection and verify that scans are
@@ -89,31 +82,31 @@ class TestQIPipeline(object):
         :param fixture: the test input
         """
         logger(__name__).debug("Testing the QIN pipeline on %s..." % fixture)
-
+        
         # The staging destination and work area.
         dest = os.path.join(RESULTS, 'data')
         base_dir = os.path.join(RESULTS, 'work')
-
+        
         # The pipeline options.
         opts = dict(base_dir=base_dir, dest=dest, mask=MASK_CONF,
-                    registration=REG_CONF)
+            registration=REG_CONF)
         # Check whether the modeling workflow is executable.
         if not distutils.spawn.find_executable('fastfit'):
             opts['modeling'] = False
         else:
             opts['modeling'] = MODELING_CONF
-
+        
         # The test subject => directory dictionary.
         sbj_dir_dict = get_subjects(collection, fixture)
         # The test subjects.
         subjects = sbj_dir_dict.keys()
         # The test source directories.
         sources = sbj_dir_dict.values()
-
+        
         with xnat_helper.connection() as xnat:
             # Delete any existing test subjects.
             xnat_helper.delete_subjects(project(), *subjects)
-
+            
             # Run the staging, mask and registration workflows, but not
             # the modeling.
             logger(__name__).debug("Executing the QIN pipeline...")
@@ -129,25 +122,23 @@ class TestQIPipeline(object):
                         continue
                     recon = results['registration']
                     assert_is_not_none(recon, "The %s %s result does not have a"
-                                       " registration reconstruction" % (sbj, sess))
-                    reg_obj = xnat.get_reconstruction(
-                        project(), sbj, sess, recon)
+                        " registration reconstruction" % (sbj, sess))
+                    reg_obj = xnat.get_reconstruction(project(), sbj, sess, recon)
                     assert_true(reg_obj.exists(), "The %s %s registration"
-                                " reconstruction  %s was not created in XNAT" %
-                               (sbj, sess, recon))
+                        " reconstruction  %s was not created in XNAT" %
+                        (sbj, sess, recon))
                     # Verify the modeling assessor
                     if opts['modeling'] != False:
                         assessor = results['modeling']
-                        mdl_obj = xnat.get_assessor(
-                            project(), sbj, sess, assessor)
+                        mdl_obj = xnat.get_assessor(project(), sbj, sess, assessor)
                         assert_true(mdl_obj.exists(), "The %s %s modeling assessor %s "
-                                    "was not created in XNAT" % (sbj, sess, assessor))
-
+                            "was not created in XNAT" % (sbj, sess, assessor))
+            
             # Delete the test subjects.
             xnat_helper.delete_subjects(project(), *subjects)
 
 
 if __name__ == "__main__":
     import nose
-
+    
     nose.main(defaultTest=__name__)

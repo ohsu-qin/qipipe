@@ -15,9 +15,6 @@ FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
 RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'staging')
 """The test results directory."""
 
-LOG = os.path.join(RESULTS, 'log', 'qipipe.log')
-"""The log file."""
-
 
 class TestStagingWorkflow(object):
 

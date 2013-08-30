@@ -4,7 +4,7 @@ import glob
 import shutil
 from nose.tools import (assert_equal, assert_is_not_none)
 import nipype.pipeline.engine as pe
-from qipipe.helpers.logging_helper import logger
+from test.helpers.logging_helper import logger
 from qipipe.pipeline import mask
 from test.helpers.project import project
 from test.unit.pipeline.staged_test_base import (StagedTestBase, ROOT)
@@ -24,8 +24,8 @@ class TestMaskWorkflow(StagedTestBase):
     """
     Mask workflow unit tests.
     
-    This test exercises the mask workflow on three series of one visit in each of the
-    Breast and Sarcoma studies.
+    This test exercises the mask workflow on three series of one visit in each
+    of the Breast and Sarcoma studies.
     """
 
     def __init__(self):
@@ -56,7 +56,8 @@ class TestMaskWorkflow(StagedTestBase):
                 recon_obj = xnat.find(project(), sbj, sess,
                                       reconstruction=recon)
                 assert_is_not_none(recon_obj, "The %s %s %s XNAT reconstruction"
-                                   " object was not created" % (sbj, sess, mask.MASK_RECON))
+                                   " object was not created" %
+                                   (sbj, sess, mask.MASK_RECON))
 
 
 if __name__ == "__main__":
