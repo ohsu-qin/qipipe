@@ -9,8 +9,10 @@ import re
 import argparse
 from qipipe.helpers import logging
 from collections import defaultdict
-# Defer importing the application modules until the logging level has been set.
-
+from qipipe.helpers.logging_helper import logger
+from qipipe.helpers.project import project
+from qipipe.helpers import xnat_helper
+from qipipe.interfaces import XNATUpload
 
 def main(argv=sys.argv):
     # Parse the command line arguments.
@@ -24,11 +26,6 @@ def main(argv=sys.argv):
         logging.basicConfig(filename=args.log)
     if args.log_level:
         logging.getLogger().setLevel(args.log_level)
-
-    # Import the application now, after logging has been set.
-    from qipipe.helpers.project import project
-    from qipipe.helpers import xnat_helper
-    from qipipe.interfaces import XNATUpload
 
     # The options.
     if args.reconstruction:
