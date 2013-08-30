@@ -8,7 +8,7 @@ RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'unpack')
 """The test results directory."""
 
 
-class TestUnpack:
+class TestUnpack(object):
     """Unpack interface unit tests."""
     
     def test_unpack(self):

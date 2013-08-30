@@ -9,7 +9,7 @@ FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'breast')
 # The test results parent directory.
 RESULTS = os.path.join(ROOT, 'results', 'staging', 'breast')
 
-class TestGroupDicom:
+class TestGroupDicom(object):
     """GroupDicom interface unit tests."""
     
     def test_link_dicom(self):

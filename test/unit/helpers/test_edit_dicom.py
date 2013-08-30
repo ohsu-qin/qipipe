@@ -11,7 +11,7 @@ FIXTURE = os.path.join(ROOT, 'fixtures', 'helpers', 'edit_dicom')
 RESULTS = os.path.join(ROOT, 'results', 'helpers', 'edit_dicom')
 """The test results directory."""
 
-class TestEditDicom:
+class TestEditDicom(object):
     """DICOM edit unit tests."""
     
     def setUp(self):

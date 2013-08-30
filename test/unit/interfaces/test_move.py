@@ -15,7 +15,7 @@ SOURCE = os.path.join(RESULTS, 'source', 'data')
 TARGET = os.path.join(RESULTS, 'target')
 """The test target area where the work data is moved."""
 
-class TestMove:
+class TestMove(object):
     """Move interface unit tests."""
     
     def setUp(self):

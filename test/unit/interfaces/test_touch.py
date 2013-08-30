@@ -9,7 +9,7 @@ RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'touch')
 FNAME = os.path.join(RESULTS, 'empty.txt')
 """The file to create."""
 
-class TestTouch:
+class TestTouch(object):
     """Touch interface unit tests."""
     
     def setUp(self):

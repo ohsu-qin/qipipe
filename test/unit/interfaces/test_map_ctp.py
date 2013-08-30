@@ -9,7 +9,7 @@ RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'map_ctp')
 """The test results directory."""
 
 
-class TestMapCTP:
+class TestMapCTP(object):
     """Map CTP unit tests."""
     
     def tearDown(self):

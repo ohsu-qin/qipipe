@@ -8,7 +8,7 @@ from test import ROOT
 RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'lookup')
 """The test results directory."""
 
-class TestLookup:
+class TestLookup(object):
     """Lookup interface unit tests."""
     
     def test_lookup(self):

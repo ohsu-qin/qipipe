@@ -4,7 +4,7 @@ from collections import OrderedDict
 from qipipe.helpers import dictionary_hierarchy as hierarchy
 
 
-class TestHierarchy:
+class TestHierarchy(object):
     """DictionaryHierarchy unit tests."""
     
     def test_flat(self):

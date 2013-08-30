@@ -32,7 +32,7 @@ ANALYSIS_FIXTURE = os.path.join(FIXTURES, 'dummy_analysis.csv')
 """The analysis test fixture."""
 
 
-class TestXNATUpload:
+class TestXNATUpload(object):
     """The XNAT upload interface unit tests."""
     
     def setUp(self):

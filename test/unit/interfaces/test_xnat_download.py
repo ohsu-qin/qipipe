@@ -26,7 +26,7 @@ FORMAT = 'DICOM'
 """The test format."""
 
 
-class TestXNATDownload:
+class TestXNATDownload(object):
     """The  XNAT download interface unit tests."""
     
     def setUp(self):

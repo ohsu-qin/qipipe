@@ -8,7 +8,7 @@ FIXTURE = os.path.join(ROOT, 'fixtures', 'helpers', 'ast_config', 'tuning.cfg')
 """The test fixture configuration file."""
 
 
-class TestASTConfig:
+class TestASTConfig(object):
     """The ASTConfig unit tests."""
 
     def test_config(self):

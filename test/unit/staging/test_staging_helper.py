@@ -7,7 +7,7 @@ from test import ROOT
 # The test fixture.
 FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'sarcoma', 'Subj_1')
 
-class TestStagingHelper:
+class TestStagingHelper(object):
     """staging_helper unit tests."""
     
     def test_group_dicom_files_by_series(self):

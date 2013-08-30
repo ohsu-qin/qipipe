@@ -4,7 +4,7 @@ from nose.tools import (assert_equal, assert_raises, assert_true, assert_false)
 from qipipe.helpers.collection_helper import *
 
 
-class TestCollectionHelper:
+class TestCollectionHelper(object):
     """dicom_helper unit tests."""
 
     def test_is_nonstring_iterable(self):

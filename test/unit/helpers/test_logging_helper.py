@@ -16,7 +16,7 @@ RESULTS = os.path.join(ROOT, 'results', 'helpers', 'logging')
 RESULT = os.path.join(RESULTS, 'log', 'qipipe.log')
 """The resulting test log."""
 
-class TestLoggingHelper:
+class TestLoggingHelper(object):
     """The logging unit tests."""
     
     def setUp(self):

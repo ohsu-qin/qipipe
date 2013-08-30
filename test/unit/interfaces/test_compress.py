@@ -9,7 +9,7 @@ FIXTURE = os.path.join(ROOT, 'fixtures', 'interfaces', 'compress', 'small.txt')
 RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'compress')
 """The test results directory."""
 
-class TestCompress:
+class TestCompress(object):
     """Compress interface unit tests."""
     
     def test_compress(self):

@@ -25,7 +25,7 @@ INSTANCE_NBR = 6
 """The test image Instance Number."""
 
 
-class TestDicomHelper:
+class TestDicomHelper(object):
     """dicom_helper unit tests."""
 
     def test_read_dicom_tags(self):
