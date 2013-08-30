@@ -1,29 +1,26 @@
-import os, glob, shutil
-from nose.tools import (assert_equal, assert_not_equal)
+import os
+from nose.tools import (assert_equal, assert_in, assert_true)
 from qipipe.helpers.logging_helper import logger
 from qipipe.interfaces import GroupDicom
 from test import ROOT
 
 # The test fixture.
-FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'breast')
-# The test results parent directory.
-RESULTS = os.path.join(ROOT, 'results', 'staging', 'breast')
+FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'breast', 'BreastChemo3', 'Visit1')
 
 class TestGroupDicom(object):
     """GroupDicom interface unit tests."""
     
     def test_link_dicom(self):
         logger(__name__).debug("Testing the GroupDicom interface on %s..." % FIXTURE)
-        shutil.rmtree(RESULTS, True)
-        sbj_dirs = glob.glob(FIXTURE + '/*')
-        for d in sbj_dirs:
-            grouper = GroupDicom(collection='Breast', subject_dir=d, session_pat='Visit*', dicom_pat='*concat*/*', dest=RESULTS)
-            result = grouper.run()
-            ser_dirs = result.outputs.series_dirs
-            assert_not_equal(0, len(ser_dirs), "GroupDicom did not create the output series directories in %s" % RESULTS)
-            assert_equal(result.outputs.series_dirs, ser_dirs, "The GroupDicom output is incorrect: %s" % ser_dirs)
-        # Cleanup.
-        shutil.rmtree(RESULTS, True)
+        grouper = GroupDicom(in_files=FIXTURE)
+        result = grouper.run()
+        ser_dict = result.outputs.series_files_dict
+        assert_true(not not ser_dict, "GroupDicom did not group the files")
+        for series in [7, 33]:
+            assert_in(series, ser_dict, "GroupDicom did not group the"
+                " series %d" % series)
+            assert_equal(len(ser_dict[series]), 1, "Too many DICOM files were"
+                " grouped in series %d: %d" % (series, len(ser_dict[series])))
         logger(__name__).debug("GroupDicom interface test completed")
 
 if __name__ == "__main__":
