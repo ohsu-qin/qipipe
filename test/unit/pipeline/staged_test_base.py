@@ -7,7 +7,6 @@ from nose.tools import assert_equal
 import nipype.pipeline.engine as pe
 
 from qipipe.helpers.logging_helper import logger
-from ..helpers import xnat_helper
 from qipipe.pipeline import registration
 from qipipe.helpers import xnat_helper
 from test import ROOT
