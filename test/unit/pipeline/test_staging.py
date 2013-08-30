@@ -70,12 +70,12 @@ class TestStagingWorkflow(object):
                     assert_true(sess_obj.exists(), "The %s %s session was not"
                                 " created in XNAT" % (sbj, sess))
                     sess_dest = os.path.join(dest, sbj, sess)
-                    assert_true(os.path.exists(sess_dest), "The staging area was not"
-                                " created: %s" % sess_dest)
+                    assert_true(os.path.exists(sess_dest), "The staging area"
+                                " was not created: %s" % sess_dest)
                     for scan in scans:
                         scan_obj = xnat.get_scan(project(), sbj, sess, scan)
-                        assert_true(scan_obj.exists(), "The %s %s scan %s was not"
-                                    " created in XNAT" % (sbj, sess, scan))
+                        assert_true(scan_obj.exists(), "The %s %s scan %s was"
+                                    " not created in XNAT" % (sbj, sess, scan))
 
             # Delete the test subjects.
             xnat_helper.delete_subjects(project(), *subjects)

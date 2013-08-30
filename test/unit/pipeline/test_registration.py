@@ -24,8 +24,8 @@ class TestRegistrationWorkflow(StagedTestBase):
     """
     Registration workflow unit tests.
     
-    This test exercises the registration workflow on three series of one visit in each of the
-    Breast and Sarcoma studies.
+    This test exercises the registration workflow on three series of one visit
+    in each of the Breast and Sarcoma studies.
     """
 
     def __init__(self):
@@ -46,7 +46,8 @@ class TestRegistrationWorkflow(StagedTestBase):
         Executes :meth:`qipipe.pipeline.registration.run` on the given input.
         
         :param fixture: the test fixture directory
-        :param input_dict: the input *{subject: {session: ([images], mask)}}* to register
+        :param input_dict: the input *{subject: {session: ([images], mask)}}*
+            to register
         :param base_dir: the workflow exection directory
         :return: the :meth:`qipipe.pipeline.registration.run` result
         """

@@ -9,28 +9,29 @@ FIXTURE = os.path.join(ROOT, 'fixtures', 'helpers', 'ast_config', 'tuning.cfg')
 
 
 class TestASTConfig(object):
+
     """The ASTConfig unit tests."""
 
     def test_config(self):
         logger(__name__).debug("Testing the JSON configuration loader on"
-            " %s..." % FIXTURE)
+                               " %s..." % FIXTURE)
         cfg = read_config(FIXTURE)
         assert_is_not_none(cfg.has_section('Tuning'),
-            "The configuration is missing the Tuning section")
+                           "The configuration is missing the Tuning section")
         opts = cfg['Tuning']
         expected = dict(method='FFT',
-            description="String with [ ( 3 , a\" ' 4.5 'b' ) ] characters",
-            iterations=[1, [2, [3, 4], 5]],
-            parameters=[(1,), (2, 3)],
-            sampling=[0.3, [None, [None] * 2, 1.0]],
-            two_tailed=[True, False],
-            threshold=4.0,
-            plugin_args=dict(
-                qsub_args='-pe mpi 48-120 -l h_rt=4:00:00,mf=2G'' -b n',
-                overwrite=True))
+                        description="String with [ ( 3 , a\" ' 4.5 'b' ) ] characters",
+                        iterations=[1, [2, [3, 4], 5]],
+                        parameters=[(1,), (2, 3)],
+                        sampling=[0.3, [None, [None] * 2, 1.0]],
+                        two_tailed=[True, False],
+                        threshold=4.0,
+                        plugin_args=dict(
+                            qsub_args='-pe mpi 48-120 -l h_rt=4:00:00,mf=2G'' -b n',
+                            overwrite=True))
 
         assert_equal(opts, expected, "The configuration Tuning options are"
-            " incorrect: %s" % opts)
+                     " incorrect: %s" % opts)
 
 
 if __name__ == "__main__":
