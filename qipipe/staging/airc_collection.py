@@ -1,25 +1,32 @@
 import re
 from .staging_error import StagingError
 
-EXTENT = {}
-"""A {name: collection} dictionary for all supported AIRC collections."""
-
-
 def collection_with_name(name):
     """
     :param name: the OHSU QIN collection name
     :return: the corresponding AIRC collection
     :raise ValueError: if the given collection name is not recognized
     """
-    if name not in EXTENT:
-        raise ValueError("The collection name is not recognized: %s" % name)
-        
-    return EXTENT[name]
+    if not hasattr(collection_with_name, 'extent'):
+        setattr(collection_with_name, extent, _create_collections())
+    if name not in collection_with_name.extent:
+        raise ValueError("The AIRC collection name is not recognized: %s" % name)
+    
+    return collection_with_name.extent[name]
+
+def _create_collections():
+    """Creates the pre-defined AIRC collections."""
+    
+    return dict(
+        Breast=AIRCCollection('Breast', 'BreastChemo(\d+)', 'Visit(\d+)', '*concat*/*'),
+        Sarcoma=AIRCCollection('Sarcoma', 'Subj_(\d+)', '(?:Visit_|S\d+V)(\d+)', '*concat*/*')
+    )
 
 
 class AIRCCollection(object):
     """The AIRC Study characteristics."""
-
+    
+    
     def __init__(self, name, subject_pattern, session_pattern, dicom_pattern):
         """
         :param name: `self.name`
@@ -38,8 +45,6 @@ class AIRCCollection(object):
         
         self.dicom_pattern = dicom_pattern
         """The DICOM directory name match glob pattern."""
-        
-        EXTENT[name] = self
     
     def path2subject_number(self, path):
         """
@@ -63,11 +68,3 @@ class AIRCCollection(object):
         if not match:
             raise StagingError("The directory path %s does not match the session pattern %s" % (path, self.session_pattern))
         return int(match.group(1))
-
-
-class AIRCCollection:
-    BREAST = AIRCCollection('Breast', 'BreastChemo(\d+)', 'Visit(\d+)', '*concat*/*')
-    """The Breast collection."""
-
-    SARCOMA = AIRCCollection('Sarcoma', 'Subj_(\d+)', '(?:Visit_|S\d+V)(\d+)', '*concat*/*')
-    """The Sarcoma collection."""
