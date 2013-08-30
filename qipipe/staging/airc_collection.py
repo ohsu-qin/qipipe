@@ -9,7 +9,7 @@ def collection_with_name(name):
     :raise ValueError: if the given collection name is not recognized
     """
     if not hasattr(collection_with_name, 'extent'):
-        setattr(collection_with_name, extent, _create_collections())
+        setattr(collection_with_name, 'extent', _create_collections())
     if name not in collection_with_name.extent:
         raise ValueError(
             "The AIRC collection name is not recognized: %s" % name)
