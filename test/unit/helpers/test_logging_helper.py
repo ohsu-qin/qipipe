@@ -34,7 +34,7 @@ class TestLoggingHelper:
         with open(RESULT) as fs:
             msgs = fs.readlines()
         assert_true(not not msgs, "No log messages in %s" % RESULT)
-        assert_equal(1, len(msgs), "Extraneous log messages in %s" % RESULT)
+        assert_equal(len(msgs), 1, "Extraneous log messages in %s" % RESULT)
     
     def test_level(self):
         logging_helper.configure(filename=RESULT, level='DEBUG')
@@ -45,7 +45,7 @@ class TestLoggingHelper:
         with open(RESULT) as fs:
             msgs = fs.readlines()
         assert_true(not not msgs, "No log messages in %s" % RESULT)
-        assert_equal(2, len(msgs), "Extraneous log messages in %s" % RESULT)
+        assert_equal(len(msgs), 2, "Extraneous log messages in %s" % RESULT)
 
 if __name__ == "__main__":
     import nose

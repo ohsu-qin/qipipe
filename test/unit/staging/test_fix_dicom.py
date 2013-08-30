@@ -27,8 +27,8 @@ class TestFixDicom:
         fixed = fix_dicom_headers(COLLECTION, SUBJECT, FIXTURE, dest=dest)
         # Verify the result.
         for ds in iter_dicom(*fixed):
-            assert_equal('CHEST', ds.BodyPartExamined, "Incorrect Body Part: %s" % ds.BodyPartExamined)
-            assert_equal(SUBJECT, ds.PatientID, "Incorrect Patient ID: %s" % ds.PatientID)
+            assert_equal(ds.BodyPartExamined, 'CHEST', "Incorrect Body Part: %s" % ds.BodyPartExamined)
+            assert_equal(ds.PatientID, SUBJECT, "Incorrect Patient ID: %s" % ds.PatientID)
         # Cleanup.
         shutil.rmtree(RESULTS, True)
 

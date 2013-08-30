@@ -20,14 +20,17 @@ class TestMapCTP:
         map_ctp = MapCTP(collection=COLLECTION, patient_ids=SUBJECTS, dest=RESULTS)
         result = map_ctp.run()
         prop_file = result.outputs.out_file
-        assert_true(os.path.exists(prop_file), "Property file was not created: %s" % prop_file)
-        assert_equal(RESULTS, os.path.dirname(prop_file), "Property file was not created in %s: %s" % (RESULTS, prop_file))
+        assert_true(os.path.exists(prop_file), "Property file was not created:"
+            " %s" % prop_file)
+        assert_equal(os.path.dirname(prop_file), RESULTS, "Property file was"
+            " not created in %s: %s" % (RESULTS, prop_file))
         for line in open(prop_file).readlines():
             qin_id, ctp_suffix = re.match(PAT, line).groups()
             assert_true(qin_id in SUBJECTS, "Subject id not found: %s" % qin_id)
             qin_nbr = int(qin_id[-2:])
             ctp_nbr = int(ctp_suffix)
-            assert_equal(qin_nbr, ctp_nbr, "Patient number incorrect; expected: %d found: %d" % (qin_nbr, ctp_nbr))
+            assert_equal(ctp_nbr, qin_nbr, "Patient number incorrect; expected:"
+                " %d found: %d" % (qin_nbr, ctp_nbr))
 
 
 if __name__ == "__main__":

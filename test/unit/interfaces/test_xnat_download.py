@@ -62,7 +62,7 @@ class TestXNATDownload:
         
         # Verify the result
         dl_files = result.outputs.out_files
-        assert_equal(2, len(dl_files), "The %s download file count is incorrect: %s" % (SESSION, dl_files))
+        assert_equal(len(dl_files), 2, "The %s download file count is incorrect: %s" % (SESSION, dl_files))
         for f in dl_files:
             assert_true(os.path.exists(f), "The file was not downloaded: %s" % f)
             fdir, fname = os.path.split(f)

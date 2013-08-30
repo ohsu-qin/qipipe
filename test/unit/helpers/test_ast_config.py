@@ -29,7 +29,7 @@ class TestASTConfig:
                 qsub_args='-pe mpi 48-120 -l h_rt=4:00:00,mf=2G'' -b n',
                 overwrite=True))
 
-        assert_equal(expected, opts, "The configuration Tuning options are"
+        assert_equal(opts, expected, "The configuration Tuning options are"
             " incorrect: %s" % opts)
 
 

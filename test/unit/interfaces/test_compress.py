@@ -17,7 +17,7 @@ class TestCompress:
         compress = Compress(in_file=FIXTURE, dest=RESULTS)
         target = os.path.join(RESULTS, 'small.txt.gz')
         result = compress.run()
-        assert_equal(target, result.outputs.out_file, "Compress output file"
+        assert_equal(result.outputs.out_file, target, "Compress output file"
             " name incorrect: %s" % result.outputs.out_file)
         assert_true(os.path.exists(target))
         shutil.rmtree(RESULTS, True)

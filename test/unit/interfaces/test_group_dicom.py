@@ -21,7 +21,7 @@ class TestGroupDicom:
             result = grouper.run()
             ser_dirs = result.outputs.series_dirs
             assert_not_equal(0, len(ser_dirs), "GroupDicom did not create the output series directories in %s" % RESULTS)
-            assert_equal(ser_dirs, result.outputs.series_dirs, "The GroupDicom output is incorrect: %s" % ser_dirs)
+            assert_equal(result.outputs.series_dirs, ser_dirs, "The GroupDicom output is incorrect: %s" % ser_dirs)
         # Cleanup.
         shutil.rmtree(RESULTS, True)
         logger(__name__).debug("GroupDicom interface test completed")

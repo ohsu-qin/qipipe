@@ -23,7 +23,7 @@ class TestTouch:
         touch = Touch(fname=FNAME)
         result = touch.run()
         # Verify the result.
-        assert_equal(FNAME, result.outputs.fname, "Touch target file name"
+        assert_equal(result.outputs.fname, FNAME, "Touch target file name"
             " incorrect: %s" % result.outputs.fname)
         assert_true(os.path.exists(FNAME), "Touch target file does not"
             " exist: %s" % FNAME)
@@ -31,7 +31,7 @@ class TestTouch:
         # Retouch the file.
         result = touch.run()
         # Verify the result.
-        assert_equal(FNAME, result.outputs.fname, "Touch target file name"
+        assert_equal(result.outputs.fname, FNAME, "Touch target file name"
             " incorrect: %s" % result.outputs.fname)
         assert_true(os.path.exists(FNAME), "Touch target file does not"
             " exist: %s" % FNAME)

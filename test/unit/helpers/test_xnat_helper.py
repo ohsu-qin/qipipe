@@ -51,7 +51,7 @@ class TestXNATHelper(object):
                 container_type='scan', format='NIFTI')
             
         # Verify the result.
-        assert_equal(1, len(files), "The download file count is incorrect: %d" % len(files))
+        assert_equal(len(files), 1, "The download file count is incorrect: %d" % len(files))
         f = files[0]
         assert_true(os.path.exists(f), "File not downloaded: %s" % f)
         assert_equal(set(files), set(all_files),

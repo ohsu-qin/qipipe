@@ -24,7 +24,8 @@ class TestMapCTP:
             assert_is_not_none(ctp_id, "Subject was not mapped: %s" % sbj)
             qin_nbr = int(sbj[-2:])
             ctp_nbr = int(ctp_id[-4:])
-            assert_equal(qin_nbr, ctp_nbr, "Patient number incorrect; expected: %d found: %d" % (qin_nbr, ctp_nbr))
+            assert_equal(ctp_nbr, qin_nbr, "Patient number incorrect; expected:"
+                " %d found: %d" % (qin_nbr, ctp_nbr))
 
 
 if __name__ == "__main__":

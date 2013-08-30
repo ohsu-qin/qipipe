@@ -1,25 +1,28 @@
 import os
 import glob
-from nose.tools import assert_equal
+from nose.tools import (assert_equal, assert_true)
 from qipipe.helpers import dicom_helper as dcm
 
 FIXTURE = os.path.join(os.path.dirname(__file__), '..', '..', 'fixtures', 'helpers', 'edit_dicom')
-"""The test data."""
+"""The test image parent directory."""
 
-SBJ_ID = '111710'
-"""The Subject ID for the test images."""
+SBJ_ID = 'Sarcoma002'
+"""The Subject ID."""
 
 STUDY_ID = '1'
-"""The Study ID for the test images."""
+"""The test image Study ID."""
 
-STUDY_UID = '1.3.12.2.1107.5.2.32.35139.30000010111521270056200000038'
-"""The Study UID for the test images."""
+STUDY_UID = '1.3.12.2.1107.5.2.32.35139.30000010011316342567100000106'
+"""The test image Study UID."""
 
-SERIES_NBR = 7
-"""The Series Number for the test images."""
+SERIES_NBR = 11
+"""The test image Series Number."""
 
-SERIES_UID = '1.3.12.2.1107.5.2.32.35139.2010111713034928807078745.0.0.0'
-"""The Series UID for the test images."""
+SERIES_UID = '1.3.12.2.1107.5.2.32.35139.2010011914134225154552501.0.0.0'
+"""The test image Series UID."""
+
+INSTANCE_NBR = 6
+"""The test image Instance Number."""
 
 
 class TestDicomHelper:
@@ -32,16 +35,21 @@ class TestDicomHelper:
         for ds in dcm.iter_dicom_headers(FIXTURE):
             tdict = dcm.select_dicom_tags(ds, 'Study ID', 'Series Number')
             study = tdict['Study ID']
-            assert_equal(STUDY_ID, study, "Study tag incorrect: %s" % study)
+            assert_equal(study, STUDY_ID, "Study tag incorrect: %s" % study)
             series = tdict['Series Number']
-            assert_equal(SERIES_NBR, series, "Series tag incorrect: %d" % series)
+            assert_equal(series, SERIES_NBR, "Series tag incorrect: %d" % series)
 
     def test_read_image_hierarchy(self):
-        for i, h in enumerate(dcm.read_image_hierarchy(FIXTURE)):
-            assert_equal(SBJ_ID, h[0], "Subject ID incorrect: %s" % h[0])
-            assert_equal(STUDY_UID, h[1], "Study UID incorrect: %s" % h[1])
-            assert_equal(SERIES_UID, h[2], "Series UID incorrect: %s" % h[2]) 
-            assert_equal(i+5, h[3], "Instance Number incorrect: %s" % h[3]) 
+        hierarchies = list(dcm.read_image_hierarchy(FIXTURE))
+        assert_true(not not hierarchies, "The DICOM Helper did not detect an image hierarchy")
+        assert_equal(len(hierarchies), 1, "The DICOM Helper read too many image hierarchies")
+        hierarchy = hierarchies[0]
+        assert_equal(len(hierarchy), 4, "The DICOM Helper image hierarchy item count is incorrect")
+        sbj_id, study_uid, series_uid, inst_nbr = hierarchy
+        assert_equal(sbj_id, SBJ_ID, "Subject ID incorrect: %s" % sbj_id)
+        assert_equal(study_uid, STUDY_UID, "Study UID incorrect: %s" % study_uid)
+        assert_equal(series_uid, SERIES_UID, "Series UID incorrect: %s" % series_uid) 
+        assert_equal(inst_nbr, INSTANCE_NBR, "Instance Number incorrect: %s" % inst_nbr) 
 
 
 if __name__ == "__main__":

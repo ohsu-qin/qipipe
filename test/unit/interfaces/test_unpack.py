@@ -15,8 +15,8 @@ class TestUnpack:
         unpack = Unpack(input_name='list', output_names=['a', 'b'])
         unpack.inputs.list = [1, 2]
         result = unpack.run()
-        assert_equal(1, result.outputs.a, "Output field a incorrect: %s" % result.outputs.a)
-        assert_equal(2, result.outputs.b, "Output field b incorrect: %s" % result.outputs.b)
+        assert_equal(result.outputs.a, 1, "Output field a incorrect: %s" % result.outputs.a)
+        assert_equal(result.outputs.b, 2, "Output field b incorrect: %s" % result.outputs.b)
 
 
 if __name__ == "__main__":
