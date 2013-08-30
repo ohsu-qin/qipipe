@@ -41,7 +41,8 @@ class TestMove(object):
         # Verify the result.
         tgt_file = os.path.join(TARGET, 'small.txt')
         assert_equal(result.outputs.out_file, tgt_file,
-                     "Move target file name incorrect: %s" % result.outputs.out_file)
+                     "Move target file name incorrect: %s" %
+                     result.outputs.out_file)
         assert_true(os.path.exists(tgt_file),
                     "Move target file does not exist: %s" % tgt_file)
         assert_false(os.path.exists(src_file),
@@ -56,7 +57,8 @@ class TestMove(object):
         _, dname = os.path.split(SOURCE)
         tgt_dir = os.path.join(TARGET, dname)
         assert_equal(result.outputs.out_file, tgt_dir,
-                     "Move target directory name incorrect: %s" % result.outputs.out_file)
+                     "Move target directory name incorrect: %s" %
+                     result.outputs.out_file)
         assert_true(os.path.exists(tgt_dir),
                     "Move target directory does not exist: %s" % tgt_dir)
         assert_false(os.path.exists(SOURCE),
