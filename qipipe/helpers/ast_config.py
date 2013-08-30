@@ -1,4 +1,6 @@
-import os, re, ast
+import os
+import re
+import ast
 from ConfigParser import ConfigParser as Config
 from qipipe.helpers.collection_helper import to_series
 
@@ -18,14 +20,16 @@ def read_config(*filenames):
     filenames = [os.path.abspath(fname) for fname in filenames]
     cfg_files = cfg.read(filenames)
     if not cfg_files:
-        raise ValueError("Configuration file could not be read: %s" % filenames)
+        raise ValueError(
+            "Configuration file could not be read: %s" % filenames)
     logger(__name__).debug("Loaded configuration from %s with sections %s." %
-        (to_series(cfg_files), to_series(cfg.sections())))
-    
+          (to_series(cfg_files), to_series(cfg.sections())))
+
     return cfg
 
 
 class ASTConfig(Config):
+
     """
     ASTConfig parses a configuration option values as AST objects.
     Strings are quoted, if necessary.
@@ -67,26 +71,26 @@ class ASTConfig(Config):
 
     DICT_PAT = re.compile(BUNCH_PAT % dict(left='{', right='}'), re.VERBOSE)
     """A dictionary string pattern."""
-    
+
     EMBEDDED_BUNCH_PAT = """
         ([^%(left)s]*)          # A prefix without the left delimiter
         (\%(left)s.*\%(right)s)? # The embedded item
         ([^%(right)s]*)         # A suffix without the right delimiter
         $                       # The end of the value
     """
-    
+
     EMBEDDED_LIST_PAT = re.compile(EMBEDDED_BUNCH_PAT %
-        dict(left='[', right=']'), re.VERBOSE)
+                                   dict(left='[', right=']'), re.VERBOSE)
     """A (prefix)(list)(suffix) recognition pattern."""
-    
+
     EMBEDDED_TUPLE_PAT = re.compile(EMBEDDED_BUNCH_PAT %
-        dict(left='(', right=')'), re.VERBOSE)
+                                    dict(left='(', right=')'), re.VERBOSE)
     """A (prefix)(tuple)(suffix) recognition pattern."""
-    
+
     EMBEDDED_DICT_PAT = re.compile(EMBEDDED_BUNCH_PAT %
-        dict(left='{', right='}'), re.VERBOSE)
+                                   dict(left='{', right='}'), re.VERBOSE)
     """A (prefix)(dictionary)(suffix) recognition pattern."""
-    
+
     PARSEABLE_ITEM_PAT = re.compile("""
         (
             True            # The True literal
@@ -100,32 +104,32 @@ class ASTConfig(Config):
         )$                  # The end of the value
         """, re.VERBOSE)
     """A non-list string parseable by AST."""
-    
+
     def __iter__(self):
         return self.next()
-    
+
     def next(self):
         """
         :yield: the next *(section, {item: value})* tuple
         """
         for s in self.sections():
             yield (s, self[s])
-    
+
     def __contains__(self, section):
         """
         :param: the config section to find
         :return: whether this config has the given section
         """
         return self.has_section(section)
-    
+
     def __getitem__(self, section):
         """
         :param section: the configuration section name
         :return: the section option => value dictionary
         """
         return {name: self._parse_entry(name, value)
-            for name, value in self.items(section)}
-    
+                for name, value in self.items(section)}
+
     def _parse_entry(self, name, s):
         """
         :param name: the option name
@@ -139,9 +143,9 @@ class ASTConfig(Config):
                 return ast.literal_eval(ast_value)
             except Exception:
                 logger(__name__).error("Cannot load the configuration entry"
-                    " %s: %s parsed as %s" % (name, s, ast_value))
+                                       " %s: %s parsed as %s" % (name, s, ast_value))
                 raise
-    
+
     def _to_ast(self, s):
         """
         :param s: the input string
@@ -154,7 +158,7 @@ class ASTConfig(Config):
         # then we are done.
         if ASTConfig.PARSEABLE_ITEM_PAT.match(s):
             return s
-        
+
         # If the string is a list, then make a quoted list.
         # Otherwise, if the string signifies a boolean, then return the boolean.
         # Otherwise, quote the content.
@@ -168,12 +172,12 @@ class ASTConfig(Config):
             return 'None'
         else:
             return '"%s"' % s.replace('"', '\\"')
-    
+
     def _is_bunch(self, s):
         return (ASTConfig.LIST_PAT.match(s) or
                 ASTConfig.TUPLE_PAT.match(s) or
                 ASTConfig.DICT_PAT.match(s))
-    
+
     def _quote_bunch(self, s):
         # A dictionary must already be properly quoted.
         if s[0] == '{':
@@ -182,7 +186,7 @@ class ASTConfig(Config):
         if len(quoted_items) == 1:
             quoted_items.append('')
         return s[0] + ', '.join(quoted_items) + s[-1]
-    
+
     def _quote_bunch_content(self, s):
         """
         :param s: the comma-separated items
@@ -219,5 +223,3 @@ class ASTConfig(Config):
             items = re.split('\s*,\s*', s)
             quoted_items = [self._to_ast(item) for item in items if item]
             return quoted_items
-        
-        

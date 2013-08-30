@@ -1,15 +1,16 @@
-import os, shutil
+import os
+import shutil
 from nipype.interfaces.base import (traits,
-    BaseInterfaceInputSpec, TraitedSpec, BaseInterface,
-    File, Directory)
+                                    BaseInterfaceInputSpec, TraitedSpec, BaseInterface,
+                                    File, Directory)
 
 
 class CopyInputSpec(BaseInterfaceInputSpec):
     in_file = traits.Either(File, Directory, exists=True, mandatory=True,
-        desc='The file or directory to copy')
+                            desc='The file or directory to copy')
 
     dest = traits.Either(File, Directory, mandatory=True,
-        desc='The destination path')
+                         desc='The destination path')
 
 
 class CopyOutputSpec(TraitedSpec):
@@ -17,9 +18,10 @@ class CopyOutputSpec(TraitedSpec):
 
 
 class Copy(BaseInterface):
+
     """The Copy interface copies a file to a destination directory."""
     input_spec = CopyInputSpec
-    
+
     output_spec = CopyOutputSpec
 
     def _run_interface(self, runtime):

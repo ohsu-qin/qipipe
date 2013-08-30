@@ -1,4 +1,5 @@
-import os, shutil
+import os
+import shutil
 from nose.tools import (assert_equal, assert_true)
 import nipype.pipeline.engine as pe
 from qipipe.helpers import logging_helper
@@ -16,32 +17,34 @@ RESULTS = os.path.join(ROOT, 'results', 'helpers', 'logging')
 RESULT = os.path.join(RESULTS, 'log', 'qipipe.log')
 """The resulting test log."""
 
+
 class TestLoggingHelper(object):
+
     """The logging unit tests."""
-    
+
     def setUp(self):
         shutil.rmtree(RESULTS, True)
-    
+
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
-    
+
     def test_filename(self):
         logging_helper.configure(filename=RESULT)
         logger('qipipe').info("Test info log message.")
         logger('qipipe').debug("Test debug log message.")
         assert_true(os.path.exists(RESULT),
-            "The log file was not created: %s" % RESULT)
+                    "The log file was not created: %s" % RESULT)
         with open(RESULT) as fs:
             msgs = fs.readlines()
         assert_true(not not msgs, "No log messages in %s" % RESULT)
         assert_equal(len(msgs), 1, "Extraneous log messages in %s" % RESULT)
-    
+
     def test_level(self):
         logging_helper.configure(filename=RESULT, level='DEBUG')
         logger('qipipe').info("Test info log message.")
         logger('qipipe').debug("Test debug log message.")
         assert_true(os.path.exists(RESULT),
-            "The log file was not created: %s" % RESULT)
+                    "The log file was not created: %s" % RESULT)
         with open(RESULT) as fs:
             msgs = fs.readlines()
         assert_true(not not msgs, "No log messages in %s" % RESULT)
@@ -49,5 +52,5 @@ class TestLoggingHelper(object):
 
 if __name__ == "__main__":
     import nose
-    
+
     nose.main(defaultTest=__name__)

@@ -1,4 +1,5 @@
-import os, shutil
+import os
+import shutil
 from nose.tools import (assert_equal, assert_true)
 from qipipe.interfaces.touch import Touch
 from test import ROOT
@@ -9,35 +10,37 @@ RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'touch')
 FNAME = os.path.join(RESULTS, 'empty.txt')
 """The file to create."""
 
+
 class TestTouch(object):
+
     """Touch interface unit tests."""
-    
+
     def setUp(self):
         shutil.rmtree(RESULTS, True)
-    
+
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
-        
+
     def test_touch(self):
         # Touch the file.
         touch = Touch(fname=FNAME)
         result = touch.run()
         # Verify the result.
         assert_equal(result.outputs.fname, FNAME, "Touch target file name"
-            " incorrect: %s" % result.outputs.fname)
+                     " incorrect: %s" % result.outputs.fname)
         assert_true(os.path.exists(FNAME), "Touch target file does not"
-            " exist: %s" % FNAME)
-        
+                    " exist: %s" % FNAME)
+
         # Retouch the file.
         result = touch.run()
         # Verify the result.
         assert_equal(result.outputs.fname, FNAME, "Touch target file name"
-            " incorrect: %s" % result.outputs.fname)
+                     " incorrect: %s" % result.outputs.fname)
         assert_true(os.path.exists(FNAME), "Touch target file does not"
-            " exist: %s" % FNAME)
+                    " exist: %s" % FNAME)
 
 
 if __name__ == "__main__":
     import nose
-    
+
     nose.main(defaultTest=__name__)

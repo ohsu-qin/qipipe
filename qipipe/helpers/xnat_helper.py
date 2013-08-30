@@ -2,7 +2,7 @@ import os
 from contextlib import contextmanager
 import pyxnat
 from pyxnat.core.resources import (Experiment, Reconstruction, Reconstructions,
-    Assessor, Assessors)
+                                   Assessor, Assessors)
 from .xnat_config import default_configuration
 
 from .logging_helper import logger
@@ -35,7 +35,8 @@ def connection():
         connection.connect_cnt -= 1
         if not connection.connect_cnt:
             connection.xnat.close()
-    
+
+
 def canonical_label(*names):
     """
     Returns the XNAT label for the given hierarchical name, qualified by
@@ -65,6 +66,7 @@ def canonical_label(*names):
     else:
         return last
 
+
 def parse_canonical_label(label):
     """
     Returns the names for the given XNAT session
@@ -81,6 +83,7 @@ def parse_canonical_label(label):
     """
     return tuple(label.split('_'))
 
+
 def delete_subjects(project, *subjects):
     """
     Deletes the given XNAT subjects, if they exist.
@@ -94,7 +97,7 @@ def delete_subjects(project, *subjects):
             if sbj_obj.exists():
                 sbj_obj.delete()
                 logger(__name__).debug("Deleted the XNAT test subject %s." %
-                    sbj)
+                                       sbj)
 
 
 class XNATError(Exception):
@@ -102,19 +105,21 @@ class XNATError(Exception):
 
 
 class XNAT(object):
+
     """XNAT is a pyxnat facade convenience class."""
-    
+
     SUBJECT_QUERY_FMT = "/project/%s/subject/%s"
     """The subject query template."""
-    
+
     CONTAINER_TYPES = ['scan', 'reconstruction', 'assessor']
     """The supported XNAT resource container types."""
-    
+
     ASSESSOR_SYNONYMS = ['analysis', 'assessment']
     """Alternative designations for the XNAT ``assessor`` container type."""
-    
-    INOUT_CONTAINER_TYPES = [Reconstruction, Reconstructions, Assessor, Assessors]
-    
+
+    INOUT_CONTAINER_TYPES = [
+        Reconstruction, Reconstructions, Assessor, Assessors]
+
     def __init__(self, config_or_interface=None):
         """
         
@@ -128,14 +133,14 @@ class XNAT(object):
                 config_or_interface = default_configuration()
             self._config = config_or_interface
             logger(__name__).debug("Connecting to XNAT with config %s..." %
-                config_or_interface)
+                                   config_or_interface)
             self.interface = pyxnat.Interface(config=config_or_interface)
-    
+
     def close(self):
         """Drops the XNAT connection."""
         self.interface.disconnect()
         logger(__name__).debug("Closed the XNAT connection.")
-    
+
     def get_subject(self, project, subject):
         """
         Returns the XNAT subject object for the given XNAT lineage.
@@ -149,9 +154,9 @@ class XNAT(object):
         label = canonical_label(project, subject)
         # The query path.
         qpath = XNAT.SUBJECT_QUERY_FMT % (project, label)
-        
+
         return self.interface.select(qpath)
-    
+
     def get_session(self, project, subject, session):
         """
         Returns the XNAT session object for the given XNAT lineage.
@@ -163,9 +168,9 @@ class XNAT(object):
         :return: the corresponding XNAT session (which may not exist)
         """
         label = canonical_label(project, subject, session)
-        
+
         return self.get_subject(project, subject).experiment(label)
-    
+
     def get_scans(self, project, subject, session):
         """
         Returns the XNAT scan numbers for the given XNAT lineage.
@@ -178,9 +183,9 @@ class XNAT(object):
         """
         label = canonical_label(project, subject, session)
         exp = self.get_subject(project, subject).experiment(label)
-        
-        return [int(scan) for scan in exp.scans().get()] 
-    
+
+        return [int(scan) for scan in exp.scans().get()]
+
     def get_scan(self, project, subject, session, scan):
         """
         Returns the XNAT scan object for the given XNAT lineage.
@@ -194,7 +199,7 @@ class XNAT(object):
         :return: the corresponding XNAT scan object (which may not exist)
         """
         return self.get_session(project, subject, session).scan(str(scan))
-    
+
     def get_reconstruction(self, project, subject, session, recon):
         """
         Returns the XNAT reconstruction object for the given XNAT lineage.
@@ -209,9 +214,9 @@ class XNAT(object):
         :return: the corresponding XNAT reconstruction object (which may not exist)
         """
         label = canonical_label(project, subject, session, recon)
-        
+
         return self.get_session(project, subject, session).reconstruction(label)
-    
+
     def get_assessor(self, project, subject, session, analysis):
         """
         Returns the XNAT assessor object for the given XNAT lineage.
@@ -226,13 +231,13 @@ class XNAT(object):
         :return: the corresponding XNAT assessor object (which may not exist)
         """
         label = canonical_label(project, subject, session, analysis)
-        
+
         return self.get_session(project, subject, session).assessor(label)
-    
+
     # Define the get_assessor function aliases.
     get_assessment = get_assessor
     get_analysis = get_assessor
-    
+
     def download(self, project, subject, session, **opts):
         """
         Downloads the files for the specfied XNAT session.
@@ -269,27 +274,29 @@ class XNAT(object):
         # The XNAT experiment, which must exist.
         exp = self.get_session(project, subject, session)
         if not exp.exists():
-            raise XNATError("The XNAT download session was not found: %s" % session)
-        
+            raise XNATError(
+                "The XNAT download session was not found: %s" % session)
+
         # The download location.
         dest = opts.pop('dest', None) or os.getcwd()
         if not os.path.exists(dest):
             os.makedirs(dest)
-        
+
         logger(__name__).debug("Downloading the %s %s %s files to %s..." %
-            (subject, session, opts, dest))
-        
+              (subject, session, opts, dest))
+
         # The resource.
         rsc = self._infer_xnat_resource(exp, opts)
-        
+
         # Download the files.
         rsc_files = list(rsc.files())
         if not rsc_files:
-            logger(__name__).debug("The %s %s %s resource does not contain any files." %
-                (subject, session, opts))
-        
+            logger(
+                __name__).debug("The %s %s %s resource does not contain any files." %
+                                (subject, session, opts))
+
         return [self._download_file(f, dest) for f in rsc_files]
-    
+
     def _download_file(self, file_obj, dest):
         """
         :param file_obj: the XNAT file object
@@ -298,14 +305,16 @@ class XNAT(object):
         """
         fname = file_obj.label()
         if not fname:
-            raise XNATError("XNAT file object does not have a name: %s" % file_obj)
+            raise XNATError(
+                "XNAT file object does not have a name: %s" % file_obj)
         tgt = os.path.join(dest, fname)
-        logger(__name__).debug("Downloading the XNAT file %s to %s..." % (fname, dest))
+        logger(__name__).debug(
+            "Downloading the XNAT file %s to %s..." % (fname, dest))
         file_obj.get(tgt)
         logger(__name__).debug("Downloaded the XNAT file %s." % tgt)
-        
+
         return tgt
-    
+
     def upload(self, project, subject, session, *in_files, **opts):
         """
         Imports the given files into XNAT. The target XNAT resource has the
@@ -378,40 +387,39 @@ class XNAT(object):
         # parent container.
         if not self._infer_resource_container(opts):
             raise ValueError("XNAT upload cannot infer the %s %s %s resource parent"
-                " from the options %s" % (project, subject, session, opts))
-        
+                             " from the options %s" % (project, subject, session, opts))
+
         # Infer the format, if necessary.
         format = opts.get('format')
         if not format:
             format = self._infer_format(*in_files)
             if format:
                 opts['format'] = format
-        
+
         # The default resource is the image format.
         if 'resource' not in opts:
             if not format:
                 raise ValueError("XNAT %s upload cannot infer the image format"
-                    " as the default resource name" % session)
+                                 " as the default resource name" % session)
             opts['resource'] = format
-        
+
         # The XNAT resource parent container.
         rsc_obj = self.find(project, subject, session, create=True, **opts)
         # If only the XNAT experiment was detected, then we don't have
         # enough information to continue.
         if isinstance(rsc_obj, Experiment):
             raise XNATError("A resource container could not be inferred from "
-                "the options %s" % opts)
-        
+                            "the options %s" % opts)
+
         # Upload each file.
         logger(__name__).debug("Uploading %d %s %s %s files to XNAT..." %
-            (len(in_files), project, subject, session))
+              (len(in_files), project, subject, session))
         xnat_files = [self._upload_file(rsc_obj, f, opts) for f in in_files]
         logger(__name__).debug("%d %s %s %s files uploaded to XNAT." %
-            (len(in_files), project, subject, session))
-        
+              (len(in_files), project, subject, session))
+
         return xnat_files
-    
-    
+
     def find(self, project, subject, session=None, **opts):
         """
         Finds the given XNAT object in the hierarchy:
@@ -470,7 +478,7 @@ class XNAT(object):
             modality option is missing
         """
         create = opts.pop('create', False)
-        
+
         # If no session is specified, then return the XNAT subject.
         if not session:
             sbj = self.get_subject(project, subject)
@@ -478,17 +486,18 @@ class XNAT(object):
                 return sbj
             elif create:
                 logger(__name__).debug("Creating the XNAT %s %s subject..." %
-                    (project, subject))
+                      (project, subject))
                 sbj.insert()
-                logger(__name__).debug("Created the XNAT %s %s subject with id %s." %
-                    (project, subject, sbj.id()))
+                logger(
+                    __name__).debug("Created the XNAT %s %s subject with id %s." %
+                                    (project, subject, sbj.id()))
                 return sbj
             else:
                 return
-        
+
         # The XNAT experiment.
         exp = self.get_session(project, subject, session)
-        
+
         # If there is an experiment and we are not asked for a container,
         # then return the experiment.
         # Otherwise, if create is specified, then create the experiment.
@@ -501,57 +510,59 @@ class XNAT(object):
                 # experiments option.
                 opts['experiments'] = self._standardize_modality(modality)
                 # Create the experiment.
-                logger(__name__).debug("Creating the XNAT %s %s %s experiment..." %
-                    (project, subject, session))
+                logger(
+                    __name__).debug("Creating the XNAT %s %s %s experiment..." %
+                                    (project, subject, session))
                 exp.insert()
                 logger(__name__).debug("Created the XNAT %s %s %s experiment with "
-                    "id %s." % (project, subject, session, exp.id()))
+                                       "id %s." % (project, subject, session, exp.id()))
             else:
                 return
-        
+
         # The resource parent container.
         ctr_spec = self._infer_resource_container(opts)
         # If only the session was specified, then we are done.
         if not ctr_spec:
             return exp
-        
+
         # The container was specified.
         ctr_type, ctr_id = ctr_spec
         if not ctr_id:
             raise ValueError("XNAT %s %s %s %s container id is missing" %
-                (project, subject, session, ctr_type))
+                            (project, subject, session, ctr_type))
         ctr = self._xnat_resource_parent(exp, ctr_type, ctr_id)
         if not ctr.exists():
             if create:
                 logger(__name__).debug("Creating the XNAT %s %s %s %s %s resource parent "
-                    "container..." %
-                    (project, subject, session, ctr_type, ctr_id))
+                                       "container..." %
+                      (project, subject, session, ctr_type, ctr_id))
                 ctr.insert()
                 logger(__name__).debug("Created the XNAT %s %s %s %s %s resource parent "
-                    "container with id %s." %
-                    (project, subject, session, ctr_type, ctr_id, ctr.id()))
+                                       "container with id %s." %
+                      (project, subject, session, ctr_type, ctr_id, ctr.id()))
             else:
                 return
-        
+
         # Find the resource, if specified.
         resource = opts.get('resource')
         if not resource:
             return ctr
-        
+
         rsc = self._xnat_child_resource(ctr, resource, opts.get('inout'))
         if not rsc.exists():
             if create:
-                logger(__name__).debug("Creating the XNAT %s %s %s %s %s %s resource..." %
-                    (project, subject, session, ctr_type, ctr_id, resource))
+                logger(
+                    __name__).debug("Creating the XNAT %s %s %s %s %s %s resource..." %
+                                    (project, subject, session, ctr_type, ctr_id, resource))
                 rsc.insert()
                 logger(__name__).debug("Created the XNAT %s %s %s %s %s %s resource with "
-                    "id %s." %
-                    (project, subject, session, ctr_type, ctr_id, resource, rsc.id()))
+                                       "id %s." %
+                      (project, subject, session, ctr_type, ctr_id, resource, rsc.id()))
             else:
                 return
-        
+
         return rsc
-    
+
     def _standardize_modality(self, modality):
         """
         Examples:
@@ -575,7 +586,7 @@ class XNAT(object):
                 modality = modality.lower()
             modality = modality + 'SessionData'
         return 'xnat:' + modality
-    
+
     def _infer_xnat_resource(self, experiment, opts):
         """
         Infers the resource container item from the given options.
@@ -588,15 +599,15 @@ class XNAT(object):
         """
         # The image format.
         format = opts.get('format') or 'NIFTI'
-        
+
         # The resource parent type and name.
         ctr_type, ctr_name = self._infer_resource_container(opts)
         # The resource parent.
         rsc_parent = self._xnat_resource_parent(experiment, ctr_type, ctr_name)
-        
+
         # The resource.
         return self._xnat_child_resource(rsc_parent, format, opts.get('inout'))
-    
+
     def _infer_resource_container(self, opts):
         """
         Determines the resource container item from the given options as follows:
@@ -622,7 +633,7 @@ class XNAT(object):
         for t in XNAT.ASSESSOR_SYNONYMS:
             if t in opts:
                 return ('assessor', opts[t])
-    
+
     def _xnat_container_type(self, name):
         """
         :param name: the L{XNAT.CONTAINER_TYPES} or L{XNAT.ASSESSOR_SYNONYMS}
@@ -636,8 +647,8 @@ class XNAT(object):
             return name
         else:
             raise XNATError("XNAT upload session child container not recognized:"
-                " %s" % name)
-    
+                            " %s" % name)
+
     def _xnat_resource_parent(self, experiment, container_type, name=None):
         """
         Returns the resource parent for the given experiment and container
@@ -673,8 +684,8 @@ class XNAT(object):
         elif container_type == 'assessor':
             return experiment.assessors()
         raise XNATError("XNAT resource container type not recognized: %s" %
-            container_type)
-    
+                        container_type)
+
     def _xnat_child_resource(self, parent, name=None, inout=None):
         """
         :param parent: the XNAT resource parent object
@@ -693,7 +704,7 @@ class XNAT(object):
                     rsc = parent.out_resource(name)
                 else:
                     raise XNATError("Unsupported resource inout option: %s" %
-                        inout)
+                                    inout)
                 return rsc
             else:
                 return parent.resource(name)
@@ -703,10 +714,11 @@ class XNAT(object):
             elif inout in ['out', None]:
                 return parent.out_resources()
             else:
-                raise XNATError("Unsupported resource inout option: %s" % inout)
+                raise XNATError(
+                    "Unsupported resource inout option: %s" % inout)
         else:
             return parent.resources()
-    
+
     def _is_inout_container(self, container):
         """
         :param obj: the XNAT container object
@@ -716,7 +728,7 @@ class XNAT(object):
             if isinstance(container, ctr_type):
                 return True
         return False
-    
+
     def _infer_format(self, *in_files):
         """
         Infers the given image file format from the file extension
@@ -730,15 +742,15 @@ class XNAT(object):
         _, fname = os.path.split(in_file)
         # Infer the format from the extension.
         base, ext = os.path.splitext(fname)
-        
+
         # Verify that all remaining input files have the same extension.
         if in_files:
             for f in in_files[1:]:
                 _, other_ext = os.path.splitext(f)
                 if ext != other_ext:
                     raise XNATError("Upload cannot determine a format from"
-                        " the heterogeneous file extensions: %s vs %f" % (fname, f))
-        
+                                    " the heterogeneous file extensions: %s vs %f" % (fname, f))
+
         # Ignore .gz to get at the format extension.
         if ext == '.gz':
             _, ext = os.path.splitext(base)
@@ -746,7 +758,7 @@ class XNAT(object):
             return 'NIFTI'
         elif ext == '.dcm':
             return 'DICOM'
-    
+
     def _upload_file(self, resource, in_file, opts):
         """
         Uploads the given file to XNAT.
@@ -760,8 +772,8 @@ class XNAT(object):
         # The XNAT file name.
         _, fname = os.path.split(in_file)
         logger(__name__).debug("Uploading the XNAT file %s from %s..." %
-            (fname, in_file))
-        
+              (fname, in_file))
+
         # The XNAT file wrapper.
         file_obj = resource.file(fname)
         # The resource parent container.
@@ -769,13 +781,13 @@ class XNAT(object):
         # Check for an existing file.
         if file_obj.exists() and not opts.get('overwrite'):
             raise XNATError("The XNAT file object %s already exists in the %s"
-                " resource" % (fname, resource.label()))
-        
+                            " resource" % (fname, resource.label()))
+
         # Upload the file.
         logger(__name__).debug("Inserting the XNAT file %s into the %s %s %s"
-            " resource..." %
-            (fname, rsc_ctr.__class__.__name__.lower(), rsc_ctr.id(), resource.label()))
+                               " resource..." %
+              (fname, rsc_ctr.__class__.__name__.lower(), rsc_ctr.id(), resource.label()))
         file_obj.insert(in_file, **opts)
         logger(__name__).debug("Uploaded the XNAT file %s." % fname)
-        
+
         return fname

@@ -4,18 +4,18 @@ Maps the OHSU DICOM Patient IDs to the CTP Patient IDs.
 
 import os
 from nipype.interfaces.base import (traits, BaseInterfaceInputSpec,
-    TraitedSpec, BaseInterface, File, Directory)
+                                    TraitedSpec, BaseInterface, File, Directory)
 from ..staging.map_ctp import (property_filename, CTPPatientIdMap)
 
 
 class MapCTPInputSpec(BaseInterfaceInputSpec):
     collection = traits.Str(mandatory=True, desc='The collection name')
-    
+
     patient_ids = traits.CList(traits.Str(), mandatory=True,
-        desc='The DICOM Patient IDs to map')
+                               desc='The DICOM Patient IDs to map')
 
     dest = Directory(desc='The optional directory to write the map file '
-        '(default current directory)')
+                     '(default current directory)')
 
 
 class MapCTPOutputSpec(TraitedSpec):
@@ -23,13 +23,14 @@ class MapCTPOutputSpec(TraitedSpec):
 
 
 class MapCTP(BaseInterface):
+
     """The MapCTP interface wraps the
     :class:`qipipe.interfaces.map_ctp.CTPPatientIdMap` class."""
-    
+
     input_spec = MapCTPInputSpec
-    
+
     output_spec = MapCTPOutputSpec
-    
+
     def _run_interface(self, runtime):
         # Make the CTP id map.
         ctp_map = CTPPatientIdMap()
@@ -41,12 +42,13 @@ class MapCTP(BaseInterface):
                 os.makedirs(dest)
         else:
             dest = os.getcwd()
-        self.out_file = os.path.join(dest, property_filename(self.inputs.collection))
+        self.out_file = os.path.join(
+            dest, property_filename(self.inputs.collection))
         output = open(self.out_file, 'w')
         ctp_map.write(output)
         output.close()
         return runtime
-    
+
     def _list_outputs(self):
         outputs = self._outputs().get()
         outputs['out_file'] = os.path.abspath(self.out_file)

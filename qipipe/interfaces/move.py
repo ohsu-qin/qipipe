@@ -1,23 +1,28 @@
-import os, shutil
+import os
+import shutil
 from nipype.interfaces.base import (traits,
-    BaseInterfaceInputSpec, TraitedSpec, BaseInterface,
-    File, Directory)
+                                    BaseInterfaceInputSpec, TraitedSpec, BaseInterface,
+                                    File, Directory)
 
 
 class MoveInputSpec(BaseInterfaceInputSpec):
-    in_file = traits.Either(File, Directory, exists=True, mandatory=True, desc='The file or directory to move')
+    in_file = traits.Either(File, Directory, exists=True,
+                            mandatory=True, desc='The file or directory to move')
 
-    dest = traits.Either(File, Directory, mandatory=True, desc='The destination path')
+    dest = traits.Either(
+        File, Directory, mandatory=True, desc='The destination path')
 
 
 class MoveOutputSpec(TraitedSpec):
-    out_file = traits.Either(File, Directory, exists=True, desc='The moved file or directory')
+    out_file = traits.Either(
+        File, Directory, exists=True, desc='The moved file or directory')
 
 
 class Move(BaseInterface):
+
     """The Move interface moves a file to a destination directory."""
     input_spec = MoveInputSpec
-    
+
     output_spec = MoveOutputSpec
 
     def _run_interface(self, runtime):

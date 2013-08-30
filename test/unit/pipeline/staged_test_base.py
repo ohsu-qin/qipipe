@@ -1,4 +1,7 @@
-import os, re, glob, shutil
+import os
+import re
+import glob
+import shutil
 from collections import defaultdict
 from nose.tools import assert_equal
 import nipype.pipeline.engine as pe
@@ -12,6 +15,7 @@ from test.helpers.project import project
 
 
 class StagedTestBase(object):
+
     """
     Base class for testing workflows on a test fixture directory in the
     standard staging subject/session/images hierarchy, e.g.::
@@ -24,7 +28,7 @@ class StagedTestBase(object):
                     ...
                 breast003_session01_mask.nii.gz
     """
-    
+
     def __init__(self, logger, fixtures, results, use_mask=False):
         """
         :param logger: this test case's logger
@@ -37,19 +41,19 @@ class StagedTestBase(object):
         self._fixtures = fixtures
         self._results = results
         self._use_mask = use_mask
-    
+
     def setUp(self):
         shutil.rmtree(self._results, True)
-    
+
     def tearDown(self):
         shutil.rmtree(self._results, True)
-    
+
     def _test_breast(self, **opts):
         self._test_collection('Breast', **opts)
-    
+
     def _test_sarcoma(self, **opts):
         self._test_collection('Sarcoma', **opts)
-    
+
     def _test_collection(self, collection, **opts):
         """
         Run the workflow and verify that the registered images are
@@ -60,11 +64,11 @@ class StagedTestBase(object):
         """
         # The fixture is the collection subdirectory.
         fixture = os.path.join(self._fixtures, collection.lower())
-        
+
         # The default workflow base directory.
         if 'base_dir' not in opts:
             opts['base_dir'] = os.path.join(self._results, 'work')
-        
+
         # The inputs.
         input_dict = self._group_files(fixture)
         # The test subjects.
@@ -78,7 +82,7 @@ class StagedTestBase(object):
             self._verify_result(xnat, input_dict, result)
             # Clean up.
             xnat_helper.delete_subjects(project(), *subjects)
-    
+
     def _group_files(self, fixture):
         """
         Groups the files in the given test fixture directory. The fixture is a
@@ -101,13 +105,14 @@ class StagedTestBase(object):
                     if not masks:
                         raise ValueError("Mask not found in %s" % sess_dir)
                     if len(masks) > 1:
-                        raise ValueError("Too many masks found in %s" % sess_dir)
+                        raise ValueError(
+                            "Too many masks found in %s" % sess_dir)
                     input_dict[sbj][sess] = (images, masks[0])
                 else:
                     input_dict[sbj][sess] = images
-        
+
         return input_dict
-    
+
     def _run_workflow(self, fixture, input_dict, **opts):
         """
         This method is implemented by subclasses to execute the subclass
@@ -122,7 +127,7 @@ class StagedTestBase(object):
             implement this method
         """
         raise NotImplementedError("_run_workflow is a subclass responsibility")
-    
+
     def _verify_result(self, xnat, input_dict, result):
         """
         This method is implemented by subclasses to verify the workflow
@@ -138,4 +143,5 @@ class StagedTestBase(object):
             class:`test.unit.pipeline.StagedTestBase` subclass does not
             implement this method
         """
-        raise NotImplementedError("_verify_result is a subclass responsibility")
+        raise NotImplementedError(
+            "_verify_result is a subclass responsibility")

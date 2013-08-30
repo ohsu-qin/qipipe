@@ -1,7 +1,9 @@
 from nipype.interfaces.base import (traits, DynamicTraitedSpec, isdefined)
 from nipype.interfaces.io import (IOBase, add_traits)
-    
+
+
 class Unpack(IOBase):
+
     """
     The Unpack Interface converts a list input field to one output field per list item.
     
@@ -14,9 +16,9 @@ class Unpack(IOBase):
         >>> result.outputs.b
         2
     """
-    
+
     input_spec = DynamicTraitedSpec
-    
+
     output_spec = DynamicTraitedSpec
 
     def __init__(self, input_name, output_names, mandatory_inputs=True, **inputs):
@@ -31,7 +33,8 @@ class Unpack(IOBase):
         if not input_name:
             raise Exception('Unpack input field name is missing')
         if not output_names:
-            raise Exception('Unpack output field names must be a non-empty list')            
+            raise Exception(
+                'Unpack output field names must be a non-empty list')
         self.input_names = [input_name]
         self.output_names = output_names
         self._mandatory_inputs = mandatory_inputs
@@ -40,7 +43,7 @@ class Unpack(IOBase):
         # initialization, even it the trait is not in the add_traits argument.
         # The work-around is to reset the values after adding the traits.
         self.inputs.set(**inputs)
-        
+
     def _add_output_traits(self, base):
         return add_traits(base, self.output_names)
 
@@ -51,18 +54,19 @@ class Unpack(IOBase):
                 value = getattr(self.inputs, key)
                 if not isdefined(value):
                     msg = ("%s requires a value for input '%s' because it was "
-                        "listed in 'input_names'. You can turn off mandatory "
-                        "inputs checking  by passing mandatory_inputs = False "
-                        "to the constructor." % (self.__class__.__name__, key))
+                           "listed in 'input_names'. You can turn off mandatory "
+                           "inputs checking  by passing mandatory_inputs = False "
+                           "to the constructor." % (self.__class__.__name__, key))
                     raise ValueError(msg)
-        
+
         # The input list.
         in_list = getattr(self.inputs, self.input_names[0])
         # The output name => value dictionary result.
-        self._result = {self.output_names[i]: value for i, value in enumerate(in_list)}
+        self._result = {
+            self.output_names[i]: value for i, value in enumerate(in_list)}
 
         return runtime
-    
+
     def _list_outputs(self):
         outputs = self._outputs().get()
         for key, value in self._result.iteritems():

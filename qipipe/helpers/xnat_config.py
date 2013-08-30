@@ -2,6 +2,7 @@ import os
 
 __all__ = ['default_configuration']
 
+
 def default_configuration():
     """
     Returns the XNAT configuration file location determined as the first file

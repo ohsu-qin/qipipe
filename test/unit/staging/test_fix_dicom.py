@@ -1,4 +1,6 @@
-import os, glob, shutil
+import os
+import glob
+import shutil
 from nose.tools import assert_equal
 
 from qipipe.staging.fix_dicom import fix_dicom_headers
@@ -19,16 +21,19 @@ SUBJECT = 'Sarcoma003'
 
 
 class TestFixDicom(object):
+
     """Fix DICOM header unit tests."""
-    
+
     def test_fix_dicom_headers(self):
         shutil.rmtree(RESULTS, True)
         dest = os.path.dirname(RESULTS)
         fixed = fix_dicom_headers(COLLECTION, SUBJECT, FIXTURE, dest=dest)
         # Verify the result.
         for ds in iter_dicom(*fixed):
-            assert_equal(ds.BodyPartExamined, 'CHEST', "Incorrect Body Part: %s" % ds.BodyPartExamined)
-            assert_equal(ds.PatientID, SUBJECT, "Incorrect Patient ID: %s" % ds.PatientID)
+            assert_equal(ds.BodyPartExamined, 'CHEST',
+                         "Incorrect Body Part: %s" % ds.BodyPartExamined)
+            assert_equal(
+                ds.PatientID, SUBJECT, "Incorrect Patient ID: %s" % ds.PatientID)
         # Cleanup.
         shutil.rmtree(RESULTS, True)
 

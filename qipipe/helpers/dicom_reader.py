@@ -1,4 +1,7 @@
-import os, re, gzip, operator
+import os
+import re
+import gzip
+import operator
 import dicom
 from dicom.filereader import InvalidDicomError
 from .file_helper import FileIterator
@@ -25,6 +28,7 @@ def read_dicom_file(fp, *args):
             fp = open(fp)
     return dicom.read_file(fp, *args)
 
+
 def read_dicom_header(fp):
     """
     Reads the DICOM header of the given file.
@@ -35,6 +39,7 @@ def read_dicom_header(fp):
     :raise: IOError if the file cannot be read
     """
     return read_dicom_file(fp, *DicomHeaderIterator.OPTS)
+
 
 def isdicom(fp):
     """
@@ -48,6 +53,7 @@ def isdicom(fp):
         logger(__name__).debug("%s is not a DICOM file." % fp)
         return False
     return True
+
 
 def select_dicom_tags(ds, *tags):
     """
@@ -71,6 +77,7 @@ def select_dicom_tags(ds, *tags):
             pass
     return tdict
 
+
 def iter_dicom(*dicom_files):
     """
     Iterates over the DICOM data sets for DICOM files at the given locations.
@@ -78,6 +85,7 @@ def iter_dicom(*dicom_files):
     :param dicom_files: the DICOM files or directories containing DICOM files
     """
     return DicomIterator(*dicom_files)
+
 
 def iter_dicom_headers(*dicom_files):
     """
@@ -87,9 +95,12 @@ def iter_dicom_headers(*dicom_files):
     """
     return DicomHeaderIterator(*dicom_files)
 
+
 class DicomIterator(FileIterator):
+
     """
-    DicomIterator is a generator class for reading the pydicom data sets from DICOM files.
+    DicomIterator is a generator class for reading the pydicom data sets from
+    DICOM files.
     """
 
     def __init__(self, *dicom_files):
@@ -98,7 +109,7 @@ class DicomIterator(FileIterator):
         """
         super(DicomIterator, self).__init__(*dicom_files)
         self.args = []
-    
+
     def next(self):
         """
         Iterates over each DICOM data set.
@@ -111,14 +122,17 @@ class DicomIterator(FileIterator):
             except InvalidDicomError:
                 logger(__name__).info("Skipping non-DICOM file %s" % f)
 
+
 class DicomHeaderIterator(DicomIterator):
+
     """
-    DicomHeaderIterator is a generator class for reading the pydicom non-pixel data sets from DICOM files.
+    DicomHeaderIterator is a generator class for reading the pydicom non-pixel
+    data sets from DICOM files.
     """
-    # Read the DICOM file with defer_size=256, stop_before_pixels=True and force=False.
+    # Read the DICOM file with defer_size=256, stop_before_pixels=True and
+    # force=False.
     OPTS = [256, True, False]
-    
+
     def __init__(self, *dicom_files):
         super(DicomHeaderIterator, self).__init__(*dicom_files)
         self.args = DicomHeaderIterator.OPTS
-            

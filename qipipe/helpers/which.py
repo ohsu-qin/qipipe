@@ -27,6 +27,7 @@ def which(program):
 
     return None
 
+
 def is_executable(fpath):
     """
     :param fpath: the file path to check

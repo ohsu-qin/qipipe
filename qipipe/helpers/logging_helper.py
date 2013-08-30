@@ -18,8 +18,9 @@ def logger(name):
     # Configure on demand.
     if not hasattr(logger, 'configured'):
         configure()
-    
+
     return logging.getLogger(name)
+
 
 def configure(cfg_file=None, **opts):
     """
@@ -107,7 +108,7 @@ def configure(cfg_file=None, **opts):
     """
     # Load the configuration files.
     cfg = _load_config(cfg_file)
-    
+
     # The options override the configuration files.
     if 'filename' in opts:
         # TODO - document this
@@ -129,17 +130,17 @@ def configure(cfg_file=None, **opts):
             cfg['handlers']['console']['level'] = level
     # Add the other options, if any.
     _update_config(cfg, opts)
-    
+
     # Make the log file parent directory, if necessary.
     if 'file_handler' in cfg['loggers']['qipipe']['handlers']:
         path = cfg['handlers']['file_handler']['filename']
         log_dir = os.path.dirname(path)
         if log_dir and not os.path.exists(log_dir):
             os.makedirs(log_dir)
-    
+
     # Configure the logger.
     logging.config.dictConfig(cfg)
-    
+
     # Set the logger configured flag.
     setattr(logger, 'configured', True)
 
@@ -155,6 +156,7 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 APP_LOG_CFG_PATH = os.path.join(BASE_DIR, 'conf', LOG_CFG_FILE)
 """The default application logging configuration file path."""
+
 
 def _load_config(cfg_file=None):
     """
@@ -182,6 +184,7 @@ def _load_config(cfg_file=None):
 
     return config
 
+
 def _load_config_file(path):
     """
     Loads the given logger configuration file.
@@ -191,6 +194,7 @@ def _load_config_file(path):
     """
     with open(path) as fs:
         return yaml.load(fs)
+
 
 def _update_config(config, other):
     """
@@ -214,4 +218,3 @@ def _update_config(config, other):
                     cfg_section[subsection][subsection] = other[subsection]
         else:
             config[section] = other[section]
-            

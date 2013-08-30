@@ -2,20 +2,20 @@ import os
 from os import path
 import traits.api as traits
 from nipype.interfaces.base import (TraitedSpec, CommandLine,
-    CommandLineInputSpec)
+                                    CommandLineInputSpec)
 from nipype.interfaces.traits_extension import Undefined
 
 
 class MriVolClusterInputSpec(CommandLineInputSpec):
-    in_file = traits.File(desc='Input file', 
-                          mandatory=True, 
+    in_file = traits.File(desc='Input file',
+                          mandatory=True,
                           exists=True,
                           argstr='--in %s')
-    min_thresh = traits.Float(0.0, 
+    min_thresh = traits.Float(0.0,
                               usedefault=True,
-                              desc="Minimum threshold value", 
+                              desc="Minimum threshold value",
                               argstr='--thmin %s')
-    max_thresh = traits.Float(desc="Maximum threshold value", 
+    max_thresh = traits.Float(desc="Maximum threshold value",
                               argstr='--thmax %s')
     min_size = traits.Float(desc="Minimum cluster size in mm^3",
                             argstr='--minsize %s')
@@ -30,17 +30,21 @@ class MriVolClusterInputSpec(CommandLineInputSpec):
                                  desc="Name of output masked image",
                                  argstr="--out %s")
 
+
 class MriVolClusterOutputSpec(TraitedSpec):
-    out_cluster_file = traits.File(desc="Output image containing cluster labels")
+    out_cluster_file = traits.File(
+        desc="Output image containing cluster labels")
     out_masked_file = traits.File(desc="Input image masked by clusters")
 
+
 class MriVolCluster(CommandLine):
+
     """
     MriVolCluster encapsulates the FSL mri_volcluster_ command.
     
     .. _mri_volcluster: http://ftp.nmr.mgh.harvard.edu/fswiki/mri_volcluster
     """
-    
+
     input_spec = MriVolClusterInputSpec
     output_spec = MriVolClusterOutputSpec
     cmd = 'mri_volcluster'
@@ -49,9 +53,9 @@ class MriVolCluster(CommandLine):
         cwd = os.getcwd()
         outputs = self.output_spec().get()
         if not self.inputs.out_clusters_name is Undefined:
-            outputs['out_cluster_file'] = path.join(cwd, 
+            outputs['out_cluster_file'] = path.join(cwd,
                                                     self.inputs.out_clusters_name)
         if not self.inputs.out_masked_name is Undefined:
-            outputs['out_masked_file'] = path.join(cwd, 
+            outputs['out_masked_file'] = path.join(cwd,
                                                    self.inputs.out_masked_name)
         return outputs

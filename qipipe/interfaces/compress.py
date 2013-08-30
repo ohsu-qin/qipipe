@@ -1,12 +1,14 @@
-import os, gzip
+import os
+import gzip
 from nipype.interfaces.base import (BaseInterfaceInputSpec, TraitedSpec,
-    BaseInterface, File, Directory)
+                                    BaseInterface, File, Directory)
+
 
 class CompressInputSpec(BaseInterfaceInputSpec):
     in_file = File(exists=True, mandatory=True, desc='The file to compress')
 
     dest = Directory(desc='The optional directory to write the compressed file'
-        '(default current directory)')
+                     '(default current directory)')
 
 
 class CompressOutputSpec(TraitedSpec):
@@ -15,18 +17,19 @@ class CompressOutputSpec(TraitedSpec):
 
 class Compress(BaseInterface):
     input_spec = CompressInputSpec
-    
+
     output_spec = CompressOutputSpec
 
     def _run_interface(self, runtime):
-        self.out_file = self._compress(self.inputs.in_file, dest=self.inputs.dest)
-        
+        self.out_file = self._compress(
+            self.inputs.in_file, dest=self.inputs.dest)
+
         return runtime
 
     def _list_outputs(self):
         outputs = self._outputs().get()
         outputs['out_file'] = self.out_file
-        
+
         return outputs
 
     def _compress(self, in_file, dest=None):
@@ -48,5 +51,5 @@ class Compress(BaseInterface):
         cf.writelines(f)
         f.close()
         cf.close()
-        
+
         return os.path.abspath(out_file)

@@ -15,12 +15,13 @@ def generate_file_name(ext=None):
     :return: the file name
     """
     # A starting time prior to now.
-    start = time.mktime(calendar.datetime.date(2013,01,01).timetuple())
+    start = time.mktime(calendar.datetime.date(2013, 01, 01).timetuple())
     # A long which is unique to within one millisecond.
     offset = long((time.time() - start) * 1000)
-    # The file name is encoded from the offset without trailing filler or linebreak.
+    # The file name is encoded from the offset without trailing filler or
+    # linebreak.
     fname = base64.urlsafe_b64encode(struct.pack('L', offset)).rstrip('A=\n')
-    
+
     if ext:
         return fname + ext
     else:
@@ -28,6 +29,7 @@ def generate_file_name(ext=None):
 
 
 class FileIterator(object):
+
     """
     FileIterator is a generator class which iterates over the files contained
     recursively in the :meth:`__init__` file specifications.
@@ -39,10 +41,10 @@ class FileIterator(object):
             to iterate
         """
         self._filespecs = filespecs
-    
+
     def __iter__(self):
         return self.next()
-        
+
     def next(self):
         """
         Iterates over the files as follows:
@@ -81,5 +83,4 @@ class FileIterator(object):
                     yield f
             else:
                 raise ValueError("File iteration item is not supported:"
-                    " %s" % spec.__class__)
-        
+                                 " %s" % spec.__class__)

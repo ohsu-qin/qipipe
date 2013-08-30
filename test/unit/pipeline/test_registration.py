@@ -1,4 +1,7 @@
-import os, re, glob, shutil
+import os
+import re
+import glob
+import shutil
 from nose.tools import (assert_equal, assert_is_not_none)
 import nipype.pipeline.engine as pe
 from qipipe.helpers.logging_helper import logger
@@ -17,25 +20,27 @@ RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'registration')
 
 
 class TestRegistrationWorkflow(StagedTestBase):
+
     """
     Registration workflow unit tests.
     
     This test exercises the registration workflow on three series of one visit in each of the
     Breast and Sarcoma studies.
     """
-    
+
     def __init__(self):
-        super(TestRegistrationWorkflow, self).__init__(logger(__name__), FIXTURES, RESULTS, use_mask=True)
-    
+        super(TestRegistrationWorkflow, self).__init__(
+            logger(__name__), FIXTURES, RESULTS, use_mask=True)
+
     def test_breast_with_ants(self):
         self._test_breast()
-    
+
     def test_sarcoma_with_ants(self):
         self._test_sarcoma()
-    
+
     def test_breast_with_fnirt(self):
         self._test_breast(technique='fnirt')
-    
+
     def _run_workflow(self, fixture, input_dict, base_dir=None):
         """
         Executes :meth:`qipipe.pipeline.registration.run` on the given input.
@@ -45,20 +50,21 @@ class TestRegistrationWorkflow(StagedTestBase):
         :param base_dir: the workflow exection directory
         :return: the :meth:`qipipe.pipeline.registration.run` result
         """
-        logger(__name__).debug("Testing the registration workflow on %s..." % fixture)
+        logger(__name__).debug(
+            "Testing the registration workflow on %s..." % fixture)
         # Add in the mask.
         return registration.run(input_dict, cfg_file=REG_CONF, base_dir=base_dir)
-    
+
     def _verify_result(self, xnat, input_dict, recon):
         for sbj, sess_dict in input_dict.iteritems():
             for sess in sess_dict:
                 recon_obj = xnat.find(project(), sbj, sess,
-                    reconstruction=recon)
+                                      reconstruction=recon)
                 assert_is_not_none(recon_obj, "The %s %s %s XNAT reconstruction"
-                    " object was not created" % (sbj, sess, recon))
+                                   " object was not created" % (sbj, sess, recon))
 
 
 if __name__ == "__main__":
     import nose
-    
+
     nose.main(defaultTest=__name__)

@@ -7,6 +7,7 @@ from .logging_helper import logger
 # import dicom
 # dicom.debug(True)
 
+
 def edit_dicom_headers(dest, *dicom_files, **tag_values):
     """
     Sets the tags of the given DICOM files.
@@ -20,16 +21,18 @@ def edit_dicom_headers(dest, *dicom_files, **tag_values):
     if not os.path.exists(dest):
         os.makedirs(dest)
     # The {tag: value} dictionary.
-    tv = {dd.tag_for_name(t.replace(' ', '')): v for t, v in tag_values.iteritems()}
+    tv = {dd.tag_for_name(t.replace(' ', ''))
+                          : v for t, v in tag_values.iteritems()}
     # The {tag: VR} dictionary.
     tvr = {t: dd.get_entry(t)[0] for t in tv.iterkeys()}
     files = []
-    
-    logger(__name__).info("Editing the DICOM files with the following tag values: %s..." % tag_values)
+
+    logger(__name__).info(
+        "Editing the DICOM files with the following tag values: %s..." % tag_values)
     # Open the DICOM store on each DICOM file (skipping non-DICOM files),
     # set the tag values and save to a new file in the destination directory.
     for ds in iter_dicom(*dicom_files):
-        for  t, v in tv.iteritems():
+        for t, v in tv.iteritems():
             if t in ds:
                 ds[t].value = v
             else:
@@ -41,5 +44,5 @@ def edit_dicom_headers(dest, *dicom_files, **tag_values):
         files.append(out_file)
         logger(__name__).debug("Saved the edited DICOM file as %s." % out_file)
     logger(__name__).info("The edited DICOM files were saved in %s." % dest)
-    
+
     return files

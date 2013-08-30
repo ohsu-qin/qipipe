@@ -20,16 +20,17 @@ def read_image_hierarchy(*files):
 
 class ImageHierarchy(DictionaryHierarchy):
     TAGS = ('Patient ID', 'Study Instance UID', 'Series Instance UID',
-        'Instance Number')
-    
+            'Instance Number')
+
     """
     ImageHierarchy wraps the DICOM image subject-study-series-image hierarchy.
     """
+
     def __init__(self):
         # the subject: series: image nested dictionary
         self.tree = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         super(ImageHierarchy, self).__init__(self.tree)
-    
+
     def add(self, ds):
         """
         Adds the subject-study-series-image hierarchy entries from the given

@@ -17,5 +17,5 @@ def project(name=None):
         project.name = name
     elif not hasattr(project, 'name'):
         project.name = 'QIN'
-    
+
     return project.name

@@ -8,6 +8,7 @@ def is_nonstring_iterable(obj):
     """
     return isinstance(obj, Iterable) and not isinstance(obj, str)
 
+
 def to_series(items, conjunction='and'):
     """
     Formats the given items as a series string.
@@ -33,16 +34,17 @@ def to_series(items, conjunction='and'):
 
 
 class ImmutableDict(dict):
+
     """
     ImmutableDict is a dictionary that cannot be changed after creation.
     
     An ImmutableDict is *not* hashable and therefore cannot be used as a dictionary
     key or set member. See http://www.python.org/dev/peps/pep-0351 for the rationale.
     """
-    
+
     def __init__(self, *args, **kwargs):
         super(ImmutableDict, self).__init__(*args, **kwargs)
-    
+
     def __setitem__(self, key, value):
         """
         :raise NotImplementedError: always

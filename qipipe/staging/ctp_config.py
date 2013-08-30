@@ -1,7 +1,9 @@
 import os
 from ConfigParser import ConfigParser as Config
 
-_CFG_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'conf', 'ctp.cfg')
+_CFG_FILE = os.path.join(
+    os.path.dirname(__file__), '..', '..', 'conf', 'ctp.cfg')
+
 
 def ctp_collection_for_name(name):
     """
@@ -9,6 +11,7 @@ def ctp_collection_for_name(name):
     :return: the CTP collection name
     """
     return ctp_config().get('CTP', name)
+
 
 def ctp_config():
     if not hasattr(ctp_config, 'instance'):

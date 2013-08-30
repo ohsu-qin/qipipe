@@ -1,4 +1,6 @@
-import os, re, tempfile
+import os
+import re
+import tempfile
 from ..helpers.project import project
 from ..helpers import xnat_helper
 from ..helpers.collection_helper import EMPTY_DICT
@@ -7,19 +9,20 @@ from .distributable import DISTRIBUTABLE
 
 
 class WorkflowBase(object):
+
     """
     The WorkflowBase class is the base class for the QIN workflow wrapper classes.
     """
-    
+
     CLASS_NAME_PAT = re.compile("^(\w+)Workflow$")
     """The workflow wrapper class name matcher."""
-    
-    DEF_CONF_DIR = os.path.join(os.path.dirname(__file__),'..', '..', 'conf')
+
+    DEF_CONF_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'conf')
     """The default configuration directory."""
-    
+
     INTERFACE_PREFIX_PAT = re.compile('(\w+\.)+interfaces?\.?')
     """Regexp matcher for an interface module."""
-    
+
     MODULE_PREFIX_PAT = re.compile('^((\w+\.)*)(\w+\.)(\w+)$')
     """
     Regexp matcher for a module prefix.
@@ -32,10 +35,10 @@ class WorkflowBase(object):
     >>> WorkflowBase.MODULE_PREFIX_PAT.match('AverageImages')
     None
     """
-    
+
     SGE_BINARY_PAT = re.compile('-b [ny]')
     """Regexp matcher for the SGE plugin binary switch option."""
-    
+
     def __init__(self, logger, cfg_file=None):
         """
         Initializes this workflow wrapper object.
@@ -48,7 +51,7 @@ class WorkflowBase(object):
         self.logger = logger
         self.configuration = self._load_configuration(cfg_file)
         """The workflow configuration."""
-    
+
     def _load_configuration(self, cfg_file=None):
         """
         Loads the workflow configuration. The default configuration resides in
@@ -62,27 +65,27 @@ class WorkflowBase(object):
         match = WorkflowBase.CLASS_NAME_PAT.match(self.__class__.__name__)
         if not match:
             raise NameError("The workflow wrapper class does not match the standard"
-                " workflow class name pattern: %s" % self.__class__.__name__)
+                            " workflow class name pattern: %s" % self.__class__.__name__)
         name = match.group(1)
         fname = "%s.cfg" % name.lower()
         def_cfg_file = os.path.join(WorkflowBase.DEF_CONF_DIR, fname)
-        
+
         # The configuration files to load.
         cfg_files = []
         if os.path.exists(def_cfg_file):
             cfg_files.append(os.path.abspath(def_cfg_file))
         if cfg_file:
             cfg_files.append(os.path.abspath(cfg_file))
-        
+
         # Load the configuration.
         if cfg_files:
             self.logger.debug("Loading the %s configuration files %s..." %
-                (name, cfg_files))
+                             (name, cfg_files))
             cfg = read_config(*cfg_files)
             return dict(cfg)
         else:
             return {}
-    
+
     def _download_scans(self, xnat, subject, session, dest):
         """
         Download the NIFTI scan files for the given session.
@@ -94,8 +97,8 @@ class WorkflowBase(object):
         :return: the download file paths
         """
         return xnat.download(project(), subject, session, dest=dest,
-            container_type='scan', format='NIFTI')
-    
+                             container_type='scan', format='NIFTI')
+
     def _depict_workflow(self, workflow):
         """Diagrams the given workflow graph."""
         fname = workflow.name + '.dot'
@@ -105,8 +108,8 @@ class WorkflowBase(object):
             grf = fname
         workflow.write_graph(dotfilename=grf)
         self.logger.debug("The %s workflow graph is depicted at %s.png." %
-            (workflow.name, grf))
-    
+                         (workflow.name, grf))
+
     def _run_workflow(self, workflow):
         """
         Executes the given workflow.
@@ -118,19 +121,19 @@ class WorkflowBase(object):
             args = self._configure_plugin(workflow)
         else:
             args = {}
-        
+
         # Set the base directory to an absolute path.
         if workflow.base_dir:
             workflow.base_dir = os.path.abspath(workflow.base_dir)
         else:
             workflow.base_dir = tempfile.mkdtemp()
-        
+
         # Run the workflow.
         self.logger.debug("Executing the workflow %s in %s..." %
-            (workflow.name, workflow.base_dir))
+                         (workflow.name, workflow.base_dir))
         with xnat_helper.connection():
             workflow.run(**args)
-    
+
     def _inspect_workflow_inputs(self, workflow):
         """
         Collects the given workflow nodes' inputs for debugging.
@@ -139,8 +142,8 @@ class WorkflowBase(object):
             is a node parameter {name: value} dictionary
         """
         return {node_name: self._inspect_node_inputs(workflow.get_node(node_name))
-            for node_name in workflow.list_node_names()}
-    
+                for node_name in workflow.list_node_names()}
+
     def _inspect_node_inputs(self, node):
         """
         Collects the given node inputs and plugin arguments for debugging.
@@ -153,9 +156,9 @@ class WorkflowBase(object):
             value = getattr(node.inputs, field)
             if value != None:
                 param_dict[field] = value
-        
+
         return param_dict
-    
+
     def _configure_plugin(self, workflow):
         """
         Sets the ``execution`` and ``SGE`` parameters for the given workflow.
@@ -165,13 +168,13 @@ class WorkflowBase(object):
         :return: the workflow execution arguments
         """
         # The workflow submission arguments:
-        
+
         # The execution setting.
         if 'Execution' in self.configuration:
             workflow.config['execution'] = self.configuration['Execution']
             self.logger.debug("Workflow %s execution parameter: %s." %
-                (workflow.name, workflow.config['execution']))
-        
+                             (workflow.name, workflow.config['execution']))
+
         # The Grid Engine setting.
         if 'SGE' in self.configuration:
             args = dict(plugin='SGE', **self.configuration['SGE'])
@@ -181,12 +184,12 @@ class WorkflowBase(object):
                 if not plugin_args.find(' - b '):
                     plugin_args += ' -b n'
             self.logger.debug("Workflow %s plug-in parameters: %s." %
-                (workflow.name, args))
+                             (workflow.name, args))
         else:
             args = {}
-        
+
         return args
-    
+
     def _configure_nodes(self, workflow):
         """
         Sets the input parameters defined for the given workflow in
@@ -206,51 +209,52 @@ class WorkflowBase(object):
             def_plugin_args = self.configuration['SGE'].get('plugin_args')
             if def_plugin_args:
                 # Remove the negated binary flag, if necessary.
-                def_plugin_args = WorkflowBase.SGE_BINARY_PAT.sub('', def_plugin_args)
+                def_plugin_args = WorkflowBase.SGE_BINARY_PAT.sub(
+                    '', def_plugin_args)
                 self.logger.debug("Workflow %s default node plug-in parameters:"
-                    " %s." % (workflow.name, def_plugin_args))
+                                  " %s." % (workflow.name, def_plugin_args))
         else:
             def_plugin_args = None
-        
+
         # The nodes defined in this workflow start with the workflow name.
         prefix = workflow.name + '.'
         # Configure all node inputs.
         nodes = [workflow.get_node(name)
-            for name in workflow.list_node_names()]
+                 for name in workflow.list_node_names()]
         for node in nodes:
             # An input {field: value} dictionary to format a debug log message.
             input_dict = {}
             # The node interface class configuration entry.
             cfg = self._interface_configuration(node.interface.__class__)
-            
+
             # Set the node inputs or plug-in argument.
             for attr, value in cfg.iteritems():
                 if attr == 'plugin_args':
                     if DISTRIBUTABLE:
                         setattr(node, attr, value)
                         self.logger.debug("%s workflow node %s plugin"
-                            " arguments: %s" % (workflow.name, node, value))
+                                          " arguments: %s" % (workflow.name, node, value))
                 elif value != getattr(node.inputs, attr):
                     # The config value differs from the default value.
                     # Set the field to the config value and collect it
                     # for the debug log message.
                     setattr(node.inputs, attr, value)
                     input_dict[attr] = value
-            
+
             # If the node does not have plug-in arguments and the configuration
             # specifies a default, then set the node plug-in arguments to the
             # default.
             if (def_plugin_args and 'plugin_args' not in cfg
                 and str(node).startswith(prefix)):
                 node.plugin_args = def_plugin_args
-            
+
             # If a field was set to a config value, then print the config
             # setting to the log.
             if input_dict:
                 self.logger.debug("The following %s workflow node %s inputs"
-                    " were set from the configuration: %s" %
-                    (workflow.name, node, input_dict))
-    
+                                  " were set from the configuration: %s" %
+                                 (workflow.name, node, input_dict))
+
     def _interface_configuration(self, klass):
         """
         Returns the {parameter: value} dictionary defined for the given
@@ -284,7 +288,7 @@ class WorkflowBase(object):
                     abbr = prefix + name
                 else:
                     abbr = None
-        
+
         # Use a constant for the default return value, since most
         # interfaces do not have a configuration entry.
         return EMPTY_DICT

@@ -1,6 +1,6 @@
 import os
 from nipype.interfaces.base import (BaseInterfaceInputSpec, TraitedSpec,
-    BaseInterface, File)
+                                    BaseInterface, File)
 
 
 class TouchInputSpec(BaseInterfaceInputSpec):
@@ -12,13 +12,14 @@ class TouchOutputSpec(TraitedSpec):
 
 
 class Touch(BaseInterface):
+
     """
     The Touch interface emulates the Unix ``touch`` command.
     This interface is useful for stubbing out processing
     nodes during workflow development.
     """
     input_spec = TouchInputSpec
-    
+
     output_spec = TouchOutputSpec
 
     def _run_interface(self, runtime):
@@ -35,5 +36,5 @@ class Touch(BaseInterface):
     def _list_outputs(self):
         outputs = self._outputs().get()
         outputs['fname'] = self.inputs.fname
-        
+
         return outputs
