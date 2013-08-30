@@ -442,6 +442,9 @@ class ModelingWorkflow(WorkflowBase):
         """
         config = self.configuration.get('Parameters', {})
         
+        logger(__name__).debug("Setting the PK parameters from the option"
+            " keyword parameters %s and configuration %s..." % (opts, config))
+        
         # The R1_0 computation fields.
         r1_fields = ['pd_dir', 'max_r1_0']
         # All of the possible fields.
@@ -517,14 +520,12 @@ def _make_baseline(dce_images, baseline_end_idx):
         merged = merge_nii.run().outputs.out_file
         mean_image = fsl.MeanImage(name='mean_image')
         mean_image.inputs.in_file = merged
-        
         return mean_image.run().outputs.out_file
     else:
         return dce_images[0]
 
 def _make_r1_0(pdw_image, t1w_image, max_r1_0, mask_file, **kwargs):
     import os
-    from os import path
     import nibabel as nb
     import numpy as np
     from pdw_t1w_to_r1 import pdw_t1w_to_r1
@@ -539,13 +540,13 @@ def _make_r1_0(pdw_image, t1w_image, max_r1_0, mask_file, **kwargs):
     
     cwd = os.getcwd()
     out_nii = nb.Nifti1Image(r1_0, pdw_nw.nii_img.get_affine())
-    out_fn = path.join(cwd, 'r1_0_map.nii.gz')
+    out_fn = os.path.join(cwd, 'r1_0_map.nii.gz')
     nb.save(out_nii, out_fn)
+    
     return out_fn
 
 def _make_r1_series(time_series, r1_0, mask_file, **kwargs):
     import os
-    from os import path
     import nibabel as nb
     from dce_to_r1 import dce_to_r1
     from dcmstack.dcmmeta import NiftiWrapper
@@ -558,13 +559,13 @@ def _make_r1_series(time_series, r1_0, mask_file, **kwargs):
     
     cwd = os.getcwd()
     out_nii = nb.Nifti1Image(r1_series, dce_nw.nii_img.get_affine())
-    out_fn = path.join(cwd, 'r1_series.nii.gz')
+    out_fn = os.path.join(cwd, 'r1_series.nii.gz')
     nb.save(out_nii, out_fn)
+    
     return out_fn
 
 def _get_fit_params(time_series):
     import os, csv
-    from os import path
     import nibabel as nb
     import numpy as np
     from dcmstack.dcmmeta import NiftiWrapper
@@ -603,4 +604,5 @@ def _get_fit_params(time_series):
         csv_writer.writerow(['aif_shift', str(aif_shift)])
         csv_writer.writerow(['r1_cr', '3.8'])
         csv_writer.writerow(['r1_b_pre', '0.71'])
-    return path.join(os.getcwd(), 'params.csv')
+    
+    return os.path.join(os.getcwd(), 'params.csv')
