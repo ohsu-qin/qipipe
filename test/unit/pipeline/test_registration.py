@@ -1,5 +1,5 @@
 import os, re, glob, shutil
-from nose.tools import assert_equal
+from nose.tools import (assert_equal, assert_is_not_none)
 import nipype.pipeline.engine as pe
 from qipipe.helpers.logging_helper import logger
 from qipipe.pipeline import registration

@@ -1,5 +1,5 @@
 import os, glob, re, shutil
-from nose.tools import (assert_equal, assert_true)
+from nose.tools import (assert_equal, assert_false, assert_true)
 from nipype.interfaces.traits_extension import isdefined
 from qipipe.helpers.logging_helper import logger
 from qipipe.interfaces import XNATFind

@@ -1,5 +1,5 @@
 import os, glob, shutil
-from nose.tools import assert_equal
+from nose.tools import (assert_equal, assert_not_equal)
 from qipipe.helpers.logging_helper import logger
 from qipipe.interfaces import GroupDicom
 from test import ROOT

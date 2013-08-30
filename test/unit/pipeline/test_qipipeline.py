@@ -1,5 +1,5 @@
 import os, shutil, distutils
-from nose.tools import (assert_equal, assert_true)
+from nose.tools import (assert_equal, assert_is_not_none, assert_true)
 from qipipe.helpers.logging_helper import logger
 from qipipe.pipeline import qipipeline as qip
 from qipipe.helpers.dicom_helper import iter_dicom
