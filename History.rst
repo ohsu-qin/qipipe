@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub commits
 (http://quip1:6060/qipipe) for change details.
 
+3.2.2 / 2013-09-10
+------------------
+* Fix modeling workflow.
+
 3.2.1 / 2013-08-30
 ------------------
 * Resolve SGE submission problems.
