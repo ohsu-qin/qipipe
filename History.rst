@@ -1,5 +1,5 @@
-This history lists major release themes. See the GitHub commits (http://quip1:6060/qipipe)
-for change details.
+This history lists major release themes. See the GitHub commits
+(http://quip1:6060/qipipe) for change details.
 
 3.2.1 / 2013-08-30
 ------------------
