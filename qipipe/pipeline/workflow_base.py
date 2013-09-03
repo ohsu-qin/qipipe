@@ -11,7 +11,25 @@ from .distributable import DISTRIBUTABLE
 class WorkflowBase(object):
 
     """
-    The WorkflowBase class is the base class for the QIN workflow wrapper classes.
+    The WorkflowBase class is the base class for the QIN workflow wrapper
+    classes.
+
+    The workflow plug-in arguments and node inputs can be specfied in an
+    :class:`qipipe.helpers.ast_config.ASTConfig` file. The standard
+    configuration file name is the lower-case name of the ``WorkflowBase``
+    subclass with ``.cfg`` extension, e.g. ``registration.cfg``. The
+    configuration file paths to load in low-to-high precedence order
+    consist of the following:
+
+    1. the standard config file name in the subclass project ``conf``
+       directory
+
+    2. the standard config file name in the current working directory
+
+    3. the standard config file name in the ``QIN_CONF`` environment
+       variable directory
+
+    4. the *cfg_file* initialization parameter
     """
 
     CLASS_NAME_PAT = re.compile("^(\w+)Workflow$")
@@ -20,15 +38,18 @@ class WorkflowBase(object):
     DEF_CONF_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'conf')
     """The default configuration directory."""
 
+    CFG_ENV_VAR='QIN_CONF'
+    """The configuration directory environment variable."""
+
     INTERFACE_PREFIX_PAT = re.compile('(\w+\.)+interfaces?\.?')
     """Regexp matcher for an interface module."""
 
     MODULE_PREFIX_PAT = re.compile('^((\w+\.)*)(\w+\.)(\w+)$')
     """
     Regexp matcher for a module prefix.
-    
+
     Example:
-    
+
     >>> from qipipe.pipeline.workflow_base import WorkflowBase
     >>> WorkflowBase.MODULE_PREFIX_PAT.match('ants.util.AverageImages').groups()
     ('ants.', 'ants.', 'util.', 'AverageImages')
@@ -44,7 +65,7 @@ class WorkflowBase(object):
         Initializes this workflow wrapper object.
         If the optional configuration file is specified, then the workflow settings
         in that file override the default settings.
-        
+
         :param logger: the logger to use
         :param cfg_file: the optional workflow inputs configuration file
         """
@@ -54,28 +75,42 @@ class WorkflowBase(object):
 
     def _load_configuration(self, cfg_file=None):
         """
-        Loads the workflow configuration. The default configuration resides in
-        the project ``conf`` directory. If an configuration file is specified,
-        then the settings in that file override the default settings.
-        
+        Loads the workflow configuration, as defined in
+        :class:`qipipe.pipeline.workflow_base.WorkflowBase`.
+
         :param cfg_file: the optional configuration file path
         :return: the configuration dictionary
         """
         # The default configuration file is in the conf directory.
         match = WorkflowBase.CLASS_NAME_PAT.match(self.__class__.__name__)
         if not match:
-            raise NameError("The workflow wrapper class does not match the standard"
-                            " workflow class name pattern: %s" % self.__class__.__name__)
+            raise NameError("The workflow wrapper class does not match the"
+                            " standard workflow class name pattern: %s" %
+                            self.__class__.__name__)
         name = match.group(1)
         fname = "%s.cfg" % name.lower()
         def_cfg_file = os.path.join(WorkflowBase.DEF_CONF_DIR, fname)
 
         # The configuration files to load.
-        cfg_files = []
-        if os.path.exists(def_cfg_file):
-            cfg_files.append(os.path.abspath(def_cfg_file))
+        cfg_files = [os.path.abspath(def_cfg_file)]
+
+        # The working directory config file.
+        cwd_cfg_file = os.path.abspath(fname)
+        if cwd_cfg_file not in cfg_files:
+            cfg_files.add(cwd_cfg_file)
+
+        # The config file specified by the directory environment variable.
+        env_cfg_dir = os.getenv(WorkflowBase.CFG_ENV_VAR, None)
+        if env_cfg_dir:
+            env_cfg_file = os.path.abspath(os.path.join(env_cfg_dir, fname))
+            if env_cfg_file not in cfg_files:
+                cfg_files.add(env_cfg_file)
+
+        # The argument config file.
         if cfg_file:
-            cfg_files.append(os.path.abspath(cfg_file))
+            cfg_file = os.path.abspath(cfg_file)
+            if cfg_file not in cfg_files:
+                cfg_files.add(cfg_file)
 
         # Load the configuration.
         if cfg_files:
@@ -89,7 +124,7 @@ class WorkflowBase(object):
     def _download_scans(self, xnat, subject, session, dest):
         """
         Download the NIFTI scan files for the given session.
-        
+
         :param xnat: the :class:`qipipe.helpers.xnat_helper.XNAT` connection
         :param subject: the XNAT subject label
         :param session: the XNAT session label
@@ -113,7 +148,7 @@ class WorkflowBase(object):
     def _run_workflow(self, workflow):
         """
         Executes the given workflow.
-        
+
         :param workflow: the workflow to run
         """
         # Check whether the workflow can be distributed.
@@ -137,7 +172,7 @@ class WorkflowBase(object):
     def _inspect_workflow_inputs(self, workflow):
         """
         Collects the given workflow nodes' inputs for debugging.
-        
+
         :return: a {node name: parameters} dictionary, where *parameters*
             is a node parameter {name: value} dictionary
         """
@@ -147,7 +182,7 @@ class WorkflowBase(object):
     def _inspect_node_inputs(self, node):
         """
         Collects the given node inputs and plugin arguments for debugging.
-        
+
         :return: the node parameter {name: value} dictionary
         """
         fields = node.inputs.copyable_trait_names()
@@ -163,7 +198,7 @@ class WorkflowBase(object):
         """
         Sets the ``execution`` and ``SGE`` parameters for the given workflow.
         See the ``conf`` directory files for examples.
-        
+
         :param workflow: the workflow to run
         :return: the workflow execution arguments
         """
@@ -181,8 +216,10 @@ class WorkflowBase(object):
             if 'plugin_args' in args:
                 plugin_args = args['plugin_args']
                 # Add the negated binary flag, if necessary.
-                if not plugin_args.find(' - b '):
-                    plugin_args += ' -b n'
+                if 'qsub_args' in plugin_args:
+                    qsub_args = plugin_args['qsub_args']
+                    if not qsub_args.find(' - b '):
+                        plugin_args['qsub_args'] = qsub_args + ' -b n'
             self.logger.debug("Workflow %s plug-in parameters: %s." %
                              (workflow.name, args))
         else:
@@ -194,14 +231,14 @@ class WorkflowBase(object):
         """
         Sets the input parameters defined for the given workflow in
         this WorkflowBase's configuration.
-        
+
         :Note: nested workflow nodes are not configured, e.g. if the
         ``registration`` workflow connects a `realign`` workflow
         node ``fnirt``, then the nested ``realign.fnirt`` node in
         ``registration`` is not configured.
-        
+
         See :meth:`qipipe.pipeline.WorkflowBase._node_input_configuration`
-        
+
         :param workflow: the workflow containing the nodes
         """
         # The default Grid Engine setting.
@@ -263,12 +300,12 @@ class WorkflowBase(object):
         configuration topic matches the module path of the interface class
         name. The topic can elide the ``interfaces`` or ``interface`` prefix,
         e.g.:
-            
+
             [nipype.interfaces.ants.AverageImages]
             [ants.AverageImages]
-        
+
         both refer to the ANTS AverageImages interface.
-        
+
         :param node: the interface class to check
         :return: the corresponding {field: value} dictionary
         """
