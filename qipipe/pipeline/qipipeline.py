@@ -311,7 +311,7 @@ class QIPipelineWorkflow(WorkflowBase):
         if reg_opt:
             if resubmit:
                 self._logger.debug("The QIN pipeline workflow will resubmit the"
-                             " registration workflow." % reg_opt)
+                             " %s registration workflow." % reg_opt)
                 reg_wf_gen = RegistrationWorkflow(
                     base_dir=base_dir, reconstruction=reg_opt)
                 reg_wf = reg_wf_gen.workflow
