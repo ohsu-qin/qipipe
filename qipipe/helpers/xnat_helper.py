@@ -589,7 +589,8 @@ class XNAT(object):
 
     def _infer_xnat_resource(self, experiment, opts):
         """
-        Infers the resource container item from the given options.
+        Infers the XNAT resource type and value from the given options.
+        The default resource is the ``NIFTI`` scans.
         
         :param experiment: the XNAT experiment object
         :param opts: the :meth:`XNAT.download` options
@@ -601,7 +602,13 @@ class XNAT(object):
         format = opts.get('format') or 'NIFTI'
 
         # The resource parent type and name.
-        ctr_type, ctr_name = self._infer_resource_container(opts)
+        ctr_spec = self._infer_resource_container(opts)
+        if ctr_spec:
+            ctr_type, ctr_name = ctr_spec
+        else
+            ctr_type = 'scan'
+            ctr_name = None
+        
         # The resource parent.
         rsc_parent = self._xnat_resource_parent(experiment, ctr_type, ctr_name)
 
