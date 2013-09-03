@@ -325,7 +325,11 @@ class QIPipelineWorkflow(WorkflowBase):
                 reg_wf = self._create_registration_download_workflow(
                     base_dir=base_dir, recon=reg_opt)
                 self.registration_reconstruction = reg_opt
+                logger.debug("The QIN pipeline workflow will download the"
+                             " registration reconstruction %s." % reg_opt)
             else:
+                self.logger.debug("Skipping registration, since registration"
+                                  "and modeling are disabled.")
                 reg_wf = None
         elif reg_opt == None:
             # The registration option is neither an existing XNAT
@@ -346,9 +350,11 @@ class QIPipelineWorkflow(WorkflowBase):
                 # Download the input XNAT session mask.
                 mask_wf = self._create_mask_download_workflow(
                     base_dir=base_dir, recon=mask_opt)
+                logger.debug("The QIN pipeline workflow will download the"
+                             " mask reconstruction %s." % mask_opt)
             else:
-                self.logger.debug("Skipping mask download, since registration"
-                                  "and modeling are disabled.")
+                self.logger.debug("Skipping the mask workflow, since both"
+                                  " registration and modeling are disabled.")
                 mask_wf = None
         else:
             mask_wf = MaskWorkflow(base_dir=base_dir).workflow
@@ -357,8 +363,8 @@ class QIPipelineWorkflow(WorkflowBase):
         # XNAT objects are specified, then there is no need
         # to use the scan image files.
         if mask_opt and reg_opt:
-            self.logger.info("Skipping staging, since the registration and mask are"
-                             " already specified.")
+            self.logger.info("Skipping staging, since the realigned images"
+                             " and mask will be downloaded.")
             stg_wf = None
         elif stg_opt == False:
             # Download the input XNAT session images.
