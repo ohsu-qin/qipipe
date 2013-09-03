@@ -134,20 +134,11 @@ class QIPipelineWorkflow(WorkflowBase):
             names
         :param opts: the meth:`qipipe.pipeline.staging.run` options,
             augmented with the following keyword arguments:
-        :keyword dest: the TCIA staging destination directory
-            (default is a subdirectory named ``staged`` in the
-            current working directory)
         :keyword collection: the AIRC collection name defined by
             :mod:`qipipe.staging.airc_collection`, required if
             staging is enabled
         :return: the new *{subject: session: results}*  dictionary
         """
-        # The staging location.
-        if 'dest' in opts:
-            dest = os.path.abspath(opts.pop('dest'))
-        else:
-            dest = os.path.join(os.getcwd(), 'staged')
-
         # If registration is skipped, then start with the registration
         # download.
         # Otherwise, if staging is disabled, then run the download workflow.
@@ -162,7 +153,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 raise ValueError(
                     'QIPipeline is missing the collection argument')
             collection = opts.pop('collection')
-            stg_dict = staging.run(collection, *inputs, dest=dest,
+            stg_dict = staging.run(collection, *inputs,
                                    base_dir=exec_wf.base_dir,
                                    workflow=exec_wf, **opts)
             sbj_sess_dict = {sbj: sess_dict.keys()
@@ -305,7 +296,9 @@ class QIPipelineWorkflow(WorkflowBase):
             mdl_wf = None
         elif reg_opt == False:
             raise ValueError(
-                "Modeling is enabled but registration is disabled")
+                "The QIN pipeline cannot perform modeling, since the"
+                " registration workflow is disabled and no realigned"
+                " images will be downloaded.")
         else:
             mdl_wf_gen = ModelingWorkflow(base_dir=base_dir)
             mdl_wf = mdl_wf_gen.workflow
@@ -316,6 +309,8 @@ class QIPipelineWorkflow(WorkflowBase):
         # realigned images.
         if reg_opt:
             if resubmit:
+                logger.debug("The QIN pipeline workflow will resubmit the"
+                             " registration workflow." % reg_opt)
                 reg_wf_gen = RegistrationWorkflow(
                     base_dir=base_dir, reconstruction=reg_opt)
                 reg_wf = reg_wf_gen.workflow
@@ -328,8 +323,8 @@ class QIPipelineWorkflow(WorkflowBase):
                 logger.debug("The QIN pipeline workflow will download the"
                              " registration reconstruction %s." % reg_opt)
             else:
-                self.logger.debug("Skipping registration, since registration"
-                                  "and modeling are disabled.")
+                self.logger.info("Skipping %s realigned image download, since"
+                                 " modeling is disabled." % reg_opt)
                 reg_wf = None
         elif reg_opt == None:
             # The registration option is neither an existing XNAT
@@ -353,7 +348,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 logger.debug("The QIN pipeline workflow will download the"
                              " mask reconstruction %s." % mask_opt)
             else:
-                self.logger.debug("Skipping the mask workflow, since both"
+                self.logger.info("Skipping mask download, since both"
                                   " registration and modeling are disabled.")
                 mask_wf = None
         else:

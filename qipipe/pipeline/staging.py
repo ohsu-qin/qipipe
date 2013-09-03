@@ -18,7 +18,7 @@ def run(*inputs, **opts):
     """
     Creates a :class:`qipipe.pipeline.staging.StagingWorkflow` and runs it
     on the given inputs.
-    
+
     :param inputs: the :meth:`qipipe.pipeline.staging.StagingWorkflow.run` inputs
     :param opts: the :class:`qipipe.pipeline.staging.StagingWorkflow` initializer
         and :meth:`qipipe.pipeline.staging.StagingWorkflow.run` options
@@ -35,45 +35,45 @@ class StagingWorkflow(WorkflowBase):
     """
     The StagingWorkflow class builds and executes the staging Nipype workflow.
     The staging workflow includes the following steps:
-    
+
     - Group the input DICOM images into series.
-    
+
     - Fix each input DICOM file header using the
       :class:`qipipe.interfaces.fix_dicom.FixDicom` interface.
-    
+
     - Compress each corrected DICOM file.
-    
+
     - Upload each compressed DICOM file into XNAT.
-    
+
     - Stack each new series's 2-D DICOM files into a 3-D series NiFTI file
       using the DcmStack_ interface.
-    
+
     - Upload each new series stack into XNAT.
-    
+
     - Make the CTP_ QIN-to-TCIA subject id map.
-    
+
     - Collect the id map and the compressed DICOM images into a target directory
       in collection/subject/session/series format for TCIA upload.
-    
+
     The staging workflow input is the ``input_spec`` node consisting of the
     following input fields:
-    
+
     - ``subject``: the subject name
-    
+
     - ``session``: the session name
-    
+
     The staging workflow output is the ``output_spec`` node consisting of the
     following output fields:
-    
+
     - ``images``: the session series stack NiFTI image files
-    
+
     In addition, the staging workflow implements an ``iter_scan`` output node
     consisting of the following output fields:
-    
+
     - ``scan``: the scan number
 
     - ``image``: the scan NiFTI image file
-    
+
     .. _CTP: https://wiki.cancerimagingarchive.net/display/Public/Image+Submitter+Site+User%27s+Guide
     .. _DcmStack: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.dcmstack.html
     """
@@ -82,7 +82,7 @@ class StagingWorkflow(WorkflowBase):
         """
         If the optional configuration file is specified, then the workflow
         settings in that file override the default settings.
-        
+
         :parameter base_dir: the workflow execution directory
             (default a new temp directory)
         :parameter cfg_file: the optional workflow inputs configuration file
@@ -99,42 +99,42 @@ class StagingWorkflow(WorkflowBase):
         """
         Runs the staging workflow on the new AIRC visits in the given
         input directories.
-        
+
         The new DICOM files to upload to TCIA are placed in the destination
         `dicom` subdirectory in the following hierarchy:
-            
+
             /path/to/dest/dicom/
                 subject/
                     session/
                         series/
                             file.dcm.gz ...
-        
+
         where *file* is the DICOM file name.
-        
+
         The new series stack NiFTI files are placed in the destination
         `stacks` subdirectory in the following hierarchy:
-            
+
             /path/to/dest/stacks/
                 subject/
                     session/
                         file.nii.gz ...
-        
+
         :Note: If the *overwrite* option is set, then existing XNAT subjects
             which correspond to subjects in the input directories are deleted.
-        
+
         If the *workflow* parameter is set, then that execution workflow is
         required to include a node named ``input_spec`` with inputs ``subject``
         and ``session`` which connect to the respective inputs in the child
         staging workflow.
-        
+
         The return value is a *{subject: {session: [scans]}}* XNAT name
         dictionary for each processed session.
-        
+
         :param collection: the AIRC image collection name
         :param inputs: the AIRC source subject directories to stage
         :param opts: the following workflow execution options:
-        :keyword dest: the TCIA upload destination directory (default current
-            working directory)
+        :keyword dest: the TCIA staging destination directory (default is a
+            subdirectory named ``staged`` in the current working directory)
         :keyword resubmit: flag indicating whether to ignore existing
             XNAT subjects
         :keyword overwrite: flag indicating whether to replace existing XNAT
@@ -161,9 +161,9 @@ class StagingWorkflow(WorkflowBase):
 
         # The staging location.
         if 'dest' in opts:
-            dest = os.path.abspath(opts['dest'])
+            dest = os.path.abspath(opts.pop('dest'))
         else:
-            dest = os.getcwd()
+            dest = os.path.join(os.getcwd(), 'staged')
 
         # The workflow subjects.
         subjects = stg_dict.keys()
@@ -200,12 +200,12 @@ class StagingWorkflow(WorkflowBase):
         """
         Detects the AIRC visits in the given input directories. The visit
         images are grouped by series.
-        
+
         By default, only new visits which do not yet exist in XNAT are
         selected. Set the ``resubmit`` flag to False to select
         all visits. Set the ``overwrite`` flag to True to delete existing
         XNAT subjects.
-        
+
         :param collection: the AIRC image collection name
         :param inputs: the AIRC source subject directories
         :param opts: the following options:
@@ -317,7 +317,7 @@ class StagingWorkflow(WorkflowBase):
         """
         Makes the staging workflow described in
         :class:`qipipe.pipeline.staging.StagingWorkflow`.
-        
+
         :param base_dir: the workflow execution directory
             (default is a new temp directory)
         :return: the new workflow
@@ -429,7 +429,7 @@ class StagingWorkflow(WorkflowBase):
     def _group_sessions_by_series(self, *session_specs):
         """
         Creates the staging dictionary for the new images in the given sessions.
-        
+
         :param session_specs: the *(subject, session, dicom_files)* tuples to group
         :return: the *{subject: {session: {series: [dicom files]}}}* dictionary
         """
@@ -452,7 +452,7 @@ class StagingWorkflow(WorkflowBase):
         """
         Returns the dest/subject/session/series directory path in which to place
         DICOM files for TCIA upload. Creates the directory, if necessary.
-        
+
         :return: the target series directory path
         """
         path = os.path.join(dest, subject, session, str(series))
