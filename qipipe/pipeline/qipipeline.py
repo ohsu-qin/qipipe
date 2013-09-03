@@ -293,6 +293,7 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # The modeling workflow.
         if mdl_opt == False:
+            self.logger.info("Skipping modeling.")
             mdl_wf = None
         elif reg_opt == False:
             raise ValueError(
@@ -338,21 +339,21 @@ class QIPipelineWorkflow(WorkflowBase):
             reg_wf = None
 
         # The mask workflow.
-        # If both registration and modeling are disabled, then
+        # Unless both registration and modeling are enabled, then
         # there is no need to download a mask.
-        if mask_opt:
-            if reg_wf or mdl_wf:
+        if reg_wf or mdl_wf:
+            if mask_opt:
                 # Download the input XNAT session mask.
                 mask_wf = self._create_mask_download_workflow(
                     base_dir=base_dir, recon=mask_opt)
                 logger.debug("The QIN pipeline workflow will download the"
                              " mask reconstruction %s." % mask_opt)
             else:
-                self.logger.info("Skipping mask download, since both"
-                                  " registration and modeling are disabled.")
-                mask_wf = None
+                mask_wf = MaskWorkflow(base_dir=base_dir).workflow
         else:
-            mask_wf = MaskWorkflow(base_dir=base_dir).workflow
+             self.logger.info("Skipping mask download, since both"
+                              " registration and modeling are disabled.")
+             mask_wf = None
 
         # The staging workflow. If the mask and registration
         # XNAT objects are specified, then there is no need
