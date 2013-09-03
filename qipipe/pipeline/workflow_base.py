@@ -178,6 +178,11 @@ class WorkflowBase(object):
         # The Grid Engine setting.
         if 'SGE' in self.configuration:
             args = dict(plugin='SGE', **self.configuration['SGE'])
+            if 'plugin_args' in args:
+                plugin_args = args['plugin_args']
+                # Add the negated binary flag, if necessary.
+                if not plugin_args.find(' - b '):
+                    plugin_args += ' -b n'
             self.logger.debug("Workflow %s plug-in parameters: %s." %
                              (workflow.name, args))
         else:
@@ -202,8 +207,13 @@ class WorkflowBase(object):
         # The default Grid Engine setting.
         if DISTRIBUTABLE and 'SGE' in self.configuration:
             def_plugin_args = self.configuration['SGE'].get('plugin_args')
-            self.logger.debug("Workflow %s default node plug-in parameters:"
-                              " %s." % (workflow.name, def_plugin_args))
+            if def_plugin_args and 'qsub_args' in def_plugin_args:
+                # Remove the negated binary flag, if necessary.
+                qsub_args = def_plugin_args['qsub_args']
+                def_plugin_args['qsub_args'] = WorkflowBase.SGE_BINARY_PAT.sub(
+                    '', qsub_args)
+                self.logger.debug("Workflow %s default node plug-in parameters:"
+                                  " %s." % (workflow.name, def_plugin_args))
         else:
             def_plugin_args = None
 
