@@ -46,9 +46,9 @@ def main(argv=sys.argv):
     if args.modeling == False:
         opts['modeling'] = args.modeling
     if args.overwrite:
-        opts['overwrite'] = True
+        opts['overwrite'] = args.overwrite
     if args.resubmit:
-        opts['resubmit'] = False
+        opts['resubmit'] = args.resubmit
 
     # Run the QIN workflow.
     qip.run(*args.inputs, **opts)
