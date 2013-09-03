@@ -605,7 +605,7 @@ class XNAT(object):
         ctr_spec = self._infer_resource_container(opts)
         if ctr_spec:
             ctr_type, ctr_name = ctr_spec
-        else
+        else:
             ctr_type = 'scan'
             ctr_name = None
         
