@@ -127,13 +127,15 @@ class RegistrationWorkflow(WorkflowBase):
         :keyword base_dir: the workflow execution directory
             (default a new temp directory)
         :keyword cfg_file: the optional workflow inputs configuration file
+        :keyword reconstruction: the XNAT reconstruction name to use
         :keyword technique: the case-insensitive workflow technique
             (``ANTS`` or ``FNIRT``, default ``ANTS``)
         """
         super(RegistrationWorkflow, self).__init__(logger(__name__),
                                                    opts.pop('cfg_file', None))
 
-        self.reconstruction = self._generate_reconstruction_name()
+        self.reconstruction = opts.pop('reconstruction',
+                                       self._generate_reconstruction_name())
         """The XNAT reconstruction name used for all runs against this workflow
         instance."""
 
@@ -294,8 +296,10 @@ class RegistrationWorkflow(WorkflowBase):
                        realign_wf, 'input_spec.fixed_image')
 
         # Upload the realigned image to XNAT.
-        upload_reg = pe.Node(XNATUpload(project=project(),
-                                        reconstruction=self.reconstruction, format='NIFTI'), name='upload_reg')
+        upload_reg_xfc = XNATUpload(project=project(),
+                                    reconstruction=self.reconstruction,
+                                    format='NIFTI')
+        upload_reg = pe.Node(upload_reg_xfc, name='upload_reg')
         reg_wf.connect(input_spec, 'subject', upload_reg, 'subject')
         reg_wf.connect(input_spec, 'session', upload_reg, 'session')
         reg_wf.connect(
@@ -309,7 +313,8 @@ class RegistrationWorkflow(WorkflowBase):
 
         # The workflow output is the realigned image files.
         output_spec = pe.JoinNode(IdentityInterface(fields=['images']),
-                                  joinsource='iter_image', joinfield='images', name='output_spec')
+                                  joinsource='iter_image', joinfield='images',
+                                  name='output_spec')
         reg_wf.connect(iter_realigned, 'image', output_spec, 'images')
 
         self._configure_nodes(reg_wf)

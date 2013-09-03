@@ -102,8 +102,9 @@ class QIPipelineWorkflow(WorkflowBase):
         Runs the OHSU QIN pipeline on the the given inputs, as follows:
 
         - If the *registration* option is set to a XNAT reconstruction
-          name, then the realigned images are downloaded for the given
-          XNAT session label inputs.
+          name and the *resubmit* option is not set to True, then the
+          realigned images are downloaded for the given XNAT session
+          label inputs.
 
         - Otherwise, if the *staging* option is set to False, then the
           series scan stack images are downloaded for the given
@@ -147,11 +148,11 @@ class QIPipelineWorkflow(WorkflowBase):
         else:
             dest = os.path.join(os.getcwd(), 'staged')
 
-        # If there is a XNAT registration reconstruction name, then
-        # start with the registration download. Otherwise, if
-        # staging is disabled, then run the download workflow.
+        # If registration is skipped, then start with the registration
+        # download.
+        # Otherwise, if staging is disabled, then run the download workflow.
         # Otherwise, delegate to staging with the execution workflow.
-        if opts.get('registration'):
+        if opts.get('registration') and 'resubmit' not in opts:
             sbj_sess_dict = self._run_with_registration_download(*inputs)
         elif opts.get('staging') == False:
             sbj_sess_dict = self._run_with_scan_download(*inputs)
@@ -159,10 +160,11 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf = self.workflow
             if 'collection' not in opts:
                 raise ValueError(
-                    "QIPipeline is missing the collection argument")
+                    'QIPipeline is missing the collection argument')
             collection = opts.pop('collection')
             stg_dict = staging.run(collection, *inputs, dest=dest,
-                                   base_dir=exec_wf.base_dir, workflow=exec_wf, **opts)
+                                   base_dir=exec_wf.base_dir,
+                                   workflow=exec_wf, **opts)
             sbj_sess_dict = {sbj: sess_dict.keys()
                              for sbj, sess_dict in stg_dict.iteritems()}
 
@@ -292,6 +294,7 @@ class QIPipelineWorkflow(WorkflowBase):
         exec_wf = pe.Workflow(name='qin_exec', base_dir=base_dir)
 
         # The workflow options.
+        resubmit = opts.get('resubmit')
         stg_opt = opts.get('staging')
         mask_opt = opts.get('mask')
         reg_opt = opts.get('registration')
@@ -311,17 +314,29 @@ class QIPipelineWorkflow(WorkflowBase):
         # The registration workflow.
         # If modeling is disabled, then there is no need to download
         # realigned images.
-        if reg_opt == False or (reg_opt and not mdl_wf):
-            reg_wf = None
-        elif reg_opt:
-            # Download the input XNAT session reconstruction.
-            reg_wf = self._create_registration_download_workflow(
-                base_dir=base_dir, recon=reg_opt)
-            self.registration_reconstruction = reg_opt
-        else:
+        if reg_opt:
+            if resubmit:
+                reg_wf_gen = RegistrationWorkflow(
+                    base_dir=base_dir, reconstruction=reg_opt)
+                reg_wf = reg_wf_gen.workflow
+                self.registration_reconstruction = reg_opt
+            elif mdl_wf:
+                # Download the input XNAT session reconstruction.
+                reg_wf = self._create_registration_download_workflow(
+                    base_dir=base_dir, recon=reg_opt)
+                self.registration_reconstruction = reg_opt
+            else:
+                reg_wf = None
+        elif reg_opt == None:
+            # The registration option is neither an existing XNAT
+            # reconstruction nor False, so run the registration to
+            # generate a new XNAT reconstruction.
             reg_wf_gen = RegistrationWorkflow(base_dir=base_dir)
             reg_wf = reg_wf_gen.workflow
             self.registration_reconstruction = reg_wf_gen.reconstruction
+        else:
+            # The registration option is False, so skip it.
+            reg_wf = None
 
         # The mask workflow.
         # If both registration and modeling are disabled, then

@@ -135,8 +135,8 @@ class StagingWorkflow(WorkflowBase):
         :param opts: the following workflow execution options:
         :keyword dest: the TCIA upload destination directory (default current
             working directory)
-        :keyword ignore_existing: flag indicating whether to ignore existing
-            XNAT subjects (default True)
+        :keyword resubmit: flag indicating whether to ignore existing
+            XNAT subjects
         :keyword overwrite: flag indicating whether to replace existing XNAT
             subjects (default False)
         :keyword workflow: the workflow to run (default is the standard
@@ -145,7 +145,7 @@ class StagingWorkflow(WorkflowBase):
         """
         # The visit detection options.
         stg_opts = {}
-        for opt in ['overwrite', 'ignore_existing']:
+        for opt in ['overwrite', 'resubmit']:
             if opt in opts:
                 stg_opts[opt] = opts[opt]
 
@@ -202,15 +202,15 @@ class StagingWorkflow(WorkflowBase):
         images are grouped by series.
         
         By default, only new visits which do not yet exist in XNAT are
-        selected. Set the ``ignore_existing`` flag to False to select
+        selected. Set the ``resubmit`` flag to False to select
         all visits. Set the ``overwrite`` flag to True to delete existing
         XNAT subjects.
         
         :param collection: the AIRC image collection name
         :param inputs: the AIRC source subject directories
         :param opts: the following options:
-        :keyword ignore_existing: flag indicating whether to ignore existing
-            XNAT subjects (default True)
+        :keyword resubmit: flag indicating whether to ignore existing
+            XNAT subjects
         :keyword overwrite: flag indicating whether to replace existing XNAT
             subjects (default False)
         :return: the *{subject: {session: {series: [dicom files]}}}* dictionary
@@ -223,8 +223,8 @@ class StagingWorkflow(WorkflowBase):
 
         # Collect the AIRC visits into (subject, session, dicom_files)
         # tuples.
-        ignore_existing = opts.get('ignore_existing', True)
-        if ignore_existing:
+        resubmit = opts.get('resubmit', True)
+        if resubmit:
             visit_iter = iter_new_visits(collection, *inputs)
         else:
             visit_iter = iter_visits(collection, *inputs)
@@ -232,7 +232,7 @@ class StagingWorkflow(WorkflowBase):
 
         # If no images were detected, then bail.
         if not visits:
-            if ignore_existing:
+            if resubmit:
                 self.logger.info(
                     "No new visits were detected in the input directories.")
             else:
