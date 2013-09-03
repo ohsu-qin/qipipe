@@ -171,7 +171,7 @@ class StagingWorkflow(WorkflowBase):
         self._create_subject_map(collection, subjects, dest)
 
         series_cnt = sum(map(len, stg_dict.itervalues()))
-        self.logger.debug(
+        self._logger.debug(
             "Staging %d new %s series from %d subjects in %s..." %
             (series_cnt, collection, len(subjects), dest))
 
@@ -179,14 +179,14 @@ class StagingWorkflow(WorkflowBase):
         exec_wf = opts.get('workflow')
 
         for sbj, sess_dict in stg_dict.iteritems():
-            self.logger.debug("Staging subject %s..." % sbj)
+            self._logger.debug("Staging subject %s..." % sbj)
             for sess, ser_dict in sess_dict.iteritems():
-                self.logger.debug("Staging %s session %s..." % (sbj, sess))
+                self._logger.debug("Staging %s session %s..." % (sbj, sess))
                 self._stage_session(collection, sbj, sess,
                                     ser_dict, dest, exec_wf)
-                self.logger.debug("Staged %s session %s." % (sbj, sess))
-            self.logger.debug("Staged subject %s." % sbj)
-        self.logger.debug("Staged %d new %s series from %d subjects in %s." %
+                self._logger.debug("Staged %s session %s." % (sbj, sess))
+            self._logger.debug("Staged subject %s." % sbj)
+        self._logger.debug("Staged %d new %s series from %d subjects in %s." %
                          (series_cnt, collection, len(subjects), dest))
 
         # Return the {subject: {session: [scans]}} dictionary.
@@ -233,13 +233,13 @@ class StagingWorkflow(WorkflowBase):
         # If no images were detected, then bail.
         if not visits:
             if resubmit:
-                self.logger.info(
+                self._logger.info(
                     "No new visits were detected in the input directories.")
             else:
-                self.logger.info(
+                self._logger.info(
                     "No visits were detected in the input directories.")
             return {}
-        self.logger.debug("%d visits were detected" % len(visits))
+        self._logger.debug("%d visits were detected" % len(visits))
 
         # Group the DICOM files by series.
         return self._group_sessions_by_series(*visits)
@@ -248,11 +248,11 @@ class StagingWorkflow(WorkflowBase):
         """
         Maps each QIN Patient ID to a TCIA Patient ID for upload using CTP.
         """
-        self.logger.debug("Creating the TCIA subject map in %s..." % dest)
+        self._logger.debug("Creating the TCIA subject map in %s..." % dest)
         map_ctp = MapCTP(
             collection=collection, patient_ids=subjects, dest=dest)
         result = map_ctp.run()
-        self.logger.debug("Created the TCIA subject map %s." %
+        self._logger.debug("Created the TCIA subject map %s." %
                           result.outputs.out_file)
 
     def _stage_session(self, collection, subject, session, ser_dicom_dict,
@@ -276,7 +276,7 @@ class StagingWorkflow(WorkflowBase):
             ser_dest = self._make_series_staging_directory(dest, subject,
                                                            session, series)
             ser_dest_tuples.append((series, ser_dest))
-            self.logger.debug(
+            self._logger.debug(
                 "Staging %d %s %s series %s DICOM files in %s..." %
                 (len(dicom_files), subject, session, series, ser_dest))
 
@@ -310,7 +310,7 @@ class StagingWorkflow(WorkflowBase):
 
         # Execute the workflow.
         self._run_workflow(exec_wf)
-        self.logger.debug("Staged %d %s %s series %d DICOM files in %s." %
+        self._logger.debug("Staged %d %s %s series %d DICOM files in %s." %
                          (len(dicom_files), subject, session, series, ser_dest))
 
     def _create_workflow(self, base_dir=None):
@@ -322,7 +322,7 @@ class StagingWorkflow(WorkflowBase):
             (default is a new temp directory)
         :return: the new workflow
         """
-        self.logger.debug("Creating the DICOM processing workflow...")
+        self._logger.debug("Creating the DICOM processing workflow...")
 
         # The Nipype workflow object.
         workflow = pe.Workflow(name='staging', base_dir=base_dir)
@@ -331,7 +331,7 @@ class StagingWorkflow(WorkflowBase):
         in_fields = ['collection', 'subject', 'session']
         input_spec = pe.Node(IdentityInterface(fields=in_fields),
                              name='input_spec')
-        self.logger.debug("The %s workflow input node is %s with fields %s" %
+        self._logger.debug("The %s workflow input node is %s with fields %s" %
                          (workflow.name, input_spec.name, in_fields))
 
         # The series iterator.
@@ -339,14 +339,14 @@ class StagingWorkflow(WorkflowBase):
         iter_series = pe.Node(IdentityInterface(fields=iter_ser_fields),
                               name='iter_series')
         workflow.connect(input_spec, 'session', iter_series, 'session')
-        self.logger.debug("The %s workflow iterable node is %s with iterable fields"
+        self._logger.debug("The %s workflow iterable node is %s with iterable fields"
                           " %s" % (workflow.name, iter_series.name, ['series', 'dest']))
 
         # The DICOM file iterator.
         iter_dicom_fields = ['series', 'dicom_file']
         iter_dicom = pe.Node(IdentityInterface(fields=iter_dicom_fields),
                              itersource=('iter_series', 'series'), name='iter_dicom')
-        self.logger.debug("The %s workflow iterable node is %s with iterable"
+        self._logger.debug("The %s workflow iterable node is %s with iterable"
                           "source %s and iterables ('%s', {%s: %s})" % (workflow.name,
                                                                         iter_dicom.name, iter_series.name, 'dicom_file', 'series',
                                                                         'dicom_files'))
@@ -419,9 +419,9 @@ class StagingWorkflow(WorkflowBase):
 
         self._configure_nodes(workflow)
 
-        self.logger.debug("Created the %s workflow." % workflow.name)
+        self._logger.debug("Created the %s workflow." % workflow.name)
         # If debug is set, then diagram the workflow graph.
-        if self.logger.level <= logging.DEBUG:
+        if self._logger.level <= logging.DEBUG:
             self._depict_workflow(workflow)
 
         return workflow

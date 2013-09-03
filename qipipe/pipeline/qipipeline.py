@@ -183,14 +183,14 @@ class QIPipelineWorkflow(WorkflowBase):
         :param inputs: the XNAT session labels
         :return: the the XNAT *{subject: [session]}* dictionary
         """
-        self.logger.debug("Running the QIN pipeline execution workflow...")
+        self._logger.debug("Running the QIN pipeline execution workflow...")
         result_dict = defaultdict(list)
         exec_wf = self.workflow
         input_spec = exec_wf.get_node('input_spec')
 
         with xnat_helper.connection() as xnat:
             for prj, sbj, sess in self._parse_session_labels(inputs):
-                self.logger.debug(
+                self._logger.debug(
                     "Processing the %s %s %s realigned images..." %
                     (prj, sbj, sess))
 
@@ -212,7 +212,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 # Capture the result.
                 result_dict[sbj].append(sess)
 
-        self.logger.debug("Completed the QIN pipeline execution workflow.")
+        self._logger.debug("Completed the QIN pipeline execution workflow.")
         return result_dict
 
     def _run_with_registration_download(self, *inputs):
@@ -222,13 +222,13 @@ class QIPipelineWorkflow(WorkflowBase):
         :param inputs: the XNAT reconstruction labels
         :return: the the XNAT *{subject: [session]}* dictionary
         """
-        self.logger.debug("Running the QIN pipeline execution workflow...")
+        self._logger.debug("Running the QIN pipeline execution workflow...")
         result_dict = defaultdict(list)
         exec_wf = self.workflow
         input_spec = exec_wf.get_node('input_spec')
 
         for prj, sbj, sess in self._parse_session_labels(inputs):
-            self.logger.debug("Processing the %s %s %s realigned images..." %
+            self._logger.debug("Processing the %s %s %s realigned images..." %
                              (prj, sbj, sess))
 
             # Set the project id.
@@ -242,7 +242,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # Capture the result.
             result_dict[sbj].append(sess)
 
-        self.logger.debug("Completed the QIN pipeline execution workflow.")
+        self._logger.debug("Completed the QIN pipeline execution workflow.")
         return result_dict
 
     def _parse_session_labels(self, labels):
@@ -271,7 +271,7 @@ class QIPipelineWorkflow(WorkflowBase):
         :param opts: the constituent workflow initializer options
         :return: the Nipype workflow
         """
-        self.logger.debug("Building the QIN pipeline execution workflow...")
+        self._logger.debug("Building the QIN pipeline execution workflow...")
 
         # The work directory used for the master workflow and all
         # constituent workflows.
@@ -293,7 +293,7 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # The modeling workflow.
         if mdl_opt == False:
-            self.logger.info("Skipping modeling.")
+            self._logger.info("Skipping modeling.")
             mdl_wf = None
         elif reg_opt == False:
             raise ValueError(
@@ -310,7 +310,7 @@ class QIPipelineWorkflow(WorkflowBase):
         # realigned images.
         if reg_opt:
             if resubmit:
-                logger.debug("The QIN pipeline workflow will resubmit the"
+                self._logger.debug("The QIN pipeline workflow will resubmit the"
                              " registration workflow." % reg_opt)
                 reg_wf_gen = RegistrationWorkflow(
                     base_dir=base_dir, reconstruction=reg_opt)
@@ -321,10 +321,10 @@ class QIPipelineWorkflow(WorkflowBase):
                 reg_wf = self._create_registration_download_workflow(
                     base_dir=base_dir, recon=reg_opt)
                 self.registration_reconstruction = reg_opt
-                logger.debug("The QIN pipeline workflow will download the"
+                self._logger.debug("The QIN pipeline workflow will download the"
                              " registration reconstruction %s." % reg_opt)
             else:
-                self.logger.info("Skipping %s realigned image download, since"
+                self._logger.info("Skipping %s realigned image download, since"
                                  " modeling is disabled." % reg_opt)
                 reg_wf = None
         elif reg_opt == None:
@@ -346,12 +346,12 @@ class QIPipelineWorkflow(WorkflowBase):
                 # Download the input XNAT session mask.
                 mask_wf = self._create_mask_download_workflow(
                     base_dir=base_dir, recon=mask_opt)
-                logger.debug("The QIN pipeline workflow will download the"
+                self._logger.debug("The QIN pipeline workflow will download the"
                              " mask reconstruction %s." % mask_opt)
             else:
                 mask_wf = MaskWorkflow(base_dir=base_dir).workflow
         else:
-             self.logger.info("Skipping mask download, since both"
+             self._logger.info("Skipping mask download, since both"
                               " registration and modeling are disabled.")
              mask_wf = None
 
@@ -359,7 +359,7 @@ class QIPipelineWorkflow(WorkflowBase):
         # XNAT objects are specified, then there is no need
         # to use the scan image files.
         if mask_opt and reg_opt:
-            self.logger.info("Skipping staging, since the realigned images"
+            self._logger.info("Skipping staging, since the realigned images"
                              " and mask will be downloaded.")
             stg_wf = None
         elif stg_opt == False:
@@ -432,9 +432,9 @@ class QIPipelineWorkflow(WorkflowBase):
 
         self._configure_nodes(exec_wf)
 
-        self.logger.debug("Created the %s workflow." % exec_wf.name)
+        self._logger.debug("Created the %s workflow." % exec_wf.name)
         # If debug is set, then diagram the workflow graph.
-        if self.logger.level <= logging.DEBUG:
+        if self._logger.level <= logging.DEBUG:
             self._depict_workflow(exec_wf)
 
         return exec_wf
@@ -446,7 +446,7 @@ class QIPipelineWorkflow(WorkflowBase):
         :param base_dir: the workflow execution directory
         :return: the new workflow
         """
-        self.logger.debug("Creating the session download workflow...")
+        self._logger.debug("Creating the session download workflow...")
 
         # The Nipype workflow object.
         dl_wf = pe.Workflow(name='staging', base_dir=base_dir)
@@ -455,7 +455,7 @@ class QIPipelineWorkflow(WorkflowBase):
         in_fields = ['subject', 'session']
         input_spec = pe.Node(IdentityInterface(fields=in_fields),
                              name='input_spec')
-        self.logger.debug("The %s input node is %s with fields %s" %
+        self._logger.debug("The %s input node is %s with fields %s" %
                          (dl_wf.name, input_spec.name, in_fields))
 
         # The input scan iterator.
@@ -479,7 +479,7 @@ class QIPipelineWorkflow(WorkflowBase):
                                   joinsource='iter_scan', joinfield='images', name='output_spec')
         dl_wf.connect(iter_image, 'image', output_spec, 'images')
 
-        self.logger.debug("Created the session download workflow.")
+        self._logger.debug("Created the session download workflow.")
 
         return dl_wf
 
@@ -491,7 +491,7 @@ class QIPipelineWorkflow(WorkflowBase):
         :param recon: the XNAT mask reconstruction label
         :return: the new workflow
         """
-        self.logger.debug("Creating the session download workflow...")
+        self._logger.debug("Creating the session download workflow...")
 
         # The Nipype workflow object.
         dl_wf = pe.Workflow(name='mask', base_dir=base_dir)
@@ -500,7 +500,7 @@ class QIPipelineWorkflow(WorkflowBase):
         in_fields = ['subject', 'session']
         input_spec = pe.Node(IdentityInterface(fields=in_fields),
                              name='input_spec')
-        self.logger.debug("The %s input node is %s with fields %s" %
+        self._logger.debug("The %s input node is %s with fields %s" %
                          (dl_wf.name, input_spec.name, in_fields))
 
         # Download each XNAT series stack file.
@@ -514,7 +514,7 @@ class QIPipelineWorkflow(WorkflowBase):
                               name='output_spec')
         dl_wf.connect(download_mask, 'out_file', output_spec, 'mask')
 
-        self.logger.debug("Created the mask download workflow.")
+        self._logger.debug("Created the mask download workflow.")
 
         return dl_wf
 
@@ -526,7 +526,7 @@ class QIPipelineWorkflow(WorkflowBase):
         :param recon: the XNAT registration reconstruction label
         :return: the new workflow
         """
-        self.logger.debug("Creating the registration download workflow...")
+        self._logger.debug("Creating the registration download workflow...")
 
         # The Nipype workflow object.
         dl_wf = pe.Workflow(name='registration', base_dir=base_dir)
@@ -535,7 +535,7 @@ class QIPipelineWorkflow(WorkflowBase):
         in_fields = ['subject', 'session']
         input_spec = pe.Node(IdentityInterface(fields=in_fields),
                              name='input_spec')
-        self.logger.debug("The %s input node is %s with fields %s" %
+        self._logger.debug("The %s input node is %s with fields %s" %
                          (dl_wf.name, input_spec.name, in_fields))
 
         # Download the XNAT registration files.
@@ -549,6 +549,6 @@ class QIPipelineWorkflow(WorkflowBase):
                               name='output_spec')
         dl_wf.connect(download_reg, 'out_files', output_spec, 'images')
 
-        self.logger.debug("Created the registration download workflow.")
+        self._logger.debug("Created the registration download workflow.")
 
         return dl_wf

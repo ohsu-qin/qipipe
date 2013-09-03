@@ -189,18 +189,18 @@ class ModelingWorkflow(WorkflowBase):
         img_cnt = sum(map(len, images_list))
 
         # Model the images.
-        self.logger.debug("Modeling %d images in %d sessions..." %
+        self._logger.debug("Modeling %d images in %d sessions..." %
             (img_cnt, sess_cnt))
         for sbj, sess_dict in input_dict.iteritems():
-            self.logger.debug("Modeling subject %s..." % sbj)
+            self._logger.debug("Modeling subject %s..." % sbj)
             for sess, sess_inputs in sess_dict.iteritems():
                 images, mask = sess_inputs
-                self.logger.debug("Modeling %d %s %s images..." %
+                self._logger.debug("Modeling %d %s %s images..." %
                     (len(images), sbj, sess))
                 self._model(sbj, sess, images, mask)
-                self.logger.debug("Modeled %s %s." % (sbj, sess))
-            self.logger.debug("Modeled subject %s." % sbj)
-        self.logger.debug("Modeled %d images from %d sessions." %
+                self._logger.debug("Modeled %s %s." % (sbj, sess))
+            self._logger.debug("Modeled subject %s." % sbj)
+        self._logger.debug("Modeled %d images from %d sessions." %
             (img_cnt, sess_cnt))
 
         # Return the analysis name.
@@ -219,10 +219,10 @@ class ModelingWorkflow(WorkflowBase):
         self._set_modeling_input(self.workflow, subject, session, images,
             mask)
         # Execute the modeling workflow.
-        self.logger.debug("Executing the %s workflow on %s %s..." %
+        self._logger.debug("Executing the %s workflow on %s %s..." %
             (self.workflow.name, subject, session))
         self._run_workflow(self.workflow)
-        self.logger.debug("Executed the %s workflow on %s %s." %
+        self._logger.debug("Executed the %s workflow on %s %s." %
             (self.workflow.name, subject, session))
 
     def _set_modeling_input(self, subject, session, images, mask):
@@ -254,7 +254,7 @@ class ModelingWorkflow(WorkflowBase):
         :param opts: the additional workflow initialization options
         :return: the Nipype workflow
         """
-        self.logger.debug("Building the modeling workflow...")
+        self._logger.debug("Building the modeling workflow...")
 
         # The base workflow.
         if not base_dir:
@@ -268,7 +268,7 @@ class ModelingWorkflow(WorkflowBase):
         in_fields = ['subject', 'session', 'images', 'mask']
         input_xfc = IdentityInterface(fields=in_fields)
         input_spec = pe.Node(input_xfc, name='input_spec')
-        self.logger.debug("The modeling workflow input is %s with"
+        self._logger.debug("The modeling workflow input is %s with"
             " fields %s" % (input_spec.name, in_fields))
         reusable_wf.connect(input_spec, 'mask', base_wf, 'input_spec.mask')
         reusable_wf.connect(input_spec, 'images', base_wf, 'input_spec.images')
@@ -292,14 +292,14 @@ class ModelingWorkflow(WorkflowBase):
         for field in base_out_fields:
             base_field = 'output_spec.' + field
             reusable_wf.connect(base_wf, base_field, output_spec, field)
-        self.logger.debug("The modeling reusable workflow output is %s with"
+        self._logger.debug("The modeling reusable workflow output is %s with"
             " fields %s" % (output_spec.name, out_fields))
 
         self._configure_nodes(reusable_wf)
 
-        self.logger.debug("Created the %s workflow." % reusable_wf.name)
+        self._logger.debug("Created the %s workflow." % reusable_wf.name)
         # If debug is set, then diagram the workflow graph.
-        if self.logger.level <= logging.DEBUG:
+        if self._logger.level <= logging.DEBUG:
             self._depict_workflow(reusable_wf)
 
         return reusable_wf
@@ -511,7 +511,7 @@ class ModelingWorkflow(WorkflowBase):
             for field in r1_fields:
                 opts.pop(field, None)
 
-        self.logger.debug("The PK modeling parameters: %s" % opts)
+        self._logger.debug("The PK modeling parameters: %s" % opts)
         return opts
 
 

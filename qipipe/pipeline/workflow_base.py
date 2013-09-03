@@ -69,7 +69,7 @@ class WorkflowBase(object):
         :param logger: the logger to use
         :param cfg_file: the optional workflow inputs configuration file
         """
-        self.logger = logger
+        self._logger = logger
         self.configuration = self._load_configuration(cfg_file)
         """The workflow configuration."""
 
@@ -114,7 +114,7 @@ class WorkflowBase(object):
 
         # Load the configuration.
         if cfg_files:
-            self.logger.debug("Loading the %s configuration files %s..." %
+            self._logger.debug("Loading the %s configuration files %s..." %
                              (name, cfg_files))
             cfg = read_config(*cfg_files)
             return dict(cfg)
@@ -142,7 +142,7 @@ class WorkflowBase(object):
         else:
             grf = fname
         workflow.write_graph(dotfilename=grf)
-        self.logger.debug("The %s workflow graph is depicted at %s.png." %
+        self._logger.debug("The %s workflow graph is depicted at %s.png." %
                          (workflow.name, grf))
 
     def _run_workflow(self, workflow):
@@ -164,7 +164,7 @@ class WorkflowBase(object):
             workflow.base_dir = tempfile.mkdtemp()
 
         # Run the workflow.
-        self.logger.debug("Executing the workflow %s in %s..." %
+        self._logger.debug("Executing the workflow %s in %s..." %
                          (workflow.name, workflow.base_dir))
         with xnat_helper.connection():
             workflow.run(**args)
@@ -207,7 +207,7 @@ class WorkflowBase(object):
         # The execution setting.
         if 'Execution' in self.configuration:
             workflow.config['execution'] = self.configuration['Execution']
-            self.logger.debug("Workflow %s execution parameter: %s." %
+            self._logger.debug("Workflow %s execution parameter: %s." %
                              (workflow.name, workflow.config['execution']))
 
         # The Grid Engine setting.
@@ -220,7 +220,7 @@ class WorkflowBase(object):
                     qsub_args = plugin_args['qsub_args']
                     if not qsub_args.find(' - b '):
                         plugin_args['qsub_args'] = qsub_args + ' -b n'
-            self.logger.debug("Workflow %s plug-in parameters: %s." %
+            self._logger.debug("Workflow %s plug-in parameters: %s." %
                              (workflow.name, args))
         else:
             args = {}
@@ -249,7 +249,7 @@ class WorkflowBase(object):
                 qsub_args = def_plugin_args['qsub_args']
                 def_plugin_args['qsub_args'] = WorkflowBase.SGE_BINARY_PAT.sub(
                     '', qsub_args)
-                self.logger.debug("Workflow %s default node plug-in parameters:"
+                self._logger.debug("Workflow %s default node plug-in parameters:"
                                   " %s." % (workflow.name, def_plugin_args))
         else:
             def_plugin_args = None
@@ -270,7 +270,7 @@ class WorkflowBase(object):
                 if attr == 'plugin_args':
                     if DISTRIBUTABLE:
                         setattr(node, attr, value)
-                        self.logger.debug("%s workflow node %s plugin"
+                        self._logger.debug("%s workflow node %s plugin"
                                           " arguments: %s" % (workflow.name, node, value))
                 elif value != getattr(node.inputs, attr):
                     # The config value differs from the default value.
@@ -289,7 +289,7 @@ class WorkflowBase(object):
             # If a field was set to a config value, then print the config
             # setting to the log.
             if input_dict:
-                self.logger.debug("The following %s workflow node %s inputs"
+                self._logger.debug("The following %s workflow node %s inputs"
                                   " were set from the configuration: %s" %
                                  (workflow.name, node, input_dict))
 

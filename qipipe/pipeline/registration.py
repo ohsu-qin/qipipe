@@ -170,18 +170,18 @@ class RegistrationWorkflow(WorkflowBase):
         img_cnt = sum(map(len, images_list))
 
         # Register the images.
-        self.logger.debug("Registering %d images in %d sessions..." %
+        self._logger.debug("Registering %d images in %d sessions..." %
                          (img_cnt, sess_cnt))
         for sbj, sess_dict in input_dict.iteritems():
-            self.logger.debug("Registering subject %s..." % sbj)
+            self._logger.debug("Registering subject %s..." % sbj)
             for sess, sess_inputs in sess_dict.iteritems():
                 images, mask = sess_inputs
-                self.logger.debug("Registering %d %s %s images" %
+                self._logger.debug("Registering %d %s %s images" %
                                  (len(images), sbj, sess))
                 self._register(sbj, sess, images, mask)
-                self.logger.debug("Registered %s %s." % (sbj, sess))
-            self.logger.debug("Registered subject %s." % sbj)
-        self.logger.debug("Registered %d images from %d sessions." %
+                self._logger.debug("Registered %s %s." % (sbj, sess))
+            self._logger.debug("Registered subject %s." % sbj)
+        self._logger.debug("Registered %d images from %d sessions." %
                          (img_cnt, sess_cnt))
 
         return self.reconstruction
@@ -212,10 +212,10 @@ class RegistrationWorkflow(WorkflowBase):
         # Set the workflow input.
         self._set_registration_input(subject, session, images, mask)
         # Execute the registration workflow.
-        self.logger.debug("Executing the %s workflow on %s %s..." %
+        self._logger.debug("Executing the %s workflow on %s %s..." %
                          (self.workflow.name, subject, session))
         self._run_workflow(self.workflow)
-        self.logger.debug("Executed the %s workflow on %s %s." %
+        self._logger.debug("Executed the %s workflow on %s %s." %
                          (self.workflow.name, subject, session))
 
     def _set_registration_input(self, subject, session, images, mask):
@@ -262,7 +262,7 @@ class RegistrationWorkflow(WorkflowBase):
             ('``ANTS`` or ``FNIRT``, default ``ANTS``)
         :return: the Workflow object
         """
-        self.logger.debug("Creating a base registration workflow...")
+        self._logger.debug("Creating a base registration workflow...")
 
         # The reusable workflow.
         if not base_dir:
@@ -319,9 +319,9 @@ class RegistrationWorkflow(WorkflowBase):
 
         self._configure_nodes(reg_wf)
 
-        self.logger.debug("Created the %s workflow." % reg_wf.name)
+        self._logger.debug("Created the %s workflow." % reg_wf.name)
         # If debug is set, then diagram the workflow graph.
-        if self.logger.level <= logging.DEBUG:
+        if self._logger.level <= logging.DEBUG:
             self._depict_workflow(reg_wf)
 
         return reg_wf
@@ -334,7 +334,7 @@ class RegistrationWorkflow(WorkflowBase):
         :param technique: the registration technique (``ANTS`` or ``FNIRT``)
         :return: the Workflow object
         """
-        self.logger.debug('Creating the realign workflow...')
+        self._logger.debug('Creating the realign workflow...')
 
         realign_wf = pe.Workflow(name='realign', base_dir=base_dir)
 
