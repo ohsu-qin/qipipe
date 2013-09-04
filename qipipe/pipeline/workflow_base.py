@@ -57,9 +57,6 @@ class WorkflowBase(object):
     None
     """
 
-    SGE_BINARY_PAT = re.compile('-b [ny]')
-    """Regexp matcher for the SGE plugin binary switch option."""
-
     def __init__(self, logger, cfg_file=None):
         """
         Initializes this workflow wrapper object.
@@ -213,13 +210,6 @@ class WorkflowBase(object):
         # The Grid Engine setting.
         if 'SGE' in self.configuration:
             args = dict(plugin='SGE', **self.configuration['SGE'])
-            if 'plugin_args' in args:
-                plugin_args = args['plugin_args']
-                # Add the negated binary flag, if necessary.
-                if 'qsub_args' in plugin_args:
-                    qsub_args = plugin_args['qsub_args']
-                    if not qsub_args.find(' - b '):
-                        plugin_args['qsub_args'] = qsub_args + ' -b n'
             self._logger.debug("Workflow %s plug-in parameters: %s." %
                              (workflow.name, args))
         else:
@@ -245,10 +235,6 @@ class WorkflowBase(object):
         if DISTRIBUTABLE and 'SGE' in self.configuration:
             def_plugin_args = self.configuration['SGE'].get('plugin_args')
             if def_plugin_args and 'qsub_args' in def_plugin_args:
-                # Remove the negated binary flag, if necessary.
-                qsub_args = def_plugin_args['qsub_args']
-                def_plugin_args['qsub_args'] = WorkflowBase.SGE_BINARY_PAT.sub(
-                    '', qsub_args)
                 self._logger.debug("Workflow %s default node plug-in parameters:"
                                   " %s." % (workflow.name, def_plugin_args))
         else:
