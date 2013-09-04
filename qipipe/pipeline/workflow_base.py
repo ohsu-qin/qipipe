@@ -60,8 +60,8 @@ class WorkflowBase(object):
     def __init__(self, logger, cfg_file=None):
         """
         Initializes this workflow wrapper object.
-        If the optional configuration file is specified, then the workflow settings
-        in that file override the default settings.
+        If the optional configuration file is specified, then the workflow
+        settings in that file override the default settings.
 
         :param logger: the logger to use
         :param cfg_file: the optional workflow inputs configuration file
@@ -257,7 +257,8 @@ class WorkflowBase(object):
                     if DISTRIBUTABLE:
                         setattr(node, attr, value)
                         self._logger.debug("%s workflow node %s plugin"
-                                          " arguments: %s" % (workflow.name, node, value))
+                                          " arguments: %s" %
+                                          (workflow.name, node, value))
                 elif value != getattr(node.inputs, attr):
                     # The config value differs from the default value.
                     # Set the field to the config value and collect it
@@ -265,11 +266,14 @@ class WorkflowBase(object):
                     setattr(node.inputs, attr, value)
                     input_dict[attr] = value
 
-            # If the node does not have plug-in arguments and the configuration
-            # specifies a default, then set the node plug-in arguments to the
-            # default.
-            if (def_plugin_args and 'plugin_args' not in cfg
-                and str(node).startswith(prefix)):
+            # If:
+            # 1) the configuration specifies a default,
+            # 2) the node itself is not configured with plug-in arguments, and
+            # 3) the node is defined in this workflow as opposed to a child
+            #    workflow (i.e., the node name prefix is this workflow name),
+            # then set the node plug-in arguments to the default.
+            if (def_plugin_args and 'plugin_args' not in cfg and
+                    str(node).startswith(prefix)):
                 node.plugin_args = def_plugin_args
 
             # If a field was set to a config value, then print the config
