@@ -139,25 +139,16 @@ class QIPipelineWorkflow(WorkflowBase):
             staging is enabled
         :return: the new *{subject: session: results}*  dictionary
         """
-        # If registration is skipped, then start with the registration
-        # download.
-        # Otherwise, if staging is disabled, then run the download workflow.
-        # Otherwise, delegate to staging with the execution workflow.
-        if opts.get('registration') and 'resubmit' not in opts:
-            sbj_sess_dict = self._run_with_registration_download(*inputs)
-        elif opts.get('staging') == False:
-            sbj_sess_dict = self._run_with_scan_download(*inputs)
+        # If there is a staging input, then start with either a scan download
+        # or the DICOM inputs, depending of whether the staging workflow is
+        # enabled. Otherwise, start with registration download.
+        if self.workflow.get_node('staging.input_spec'):
+            if opts.get('staging') == False:
+                sbj_sess_dict = self._run_with_scan_download(*inputs)
+            else:
+                sbj_sess_dict = self._run_with_dicom_input(*inputs)
         else:
-            exec_wf = self.workflow
-            if 'collection' not in opts:
-                raise ValueError(
-                    'QIPipeline is missing the collection argument')
-            collection = opts.pop('collection')
-            stg_dict = staging.run(collection, *inputs,
-                                   base_dir=exec_wf.base_dir,
-                                   workflow=exec_wf, **opts)
-            sbj_sess_dict = {sbj: sess_dict.keys()
-                             for sbj, sess_dict in stg_dict.iteritems()}
+            sbj_sess_dict = self._run_with_registration_download(*inputs)
 
         # Return the new {subject: {session: {results}}} dictionary.
         # Each session has the same unqualified XNAT registration
@@ -175,6 +166,18 @@ class QIPipelineWorkflow(WorkflowBase):
                 output_dict[sbj][sess] = template.copy()
 
         return output_dict
+    
+    def _run_with_dicom_input(self, *inputs):
+        if 'collection' not in opts:
+            raise ValueError(
+                'QIPipeline is missing the collection argument')
+        collection = opts.pop('collection')
+        stg_dict = staging.run(collection, *inputs,
+                               base_dir=exec_wf.base_dir,
+                               workflow=exec_wf, **opts)
+        
+        return {sbj: sess_dict.keys()
+                for sbj, sess_dict in stg_dict.iteritems()}
 
     def _run_with_scan_download(self, *inputs):
         """
