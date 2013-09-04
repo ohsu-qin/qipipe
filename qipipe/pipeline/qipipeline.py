@@ -324,16 +324,17 @@ class QIPipelineWorkflow(WorkflowBase):
                 reg_wf = self._create_registration_download_workflow(
                     base_dir=base_dir, recon=reg_opt)
                 self.registration_reconstruction = reg_opt
-                self._logger.debug("The QIN pipeline workflow will download the"
-                             " registration reconstruction %s." % reg_opt)
+                self._logger.debug("The QIN pipeline workflow will download"
+                                   "  the registration reconstruction %s." %
+                                   reg_opt)
             else:
                 self._logger.info("Skipping %s realigned image download, since"
                                  " modeling is disabled." % reg_opt)
                 reg_wf = None
         elif reg_opt == None:
             # The registration option is neither an existing XNAT
-            # reconstruction nor False, so run the registration to
-            # generate a new XNAT reconstruction.
+            # reconstruction nor False, so run the registration
+            # workflow to generate a new XNAT reconstruction.
             reg_wf_gen = RegistrationWorkflow(base_dir=base_dir)
             reg_wf = reg_wf_gen.workflow
             self.registration_reconstruction = reg_wf_gen.reconstruction
@@ -349,27 +350,25 @@ class QIPipelineWorkflow(WorkflowBase):
                 # Download the input XNAT session mask.
                 mask_wf = self._create_mask_download_workflow(
                     base_dir=base_dir, recon=mask_opt)
-                self._logger.debug("The QIN pipeline workflow will download the"
-                             " mask reconstruction %s." % mask_opt)
+                self._logger.debug("The QIN pipeline workflow will download"
+                                   " the mask reconstruction %s." % mask_opt)
             else:
                 mask_wf = MaskWorkflow(base_dir=base_dir).workflow
         else:
              self._logger.info("Skipping mask download, since both"
-                              " registration and modeling are disabled.")
+                               " registration and modeling are disabled.")
              mask_wf = None
 
-        # The staging workflow. If the mask and registration
-        # XNAT objects are specified, then there is no need
-        # to use the scan image files.
-        if mask_opt and reg_opt:
-            self._logger.info("Skipping staging, since the realigned images"
-                             " and mask will be downloaded.")
-            stg_wf = None
-        elif stg_opt == False:
-            # Download the input XNAT session images.
-            stg_wf = self._create_scan_download_workflow(base_dir=base_dir)
+        # The staging workflow. If staging is disabled and there is a
+        # registration workflow, then download the scan images.
+        if stg_opt == False:
+            if reg_wf:
+                # Download the input XNAT session images.
+                stg_wf = self._create_scan_download_workflow(base_dir=base_dir)
+            else:
+                stg_wf = False
         else:
-            # Stage the input DICOM files
+            # Stage the input DICOM files.
             stg_wf = StagingWorkflow(base_dir=base_dir).workflow
 
         # Validate that there is at least one constituent workflow.
@@ -385,53 +384,50 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # Stage the session images.
         if stg_wf:
-            exec_wf.connect(
-                input_spec, 'subject', stg_wf, 'input_spec.subject')
-            exec_wf.connect(
-                input_spec, 'session', stg_wf, 'input_spec.session')
+            exec_wf.connect(input_spec, 'subject',
+                            stg_wf, 'input_spec.subject')
+            exec_wf.connect(input_spec, 'session',
+                            stg_wf, 'input_spec.session')
 
         # Create the mask.
         if mask_wf:
-            exec_wf.connect(
-                input_spec, 'subject', mask_wf, 'input_spec.subject')
-            exec_wf.connect(
-                input_spec, 'session', mask_wf, 'input_spec.session')
-            # If the input DICOM files will be staged and the mask will be created
-            # rather than downloaded, then connect the staged output to the mask
-            # input.
-            if stg_wf and not mask_opt:
-                exec_wf.connect(
-                    stg_wf, 'output_spec.images', mask_wf, 'input_spec.images')
+            exec_wf.connect(input_spec, 'subject',
+                            mask_wf, 'input_spec.subject')
+            exec_wf.connect(input_spec, 'session',
+                            mask_wf, 'input_spec.session')
+            # If the mask will be created rather than downloaded,
+            # then connect the staged output to the mask input.
+            if not mask_opt:
+                exec_wf.connect(stg_wf, 'output_spec.images',
+                                mask_wf, 'input_spec.images')
 
         # Register the staged images.
         if reg_wf:
-            exec_wf.connect(
-                input_spec, 'subject', reg_wf, 'input_spec.subject')
-            exec_wf.connect(
-                input_spec, 'session', reg_wf, 'input_spec.session')
+            exec_wf.connect(input_spec, 'subject',
+                            reg_wf, 'input_spec.subject')
+            exec_wf.connect(input_spec, 'session',
+                            reg_wf, 'input_spec.session')
             # If registration will be performed to create the realigned images,
-            # then connect the mask output to the registration mask input.
-            # Furthermore, if the input DICOM files will be staged, then connect
-            # the staged output to the registration input.
-            if not reg_opt:
-                exec_wf.connect(
-                    mask_wf, 'output_spec.mask', reg_wf, 'input_spec.mask')
-                if stg_wf:
-                    exec_wf.connect(
-                        stg_wf, 'output_spec.images', reg_wf, 'input_spec.images')
-                    exec_wf.connect(
-                        stg_wf, 'iter_image.image', reg_wf, 'iter_image.image')
+            # then connect the mask output to the registration mask input and
+            # the staged output to the registration image input.
+            if resubmit or not reg_opt:
+                exec_wf.connect(mask_wf, 'output_spec.mask',
+                                reg_wf, 'input_spec.mask')
+                exec_wf.connect(stg_wf, 'output_spec.images',
+                                reg_wf, 'input_spec.images')
+                exec_wf.connect(stg_wf, 'iter_image.image',
+                                reg_wf, 'iter_image.image')
 
         # Model the realigned images.
         if mdl_wf:
-            exec_wf.connect(
-                input_spec, 'subject', mdl_wf, 'input_spec.subject')
-            exec_wf.connect(
-                input_spec, 'session', mdl_wf, 'input_spec.session')
-            exec_wf.connect(
-                mask_wf, 'output_spec.mask', mdl_wf, 'input_spec.mask')
-            exec_wf.connect(
-                reg_wf, 'output_spec.images', mdl_wf, 'input_spec.images')
+            exec_wf.connect(input_spec, 'subject',
+                            mdl_wf, 'input_spec.subject')
+            exec_wf.connect(input_spec, 'session',
+                            mdl_wf, 'input_spec.session')
+            exec_wf.connect(mask_wf, 'output_spec.mask',
+                            mdl_wf, 'input_spec.mask')
+            exec_wf.connect(reg_wf, 'output_spec.images',
+                            mdl_wf, 'input_spec.images')
 
         self._configure_nodes(exec_wf)
 
@@ -444,7 +440,8 @@ class QIPipelineWorkflow(WorkflowBase):
 
     def _create_scan_download_workflow(self, base_dir):
         """
-        Makes the XNAT session series stack NiFTI file download staging workflow.
+        Makes the XNAT session series stack NiFTI file download staging
+        workflow.
 
         :param base_dir: the workflow execution directory
         :return: the new workflow
@@ -479,7 +476,8 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # The workflow output.
         output_spec = pe.JoinNode(IdentityInterface(fields=['images']),
-                                  joinsource='iter_scan', joinfield='images', name='output_spec')
+                                  joinsource='iter_scan', joinfield='images',
+                                  name='output_spec')
         dl_wf.connect(iter_image, 'image', output_spec, 'images')
 
         self._logger.debug("Created the session download workflow.")
