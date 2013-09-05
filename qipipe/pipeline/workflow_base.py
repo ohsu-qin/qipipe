@@ -235,6 +235,9 @@ class WorkflowBase(object):
         if DISTRIBUTABLE and 'SGE' in self.configuration:
             def_plugin_args = self.configuration['SGE'].get('plugin_args')
             if def_plugin_args and 'qsub_args' in def_plugin_args:
+                # Retain this workflow's default even if a node defined
+                # in this workflow is included in a parent workflow.
+                def_plugin_args['overwrite'] = True
                 self._logger.debug("Workflow %s default node plug-in parameters:"
                                   " %s." % (workflow.name, def_plugin_args))
         else:
@@ -254,7 +257,21 @@ class WorkflowBase(object):
             # Set the node inputs or plug-in argument.
             for attr, value in cfg.iteritems():
                 if attr == 'plugin_args':
+                    # If the workflow is on a cluster and the node plug-in
+                    # arguments do not overwrite the default plug-in arguments,
+                    # then append the node plug-in arguments to the default
+                    # and set the overwrite flag. This ensures that the node
+                    # plug-in arguments take precedence over the defaults and
+                    # that the arguments are retained if the node is included
+                    # in a parent workflow.
                     if DISTRIBUTABLE:
+                        if ('qsub_args' in value and
+                                'overwrite' not in value and
+                                'qsub_args' in def_plugin_args):
+                            qsub_args = value['qsub_args']
+                            def_qsub_args = def_plugin_args['qsub_args']
+                            value['qsub_args'] = def_qsub_args + ' ' + qsub_args
+                            value['overwrite'] = True
                         setattr(node, attr, value)
                         self._logger.debug("%s workflow node %s plugin"
                                           " arguments: %s" %
