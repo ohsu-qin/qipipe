@@ -137,18 +137,18 @@ class QIPipelineWorkflow(WorkflowBase):
         """
         super(QIPipelineWorkflow, self).__init__(logger(__name__))
 
+        self.registration_reconstruction = None
+        """The registration XNAT reconstruction name."""
+
+        self.modeling_assessor = None
+        """The modeling XNAT assessor name."""
+
         self.workflow = self._create_workflow(**opts)
         """
         The pipeline execution workflow. The execution workflow is executed by
         calling the :meth:`qipipe.pipeline.modeling.QIPipelineWorkflow.run`
         method.
         """
-
-        self.registration_reconstruction = None
-        """The registration XNAT reconstruction name."""
-
-        self.modeling_assessor = None
-        """The modeling XNAT assessor name."""
 
     def run(self, *inputs, **opts):
         """
