@@ -327,21 +327,31 @@ class QIPipelineWorkflow(WorkflowBase):
 
     def _parse_session_labels(self, labels):
         """
-        A generator for *(project, subject, session)* names
-        parsed from the given XNAT session labels.
+        Parse the given XNAT session labels.
 
         :param labels: the XNAT session labels to parse
-        :yield: the *(project, subject, session)* name tuple
+        :return: the [*(project, subject, session)*] name tuples
+        :raise ValueError: if a label is not in
+            *project*``_``*subject*``_``*session* format
+        """
+        return [self._parse_session_label(label) for label in labels]
+
+    def _parse_session_label(self, label):
+        """
+        Parse the given XNAT session label.
+
+        :param label: the XNAT session label to parse
+        :return: the *(project, subject, session)* name tuple
         :raise ValueError: if the label is not in
             *project*``_``*subject*``_``*session* format
         """
-        for label in labels:
-            # The project/subject/session name hierarchy
-            names = xnat_helper.parse_canonical_label(label)
-            if len(names) != 3:
-                raise ValueError("The XNAT session label is not in the format"
-                                 " project_subject_session: %s" % label)
-            yield names
+        # The project/subject/session name hierarchy
+        names = xnat_helper.parse_canonical_label(label)
+        if len(names) != 3:
+            raise ValueError("The XNAT session label is not in the format"
+                             " project_subject_session: %s" % label)
+
+        return names
 
     def _create_workflow(self, **opts):
         """
