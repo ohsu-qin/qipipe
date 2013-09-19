@@ -230,14 +230,22 @@ class QIPipelineWorkflow(WorkflowBase):
         exec_wf = self.workflow
         input_spec = exec_wf.get_node('input_spec')
         dest = os.path.join(exec_wf.base_dir, 'scans')
+        
+        # Parse the XNAT hierarchy for the inputs.
+        sess_specs = self._parse_session_labels(inputs)
+        # Validate the project.
+        for spec in sess_specs:
+            prj, _, _ = spec
+            if prj != project():
+                raise ValueError("The project %s in the session label %s"
+                                 "differs from the current project %s" %
+                                 (prj, spec, project())
 
         with xnat_helper.connection() as xnat:
-            for prj, sbj, sess in self._parse_session_labels(inputs):
+            for prj, sbj, sess in sess_specs:
                 self._logger.debug("Processing the %s %s %s scans..." %
                                    (prj, sbj, sess))
 
-                # Set the project id.
-                project(prj)
                 # Get the scan numbers.
                 scans = xnat.get_scans(prj, sbj, sess)
                 if not scans:
