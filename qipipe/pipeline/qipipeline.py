@@ -187,11 +187,12 @@ class QIPipelineWorkflow(WorkflowBase):
         else:
             sbj_sess_dict = self._run_with_registration_download(*inputs)
 
-        # Return the new {subject: {session: {results}}} dictionary.
+        # Return the new {subject: {session: {results}}} dictionary,
+        # where the results dictionary has keys registration and modeling.
         # Each session has the same unqualified XNAT registration
-        # reconstruction and modeling assessor name. Therefore, make
-        # a template containing these names and copy the template
-        # into the {subject: {session: {results}}} output dictionary.
+        # reconstruction and modeling assessor name. Therefore, make a
+        # template containing these names and copy the template into the
+        # {subject: {session: {results}}} output dictionary.
         template = {}
         if self.registration_reconstruction:
             template['registration'] = self.registration_reconstruction
@@ -289,7 +290,7 @@ class QIPipelineWorkflow(WorkflowBase):
         """
         # The XNAT registration object.
         reg_obj = xnat.get_reconstruction(project, subject, session,
-                                           self.registration_reconstruction)
+                                          self.registration_reconstruction)
         # The XNAT registration file names.
         reg_files = reg_obj.out_resources().fetchone().files().get()
         reg_scans = [int(QIPipelineWorkflow.REG_SERIES_PAT.match(f).group(1))
@@ -312,7 +313,7 @@ class QIPipelineWorkflow(WorkflowBase):
 
         for prj, sbj, sess in self._parse_session_labels(inputs):
             self._logger.debug("Processing the %s %s %s realigned images..." %
-                             (prj, sbj, sess))
+                               (prj, sbj, sess))
 
             # Set the project id.
             project(prj)
