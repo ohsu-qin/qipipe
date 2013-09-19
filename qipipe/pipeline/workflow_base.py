@@ -78,6 +78,9 @@ class WorkflowBase(object):
         :param cfg_file: the optional configuration file path
         :return: the configuration dictionary
         """
+        # The configuration files to load.
+        cfg_files = []
+
         # The default configuration file is in the conf directory.
         match = WorkflowBase.CLASS_NAME_PAT.match(self.__class__.__name__)
         if not match:
@@ -87,26 +90,25 @@ class WorkflowBase(object):
         name = match.group(1)
         fname = "%s.cfg" % name.lower()
         def_cfg_file = os.path.join(WorkflowBase.DEF_CONF_DIR, fname)
-
-        # The configuration files to load.
-        cfg_files = [os.path.abspath(def_cfg_file)]
+        if os.path.exists(def_cfg_file):
+            cfg_files.append(os.path.abspath(def_cfg_file))
 
         # The working directory config file.
         cwd_cfg_file = os.path.abspath(fname)
-        if cwd_cfg_file not in cfg_files:
+        if os.path.exists(cwd_cfg_file) and cwd_cfg_file not in cfg_files:
             cfg_files.append(cwd_cfg_file)
 
         # The config file specified by the directory environment variable.
         env_cfg_dir = os.getenv(WorkflowBase.CFG_ENV_VAR, None)
         if env_cfg_dir:
             env_cfg_file = os.path.abspath(os.path.join(env_cfg_dir, fname))
-            if env_cfg_file not in cfg_files:
+            if os.path.exists(env_cfg_file) and env_cfg_file not in cfg_files:
                 cfg_files.append(env_cfg_file)
 
         # The argument config file.
         if cfg_file:
             cfg_file = os.path.abspath(cfg_file)
-            if cfg_file not in cfg_files:
+            if os.path.exists(cfg_file) and cfg_file not in cfg_files:
                 cfg_files.append(cfg_file)
 
         # Load the configuration.
