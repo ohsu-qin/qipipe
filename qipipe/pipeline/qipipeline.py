@@ -228,10 +228,8 @@ class QIPipelineWorkflow(WorkflowBase):
         """
         self._logger.debug("Running the QIN pipeline execution workflow...")
 
+        # The {subject: [session]} return value.
         result_dict = defaultdict(list)
-        exec_wf = self.workflow
-        input_spec = exec_wf.get_node('input_spec')
-        dest = os.path.join(exec_wf.base_dir, 'scans')
 
         # Parse the XNAT hierarchy for the inputs.
         sess_specs = self._parse_session_labels(inputs)
@@ -243,43 +241,60 @@ class QIPipelineWorkflow(WorkflowBase):
                                  "differs from the current project %s" %
                                  (prj, spec, project()))
 
+        # Run the workflow on each session's downloaded scans.
         with xnat_helper.connection() as xnat:
             for prj, sbj, sess in sess_specs:
-                self._logger.debug("Processing the %s %s %s scans..." %
-                                   (prj, sbj, sess))
-
-                # Get the scan numbers.
-                scans = xnat.get_scans(prj, sbj, sess)
-                if not scans:
-                    raise IOError("The QIN pipeline did not find a %s %s %s"
-                                  " scan." % (prj, sbj, sess))
-
-                # Set the workflow input.
-                input_spec = exec_wf.get_node('input_spec')
-                input_spec.inputs.subject = sbj
-                input_spec.inputs.session = sess
-
-                # If some scans are not yet registered, then partition the
-                # input scans into those which are already registered and
-                # those which need to be registered.
-                iter_series = exec_wf.get_node('iter_series')
-                if opts.get('skip_registration'):
-                    iter_series.iterables = ('scan', scans)
-                else:
-                    reg_scans, unreg_scans = self._partition_scans(
-                        xnat, prj, sbj, sess, scans)
-                    iter_series.iterables = ('scan', unreg_scans)
-                    download_reg = exec_wf.get_node('download_reg')
-                    download_reg.iterables = ('scan', reg_scans)
-
-                # Execute the workflow.
-                self._run_workflow(exec_wf)
+                # Run the workflow.
+                self._run_on_scans(xnat, prj, sbj, sess, **opts)
                 # Capture the result.
                 result_dict[sbj].append(sess)
 
         self._logger.debug("Completed the QIN pipeline execution workflow.")
 
         return result_dict
+
+    def _run_on_scans(self, xnat, project, subject, session, **opts):
+        """
+        Runs the execution workflow on downloaded scan image files.
+
+        :param project: the project name
+        :param subject: the subject name
+        :param session: the session name
+        :param opts: the following keyword options:
+        :keyword skip_registration: flag indicating whether to register
+            the scan images
+        """
+        self._logger.debug("Processing the %s %s %s scans..." %
+                           (project, subject, session))
+        
+        # Get the scan numbers.
+        scans = xnat.get_scans(project, subject, session)
+        if not scans:
+            raise IOError("The QIN pipeline did not find a %s %s %s"
+                          " scan." % (project, subject, session))
+
+        # Set the workflow input.
+        input_spec = self.workflow.get_node('input_spec')
+        input_spec.inputs.subject = subject
+        input_spec.inputs.session = session
+
+        # If some scans are not yet registered, then partition the
+        # input scans into those which are already registered and
+        # those which need to be registered.
+        iter_series = self.workflow.get_node('iter_series')
+        if opts.get('skip_registration'):
+            iter_series.iterables = ('scan', scans)
+        else:
+            reg_scans, unreg_scans = self._partition_scans(
+                xnat, project, subject, session, scans)
+            iter_series.iterables = ('scan', unreg_scans)
+            download_reg = self.workflow.get_node('download_reg')
+            download_reg.iterables = ('scan', reg_scans)
+
+        # Execute the workflow.
+        self._run_workflow(self.workflow)
+        self._logger.debug("Processed %d %s %s %s scans." %
+                           (len(scans), project, subject, session))
 
     def _partition_scans(self, xnat, project, subject, session, scans):
         """
