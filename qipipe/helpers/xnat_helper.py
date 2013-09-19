@@ -56,6 +56,8 @@ def canonical_label(*names):
     :return: the corresponding XNAT label
     """
     names = list(names)
+    if any((not n for n in names)):
+        raise ValueError("The XNAT label name hierarchy is invalid: %s" % names)
     last = names.pop()
     if names:
         prefix = canonical_label(*names)
