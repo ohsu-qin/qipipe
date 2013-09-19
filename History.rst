@@ -1,9 +1,9 @@
 This history lists major release themes. See the GitHub commits
 (http://quip1:6060/qipipe) for change details.
 
-3.2.2 / 2013-09-10
+3.2.2 / 2013-09-19
 ------------------
-* Fix modeling workflow.
+* Add a separate reference workflow.
 
 3.2.1 / 2013-08-30
 ------------------
