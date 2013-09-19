@@ -290,8 +290,12 @@ class QIPipelineWorkflow(WorkflowBase):
             reg_scans, unreg_scans = self._partition_scans(
                 xnat, project, subject, session, scans)
             iter_series.iterables = ('scan', unreg_scans)
-            download_reg = self.workflow.get_node('download_reg')
-            download_reg.iterables = ('scan', reg_scans)
+            # If modeling is enabled, then some of the realigned
+            # images might need to be downloaded.
+            if reg_scans:
+                download_reg = self.workflow.get_node('download_reg')
+                if download_reg:
+                    download_reg.iterables = ('scan', reg_scans)
 
         # Execute the workflow.
         self._run_workflow(self.workflow)
@@ -413,7 +417,6 @@ class QIPipelineWorkflow(WorkflowBase):
         exec_wf = pe.Workflow(name='qin_exec', base_dir=base_dir)
 
         # The workflow options.
-
         mask_recon = opts.get('mask')
         ref_recon = opts.get('reference')
         reg_recon = opts.get('registration')
