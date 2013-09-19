@@ -3,9 +3,9 @@ import logging
 from nipype.pipeline import engine as pe
 from nipype.interfaces.dcmstack import (DcmStack, MergeNifti, CopyMeta)
 from nipype.interfaces.utility import (IdentityInterface, Function)
+from .. import project
 from ..interfaces import (XNATUpload, Fastfit)
 from ..helpers import file_helper
-from ..helpers.project import project
 from .workflow_base import WorkflowBase
 from .distributable import DISTRIBUTABLE
 from ..helpers.logging_helper import logger

@@ -5,9 +5,8 @@ from nose.tools import assert_true
 from qipipe.pipeline import staging
 from qipipe.helpers import xnat_helper
 from qipipe.staging.staging_helper import get_subjects
+from test import (project, ROOT)
 from test.helpers.logging_helper import logger
-from test.helpers.project import project
-from test import ROOT
 
 FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
 """The test fixture directory."""

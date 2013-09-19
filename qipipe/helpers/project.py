@@ -1,21 +1,15 @@
 def project(name=None):
     """
     Gets or sets the current XNAT project name.
-    If there is a name argument, then the current XNAT project name
-    is set to that value and returns the new project name.
-    Otherwise, this function returns the current XNAT project name.
-    The default project id is ``QIN``.
+    The default project name is ``QIN``.
     
-    The ``qipipe`` module does not reset the current project. Testing
-    modules can reset the project to override the default in order
-    to define a XNAT test project.
-    
-    :param name: the XNAT project name to make current
+    :param name: the XNAT project name to set, or None to get the
+        current project name
     :return: the current XNAT project name
     """
     if name:
         project.name = name
     elif not hasattr(project, 'name'):
-        project.name = 'QIN'
+        project.name = None
 
-    return project.name
+    return project.name or 'QIN'

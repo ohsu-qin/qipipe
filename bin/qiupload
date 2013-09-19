@@ -7,10 +7,10 @@ import sys
 import os
 import re
 import argparse
+from qipipe import project
 from qipipe.helpers import logging
 from collections import defaultdict
 from qipipe.helpers.logging_helper import logger
-from qipipe.helpers.project import project
 from qipipe.helpers import xnat_helper
 from qipipe.interfaces import XNATUpload
 
@@ -90,12 +90,14 @@ def _parse_arguments():
     # The logging level.
     verbosity_grp = parser.add_mutually_exclusive_group()
     verbosity_grp.add_argument('-q', '--quiet', help="don't print messages",
-                               dest='log_level', action='store_const', const=logging.ERROR)
+                               dest='log_level', action='store_const',
+                               const=logging.ERROR)
     verbosity_grp.add_argument(
         '-v', '--verbose', help='print informational messages',
         dest='log_level', action='store_const', const=logging.INFO)
     verbosity_grp.add_argument('-d', '--debug', help='print debug messages',
-                               dest='log_level', action='store_const', const=logging.DEBUG)
+                               dest='log_level', action='store_const',
+                               const=logging.DEBUG)
 
     # The remaining options.
     target_grp = parser.add_mutually_exclusive_group()

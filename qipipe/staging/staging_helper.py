@@ -4,7 +4,7 @@ import os
 import re
 import glob
 from collections import defaultdict
-from ..helpers.project import project
+from .. import project
 from ..helpers import xnat_helper
 from ..helpers.dicom_helper import iter_dicom_headers
 from . import airc_collection as airc
@@ -102,7 +102,7 @@ def iter_visits(collection, *subject_dirs, **opts):
     
     :param collection: the AIRC image collection name
     :param subject_dirs: the subject directories over which to iterate
-    :param opts: the following keyword options:
+    :param opts: the following keyword arguments:
     :keyword filter: a *(subject, session)* selection filter
     :return: the visit *(subject, session, files)* tuples
     """

@@ -6,6 +6,7 @@ from .compress import Compress
 from .copy import Copy
 from .fastfit import Fastfit
 from .fix_dicom import FixDicom
+from .gate import Gate
 from .group_dicom import GroupDicom
 from .lookup import Lookup
 from .map_ctp import MapCTP

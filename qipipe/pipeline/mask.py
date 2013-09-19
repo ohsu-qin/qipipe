@@ -4,7 +4,7 @@ from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Function)
 from nipype.interfaces import fsl
 from nipype.interfaces.dcmstack import MergeNifti
-from ..helpers.project import project
+from .. import project
 from ..interfaces import (XNATUpload, MriVolCluster)
 from .workflow_base import WorkflowBase
 from ..helpers.logging_helper import logger
@@ -48,7 +48,7 @@ class MaskWorkflow(WorkflowBase):
     The mask workflow output is the `output_spec` node consisting of the
     following output fields:
     
-    - `out_file`: the mask file
+    - `mask`: the mask file
     
     The optional workflow configuration file can contain the following
     sections:
@@ -89,9 +89,7 @@ class MaskWorkflow(WorkflowBase):
         sess_cnt = sum(map(len, input_dict.values()))
         self._logger.debug("Masking %d sessions from %d subjects..." %
             (sess_cnt, sbj_cnt))
-        # The subject workflow.
         for sbj, sess_dict in input_dict.iteritems():
-            # The session workflow.
             self._logger.debug("Masking subject %s..." % sbj)
             for sess, images in sess_dict.iteritems():
                 self._logger.debug("Masking %d %s %s images..." %
@@ -188,8 +186,7 @@ class MaskWorkflow(WorkflowBase):
         workflow.connect(inv_mask, 'out_file', upload_mask, 'in_files')
         
         # The output is the mask file.
-        out_fields = ['mask']
-        output_spec = pe.Node(IdentityInterface(fields=out_fields),
+        output_spec = pe.Node(IdentityInterface(fields=['mask']),
             name='output_spec')
         workflow.connect(inv_mask, 'out_file', output_spec, 'mask')
         

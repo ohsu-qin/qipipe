@@ -6,8 +6,7 @@ from nose.tools import (assert_equal, assert_true)
 from test.helpers.logging_helper import logger
 from qipipe.interfaces import XNATDownload
 from qipipe.helpers import xnat_helper
-from test import ROOT
-from test.helpers.project import project
+from test import (project, ROOT)
 from test.helpers.xnat_test_helper import generate_subject_name
 
 FIXTURE = os.path.join(
@@ -61,23 +60,23 @@ class TestXNATDownload(object):
         xnat_helper.delete_subjects(project(), SUBJECT)
         shutil.rmtree(RESULTS, True)
 
-    def test_download(self):
-        logger(__name__).debug(
-            "Testing the XNATDownload interface on %s..." % SUBJECT)
+    def test_download_scan(self):
+        logger(__name__).debug("Testing the XNATDownload interface on "
+                               "%s %s scan %d..." % (SUBJECT, SESSION, SCAN))
         # Download the files.
-        download = XNATDownload(
-            project=project(), subject=SUBJECT, session=SESSION,
-            scan=9, format=FORMAT, dest=RESULTS)
+        download = XNATDownload(project=project(), subject=SUBJECT,
+                                session=SESSION, scan=9, format=FORMAT,
+                                dest=RESULTS)
         result = download.run()
 
         # Verify the result
         dl_files = result.outputs.out_files
-        assert_equal(
-            len(dl_files), 2, "The %s download file count is incorrect: %s" %
-            (SESSION, dl_files))
+        assert_equal(len(dl_files), 2,
+                     "The %s download file count is incorrect: %s" %
+                            (SESSION, dl_files))
         for f in dl_files:
-            assert_true(
-                os.path.exists(f), "The file was not downloaded: %s" % f)
+            assert_true(os.path.exists(f),
+                        "The file was not downloaded: %s" % f)
             fdir, fname = os.path.split(f)
             assert_true(os.path.samefile(RESULTS, fdir),
                         "The download location is incorrect: %s" % fdir)

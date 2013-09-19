@@ -1,7 +1,7 @@
 import os
 import re
 import tempfile
-from ..helpers.project import project
+from .. import project
 from ..helpers import xnat_helper
 from ..helpers.collection_helper import EMPTY_DICT
 from ..helpers.ast_config import read_config

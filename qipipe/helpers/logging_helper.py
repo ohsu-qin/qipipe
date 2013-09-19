@@ -25,7 +25,7 @@ def logger(name):
 def configure(cfg_file=None, **opts):
     """
     Configures the global logger. The logging configuration is obtained from
-    from the given keyword options and the YAML_ logging configuration files.
+    from the given keyword arguments and the YAML_ logging configuration files.
     The following logging configuration files are loaded in low-to-high
     precedence:
     
@@ -38,9 +38,16 @@ def configure(cfg_file=None, **opts):
     - the *cfg_file* parameter
     
     The ``opts`` keyword arguments specify simple logging parameters that
-    override the configuration file settings.
+    override the configuration file settings. The keyword arguments
+    can include the *filename* and *level* short-cuts, which are handled
+    as follows:
     
-    .. _YAML: http://www.yaml.org
+    - The *filename* is None, then file logging is disabled. Otherwise,
+      the file handler file name is set to the *filename* value.
+    
+    - The *level* is set for the ``qipipe`` logger. In addition, if the
+      ``qipipe`` logger has a file handler, then that file handler level
+      is set. Otherwise, the console handler level is set.
  
     The logging configuration file ``formatters``, ``handlers`` and
     ``loggers`` sections are updated incrementally. For example, the
@@ -100,6 +107,8 @@ def configure(cfg_file=None, **opts):
           console:
             formatter: simple
     
+    .. _YAML: http://www.yaml.org
+    
     :param cfg_file: the optional custom configuration YAML file
     :param opts: the logging configuration options, including
         the following short-cuts:
@@ -111,13 +120,13 @@ def configure(cfg_file=None, **opts):
 
     # The options override the configuration files.
     if 'filename' in opts:
-        # TODO - document this
         fname = opts.pop('filename')
         if fname:
             cfg['handlers']['file_handler']['filename'] = fname
         else:
             cfg['handlers']['file_handler']['filename'] = '/dev/null'
             cfg['loggers']['qipipe']['handlers'] = ['console']
+    
     if 'level' in opts:
         # The log level is set in both the logger and the handler,
         # and the more restrictive level applies. Therefore, set
@@ -128,10 +137,11 @@ def configure(cfg_file=None, **opts):
             cfg['handlers']['file_handler']['level'] = level
         else:
             cfg['handlers']['console']['level'] = level
+    
     # Add the other options, if any.
     _update_config(cfg, opts)
 
-    # Make the log file parent directory, if necessary.
+    # Ensure that the log file parent directory exists.
     if 'file_handler' in cfg['loggers']['qipipe']['handlers']:
         path = cfg['handlers']['file_handler']['filename']
         log_dir = os.path.dirname(path)

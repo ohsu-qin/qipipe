@@ -7,10 +7,10 @@ import sys
 import os
 import re
 import argparse
-from qipipe.helpers import logging
 from collections import defaultdict
+from qipipe import project
+from qipipe.helpers import logging
 from qipipe.helpers.logging_helper import logger
-from qipipe.helpers.project import project
 from qipipe.helpers import xnat_helper
 from qipipe.interfaces import XNATDownload
 

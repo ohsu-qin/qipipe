@@ -56,8 +56,8 @@ class FastfitInputSpec(MpiCommandLineInputSpec):
     params = traits.Dict(desc='Parameters for the model')
     params_csv = traits.File(desc='Parameters CSV',
                              argstr='--param-csv %s')
-    fix_params = traits.Dict(desc="Optimization parameters to fix, and "
-                             "the values to fix them to", argstr='%s')
+    fix_params = traits.Dict(desc="Optimization parameters to fix, and"
+                             " the values to fix them to", argstr='%s')
     optional_outs = traits.List(desc='Optional outputs to produce',
                                 argstr='%s')
 
@@ -111,8 +111,8 @@ class Fastfit(MpiCommandLine):
                 any(not out in self._opt_params
                     for out in self._min_outs)
                 ):
-                raise ValueError("The model %s does not provide the "
-                                 "minimum outputs" % self.inputs.model_name)
+                raise ValueError("The model %s does not provide the"
+                                 " minimum outputs" % self.inputs.model_name)
             for param_name in self._opt_params:
                 if not param_name in fixed_params:
                     outputs.add_trait(param_name, traits.File(exists=True))
@@ -124,9 +124,9 @@ class Fastfit(MpiCommandLine):
                 outputs.add_trait(param_name, traits.File(exists=True))
                 undefined_traits[param_name] = Undefined
         else:
-            raise ValueError("Either the 'model_name' input must "
-                             "be static or the 'min_outs' argument "
-                             "to the constructor must be given.")
+            raise ValueError("Either the 'model_name' input must"
+                             " be static or the 'min_outs' argument"
+                             " to the constructor must be given.")
 
         # Set up dynamic outputs for any requested optional outputs
         if isdefined(self.inputs.optional_outs):

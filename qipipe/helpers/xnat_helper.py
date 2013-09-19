@@ -106,7 +106,60 @@ class XNATError(Exception):
 
 class XNAT(object):
 
-    """XNAT is a pyxnat facade convenience class."""
+    """
+    XNAT is a pyxnat facade convenience class. An XNAT instance is
+    created in a :meth:`qipipe.helpers.xnat_helper.connection`
+    context, e.g.:
+    
+    >>> from qipipe.helpers import xnat_helper
+    >>> with xnat.connection() as xnat:
+    >>>     sbj = xnat.get_subject('QIN', 'Sarcoma001')
+    
+    This XNAT wrapper class implements methods to access XNAT objects in
+    a hierarchical name space using a labeling convention. The method
+    parameters take name values which are used to build a XNAT label,
+    as shown in the following example:
+    
+    +----------------+-------------+------------+-------------------------------------+
+    | Class          | Name        | Id         | Label                               |
+    +================+=============+============+=====================================+
+    | Project        | QIN         | QIN        | QIN                                 |
+    +----------------+-------------+------------+-------------------------------------+
+    | Subject        | Breast003   | QIN_E00580 | QIN_Breast003                       |
+    +----------------+-------------+------------+-------------------------------------+
+    | Experiment     | Session01   | QIN_E00604 | QIN_Breast003_Session01             |
+    +----------------+-------------+------------+-------------------------------------+
+    | Scan           | 1           | 1          | 1                                   |
+    +----------------+-------------+------------+-------------------------------------+
+    | Reconstruction | reg_yJf93wC |  -         | QIN_Breast003_Session01_reg_yJf93wC |
+    +----------------+-------------+------------+-------------------------------------+
+    | Assessor       | pk_4kbEv3r  | QIN_E00868 | QIN_Breast003_Session01_pk_4kbEv3r  |
+    +----------------+-------------+------------+-------------------------------------+
+    
+    The XNAT label is set by the user and required to be unique in the XNAT database,
+    with the exception of the Scan object, which is unique within the scope of the
+    experiment.
+    
+    The XNAT id is an opaque XNAT-generated identifier. Like the label, it is unique
+    in the database, with the exception of the Scan id which is unique within the scope
+    of the experiment. Oddly, XNAT does not generate a Reconstruction object id.
+    
+    In the example above, the XNAT reconstruction object is obtained as follows:
+    
+    >>> from qipipe.helpers import xnat_helper
+    >>> with xnat.connection() as xnat:
+    >>>     recon = xnat.get_reconstruction('QIN', 'Breast003', 'Session01',
+    ...                                     'reg_yJf93wC')
+    
+    A scan NiFTI file ``series1.nii.gz`` is uploaded using the following code::
+    
+        xnat.upload('QIN', 'Breast003', 'Session01', scan=1, 'series1.nii.gz')
+    
+    Scan DICOM files require a *format* options, e.g.:
+    
+        xnat.upload('QIN', 'Breast003', 'Session01', scan=1, format=DICOM,
+                    *dicom_files)
+    """
 
     SUBJECT_QUERY_FMT = "/project/%s/subject/%s"
     """The subject query template."""
@@ -240,9 +293,9 @@ class XNAT(object):
 
     def download(self, project, subject, session, **opts):
         """
-        Downloads the files for the specfied XNAT session.
+        Downloads the files for the specified XNAT session.
         
-        The keyword options include the format and session child container.
+        The keyword arguments include the format and session child container.
         The session child container option can be set to a specific resource container,
         e.g. ``scan=1``, as described in :meth:`XNAT.upload` or all resources of a given
         container type. In the latter case, the `container_type` parameter is set.
@@ -334,7 +387,7 @@ class XNAT(object):
         
         -  the default RESOURCE is the file format, e.g. ``NIFTI`` or ``DICOM``
         
-        The keyword options include the session child container, scan
+        The keyword arguments include the session child container, scan
         *modality*, *resource* name and file *format*. The required container
         keyword argument associates the container type to the container name,
         e.g. ``scan=1``. The container type is ``scan``, ``reconstruction`` or
@@ -408,8 +461,8 @@ class XNAT(object):
         # If only the XNAT experiment was detected, then we don't have
         # enough information to continue.
         if isinstance(rsc_obj, Experiment):
-            raise XNATError("A resource container could not be inferred from "
-                            "the options %s" % opts)
+            raise XNATError("A resource container could not be inferred from"
+                            " the options %s" % opts)
 
         # Upload each file.
         logger(__name__).debug("Uploading %d %s %s %s files to XNAT..." %
@@ -435,7 +488,7 @@ class XNAT(object):
         If the ``create`` flag is set, then the object is created if it does not
         yet exist.
         
-        The keyword options specify the session child container and resource.
+        The keyword arguments specify the session child container and resource.
         The container keyword argument associates the container type to the container
         name, e.g. ``reconstruction=reg_zPa4R``. The container type is ``scan``,
         ``reconstruction`` or ``analysis``. The ``analysis`` container type value
@@ -445,7 +498,7 @@ class XNAT(object):
         resource keyword.
         
         If the session does not yet exist as a XNAT experiment and the ``create``
-        option is set, then the ``modality`` keyword option specifies a supported
+        option is set, then the ``modality`` keyword argument specifies a supported
         XNAT modality, e.g. ``MR`` or  or ``CT``. A capitalized modality value is
         a synonym for the XNAT session data type, e.g. ``MR`` is a synonym for
         ``xnat:mrSessionData``. The default modality is ``MR``.
@@ -514,8 +567,8 @@ class XNAT(object):
                     __name__).debug("Creating the XNAT %s %s %s experiment..." %
                                     (project, subject, session))
                 exp.insert()
-                logger(__name__).debug("Created the XNAT %s %s %s experiment with "
-                                       "id %s." % (project, subject, session, exp.id()))
+                logger(__name__).debug("Created the XNAT %s %s %s experiment with"
+                                       " id %s." % (project, subject, session, exp.id()))
             else:
                 return
 
@@ -533,12 +586,12 @@ class XNAT(object):
         ctr = self._xnat_resource_parent(exp, ctr_type, ctr_id)
         if not ctr.exists():
             if create:
-                logger(__name__).debug("Creating the XNAT %s %s %s %s %s resource parent "
-                                       "container..." %
+                logger(__name__).debug("Creating the XNAT %s %s %s %s %s resource parent"
+                                       " container..." %
                       (project, subject, session, ctr_type, ctr_id))
                 ctr.insert()
-                logger(__name__).debug("Created the XNAT %s %s %s %s %s resource parent "
-                                       "container with id %s." %
+                logger(__name__).debug("Created the XNAT %s %s %s %s %s resource parent"
+                                       " container with id %s." %
                       (project, subject, session, ctr_type, ctr_id, ctr.id()))
             else:
                 return
@@ -555,8 +608,8 @@ class XNAT(object):
                     __name__).debug("Creating the XNAT %s %s %s %s %s %s resource..." %
                                     (project, subject, session, ctr_type, ctr_id, resource))
                 rsc.insert()
-                logger(__name__).debug("Created the XNAT %s %s %s %s %s %s resource with "
-                                       "id %s." %
+                logger(__name__).debug("Created the XNAT %s %s %s %s %s %s resource with"
+                                       " id %s." %
                       (project, subject, session, ctr_type, ctr_id, resource, rsc.id()))
             else:
                 return

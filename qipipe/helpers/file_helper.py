@@ -9,7 +9,7 @@ import calendar
 def generate_file_name(ext=None):
     """
     Makes a valid file name which is unique to within one millisecond of calling
-    this function.
+    this function. The file name is seven characters long without the extension.
     
     :param ext: the optional file extension, with leading period delimiter
     :return: the file name

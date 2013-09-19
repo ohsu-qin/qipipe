@@ -35,7 +35,7 @@ def fix_dicom_headers(collection, subject, *dicom_files, **opts):
     
     :param collection: the collection name
     :param subject: the input subject name
-    :param opts: the keyword options
+    :param opts: the keyword arguments
     :keyword dest: the location in which to write the modified files
         (default is the current directory)
     :return: the files which were created

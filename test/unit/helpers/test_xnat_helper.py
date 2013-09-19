@@ -2,8 +2,7 @@ import os
 import shutil
 from nose.tools import (assert_equal, assert_true)
 from qipipe.helpers import xnat_helper
-from test import ROOT
-from test.helpers.project import project
+from test import (project, ROOT)
 from test.helpers.xnat_test_helper import generate_subject_name
 
 FIXTURES = os.path.join(ROOT, 'fixtures', 'helpers', 'xnat')
@@ -24,7 +23,6 @@ SCAN = 1
 
 
 class TestXNATHelper(object):
-
     """The XNAT helper unit tests."""
 
     def setUp(self):
@@ -38,8 +36,7 @@ class TestXNATHelper(object):
     def test_round_trip(self):
         with xnat_helper.connection() as xnat:
             # Upload the file.
-            xnat.upload(
-                project(), SUBJECT, SESSION, FIXTURE, scan=SCAN, modality='MR',
+            xnat.upload(project(), SUBJECT, SESSION, FIXTURE, scan=SCAN, modality='MR',
                 format='NIFTI')
             _, fname = os.path.split(FIXTURE)
             scan_obj = xnat.get_scan(project(), SUBJECT, SESSION, SCAN)
@@ -47,34 +44,30 @@ class TestXNATHelper(object):
             assert_true(file_obj.exists(), "File not uploaded: %s" % fname)
 
             # Download the single uploaded file.
-            files = xnat.download(
-                project(), SUBJECT, SESSION, dest=RESULTS, scan=SCAN,
+            files = xnat.download(project(), SUBJECT, SESSION, dest=RESULTS, scan=SCAN,
                 format='NIFTI')
             # Download all scan files.
-            all_files = xnat.download(
-                project(), SUBJECT, SESSION, dest=RESULTS,
+            all_files = xnat.download(project(), SUBJECT, SESSION, dest=RESULTS,
                 container_type='scan', format='NIFTI')
 
         # Verify the result.
-        assert_equal(
-            len(files), 1, "The download file count is incorrect: %d" % len(files))
+        assert_equal(len(files), 1, "The download file count is incorrect: %d" % len(files))
         f = files[0]
         assert_true(os.path.exists(f), "File not downloaded: %s" % f)
         assert_equal(set(files), set(all_files),
-                     "The %s %s scan %d download differs from all scans download: %s vs %s" %
-                    (SUBJECT, SESSION, SCAN, files, all_files))
+            "The %s %s scan %d download differs from all scans download: %s vs %s" %
+                (SUBJECT, SESSION, SCAN, files, all_files))
 
         # Work around pyxnat bug by reconnecting in order to get the accurate experiment
         # existence status.
         with xnat_helper.connection() as xnat:
             exp = xnat.get_session(project(), SUBJECT, SESSION)
-            assert_true(
-                exp.exists(), "XNAT %s %s %s experiment does not exist." %
+            assert_true(exp.exists(), "XNAT %s %s %s experiment does not exist." %
                 (project(), SUBJECT, SESSION))
             # Test replace.
-            xnat.upload(
-                project(), SUBJECT, SESSION, FIXTURE, scan=SCAN, modality='MR',
+            xnat.upload(project(), SUBJECT, SESSION, FIXTURE, scan=SCAN, modality='MR',
                 format='NIFTI', overwrite=True)
+
 
 
 if __name__ == "__main__":

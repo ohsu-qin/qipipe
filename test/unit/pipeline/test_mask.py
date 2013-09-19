@@ -4,9 +4,9 @@ import glob
 import shutil
 from nose.tools import (assert_equal, assert_is_not_none)
 import nipype.pipeline.engine as pe
-from test.helpers.logging_helper import logger
 from qipipe.pipeline import mask
-from test.helpers.project import project
+from test import project
+from test.helpers.logging_helper import logger
 from test.unit.pipeline.staged_test_base import (StagedTestBase, ROOT)
 
 FIXTURES = os.path.join(ROOT, 'fixtures', 'registration')

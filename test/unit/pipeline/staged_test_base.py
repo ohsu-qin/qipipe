@@ -9,8 +9,7 @@ import nipype.pipeline.engine as pe
 from test.helpers.logging_helper import logger
 from qipipe.pipeline import registration
 from qipipe.helpers import xnat_helper
-from test import ROOT
-from test.helpers.project import project
+from test import (project, ROOT)
 
 
 class StagedTestBase(object):

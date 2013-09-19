@@ -9,8 +9,7 @@ from qipipe.helpers import xnat_helper
 from qipipe.staging import airc_collection as airc
 from qipipe.staging.staging_helper import get_subjects
 from qipipe.helpers.ast_config import read_config
-from test import ROOT
-from test.helpers.project import project
+from test import (project, ROOT)
 from test.unit.pipeline.test_mask import MASK_CONF
 from test.unit.pipeline.test_registration import REG_CONF
 from test.unit.pipeline.test_modeling import MODELING_CONF
@@ -31,13 +30,14 @@ class TestQIPipeline(object):
     QIN Pipeline unit tests.
     
     Note:: a precondition for running this test is that the environment
-    variable ``QIN_DATA`` is set to the AIRC ``HUANG_LAB`` mount point,
-    e.g.::
-        
-        QIN_DATA=/Volumes/HUANG_LAB
+        variable ``QIN_DATA`` is set to the AIRC ``HUANG_LAB`` mount point.
+        If ``QIN_DATA`` is not set, then no test cases are run and a
+        log message is issued.
     
     Note:: the modeling workflow is only executed if the ``fastfit``
-    executable is found.
+        executable is found.
+    
+    Note:: this test takes app. four days to run.
     """
 
     def setUp(self):
@@ -60,8 +60,9 @@ class TestQIPipeline(object):
             os.symlink(src, dest)
             self._test_collection('Breast', fixture)
         else:
-            logger(__name__).info("Skipping the QIN pipeline unit Breast test,"
-                                  " since the QIN_DATA environment variable is not set.")
+            logger(__name__).info("Skipping the QIN pipeline unit Breast"
+                                  " test, since the QIN_DATA environment"
+                                  " variable is not set.")
 
     def test_sarcoma(self):
         data = os.getenv('QIN_DATA')
@@ -76,8 +77,9 @@ class TestQIPipeline(object):
             os.symlink(src, dest)
             self._test_collection('Sarcoma', fixture)
         else:
-            logger(__name__).info("Skipping the QIN pipeline unit Sarcoma test, "
-                                  "since the QIN_DATA environment variable is not set.")
+            logger(__name__).info("Skipping the QIN pipeline unit Sarcoma"
+                                  " test, since the QIN_DATA environment"
+                                  " variable is not set.")
 
     def _test_collection(self, collection, fixture):
         """
@@ -127,20 +129,23 @@ class TestQIPipeline(object):
                     if opts['registration'] == False:
                         continue
                     recon = results['registration']
-                    assert_is_not_none(recon, "The %s %s result does not have a"
-                                       " registration reconstruction" % (sbj, sess))
+                    assert_is_not_none(recon, 
+                                       "The %s %s result does not have a"
+                                       " registration reconstruction" %
+                                       (sbj, sess))
                     reg_obj = xnat.get_reconstruction(
                         project(), sbj, sess, recon)
-                    assert_true(reg_obj.exists(), "The %s %s registration"
-                                " reconstruction  %s was not created in XNAT" %
-                               (sbj, sess, recon))
+                    assert_true(reg_obj.exists(),
+                                "The %s %s registration reconstruction %s"
+                                " was not created in XNAT" % (sbj, sess, recon))
                     # Verify the modeling assessor
                     if opts['modeling'] != False:
                         assessor = results['modeling']
                         mdl_obj = xnat.get_assessor(
                             project(), sbj, sess, assessor)
-                        assert_true(mdl_obj.exists(), "The %s %s modeling assessor %s "
-                                    "was not created in XNAT" % (sbj, sess, assessor))
+                        assert_true(mdl_obj.exists(),
+                                    "The %s %s modeling assessor %s was not"
+                                    " created in XNAT" % (sbj, sess, assessor))
 
             # Delete the test subjects.
             xnat_helper.delete_subjects(project(), *subjects)

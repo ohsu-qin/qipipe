@@ -5,8 +5,8 @@ import shutil
 from nose.tools import (assert_equal, assert_true)
 import nipype.pipeline.engine as pe
 from qipipe.pipeline import modeling
+from test import project
 from test.helpers.logging_helper import logger
-from test.helpers.project import project
 from test.unit.pipeline.staged_test_base import (StagedTestBase, ROOT)
 
 MODELING_CONF = os.path.join(ROOT, 'conf', 'modeling.cfg')
