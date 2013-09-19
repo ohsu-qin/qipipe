@@ -226,11 +226,12 @@ class QIPipelineWorkflow(WorkflowBase):
         :return: the the XNAT *{subject: [session]}* dictionary
         """
         self._logger.debug("Running the QIN pipeline execution workflow...")
+
         result_dict = defaultdict(list)
         exec_wf = self.workflow
         input_spec = exec_wf.get_node('input_spec')
         dest = os.path.join(exec_wf.base_dir, 'scans')
-        
+
         # Parse the XNAT hierarchy for the inputs.
         sess_specs = self._parse_session_labels(inputs)
         # Validate the project.
@@ -276,6 +277,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 result_dict[sbj].append(sess)
 
         self._logger.debug("Completed the QIN pipeline execution workflow.")
+
         return result_dict
 
     def _partition_scans(self, xnat, project, subject, session, scans):
@@ -303,6 +305,7 @@ class QIPipelineWorkflow(WorkflowBase):
         :return: the the XNAT *{subject: [session]}* dictionary
         """
         self._logger.debug("Running the QIN pipeline execution workflow...")
+
         result_dict = defaultdict(list)
         exec_wf = self.workflow
         input_spec = exec_wf.get_node('input_spec')
@@ -323,6 +326,7 @@ class QIPipelineWorkflow(WorkflowBase):
             result_dict[sbj].append(sess)
 
         self._logger.debug("Completed the QIN pipeline execution workflow.")
+
         return result_dict
 
     def _parse_session_labels(self, labels):
