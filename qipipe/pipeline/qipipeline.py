@@ -1,4 +1,5 @@
 import os
+import re
 import tempfile
 import logging
 from collections import defaultdict
@@ -22,11 +23,11 @@ def run(*inputs, **opts):
     Creates a :class:`qipipe.pipeline.qipipeline.QIPipelineWorkflow`
     and runs it on the given inputs.
 
-    :param inputs: the :meth:`qipipe.pipeline.qipipeline.QIPipelineWorkflow.run`
-        inputs
+    :param inputs: the
+        :meth:`qipipe.pipeline.qipipeline.QIPipelineWorkflow.run` inputs
     :param opts: the :class:`qipipe.pipeline.qipipeline.QIPipelineWorkflow`
-        initializer and :meth:`qipipe.pipeline.qipipeline.QIPipelineWorkflow.run`
-        options
+        initializer and
+        :meth:`qipipe.pipeline.qipipeline.QIPipelineWorkflow.run` options
     :return: the :meth:`qipipe.pipeline.qipipeline.QIPipelineWorkflow.run`
         result
     """
@@ -120,7 +121,7 @@ class QIPipelineWorkflow(WorkflowBase):
     :class:`qipipe.staging.RegistrationWorkflow` workflow ``input_spec``.
     """
 
-    REG_SERIES_PAT = 'series(\d+)_reg_'
+    REG_SERIES_PAT = re.compile('series(\d+)_reg_')
 
     def __init__(self, **opts):
         """
@@ -129,7 +130,8 @@ class QIPipelineWorkflow(WorkflowBase):
             (default a new temp directory)
         :keyword mask: the XNAT mask reconstruction name
         :keyword registration: the XNAT registration reconstruction name
-        :keyword skip_registration: flag indicating whether to skip registration
+        :keyword skip_registration: flag indicating whether to skip
+            registration
         :keyword technique: the
             class:`qipipe.pipeline.registration.RegistrationWorkflow`
             technique
@@ -266,7 +268,7 @@ class QIPipelineWorkflow(WorkflowBase):
         """
         self._logger.debug("Processing the %s %s %s scans..." %
                            (project, subject, session))
-        
+
         # Get the scan numbers.
         scans = xnat.get_scans(project, subject, session)
         if not scans:
@@ -625,8 +627,9 @@ class QIPipelineWorkflow(WorkflowBase):
             # the staging or the registration workflow.
             if reg_wf:
                 reg_wf_files_xfc = IdentityInterface(fields=['images'])
-                reg_wf_files = pe.JoinNode(reg_wf_files_xfc, joinsource=join_src,
-                                          name='reg_wf_files')
+                reg_wf_files = pe.JoinNode(reg_wf_files_xfc,
+                                           joinsource=join_src,
+                                           name='reg_wf_files')
                 exec_wf.connect(reg_wf, 'output_spec.image',
                                 reg_wf_files, 'images')
 
