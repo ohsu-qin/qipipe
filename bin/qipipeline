@@ -8,56 +8,33 @@ import os
 import argparse
 from qipipe.pipeline import qipipeline as qip
 from qipipe.helpers import logging_helper
-from qipipe.helpers.project import project
 
 
 def main(argv=sys.argv):
     # Parse the command line arguments.
-    args = _parse_arguments()
+    inputs, opts = _parse_arguments()
 
     # Configure the logger.
     log_cfg = {}
-    if args.log:
-        log_dir = os.path.dirname(args.log)
-        if log_dir and not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-        log_cfg['filename'] = args.log
-    if args.log_level:
-        log_cfg['level'] = args.log_level
+    if 'log' in opts:
+        log_cfg['filename'] = opts.pop('log')
+    if 'log_level' in opts:
+        log_cfg['level'] = opts.pop('log_level')
     logging_helper.configure(**log_cfg)
 
-    # Set the project.
-    project(args.project)
-
-    # The options.
-    opts = {}
-    if args.collection:
-        opts['collection'] = args.collection
-    if args.output:
-        opts['dest'] = args.output
-    if args.work:
-        opts['base_dir'] = args.work
-    if args.staging == False:
-        opts['staging'] = args.staging
-    if args.mask:
-        opts['mask'] = args.mask
-    if args.registration != None:
-        opts['registration'] = args.registration
-    if args.modeling == False:
-        opts['modeling'] = args.modeling
-    if args.overwrite:
-        opts['overwrite'] = args.overwrite
-    if args.resubmit:
-        opts['resubmit'] = args.resubmit
-
     # Run the QIN workflow.
-    qip.run(*args.inputs, **opts)
+    qip.run(*inputs, **opts)
 
     return 0
 
 
 def _parse_arguments():
-    """Parses the command line arguments."""
+    """
+    Parses the command line arguments.
+
+    :return: the (inputs, options) tuple, where inputs is the non-option
+        arguments and options is an {option: value} dictionary
+    """
     parser = argparse.ArgumentParser()
 
     # The AIRC collection to process.
@@ -70,8 +47,7 @@ def _parse_arguments():
 
     # The XNAT project id.
     parser.add_argument(
-        '-p', '--project', help='the XNAT project (default is QIN)',
-        default='QIN')
+        '-p', '--project', help='the XNAT project (default is QIN)')
 
     # The logging level.
     verbosity_grp = parser.add_mutually_exclusive_group()
@@ -88,40 +64,42 @@ def _parse_arguments():
     parser.add_argument('-l', '--log', help='the log file', metavar='FILE')
     parser.add_argument(
         '-o', '--output', help='the destination directory (default current directory)',
-        metavar='DIR')
+        metavar='DIR', dest='dest')
     parser.add_argument(
         '-w', '--work', help='the work directory (default a new temp directory)',
-        metavar='DIR')
+        metavar='DIR', dest='base_dir')
 
-    # The option to resubmit the workflow to pick up where it left off.
-    parser.add_argument(
-        '-r', '--resubmit', help='resubmit a workflow to pick up where it left off',
-        action='store_true')
-
-    # The dangerous overwrite option.
-    parser.add_argument('--overwrite', help='replace existing XNAT subjects',
-                        action='store_true')
-
-    # The XNAT objects, or False to disable.
-    parser.add_argument('--no-staging', help='disable the staging workflow',
-                        dest='staging', action='store_false')
+    # The mask and reference arguments.
     parser.add_argument('--mask', help="the mask XNAT reconstruction name",
-                        metavar='RECON', dest='mask')
-    reg_grp = parser.add_mutually_exclusive_group()
-    reg_grp.add_argument(
+                        metavar='RECON')
+    parser.add_argument('--reference', help="the reference XNAT reconstruction name",
+                        metavar='RECON')
+
+    # The registration arguments.
+    parser.add_argument(
         '--registration', help='the XNAT registration reconstruction name',
-        metavar='RECON', dest='registration')
-    reg_grp.add_argument('--no-registration', help='skip registration',
-                         dest='registration', action='store_false')
+        metavar='RECON')
+    parser.add_argument('--no-registration', help='skip registration',
+                         dest='skip_registration', action='store_true', default=None)
+    technique_grp = parser.add_mutually_exclusive_group()
+    technique_grp.add_argument('--ants', help="ANTS registration (the default)",
+                               dest='technique', action='store_const', const='ANTS')
+    technique_grp.add_argument('--fnirt', help="FNIRT registration",
+                               dest='technique', action='store_const', const='FNIRT')
+
+    # The modeling argument.
     parser.add_argument('--no-modeling', help='disable the modeling workflow',
-                        dest='modeling', action='store_false')
+                        dest='skip_modeling', action='store_true', default=None)
 
     # The input subject directories or XNAT labels to process.
     parser.add_argument('inputs', help='the input AIRC DICOM subject directory'
                         ' or XNAT session label if staging is not performed',
                         metavar='INPUT', nargs='+')
 
-    return parser.parse_args()
+    args = vars(parser.parse_args())
+    nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)
+
+    return nonempty_args.pop('inputs'), nonempty_args
 
 
 if __name__ == '__main__':
