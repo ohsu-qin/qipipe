@@ -239,7 +239,7 @@ class QIPipelineWorkflow(WorkflowBase):
             if prj != project():
                 raise ValueError("The project %s in the session label %s"
                                  "differs from the current project %s" %
-                                 (prj, spec, project())
+                                 (prj, spec, project()))
 
         with xnat_helper.connection() as xnat:
             for prj, sbj, sess in sess_specs:
