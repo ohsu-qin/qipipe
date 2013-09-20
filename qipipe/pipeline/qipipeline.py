@@ -280,22 +280,30 @@ class QIPipelineWorkflow(WorkflowBase):
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
 
-        # If some scans are not yet registered, then partition the
-        # input scans into those which are already registered and
-        # those which need to be registered.
+        # Partition the input scans into those which are already
+        # registered and those which need to be registered.
+        reg_scans, unreg_scans = self._partition_scans(
+            xnat, project, subject, session, scans)
+
+        # If registration is enabled, then there is a series iterator
+        # node. In that case, set the series iterables to the
+        # unregistered scans.
         iter_series = self.workflow.get_node('iter_series')
-        if opts.get('skip_registration'):
-            iter_series.iterables = ('scan', scans)
-        else:
-            reg_scans, unreg_scans = self._partition_scans(
-                xnat, project, subject, session, scans)
-            iter_series.iterables = ('scan', unreg_scans)
-            # If modeling is enabled, then some of the realigned
-            # images might need to be downloaded.
-            if reg_scans:
-                download_reg = self.workflow.get_node('download_reg')
-                if download_reg:
-                    download_reg.iterables = ('scan', reg_scans)
+        if iter_series:
+            iter_series.iterables = ('series', unreg_scans)
+
+        # If modeling is enabled, then there is a download registered
+        # scans node. If that is the case and there are registered scans,
+        # then download the realigned images.
+        download_reg = self.workflow.get_node('download_reg')
+        if download_reg:
+            # If registration is disabled, then validate that all scans
+            # are registered.
+            if opts.get('skip_registration') and unreg_scans:
+                raise PipelineError(
+                    "The following %s %s %s scans are not registered: %s" %
+                    (project, subject, session, unreg_scans))
+            download_reg.iterables = ('scan', reg_scans)
 
         # Execute the workflow.
         self._run_workflow(self.workflow)
@@ -509,27 +517,9 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # Stitch together the workflows:
 
-        # The mask and reference workflow inputs include the staged
-        # images as a list. The modeling workflow inputs input the
-        # realigned images as a list. In both case, a join node
-        # might be required whose join source is the staging series
-        # or scan download iterable node.
-        if stg_wf:
-            join_src = 'iter_series'
-        elif reg_wf:
-            join_src = 'download_scan'
-        else:
-            join_src = None
-
-        # If the mask or reference will be created, then collect the
-        # scan images. The staged node inputs are set below.
-        if join_src:
-            staged = pe.JoinNode(IdentityInterface(fields=['images']),
-                                 joinsource=join_src, name='staged')
-        else:
-            staged = None
-
-        # Stage the session images.
+        # If staging is enabled. then stage the DICOM input.
+        # Otherwise, if the registration, mask or reference
+        # workflow is enabled, then download the scan files.
         if stg_wf:
             for field in input_spec.inputs.copyable_trait_names():
                 exec_wf.connect(input_spec, field,
@@ -540,20 +530,28 @@ class QIPipelineWorkflow(WorkflowBase):
             for field in iter_dicom.inputs.copyable_trait_names():
                 exec_wf.connect(iter_dicom, field,
                                 stg_wf, 'iter_dicom.' + field)
-            if staged:
-                exec_wf.connect(stg_wf, 'output_spec.image',
-                                staged, 'images')
-        elif reg_wf:
-            # Download the XNAT NiFTI scan file.
+        elif reg_wf or mask_wf or ref_wf:
             dl_xfc = XNATDownload(project=project())
             download_scan = pe.Node(dl_xfc, name='download_scan')
-            exec_wf.connect(input_spec, 'subject', download_scan, 'subject')
-            exec_wf.connect(input_spec, 'session', download_scan, 'session')
-            exec_wf.connect(iter_series, 'series', download_scan, 'scan')
-            if staged:
+            exec_wf.connect(input_spec, 'subject',
+                            download_scan, 'subject')
+            exec_wf.connect(input_spec, 'session',
+                            download_scan, 'session')
+            exec_wf.connect(iter_series, 'series',
+                            download_scan, 'scan')
+        
+        # The mask and reference workflow inputs include the staged
+        # images as a list.
+        if mask_wf or ref_wf:
+            staged = pe.JoinNode(IdentityInterface(fields=['images']),
+                                 joinsource='iter_series', name='staged')
+            if stg_wf:
+                exec_wf.connect(stg_wf, 'output_spec.image', staged, 'images')
+            else:
                 exec_wf.connect(download_scan, 'out_file', staged, 'images')
 
-        # Obtain the mask.
+        # If the mask workflow is enabled, then make the mask.
+        # Otherwise, download the mask if necessary.
         if mask_wf:
             exec_wf.connect(input_spec, 'subject',
                             mask_wf, 'input_spec.subject')
@@ -562,13 +560,13 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(staged, 'images',
                             mask_wf, 'input_spec.images')
         elif mask_recon and (reg_wf or mdl_wf):
-            # Download the mask file.
             dl_xfc = XNATDownload(project=project(), reconstruction=mask_recon)
             download_mask = pe.Node(dl_xfc, name='download_mask')
             exec_wf.connect(input_spec, 'subject', download_mask, 'subject')
             exec_wf.connect(input_spec, 'session', download_mask, 'session')
 
-        # Obtain the reference.
+        # If the reference workflow is enabled, then make the mask.
+        # Otherwise, download the reference if necessary.
         if ref_wf:
             exec_wf.connect(input_spec, 'subject',
                             ref_wf, 'input_spec.subject')
@@ -577,13 +575,13 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(staged, 'images',
                             ref_wf, 'input_spec.images')
         elif ref_recon and reg_wf:
-            # Download the reference file.
             dl_xfc = XNATDownload(project=project(), reconstruction=ref_recon)
             download_ref = pe.Node(dl_xfc, name='download_ref')
             exec_wf.connect(input_spec, 'subject', download_ref, 'subject')
             exec_wf.connect(input_spec, 'session', download_ref, 'session')
 
-        # Register the staged images.
+        # If the reference workflow is enabled, then register the staged
+        # images.
         if reg_wf:
             exec_wf.connect(input_spec, 'subject',
                             reg_wf, 'input_spec.subject')
@@ -611,7 +609,8 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(download_ref, 'out_file',
                                 reg_wf, 'input_spec.reference')
 
-        # Model the realigned images.
+        # If the modeling workflow is enabled, then model the realigned
+        # images.
         if mdl_wf:
             exec_wf.connect(input_spec, 'subject',
                             mdl_wf, 'input_spec.subject')
@@ -625,52 +624,46 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(download_mask, 'output_file',
                                 mdl_wf, 'input_spec.mask')
 
-            # Collect the registration output. The join_src is set
-            # above to the upstream iterable node in either the
-            # the staging or the registration workflow.
+            # Collect the registration workflow output.
             if reg_wf:
-                reg_wf_files_xfc = IdentityInterface(fields=['images'])
-                reg_wf_files = pe.JoinNode(reg_wf_files_xfc,
-                                           joinsource=join_src,
-                                           name='reg_wf_files')
-                exec_wf.connect(reg_wf, 'output_spec.image',
-                                reg_wf_files, 'images')
+                new_reg_xfc = IdentityInterface(fields=['images'])
+                new_reg = pe.JoinNode(new_reg_xfc, joinsource='iter_series',
+                                      name='new_reg')
+                exec_wf.connect(reg_wf, 'output_spec.image', new_reg, 'images')
 
             # If the registration reconstruction name was specified,
-            # then the modeling inputs include previously registered
-            # realigned images. The run method is required to set the
-            # download node's scan field iterables.
+            # then download previously registered realigned images.
             if reg_recon:
-                dl_reg_xfc = XNATDownload(project=project(),
+                reg_dl_xfc = XNATDownload(project=project(),
                                           reconstruction=reg_recon)
-                download_reg = pe.Node(dl_reg_xfc, name='download_reg')
+                download_reg = pe.Node(reg_dl_xfc, name='download_reg')
                 exec_wf.connect(input_spec, 'subject',
                                 download_reg, 'subject')
                 exec_wf.connect(input_spec, 'session',
                                 download_reg, 'session')
-                reg_dl_files_xfc = IdentityInterface(fields=['images'])
-                reg_dl_files = pe.JoinNode(reg_dl_files,
+                downloaded_reg_xfc = IdentityInterface(fields=['images'])
+                downloaded_reg = pe.JoinNode(downloaded_reg_xfc,
                                            joinsource=download_reg,
-                                           name='reg_dl_files')
+                                           name='downloaded_reg')
+                exec_wf.connect(download_reg, 'out_file',
+                                downloaded_reg, 'images')
 
                 # If there is also a registration workflow, then
-                # merge the previously and newly registration results.
+                # merge the previously and newly realigned images.
                 if reg_wf:
-                    merge_reg_files = pe.Node(Merge(2), name='merge_reg_files')
-                    exec_wf.connect(reg_dl_files, 'images',
-                                    merge_reg_files, 'in1')
-                    exec_wf.connect(reg_wf_files, 'images',
-                                    merge_reg_files, 'in2')
-                    exec_wf.connect(merge_reg_files, 'out',
+                    merge_reg = pe.Node(Merge(2), name='merge_reg')
+                    exec_wf.connect(downloaded_reg, 'images', merge_reg, 'in1')
+                    exec_wf.connect(new_reg, 'images', merge_reg, 'in2')
+                    exec_wf.connect(merge_reg, 'out',
                                     mdl_wf, 'input_spec.images')
                 else:
                     # No registration workflow, so all inputs were downloaded.
-                    exec_wf.connect(reg_dl_files, 'images',
+                    exec_wf.connect(downloaded_reg, 'images',
                                     mdl_wf, 'input_spec.images')
             else:
                 # No registration download, so all inputs come from the
                 # registration workflow output.
-                exec_wf.connect(reg_wf_files, 'images',
+                exec_wf.connect(new_reg, 'images',
                                 mdl_wf, 'input_spec.images')
 
         # Set the configured workflow node inputs and plug-in options.
