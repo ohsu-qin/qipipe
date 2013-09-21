@@ -69,6 +69,10 @@ def _parse_arguments():
         '-w', '--work', help='the work directory (default a new temp directory)',
         metavar='DIR', dest='base_dir')
 
+    # The skip staging argument.
+    parser.add_argument('--no-staging', help='disable the staging workflow',
+                        dest='skip_staging', action='store_true', default=None)
+
     # The mask and reference arguments.
     parser.add_argument('--mask', help="the mask XNAT reconstruction name",
                         metavar='RECON')
@@ -87,7 +91,7 @@ def _parse_arguments():
     technique_grp.add_argument('--fnirt', help="FNIRT registration",
                                dest='technique', action='store_const', const='FNIRT')
 
-    # The modeling argument.
+    # The skip modeling argument.
     parser.add_argument('--no-modeling', help='disable the modeling workflow',
                         dest='skip_modeling', action='store_true', default=None)
 
