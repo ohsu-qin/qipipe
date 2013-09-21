@@ -429,6 +429,7 @@ class QIPipelineWorkflow(WorkflowBase):
         ref_recon = opts.get('reference')
         reg_recon = opts.get('registration')
         reg_technique = opts.get('technique')
+        skip_staging = opts.get('skip_staging')
         skip_registration = opts.get('skip_registration')
         skip_modeling = opts.get('skip_modeling')
 
@@ -485,7 +486,7 @@ class QIPipelineWorkflow(WorkflowBase):
             ref_wf = None
 
         # The staging workflow.
-        if reg_recon:
+        if skip_staging or reg_recon:
             self._logger.info("Skipping staging.")
             stg_wf = None
         else:
