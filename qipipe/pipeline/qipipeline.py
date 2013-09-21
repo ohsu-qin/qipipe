@@ -218,14 +218,11 @@ class QIPipelineWorkflow(WorkflowBase):
         return {sbj: sess_dict.keys()
                 for sbj, sess_dict in stg_dict.iteritems()}
 
-    def _run_with_scan_download(self, *inputs, **opts):
+    def _run_with_scan_download(self, *inputs):
         """
         Runs the execution workflow on downloaded scan image files.
 
         :param inputs: the XNAT session labels
-        :param opts: the following keyword arguments:
-        :keyword resubmit: flag indicating whether some of the scans
-            are already registered
         :return: the the XNAT *{subject: [session]}* dictionary
         """
         self._logger.debug("Running the QIN pipeline execution workflow...")
@@ -320,6 +317,10 @@ class QIPipelineWorkflow(WorkflowBase):
         # The XNAT registration object.
         reg_obj = xnat.get_reconstruction(project, subject, session,
                                           self.registration_reconstruction)
+        # If the registration has not yet been performed, then
+        # all of the scans are downloaded.
+        if not reg_obj.exists():
+            return [], scans
         # The XNAT registration file names.
         reg_files = reg_obj.out_resources().fetchone().files().get()
         reg_scans = [int(QIPipelineWorkflow.REG_SERIES_PAT.match(f).group(1))
