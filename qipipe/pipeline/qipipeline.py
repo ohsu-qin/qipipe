@@ -185,7 +185,7 @@ class QIPipelineWorkflow(WorkflowBase):
         if self.workflow.get_node('staging.input_spec'):
             sbj_sess_dict = self._run_with_dicom_input(*inputs, **opts)
         elif self.workflow.get_node('registration.input_spec'):
-            sbj_sess_dict = self._run_with_scan_download(*inputs)
+            sbj_sess_dict = self._run_with_scan_download(*inputs, **opts)
         else:
             sbj_sess_dict = self._run_with_registration_download(*inputs)
 
@@ -218,11 +218,15 @@ class QIPipelineWorkflow(WorkflowBase):
         return {sbj: sess_dict.keys()
                 for sbj, sess_dict in stg_dict.iteritems()}
 
-    def _run_with_scan_download(self, *inputs):
+    def _run_with_scan_download(self, *inputs, **opts):
         """
         Runs the execution workflow on downloaded scan image files.
 
         :param inputs: the XNAT session labels
+        :param opts: the meth:`qipipe.pipeline.qipipeline._run_on_scans`
+            keyword options:
+        :keyword skip_registration: flag indicating whether to register
+            the scan images
         :return: the the XNAT *{subject: [session]}* dictionary
         """
         self._logger.debug("Running the QIN pipeline execution workflow...")
