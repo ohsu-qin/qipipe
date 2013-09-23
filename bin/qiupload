@@ -103,7 +103,6 @@ def _parse_arguments():
     target_grp = parser.add_mutually_exclusive_group()
     target_grp.add_argument(
         '-r', '--reconstruction', help='the XNAT reconstruction name')
-    target_grp = parser.add_mutually_exclusive_group()
     target_grp.add_argument('-a', '--assessor', help='the XNAT assessor name')
     parser.add_argument(
         '-f', '--format', help='the file format (default NiFTI)')
