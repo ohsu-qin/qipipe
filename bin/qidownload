@@ -47,12 +47,12 @@ def main(argv=sys.argv):
     prj_sess_dict = _parse_session_labels(args.sessions)
     # Register the session images.
     with xnat_helper.connection() as xnat:
-    for prj, sessions in prj_sess_dict.iteritems():
-        for sbj, sess in sessions:
-            tgt_dir = os.path.join(dest, prj, sbj, sess)
-            # Download the files.
-            download = XNATDownload(**dl_opts)
-            result = download.run()
+        for prj, sessions in prj_sess_dict.iteritems():
+            for sbj, sess in sessions:
+                tgt_dir = os.path.join(dest, prj, sbj, sess)
+                # Download the files.
+                download = XNATDownload(**dl_opts)
+                result = download.run()
 
     return 0
 
