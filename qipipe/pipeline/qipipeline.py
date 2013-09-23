@@ -58,33 +58,27 @@ class QIPipelineWorkflow(WorkflowBase):
 
     The pipeline workflow depends on the initialization options as follows:
 
-    - If the *staging* option is set to False, then the series scan stack
-      images are downloaded. Otherwise, the DICOM files are staged for
-      the subject directory inputs.
+    - If none of the *skip_staging*, *mask*, *reference* or *registration*
+      options are set, then the DICOM files are staged for the subject
+      directory inputs. Otherwise, staging is not performed. In that case,
+      if registration is enabled as described below, then the previously
+      staged series scan stack images are downloaded.
 
-    - If the *mask* option is set to a XNAT reconstruction name, then the
-      mask image is downloaded. Otherwise, the mask is created from the
-      staged images.
+    - The scan images are registered if and only if the *skip_registration*
+      option is not set to True. If the *registration* option is set,
+      then the previously realigned images with the given reconstruction
+      name are downloaded. The remaining scans are registered.
 
-    - If the *reference* option is set to a XNAT reconstruction name,
-      then the reference image is downloaded. Otherwise, the reference
-      is created from the staged images.
+    - If registration is performed and the *mask* option is set, then the
+      given mask XNAT reconstruction is downloaded. Otherwise, the mask is
+      created from the staged images prior to registration.
 
-    - If the *registration* option is set to False, then the workflow
-      stops after staging.
+    - If registration is performed and the *reference* option is set, then
+      the given mask XNAT reconstruction is downloaded. Otherwise, the
+      reference is created from the staged images prior to registration.
 
-    - Otherwise, if the *registration* option is set to a XNAT
-      reconstruction name, then registration is resumed for the scans
-      which have not yet been registered.
-
-    - If the *registration* option is not set, then the staged scan
-      series stack images are registered.
-
-    - PK modeling is performed if and only if the *modeling* option
-      is not set to False.
-
-    Unnecessary phases are skipped, e.g. if modeling and registration
-    are not performed, then neither is mask or reference creation.
+    - PK modeling is performed if and only if the *skip_modeling* option is
+      not set to True.
 
     The QIN workflow input node is ``input_spec`` with the following
     fields:
@@ -474,7 +468,7 @@ class QIPipelineWorkflow(WorkflowBase):
             ref_wf = None
 
         # The staging workflow.
-        if skip_staging or reg_recon:
+        if skip_staging or reg_recon or mask_recon or ref_recon:
             self._logger.info("Skipping staging.")
             stg_wf = None
         else:
