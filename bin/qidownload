@@ -14,9 +14,6 @@ from qipipe.helpers.logging_helper import logger
 from qipipe.helpers import xnat_helper
 from qipipe.interfaces import XNATDownload
 
-SESSION_LBL_PAT = re.compile("^(\w+)_(\w+)_(\w+)$")
-"""The *project*``_``*subject*``_``*session* XNAT label matcher."""
-
 
 def main(argv=sys.argv):
     # Parse the command line arguments.
