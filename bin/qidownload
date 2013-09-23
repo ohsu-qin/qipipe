@@ -79,7 +79,7 @@ def _parse_session_label(label):
     based on the ``qipipe`` naming standard.
     
     :param label: the label to parse
-    :return: the *[project, subject, session]* list
+    :return: the *(project, subject, session)* tuple
     """
     match = SESSION_LBL_PAT.match(label)
     if not match:
