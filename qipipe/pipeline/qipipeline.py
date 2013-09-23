@@ -367,7 +367,7 @@ class QIPipelineWorkflow(WorkflowBase):
         :raise ValueError: if a label is not in
             *project*``_``*subject*``_``*session* format
         """
-        return xnat_helper.parse_session_label(label) for label in labels]
+        return [xnat_helper.parse_session_label(label) for label in labels]
 
     def _create_workflow(self, **opts):
         """
