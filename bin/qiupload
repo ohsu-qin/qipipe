@@ -15,7 +15,7 @@ from qipipe.interfaces import XNATUpload
 
 def main(argv=sys.argv):
     # Parse the command line arguments.
-    args = _parse_arguments()
+    inputs, opts = _parse_arguments()
 
     # Configure the logger.
     log_cfg = {}
@@ -26,17 +26,17 @@ def main(argv=sys.argv):
     logging_helper.configure(**log_cfg)
 
     # The options.
-    if args.reconstruction:
-        ul_opts = dict(reconstruction=args.reconstruction)
-    elif args.assessor:
-        ul_opts = dict(assessor=args.assessor)
+    if 'reconstruction' in opts:
+        ul_opts = dict(reconstruction=opts['reconstruction'])
+    elif 'assessor' in opts:
+        ul_opts = dict(assessor=opts['assessor'])
     else:
         ul_opts = {}
-    if args.format:
-        ul_opts['format'] = args.format
+    if 'format' in opts:
+        ul_opts['format'] = opts['format']
 
     # Parse the XNAT session label arguments.
-    prj_sess_dict = _parse_session_labels(args.sessions)
+    prj_sess_dict = _parse_session_labels(inputs)
     # Register the session images.
     with xnat_helper.connection() as xnat:
         for prj, sessions in prj_sess_dict.iteritems():
@@ -97,7 +97,10 @@ def _parse_arguments():
     parser.add_argument('sessions', help='the input XNAT sessions to register',
                         nargs='+')
 
-    return parser.parse_args()
+    args = vars(parser.parse_args())
+    nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)
+
+    return nonempty_args.pop('sessions'), nonempty_args
 
 
 if __name__ == '__main__':
