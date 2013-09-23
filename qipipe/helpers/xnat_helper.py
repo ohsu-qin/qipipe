@@ -81,9 +81,26 @@ def parse_canonical_label(label):
     >>> ('QIN', 'Breast003', 'Session01')
     
     :param: the XNAT session label
-    :return: the *(project, subject, session)* name tuple
+    :return: the name tuple
     """
     return tuple(label.split('_'))
+
+
+def parse_session_label(label):
+    """
+    Parses the given XNAT session label into *project*, *subject* and
+    *session* based on the :meth:`qipipe.helpers.xnat_helper.canonical_label`
+    naming standard.
+    
+    :param label: the label to parse
+    :return: the *(project, subject, session)* tuple
+    """
+    names = parse_canonical_label(label)
+    if len(names) != 3:
+        raise ValueError("The XNAT session label argument is not in"
+                         " project_subject_session format: %s" % label)
+
+    return names
 
 
 def delete_subjects(project, *subjects):
