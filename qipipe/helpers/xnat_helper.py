@@ -14,13 +14,13 @@ def connection():
     Yields a :class:`qipipe.helpers.xnat_helper.XNAT` instance.
     The XNAT connection is closed when the outermost connection
     block finishes.
-    
+
     Example:
-    
+
     >>> from qipipe.helpers import xnat_helper
     >>> with xnat_helper.connection() as xnat:
     ...    sbj = xnat.get_subject('QIN', 'Breast003')
-    
+
     :return: the XNAT instance
     :rtype: :class:`qipipe.helpers.xnat_helper.XNAT`
     """
@@ -41,9 +41,9 @@ def canonical_label(*names):
     """
     Returns the XNAT label for the given hierarchical name, qualified by
     a prefix if necessary.
-    
+
     Example:
-    
+
     >>> from qipipe.helpers.xnat_helper import canonical_label
     >>> canonical_label('QIN', 'Breast003', 'Session01')
     'QIN_Breast003_Session01'
@@ -51,7 +51,7 @@ def canonical_label(*names):
     'QIN_Breast003_Session01'
     >>> canonical_label('QIN', 'Breast003', 'QIN_Breast003_Session01', 'reg_pzR3tW')
     'QIN_Breast003_Session01_reg_pzR3tW'
-    
+
     :param names: the object names
     :return: the corresponding XNAT label
     """
@@ -73,13 +73,13 @@ def parse_canonical_label(label):
     """
     Returns the names for the given XNAT session
     label, as defined by :meth:`qipipe.helpers.xnat_helper.canonical_label`.
-    
+
     Example:
-    
+
     >>> from qipipe.helpers.xnat_helper import parse_canonical_label
     >>> parse_canonical_label('QIN_Breast003_Session01')
     >>> ('QIN', 'Breast003', 'Session01')
-    
+
     :param: the XNAT session label
     :return: the name tuple
     """
@@ -91,7 +91,7 @@ def parse_session_label(label):
     Parses the given XNAT session label into *project*, *subject* and
     *session* based on the :meth:`qipipe.helpers.xnat_helper.canonical_label`
     naming standard.
-    
+
     :param label: the label to parse
     :return: the *(project, subject, session)* tuple
     """
@@ -129,16 +129,16 @@ class XNAT(object):
     XNAT is a pyxnat facade convenience class. An XNAT instance is
     created in a :meth:`qipipe.helpers.xnat_helper.connection`
     context, e.g.:
-    
+
     >>> from qipipe.helpers import xnat_helper
     >>> with xnat.connection() as xnat:
     >>>     sbj = xnat.get_subject('QIN', 'Sarcoma001')
-    
+
     This XNAT wrapper class implements methods to access XNAT objects in
     a hierarchical name space using a labeling convention. The method
     parameters take name values which are used to build a XNAT label,
     as shown in the following example:
-    
+
     +----------------+-------------+------------+-------------------------------------+
     | Class          | Name        | Id         | Label                               |
     +================+=============+============+=====================================+
@@ -154,28 +154,28 @@ class XNAT(object):
     +----------------+-------------+------------+-------------------------------------+
     | Assessor       | pk_4kbEv3r  | QIN_E00868 | QIN_Breast003_Session01_pk_4kbEv3r  |
     +----------------+-------------+------------+-------------------------------------+
-    
+
     The XNAT label is set by the user and required to be unique in the XNAT database,
     with the exception of the Scan object, which is unique within the scope of the
     experiment.
-    
+
     The XNAT id is an opaque XNAT-generated identifier. Like the label, it is unique
     in the database, with the exception of the Scan id which is unique within the scope
     of the experiment. Oddly, XNAT does not generate a Reconstruction object id.
-    
+
     In the example above, the XNAT reconstruction object is obtained as follows:
-    
+
     >>> from qipipe.helpers import xnat_helper
     >>> with xnat.connection() as xnat:
     >>>     recon = xnat.get_reconstruction('QIN', 'Breast003', 'Session01',
     ...                                     'reg_yJf93wC')
-    
+
     A scan NiFTI file ``series1.nii.gz`` is uploaded using the following code::
-    
+
         xnat.upload('QIN', 'Breast003', 'Session01', scan=1, 'series1.nii.gz')
-    
+
     Scan DICOM files require a *format* options, e.g.::
-    
+
         xnat.upload('QIN', 'Breast003', 'Session01', scan=1, format=DICOM,
                     *dicom_files)
     """
@@ -194,7 +194,7 @@ class XNAT(object):
 
     def __init__(self, config_or_interface=None):
         """
-        
+
         :param config_or_interface: the configuration file, pyxnat Interface,
             or None to connect with the :meth:`default_configuration`
         """
@@ -217,7 +217,7 @@ class XNAT(object):
         """
         Returns the XNAT subject object for the given XNAT lineage.
         The subject name is qualified by the project id prefix, if necessary.
-        
+
         :param project: the XNAT project id
         :param subject: the XNAT subject name
         :return: the corresponding XNAT subject (which may not exist)
@@ -233,7 +233,7 @@ class XNAT(object):
         """
         Returns the XNAT session object for the given XNAT lineage.
         The session name is qualified by the subject name prefix, if necessary.
-        
+
         :param project: the XNAT project id
         :param subject: the XNAT subject label
         :param session: the XNAT experiment label
@@ -247,7 +247,7 @@ class XNAT(object):
         """
         Returns the XNAT scan numbers for the given XNAT lineage.
         The session name is qualified by the subject name prefix, if necessary.
-        
+
         :param project: the XNAT project id
         :param subject: the XNAT subject label
         :param session: the XNAT experiment label
@@ -261,9 +261,9 @@ class XNAT(object):
     def get_scan(self, project, subject, session, scan):
         """
         Returns the XNAT scan object for the given XNAT lineage.
-        
+
         See :meth:`get_session`
-        
+
         :param project: the XNAT project id
         :param subject: the XNAT subject label
         :param session: the XNAT experiment label
@@ -276,9 +276,9 @@ class XNAT(object):
         """
         Returns the XNAT reconstruction object for the given XNAT lineage.
         The lineage names are qualified by a prefix, if necessary.
-        
+
         See :meth:`get_session`
-        
+
         :param project: the XNAT project id
         :param subject: the subject name
         :param session: the session name
@@ -293,9 +293,9 @@ class XNAT(object):
         """
         Returns the XNAT assessor object for the given XNAT lineage.
         The lineage names are qualified by a prefix, if necessary.
-        
+
         See :meth:`get_session`
-        
+
         :param project: the XNAT project id
         :param subject: the subject name
         :param session: the session name
@@ -313,25 +313,26 @@ class XNAT(object):
     def download(self, project, subject, session, **opts):
         """
         Downloads the files for the specified XNAT session.
-        
+
         The keyword arguments include the format and session child container.
         The session child container option can be set to a specific resource container,
         e.g. ``scan=1``, as described in :meth:`XNAT.upload` or all resources of a given
         container type. In the latter case, the `container_type` parameter is set.
         The permissible container types are described in :meth:`XNAT.upload`.
-        
+
         The session value is qualified by the subject, if necessary.
         A reconstruction or analysis option value is qualified by the session label,
         if necessary. For example::
-            
+
             download('QIN', 'Breast001', 'Session03', reconstruction=>'reg_jA4K')
-        
+
         downloads the NiFTI files for the XNAT session with label ``Breast001_Session03``
         and reconstruction label ``Breast001_Session03_reg_jA4K``.
-        
+
         :param project: the XNAT project id
         :param subject: the XNAT subject label
         :param session: the XNAT experiment label
+        :param opts: the following keyword options:
         :keyword format: the image file format (``NIFTI`` or ``DICOM``, default ``NIFTI``)
         :keyword scan: the scan number
         :keyword reconstruction: the reconstruction name
@@ -391,21 +392,21 @@ class XNAT(object):
         """
         Imports the given files into XNAT. The target XNAT resource has the
         following hierarchy::
-            
+
             /project/PROJECT/
                 subject/SUBJECT/
                     experiment/SESSION/
                         CTR_TYPE/CONTAINER/
                             resource/RESOURCE
-        
+
         where:
-        
+
         -  the XNAT experiment name is the *session* parameter
-        
+
         -  CTR_TYPE is the experiment child type, e.g. ``scan``
-        
+
         -  the default RESOURCE is the file format, e.g. ``NIFTI`` or ``DICOM``
-        
+
         The keyword arguments include the session child container, scan
         *modality*, *resource* name and file *format*. The required container
         keyword argument associates the container type to the container name,
@@ -414,24 +415,24 @@ class XNAT(object):
         the XNAT ``assessor`` Image Assessment type. ``analysis``,
         ``assessment`` and ``assessor`` are synonymous. The container name can
         be a string or integer, e.g. the scan number.
-        
+
         If the XNAT file extension is ``.nii``, ``.nii.gz``, ``.dcm`` or
         ``.dcm.gz``, then the default XNAT image format is inferred from the
         extension.
-        
+
         If the session does not yet exist as a XNAT experiment, then the
         modality keyword argument is required. The modality is any supported
         XNAT modality, e.g. ``MR`` or  or ``CT``. A capitalized modality value
         is a synonym for the XNAT session data type, e.g. ``MR`` is a synonym
         for ``xnat:mrSessionData``.
-        
+
         Example::
-        
+
             from qipipe.helpers import xnat_helper
             with xnat_helper.connection() as xnat:
                 xnat.upload(project(), 'Sarcoma003', 'Sarcoma003_Session01',
                     scan=4, modality='MR', format='NIFTI', '/path/to/image.nii')
-        
+
         :param project: the XNAT project id
         :param subject: the XNAT subject name
         :param session: the session (XNAT experiment) name
@@ -495,18 +496,18 @@ class XNAT(object):
     def find(self, project, subject, session=None, **opts):
         """
         Finds the given XNAT object in the hierarchy:
-            
+
             /project/PROJECT/subject/SUBJECT/experiment/SESSION/CTR_TYPE/CONTAINER
-        
+
         where:
-        
+
         -  the XNAT experiment name is the `session` parameter
-        
+
         -  CTR_TYPE is the experiment child type, e.g. ``scan``
-        
+
         If the ``create`` flag is set, then the object is created if it does not
         yet exist.
-        
+
         The keyword arguments specify the session child container and resource.
         The container keyword argument associates the container type to the container
         name, e.g. ``reconstruction=reg_zPa4R``. The container type is ``scan``,
@@ -515,14 +516,15 @@ class XNAT(object):
         ``assessment`` and ``assessor`` are synonymous. The container name can be a
         string or integer, e.g. the scan number. The resource is specified by the
         resource keyword.
-        
+
         If the session does not yet exist as a XNAT experiment and the ``create``
         option is set, then the ``modality`` keyword argument specifies a supported
         XNAT modality, e.g. ``MR`` or  or ``CT``. A capitalized modality value is
         a synonym for the XNAT session data type, e.g. ``MR`` is a synonym for
         ``xnat:mrSessionData``. The default modality is ``MR``.
-        
+
         Example:
+
         >>> from qipipe.helpers import xnat_helper
         >>> with xnat_helper.connection() as xnat:
         ...     subject = xnat.find('QIN', 'Sarcoma003')
@@ -530,7 +532,7 @@ class XNAT(object):
         ...     scan = xnat.find('QIN', 'Sarcoma003', 'Session01', scan=4)
         ...     resource = xnat.find('QIN', 'Sarcoma003', 'Session01', scan=4,
         ...         resource='NIFTI')
-        
+
         :param project: the XNAT project id
         :param subject: the XNAT subject name
         :param session: the session (XNAT experiment) name
@@ -638,15 +640,15 @@ class XNAT(object):
     def _standardize_modality(self, modality):
         """
         Examples:
-        
+
         >>> from qipipe.helpers import xnat_helper
         >>> xnat_helper.connection()._standardize_modality('MR')
         xnat:mrSessionData
-        
+
         >>> from qipipe.helpers import xnat_helper
         >>> xnat_helper.connection()._standardize_modality('ctSessionData')
         xnat:ctSessionData
-        
+
         :param modality: the modality option described in
             :meth:`qipipe.helpers.xnat_helper.XNAT.find`
         :return: the standard XNAT modality argument
@@ -663,7 +665,7 @@ class XNAT(object):
         """
         Infers the XNAT resource type and value from the given options.
         The default resource is the ``NIFTI`` scans.
-        
+
         :param experiment: the XNAT experiment object
         :param opts: the :meth:`XNAT.download` options
         :keyword format: the image file format
@@ -680,7 +682,7 @@ class XNAT(object):
         else:
             ctr_type = 'scan'
             ctr_name = None
-        
+
         # The resource parent.
         rsc_parent = self._xnat_resource_parent(experiment, ctr_type, ctr_name)
 
@@ -690,17 +692,17 @@ class XNAT(object):
     def _infer_resource_container(self, opts):
         """
         Determines the resource container item from the given options as follows:
-        
+
         - If there is a *container_type* option, then that type is returned without a value.
-        
+
         - Otherwise, if the options include a container type in :object:`XNAT.CONTAINER_TYPES`,
           then the option type and value are returned.
-        
+
         - Otherwise, if the options include a container type in :object:`XNAT.ASSESSOR_SYNONYMS`,
           then the `assessor` container type and the option value are returned.
-        
+
         - Otherwise, this method returns ``None``.
-        
+
         :param opts: the options to check
         :return: the container (type, value) tuple, or None if no containe was specified
         """
@@ -736,7 +738,7 @@ class XNAT(object):
         If there is a name, then the parent is the object with that name, e.g.
         ``reconstruction('reg_1')``. Otherwise, the parent is a container group,
         e.g. ``reconstructions``.
-        
+
         :param experiment: the XNAT experiment
         :param container_type: the container type in L{XNAT.CONTAINER_TYPES}
         :param name: the optional container name
@@ -841,7 +843,7 @@ class XNAT(object):
     def _upload_file(self, resource, in_file, opts):
         """
         Uploads the given file to XNAT.
-        
+
         :param resource: the existing XNAT resource that contains the file
         :param in_file: the input file path
         :param opts: the XNAT file options
