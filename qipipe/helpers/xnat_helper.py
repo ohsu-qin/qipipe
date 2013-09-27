@@ -174,7 +174,7 @@ class XNAT(object):
     
         xnat.upload('QIN', 'Breast003', 'Session01', scan=1, 'series1.nii.gz')
     
-    Scan DICOM files require a *format* options, e.g.:
+    Scan DICOM files require a *format* options, e.g.::
     
         xnat.upload('QIN', 'Breast003', 'Session01', scan=1, format=DICOM,
                     *dicom_files)
