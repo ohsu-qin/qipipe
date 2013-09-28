@@ -198,7 +198,7 @@ class MaskWorkflow(WorkflowBase):
         # The output is the time series and mask files.
         output_spec = pe.Node(IdentityInterface(fields=['time_series', 'mask']),
                                                 name='output_spec')
-        workflow.connect(dce_merge, 'out_file', output_spec, 'mask')
+        workflow.connect(dce_merge, 'out_file', output_spec, 'time_series')
         workflow.connect(inv_mask, 'out_file', output_spec, 'mask')
         
         self._configure_nodes(workflow)
