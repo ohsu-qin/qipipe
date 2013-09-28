@@ -15,6 +15,7 @@ NIPYPE_LOG_DIR_ENV_VAR = 'NIPYPE_LOG_DIR'
 def main(argv=sys.argv):
     # Parse the command line arguments.
     inputs, opts = _parse_arguments()
+    _configure_log(**opts)
 
     # Import the qipipe pipeline module after configuring the logger.
     from qipipe.pipeline import qipipeline as qip
