@@ -6,6 +6,7 @@ Runs the QIN pipeline.
 import sys
 import os
 import argparse
+import logging
 
 NIPYPE_LOG_DIR_ENV_VAR = 'NIPYPE_LOG_DIR'
 """The Nipype log directory environment variable."""
