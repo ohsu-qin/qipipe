@@ -14,7 +14,7 @@ from .mask import MaskWorkflow
 from .reference import ReferenceWorkflow
 from .registration import RegistrationWorkflow
 from .modeling import ModelingWorkflow
-from ..interfaces import (Gate, XNATDownload)
+from ..interfaces import (Gate, XNATDownload, XNATUpload)
 from ..helpers import xnat_helper
 from ..helpers.logging_helper import logger
 
