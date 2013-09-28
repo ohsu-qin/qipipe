@@ -10,33 +10,13 @@ import argparse
 NIPYPE_LOG_DIR_ENV_VAR = 'NIPYPE_LOG_DIR'
 """The Nipype log directory environment variable."""
 
+
 def main(argv=sys.argv):
     # Parse the command line arguments.
     inputs, opts = _parse_arguments()
 
-    # Configure the logger.
-    log_cfg = {}
-    if 'log' in opts:
-        log_file = os.path.abspath(opts.pop('log'))
-        log_cfg['filename'] = log_file
-        # Set the Nipype log directory environment variable
-        # before importing qipipe. See the comments below.
-        log_dir = os.path.dirname(log_file)
-        if log_dir:
-            if not os.path.exists(log_dir):
-                os.makedirs(log_dir)
-            os.environ[NIPYPE_LOG_DIR_ENV_VAR] = log_dir
-    if 'log_level' in opts:
-        log_cfg['level'] = opts.pop('log_level')
-    # The Nipype log directory environment variable must be
-    # set before importing a nipype module which uses the
-    # nipype logger. qipipe imports the Nipype pipeline module.
-    # Therefore, import qipipe.pipeline here after setting the
-    # log directory environment variable above.
-    from qipipe.helpers import logging_helper
+    # Import the qipipe pipeline module after configuring the logger.
     from qipipe.pipeline import qipipeline as qip
-    # Make the qipipe logger.
-    logging_helper.configure(**log_cfg)
 
     # Run the QIN workflow.
     qip.run(*inputs, **opts)
@@ -56,7 +36,8 @@ def _parse_arguments():
     # The AIRC collection to process.
     coll_grp = parser.add_mutually_exclusive_group()
     coll_grp.add_argument('-b', '--breast', help='the breast TCIA collection',
-                          dest='collection', action='store_const', const='Breast')
+                          dest='collection', action='store_const',
+                          const='Breast')
     coll_grp.add_argument(
         '-s', '--sarcoma', help='the sarcoma TCIA collection',
         dest='collection', action='store_const', const='Sarcoma')
@@ -65,25 +46,14 @@ def _parse_arguments():
     parser.add_argument(
         '-p', '--project', help='the XNAT project (default is QIN)')
 
-    # The logging level.
-    verbosity_grp = parser.add_mutually_exclusive_group()
-    verbosity_grp.add_argument('-q', '--quiet', help="don't print messages",
-                               dest='log_level', action='store_const', const='ERROR')
-    verbosity_grp.add_argument(
-        '-v', '--verbose', help='print informational messages',
-        dest='log_level', action='store_const', const='INFO')
-    verbosity_grp.add_argument('-d', '--debug', help='print debug messages',
-                               dest='log_level', action='store_const',
-                               const='DEBUG')
-
     # The log, output and work options.
-    parser.add_argument('-l', '--log', help='the log file', metavar='FILE')
-    parser.add_argument(
-        '-o', '--output', help='the destination directory (default current directory)',
-        metavar='DIR', dest='dest')
-    parser.add_argument(
-        '-w', '--work', help='the work directory (default a new temp directory)',
-        metavar='DIR', dest='base_dir')
+    _add_log_options(parser)
+    parser.add_argument('-o', '--output',
+                        help='the destination directory (default current directory)',
+                        metavar='DIR', dest='dest')
+    parser.add_argument('-w', '--work',
+                        help='the work directory (default a new temp directory)',
+                        metavar='DIR', dest='base_dir')
 
     # The skip staging argument.
     parser.add_argument('--no-staging', help='disable the staging workflow',
@@ -92,24 +62,30 @@ def _parse_arguments():
     # The mask and reference arguments.
     parser.add_argument('--mask', help="the mask XNAT reconstruction name",
                         metavar='RECON')
-    parser.add_argument('--reference', help="the reference XNAT reconstruction name",
+    parser.add_argument('--reference',
+                        help="the reference XNAT reconstruction name",
                         metavar='RECON')
 
     # The registration arguments.
-    parser.add_argument(
-        '--registration', help='the XNAT registration reconstruction name',
-        metavar='RECON')
+    parser.add_argument('--registration',
+                        help='the XNAT registration reconstruction name',
+                        metavar='RECON')
     parser.add_argument('--no-registration', help='skip registration',
-                         dest='skip_registration', action='store_true', default=None)
+                         dest='skip_registration', action='store_true',
+                         default=None)
     technique_grp = parser.add_mutually_exclusive_group()
-    technique_grp.add_argument('--ants', help="ANTS registration (the default)",
-                               dest='technique', action='store_const', const='ANTS')
+    technique_grp.add_argument('--ants',
+                               help="ANTS registration (the default)",
+                               dest='technique', action='store_const',
+                               const='ANTS')
     technique_grp.add_argument('--fnirt', help="FNIRT registration",
-                               dest='technique', action='store_const', const='FNIRT')
+                               dest='technique', action='store_const',
+                               const='FNIRT')
 
     # The skip modeling argument.
     parser.add_argument('--no-modeling', help='disable the modeling workflow',
-                        dest='skip_modeling', action='store_true', default=None)
+                        dest='skip_modeling', action='store_true',
+                        default=None)
 
     # The input subject directories or XNAT labels to process.
     parser.add_argument('inputs', help='the input AIRC DICOM subject directory'
@@ -120,6 +96,53 @@ def _parse_arguments():
     nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)
 
     return nonempty_args.pop('inputs'), nonempty_args
+
+
+def _add_log_options(parser):
+    """
+    Adds the standard --log, --quiet, --verbose and --debug options to the
+    given command line arugment parser.
+    """
+    parser.add_argument('-l', '--log', help='the log file', metavar='FILE')
+    verbosity_grp = parser.add_mutually_exclusive_group()
+    verbosity_grp.add_argument(
+        '-q', '--quiet', help="obnly log error messages", dest='log_level',
+        action='store_const', const=logging.ERROR)
+    verbosity_grp.add_argument(
+        '-d', '--debug', help='log debug messages', dest='log_level',
+        action='store_const', const=logging.DEBUG)
+
+
+def _configure_log(**opts):
+    """
+    Configures the logger. This method should be called before importing
+    any qipipe or nipype module.
+
+    :param opts: the following keyword options:
+    :keyword log: the log file
+    :keyword log_level: the log level
+    """
+    log_cfg = {}
+    if 'log' in opts:
+        log_file = os.path.abspath(opts.pop('log'))
+        log_cfg['filename'] = log_file
+        # Set the Nipype log directory environment variable
+        # before importing qipipe. See the comments below.
+        log_dir = os.path.dirname(log_file)
+        if log_dir:
+            if not os.path.exists(log_dir):
+                os.makedirs(log_dir)
+            os.environ[NIPYPE_LOG_DIR_ENV_VAR] = log_dir
+    if 'log_level' in opts:
+        log_cfg['level'] = opts.pop('log_level')
+    # The Nipype log directory environment variable must be
+    # set before importing a nipype module which uses the
+    # nipype logger. qipipe imports the Nipype pipeline module.
+    # Therefore, import qipipe.helpers here after setting the
+    # log directory environment variable above.
+    from qipipe.helpers import logging_helper
+    # Make the qipipe logger.
+    logging_helper.configure(**log_cfg)
 
 
 if __name__ == '__main__':

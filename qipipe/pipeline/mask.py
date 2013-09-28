@@ -13,6 +13,9 @@ from ..helpers.logging_helper import logger
 MASK_RECON = 'mask'
 """The XNAT mask reconstruction name."""
 
+TS_RECON = 'scan_ts'
+"""The XNAT scan time series reconstruction name."""
+
 
 def run(input_dict, **opts):
     """
@@ -132,11 +135,18 @@ class MaskWorkflow(WorkflowBase):
         # The workflow input.
         in_fields = ['subject', 'session', 'images']
         input_spec = pe.Node(IdentityInterface(fields=in_fields),
-            name='input_spec')
+                             name='input_spec')
         
         # Merge the DCE data to 4D.
         dce_merge = pe.Node(MergeNifti(), name='dce_merge')
         workflow.connect(input_spec, 'images', dce_merge, 'in_files')
+        
+        # Upload the time series to XNAT.
+        upload_ts = pe.Node(XNATUpload(project=project(),
+            reconstruction=TS_RECON, format='NIFTI'), name='upload_ts')
+        workflow.connect(input_spec, 'subject', upload_ts, 'subject')
+        workflow.connect(input_spec, 'session', upload_ts, 'session')
+        workflow.connect(dce_merge, 'out_file', upload_ts, 'in_files')
         
         # Get a mean image from the DCE data.
         dce_mean = pe.Node(fsl.MeanImage(), name='dce_mean')
@@ -151,7 +161,7 @@ class MaskWorkflow(WorkflowBase):
         crop_back = pe.Node(fsl.ImageMaths(), name='crop_back')
         workflow.connect(dce_mean, 'out_file', crop_back, 'in_file')
         workflow.connect(find_cog, ('out_stat', _gen_crop_op_string),
-            crop_back, 'op_string')
+                         crop_back, 'op_string')
         
         # The cluster options.
         # Find large clusters of empty space on the cropped image.
@@ -166,15 +176,15 @@ class MaskWorkflow(WorkflowBase):
         
         # Make the mask file name.
         mask_name_func = Function(input_names=['subject', 'session'],
-            output_names=['out_file'],
-            function=_gen_mask_filename)
+                                  output_names=['out_file'],
+                                  function=_gen_mask_filename)
         mask_name = pe.Node(mask_name_func, name='mask_name')
         workflow.connect(input_spec, 'subject', mask_name, 'subject')
         workflow.connect(input_spec, 'session', mask_name, 'session')
         
         # Invert the binary mask.
         inv_mask = pe.Node(fsl.maths.MathsCommand(args='-sub 1 -mul -1'),
-            name='inv_mask')
+                           name='inv_mask')
         workflow.connect(binarize, 'out_file', inv_mask, 'in_file')
         workflow.connect(mask_name, 'out_file', inv_mask, 'out_file')
         
@@ -185,9 +195,10 @@ class MaskWorkflow(WorkflowBase):
         workflow.connect(input_spec, 'session', upload_mask, 'session')
         workflow.connect(inv_mask, 'out_file', upload_mask, 'in_files')
         
-        # The output is the mask file.
-        output_spec = pe.Node(IdentityInterface(fields=['mask']),
-            name='output_spec')
+        # The output is the time series and mask files.
+        output_spec = pe.Node(IdentityInterface(fields=['time_series', 'mask']),
+                                                name='output_spec')
+        workflow.connect(dce_merge, 'out_file', output_spec, 'mask')
         workflow.connect(inv_mask, 'out_file', output_spec, 'mask')
         
         self._configure_nodes(workflow)

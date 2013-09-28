@@ -9,7 +9,7 @@ project = u'qipipe'
 copyright = u'2013, OHSU Knight Cancer Institute'
 version = qipipe.__version__
 pygments_style = 'sphinx'
-html_theme = 'qipipe_theme'
-html_theme_path = ['.']
+html_theme = 'haiku'
+html_theme_options = dict(linkcolor='DarkSkyBlue', visitedlinkcolor='Navy')
 htmlhelp_basename = 'qipipedoc'
 html_title = "qipipe v%s" % version

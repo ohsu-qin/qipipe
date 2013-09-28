@@ -36,19 +36,19 @@ class ReferenceWorkflow(WorkflowBase):
     The ReferenceWorkflow class builds and executes the reference workflow.
     The workflow creates a reference image by averaging the middle images.
     
-    The reference workflow input is the ``input_spec`` node consisting of the
+    The reference workflow input is the *input_spec* node consisting of the
     following input fields:
     
-    - ``subject``: the subject name
+    - *subject*: the subject name
     
-    - ``session``: the session name
+    - *session*: the session name
     
-    - ``images``: the session images
+    - *images*: the session images
     
-    The reference workflow output is the ``output_spec`` node consisting of
+    The reference workflow output is the *output_spec* node consisting of
     the following output fields:
     
-    - ``reference``: the reference image files=
+    - *reference*: the reference image files=
     
     The optional workflow configuration file can contain overrides for the
     Nipype interface inputs in the following sections:
@@ -171,10 +171,10 @@ def _middle(items, proportion_or_length):
     """
     Returns a sublist of the given items determined as follows:
     
-    - If ``proportion_or_length`` is a float, then the middle fraction
+    - If *proportion_or_length* is a float, then the middle fraction
         given by that parameter
     
-    - If ``proportion_or_length`` is an integer, then the middle
+    - If *proportion_or_length* is an integer, then the middle
         items with length given by that parameter
     
     :param items: the list of items to subset

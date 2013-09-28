@@ -195,7 +195,7 @@ class WorkflowBase(object):
 
     def _configure_plugin(self, workflow):
         """
-        Sets the ``execution`` and ``SGE`` parameters for the given workflow.
+        Sets the *execution* and *SGE* parameters for the given workflow.
         See the ``conf`` directory files for examples.
 
         :param workflow: the workflow to run

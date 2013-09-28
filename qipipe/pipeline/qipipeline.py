@@ -5,6 +5,7 @@ import logging
 from collections import defaultdict
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import IdentityInterface
+from nipype.interfaces.dcmstack import MergeNifti
 from .. import project
 from . import staging
 from .workflow_base import WorkflowBase
@@ -45,16 +46,19 @@ class QIPipelineWorkflow(WorkflowBase):
     the following constituent workflows:
 
     - staging: Prepare the new AIRC DICOM visits, as described in
-      :class:`qipipe.staging.StagingWorkflow`
+      :class:`qipipe.pipeline.staging.StagingWorkflow`
 
-    - mask: Create a mask from the staged images,
-      as described in :class:`qipipe.staging.MaskWorkflow`
+    - mask: Create the mask from the staged images,
+      as described in :class:`qipipe.pipeline.mask.MaskWorkflow`
+
+    - reference: Create the fixed reference image from the staged images,
+      as described in :class:`qipipe.pipeline.reference.ReferenceWorkflow`
 
     - registration: Mask, register and realign the staged images,
-      as described in :class:`qipipe.staging.RegistrationWorkflow`
+      as described in :class:`qipipe.pipeline.registration.RegistrationWorkflow`
 
     - modeling: Perform PK modeling as described in
-      :class:`qipipe.staging.ModelingWorkflow`
+      :class:`qipipe.pipeline.modeling.ModelingWorkflow`
 
     The pipeline workflow depends on the initialization options as follows:
 
@@ -80,20 +84,20 @@ class QIPipelineWorkflow(WorkflowBase):
     - PK modeling is performed if and only if the *skip_modeling* option is
       not set to True.
 
-    The QIN workflow input node is ``input_spec`` with the following
+    The QIN workflow input node is *input_spec* with the following
     fields:
 
-    - ``subject``: the subject name
+    - *subject*: the subject name
 
-    - ``session``: the session name
+    - *session*: the session name
 
     In addition, if the staging or registration workflow is enabled
-    then the ``iter_series`` node iterables input includes the
+    then the *iter_series* node iterables input includes the
     following fields:
 
-    - ``series``: the scan number
+    - *series*: the scan number
 
-    - ``dest``: the target staging directory, if the staging
+    - *dest*: the target staging directory, if the staging
       workflow is enabled
 
     The constituent workflows are combined as follows:
@@ -109,10 +113,10 @@ class QIPipelineWorkflow(WorkflowBase):
     The easiest way to execute the pipeline is to call the
     :meth:`qipipe.pipeline.qipipeline.run` method.
 
-    The pipeline execution workflow is also available as the ``workflow``
-    instance variable. The workflow input node is named ``input_spec``
+    The pipeline execution workflow is also available as the *workflow*
+    instance variable. The workflow input node is named *input_spec*
     with the same input fields as the
-    :class:`qipipe.staging.RegistrationWorkflow` workflow ``input_spec``.
+    :class:`qipipe.staging.RegistrationWorkflow` workflow *input_spec*.
     """
 
     REG_SERIES_PAT = re.compile('series(\d+)_reg_')
@@ -154,9 +158,9 @@ class QIPipelineWorkflow(WorkflowBase):
         for the processed sessions, where results is a dictionary with
         the following items:
 
-        - ``registration``: the registration XNAT reconstruction name
+        - *registration*: the registration XNAT reconstruction name
 
-        - ``modeling``: the modeling XNAT assessor name
+        - *modeling*: the modeling XNAT assessor name
 
         If the :mod:`qipipe.pipeline.distributable' ``DISTRIBUTABLE`` flag
         is set, then the execution is distributed using the
@@ -522,7 +526,7 @@ class QIPipelineWorkflow(WorkflowBase):
                             download_scan, 'session')
             exec_wf.connect(iter_series, 'series',
                             download_scan, 'scan')
-        
+
         # The mask and reference workflow inputs include the staged
         # images as a list.
         if mask_wf or ref_wf:
@@ -591,6 +595,52 @@ class QIPipelineWorkflow(WorkflowBase):
             else:
                 exec_wf.connect(download_ref, 'out_file',
                                 reg_wf, 'input_spec.reference')
+            
+            # Collect the registration realigned images output.
+            new_reg_xfc = IdentityInterface(fields=['images'])
+            new_reg = pe.JoinNode(new_reg_xfc, joinsource='iter_series',
+                                  name='new_reg')
+            exec_wf.connect(reg_wf, 'output_spec.image', new_reg, 'images')
+            
+            # If the registration reconstruction name was specified,
+            # then download previously registered realigned images.
+            if reg_recon:
+                reg_dl_xfc = XNATDownload(project=project(),
+                                          reconstruction=reg_recon)
+                download_reg = pe.Node(reg_dl_xfc, name='download_reg')
+                exec_wf.connect(input_spec, 'subject',
+                                download_reg, 'subject')
+                exec_wf.connect(input_spec, 'session',
+                                download_reg, 'session')
+                downloaded_reg_xfc = IdentityInterface(fields=['images'])
+                downloaded_reg = pe.JoinNode(downloaded_reg_xfc,
+                                             joinsource=download_reg,
+                                             name='downloaded_reg')
+                exec_wf.connect(download_reg, 'out_file',
+                                downloaded_reg, 'images')
+
+                # Merge the previously and newly realigned images.
+                concat_reg = pe.Node(Merge(2), name='concat_reg')
+                exec_wf.connect(downloaded_reg, 'images', concat_reg, 'in1')
+                exec_wf.connect(new_reg, 'images', concat_reg, 'in2')
+
+            # Merge the realigned images to 4D.
+            merge_reg_fname = "%_ts" % self.registration_reconstruction
+            merge_reg = pe.Node(MergeNifti(out_format=merge_reg_fname),
+                                name='merge_reg')
+            if reg_recon:
+                exec_wf.connect(concat_reg, 'out', merge_reg, 'in_files')
+            else:
+                exec_wf.connect(new_reg, 'images', merge_reg, 'in_files')
+
+            # Upload the realigned time series to XNAT.
+            upload_reg_ts_xfc = XNATUpload(project=project(),
+                                           reconstruction=reg_recon,
+                                           format='NIFTI')
+            upload_reg_ts = pe.Node(upload_reg_ts_xfc, name='upload_reg_ts')
+            reg_wf.connect(input_spec, 'subject', upload_reg_ts, 'subject')
+            reg_wf.connect(input_spec, 'session', upload_reg_ts, 'session')
+            reg_wf.connect(merge_reg, 'out_file', upload_reg_ts, 'in_files')
 
         # If the modeling workflow is enabled, then model the realigned
         # images.

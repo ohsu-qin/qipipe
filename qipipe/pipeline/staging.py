@@ -57,32 +57,32 @@ class StagingWorkflow(WorkflowBase):
       directory in collection/subject/session/series format for TCIA
       upload.
 
-    The staging workflow input is the ``input_spec`` node consisting of
+    The staging workflow input is the *input_spec* node consisting of
     the following input fields:
 
-    - ``subject``: the subject name
+    - *subject*: the subject name
 
-    - ``session``: the session name
+    - *session*: the session name
 
-    - ``series``: the scan number
+    - *series*: the scan number
     
     The staging workflow has two iterables:
     
-    - the ``input_spec`` ``series`` and ``dest`` fields
+    - the *input_spec* *series* and *dest* fields
     
-    - the ``iter_dicom`` ``dicom_file`` field
+    - the *iter_dicom* *dicom_file* field
     
     These iterables must be set prior to workflow execution. The
-    ``input_spec`` iterables is set to the session scan numbers.
+    *input_spec* iterables is set to the session scan numbers.
     
-    The ``iter_dicom`` node *itersource* is the ``iter_series.series``
+    The *iter_dicom* node *itersource* is the ``iter_series.series``
     field. The ``iter_dicom.dicom_file`` iterables is set to the
     {series: [DICOM files]} dictionary.
    
-    The staging workflow output is the ``output_spec`` node consisting
+    The staging workflow output is the *output_spec* node consisting
     of the following output field:
 
-    - ``image``: the session series stack NiFTI image file
+    - *image*: the session series stack NiFTI image file
 
     .. _CTP: https://wiki.cancerimagingarchive.net/display/Public/Image+Submitter+Site+User%27s+Guide
     .. _DcmStack: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.dcmstack.html
@@ -140,8 +140,8 @@ class StagingWorkflow(WorkflowBase):
                         file.nii.gz ...
 
         If the *workflow* parameter is set, then that execution workflow is
-        required to include a node named ``input_spec`` with inputs ``subject``
-        and ``session`` which connect to the respective inputs in the child
+        required to include a node named *input_spec* with inputs *subject*
+        and *session* which connect to the respective inputs in the child
         staging workflow.
 
         The return value is a *{subject: {session: [scans]}}* XNAT name
@@ -153,7 +153,7 @@ class StagingWorkflow(WorkflowBase):
         :keyword dest: the TCIA staging destination directory (default is a
             subdirectory named ``staged`` in the current working directory)
         :keyword workflow: the workflow to run (default is the standard
-            staging workflow ``workflow`` instance variable)
+            staging workflow *workflow* instance variable)
         :return: the XNAT *{subject: {session: [scans]}}* dictionary
         """
         # Validate that there is a collection

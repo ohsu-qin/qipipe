@@ -42,18 +42,18 @@ class RegistrationWorkflow(WorkflowBase):
     The workflow registers an input NiFTI scan image against the input reference
     image and uploads the realigned image to XNAT.
     
-    The registration workflow input is the ``input_spec`` node consisting of the
+    The registration workflow input is the *input_spec* node consisting of the
     following input fields:
     
-    - ``subject``: the subject name
+    - *subject*: the subject name
     
-    - ``session``: the session name
+    - *session*: the session name
     
-    - ``mask``: the mask to apply to the images
+    - *mask*: the mask to apply to the images
     
-    - ``reference``: the fixed reference image
+    - *reference*: the fixed reference image
     
-    - ``image``: the image file to register
+    - *image*: the image file to register
     
     The mask can be obtained by running the
     :class:`qipipe.pipeline.mask.MaskWorkflow` workflow.
@@ -61,10 +61,10 @@ class RegistrationWorkflow(WorkflowBase):
     The reference can be obtained by running the
     :class:`qipipe.pipeline.reference.ReferenceWorkflow` workflow.
     
-    The registration workflow output is the ``output_spec`` node consisting of
+    The registration workflow output is the *output_spec* node consisting of
     the following output field:
     
-    - ``image``: the realigned image file
+    - *image*: the realigned image file
     
     Two registration techniques are supported:
     
@@ -81,7 +81,7 @@ class RegistrationWorkflow(WorkflowBase):
     
     - ``fsl.FNIRT``: the FSL `FNIRT interface`_ options
     
-    :Note: Since the XNAT ``reconstruction`` name is unique, a
+    :Note: Since the XNAT *reconstruction* name is unique, a
         :class:`qipipe.pipeline.registration.RegistrationWorkflow` instance
         can be used for only one registration workflow. Different registration
         inputs require different
@@ -127,7 +127,7 @@ class RegistrationWorkflow(WorkflowBase):
         Runs the registration workflow on the given inputs.
         
         The NiFTI scan images for each session are downloaded from XNAT into the
-        ``scans`` subdirectory of the ``base_dir`` specified in the
+        ``scans`` subdirectory of the *base_dir* specified in the
         :class:`RegistrationWorkflow` initializer options (default is the current
         directory). The workflow is run on these images, resulting in a new XNAT
         reconstruction object for each session which contains the realigned images.

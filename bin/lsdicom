@@ -9,16 +9,21 @@ import logging
 import argparse
 from collections import defaultdict
 import dicom
-from qipipe.helpers.collection_helper import to_series
-from qipipe.helpers.dicom_reader import read_dicom_header
-from qipipe.helpers.dicom_helper import (
-    ImageHierarchy, iter_dicom_headers, select_dicom_tags)
-from qipipe.helpers.logging_helper import logger
 
 
 def main(argv=sys.argv):
     # Parse the command line arguments.
     args = _parse_arguments()
+    
+    # Import the qipipe modules after parsing the log options.
+    from qipipe.helpers.collection_helper import to_series
+    from qipipe.helpers.dicom_helper import (iter_dicom_headers,
+                                             select_dicom_tags)
+    global iter_dicom_headers, select_dicom_tags
+    from qipipe.helpers.image_hierarchy import ImageHierarchy
+    global ImageHierarchy
+    from qipipe.helpers.logging_helper import logger
+    global logger
 
     # The summary tag list is set here rather than in the argument, since the
     # constant is imported after parsing the commmand line arguments.
@@ -39,7 +44,11 @@ def main(argv=sys.argv):
 def _parse_arguments():
     """Parses the command line arguments."""
     parser = argparse.ArgumentParser()
-
+    
+    # The log options.
+    _add_log_options(parser)
+    
+    # The output content options.
     tag_grp = parser.add_mutually_exclusive_group()
     tag_grp.add_argument('-s', '--summary',
                          help='print only the Patient ID, Study Instance UID,'
@@ -49,28 +58,64 @@ def _parse_arguments():
                          help='the comma-separated tags to print'
                          '(default is all non-pixel, non-bracketed tags whose'
                          'value does not include a line break)')
-
-    verbosity_grp = parser.add_mutually_exclusive_group()
-    verbosity_grp.add_argument(
-        '-q', '--quiet', help="don't print messages", dest='log_level',
-        action='store_const', const=logging.ERROR)
-    verbosity_grp.add_argument(
-        '-v', '--verbose', help='print informational messages',
-        dest='log_level', action='store_const', const=logging.INFO)
-    verbosity_grp.add_argument(
-        '-d', '--debug', help='print debug messages', dest='log_level',
-        action='store_const', const=logging.DEBUG)
-
     parser.add_argument(
         '-n', '--no-header', help='omit the tag name header line',
         dest='header', action='store_false')
     parser.add_argument(
         '-o', '--output', help='print the values to the given file')
+    
+    # The input file argument.
     parser.add_argument(
         'files', help='the DICOM files or directories to list (default stdin)',
         metavar='FILE', nargs='+')
 
     return parser.parse_args()
+
+
+def _add_log_options(parser):
+    """
+    Adds the standard --log, --quiet, --verbose and --debug options to the
+    given command line arugment parser.
+    """
+    parser.add_argument('-l', '--log', help='the log file', metavar='FILE')
+    verbosity_grp = parser.add_mutually_exclusive_group()
+    verbosity_grp.add_argument(
+        '-q', '--quiet', help="only log error messages", dest='log_level',
+        action='store_const', const=logging.ERROR)
+    verbosity_grp.add_argument(
+        '-d', '--debug', help='log debug messages', dest='log_level',
+        action='store_const', const=logging.DEBUG)
+
+def _configure_log(**opts):
+    """
+    Configures the logger. This method should be called before importing
+    any qipipe or nipype module.
+
+    :param opts: the following keyword options:
+    :keyword log: the log file
+    :keyword log_level: the log level
+    """
+    log_cfg = {}
+    if 'log' in opts:
+        log_file = os.path.abspath(opts.pop('log'))
+        log_cfg['filename'] = log_file
+        # Set the Nipype log directory environment variable
+        # before importing qipipe. See the comments below.
+        log_dir = os.path.dirname(log_file)
+        if log_dir:
+            if not os.path.exists(log_dir):
+                os.makedirs(log_dir)
+            os.environ[NIPYPE_LOG_DIR_ENV_VAR] = log_dir
+    if 'log_level' in opts:
+        log_cfg['level'] = opts.pop('log_level')
+    # The Nipype log directory environment variable must be
+    # set before importing a nipype module which uses the
+    # nipype logger. qipipe imports the Nipype pipeline module.
+    # Therefore, import qipipe.helpers here after setting the
+    # log directory environment variable above.
+    from qipipe.helpers import logging_helper
+    # Make the qipipe logger.
+    logging_helper.configure(**log_cfg)
 
 
 def _print_tag_values(tags, *files, **opts):

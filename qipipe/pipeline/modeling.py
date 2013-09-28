@@ -59,13 +59,10 @@ class ModelingWorkflow(WorkflowBase):
     
     - `images`: the session images to model
     
-    - the PK modeling parameters described in
-      :meth:`qipipe.pipeline.modeling.ModelingWorkflow.__init__`
+    - the PK modeling parameters described below
     
-    If an input field is defined in the
-    :meth:`qipipe.pipeline.modeling.ModelingWorkflow.__init__`
-    configuration file ``Parameters`` topic, then the input field is set to
-    that value.
+    If an input field is defined in the configuration file ``Parameters`` topic,
+    then the input field is set to that value.
     
     If the |R10| option is not set, then it is computed from the proton density
     weighted scans and DCE series baseline image.
@@ -94,8 +91,8 @@ class ModelingWorkflow(WorkflowBase):
     
     This workflow is adapted from https://everett.ohsu.edu/hg/qin_dce.
     
-    :Note: This workflow uses proprietary OHSU AIRC software, notably the BOLERO
-        implementation of the `shutter speed model`_.
+    :Note: This workflow uses proprietary OHSU AIRC software, notably the
+        BOLERO implementation of the `shutter speed model`_.
     
     .. reST substitutions:
     .. |H2O| replace:: H\ :sub:`2`\ O
@@ -108,8 +105,8 @@ class ModelingWorkflow(WorkflowBase):
 
     def __init__(self, **opts):
         """
-        Initializes the modeling workflow. The modeling parameters can be
-        defined in either the options or the configuration as follows:
+        The modeling parameters can be defined in either the options or the
+        configuration as follows:
         
         - The parameters can be defined in the configuration
           ``Parameters`` section.
@@ -117,16 +114,16 @@ class ModelingWorkflow(WorkflowBase):
         - The input options take precedence over the configuration
           settings.
         
-        - The ``r1_0_val`` takes precedence over the R1_0 computation
-          fields ``pd_dir`` and ``max_r1_0``. If ``r1_0_val`` is set
-          in the input options, then ``pd_dir`` and ``max_r1_0`` are
+        - The *r1_0_val* takes precedence over the R1_0 computation
+          fields *pd_dir* and *max_r1_0*. If *r1_0_val* is set
+          in the input options, then *pd_dir* and *max_r1_0* are
           not included from the result.
         
-        - If ``pd_dir`` and ``max_r1_0`` are set in the input options
-          and ``r1_0_val`` is not set in the input options, then
-          a ``r1_0_val`` configuration setting is ignored.
+        - If *pd_dir* and *max_r1_0* are set in the input options
+          and *r1_0_val* is not set in the input options, then
+          a *r1_0_val* configuration setting is ignored.
         
-        - The ``baseline_end_idx`` defaults to 1 if it is not set in
+        - The *baseline_end_idx* defaults to 1 if it is not set in
           either the input options or the configuration.
         
         :param opts: the following initialization options:
@@ -134,12 +131,12 @@ class ModelingWorkflow(WorkflowBase):
         :keyword base_dir: the workflow execution directory
             (default a new temp directory)
         :keyword r1_0_val: the optional fixed |R10| value
-        :keyword max_r1_0: the maximum computed |R10| value, if the fixed |R10|
-            option is not set
-        :keyword pd_dir: the proton density files parent directory, if the fixed |R10|
-            option is not set
-        :keyword baseline_end_idx: the number of images to merge into a R1 series
-            baseline image (default is 1)
+        :keyword max_r1_0: the maximum computed |R10| value, if the fixed
+            |R10| option is not set
+        :keyword pd_dir: the proton density files parent directory, if the
+            fixed |R10| option is not set
+        :keyword baseline_end_idx: the number of images to merge into a R1
+            series baseline image (default is 1)
         """
         cfg_file = opts.pop('cfg_file', None)
         super(ModelingWorkflow, self).__init__(logger(__name__), cfg_file)
@@ -167,72 +164,83 @@ class ModelingWorkflow(WorkflowBase):
         This run method connects the given inputs to the modeling workflow
         inputs. The execution workflow is then executed, resulting in a
         new uploaded XNAT analysis resource for each input session. This
-        method returns the uploaded XNAT *(subject, session, analysis)* name
-        tuples.
+        method returns the uploaded XNAT *(subject, session, analysis)*
+        name tuples.
         
-        :param input_dict: the input *{subject: {session: ([images], mask)}}*
+        The input is a *{subject: {session: image_dict}}* dictionary, where
+        `image_dict` is a dictionary with the following content:
+        
+            {'images': [DCE images], 'time_series': 4D time series, 'mask': mask file}
+        
+        :param input_dict: the input *{subject: {session: image_dict}}*
             to model
         :param opts: the following workflow options:
         :keyword reconstruction: the XNAT reconstruction to model
         :return: the modeling result XNAT assessor name
         """
+        # The image dictionaries lists.
+        img_dict_lists = [img_dict.values()
+                     for img_dict in input_dict.itervalues()]
         # The number of sessions.
-        sess_cnt = sum(map(len, input_dict.values()))
-        # The [[(images, mask])]] list.
-        sess_tuples = [sess_dict.values()
-            for sess_dict in input_dict.itervalues()]
-        # The flattened [(images, mask])] list.
-        sbj_tuples = reduce(lambda x, y: x + y, sess_tuples)
-        # The [images] list of lists.
-        images_list = [images for images, _ in sbj_tuples]
+        sess_cnt = len(img_dict_lists)
+        # The flattened image dictionary list.
+        inmg_dicts = reduce(lambda x, y: x + y, img_dict_lists)
+        # The [[images], ...] list of lists.
+        images_lists = [img_dict['images'] for img_dict in img_dicts]
         # The number of images.
-        img_cnt = sum(map(len, images_list))
+        img_cnt = sum(map(len, images_lists))
 
         # Model the images.
         self._logger.debug("Modeling %d images in %d sessions..." %
-            (img_cnt, sess_cnt))
+                           (img_cnt, sess_cnt))
         for sbj, sess_dict in input_dict.iteritems():
             self._logger.debug("Modeling subject %s..." % sbj)
-            for sess, sess_inputs in sess_dict.iteritems():
-                images, mask = sess_inputs
+            for sess, img_dict in sess_dict.iteritems():
+                images = img_dict.get('images')
+                if not images:
+                    raise ValueError("The modeling workflow %s %s images"
+                                     " are missing" % (sbj, sess))
                 self._logger.debug("Modeling %d %s %s images..." %
                     (len(images), sbj, sess))
-                self._model(sbj, sess, images, mask)
+                self._model(sbj, sess, **img_dict)
                 self._logger.debug("Modeled %s %s." % (sbj, sess))
             self._logger.debug("Modeled subject %s." % sbj)
         self._logger.debug("Modeled %d images from %d sessions." %
-            (img_cnt, sess_cnt))
+                           (img_cnt, sess_cnt))
 
         # Return the analysis name.
         return self.assessor
 
-    def _model(self, subject, session, images, mask):
+    def _model(self, subject, session, **opts):
         """
         Runs the modeling workflow on the given session images.
         
         :param subject: the subject name
         :param session: the session name
-        :param images: the input session images
-        :param mask: the image mask
+        :param opts: the following keyword options:
+        :keyword images: the 3D DCE NiFTI images to model
+        :keyword time_series: the 4D NiFTI time series image file
+        :keyword mask: the mask file
         """
         # Set the workflow input.
-        self._set_modeling_input(self.workflow, subject, session, images,
-            mask)
+        self._set_modeling_input(self.workflow, subject, **opts)
         # Execute the modeling workflow.
         self._logger.debug("Executing the %s workflow on %s %s..." %
-            (self.workflow.name, subject, session))
+                           (self.workflow.name, subject, session))
         self._run_workflow(self.workflow)
         self._logger.debug("Executed the %s workflow on %s %s." %
-            (self.workflow.name, subject, session))
+                           (self.workflow.name, subject, session))
 
-    def _set_modeling_input(self, subject, session, images, mask):
+    def _set_modeling_input(self, subject, session, **opts):
         """
         Sets the modeling input.
         
         :param subject: the subject name
         :param session: the session name
-        :param images: the images to model
-        :param mask: the image mask
+        :param opts: the following keyword options:
+        :keyword images: the 3D DCE NiFTI images to model
+        :keyword time_series: the 4D NiFTI time series image file
+        :keyword mask: the mask file
         """
         # Validate the mask input.
         if not mask:
@@ -242,8 +250,8 @@ class ModelingWorkflow(WorkflowBase):
         input_spec = self.workflow.get_node('input_spec')
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
-        input_spec.inputs.images = images
-        input_spec.inputs.mask = mask
+        for field, value in opts.iteritems():
+            setattr(input_spec.inputs, field, value)
 
     def _create_workflow(self, base_dir=None, **opts):
         """
@@ -337,18 +345,13 @@ class ModelingWorkflow(WorkflowBase):
         use_fixed_r1_0 = not not opts.get('r1_0_val')
 
         # Set up the input node.
-        in_fields = ['images', 'mask'] + opts.keys()
+        in_fields = ['images', 'time_series', 'mask'] + opts.keys()
         input_xfc = IdentityInterface(fields=in_fields, **opts)
         input_spec = pe.Node(input_xfc, name='input_spec')
         # Set the config parameters.
         for field in in_fields:
             if field in opts:
                 setattr(input_spec.inputs, field, opts[field])
-
-        # Merge the DCE data to 4D.
-        dce_merge = pe.Node(MergeNifti(), name='dce_merge')
-        dce_merge.inputs.out_format = 'dce_series'
-        base_wf.connect(input_spec, 'images', dce_merge, 'in_files')
 
         # If we are not using a fixed r1_0 value, then compute a map from a
         # proton density weighted scan and the baseline of the DCE series.
@@ -385,7 +388,7 @@ class ModelingWorkflow(WorkflowBase):
             input_names=['time_series', 'r1_0', 'baseline_end', 'mask_file'],
             output_names=['r1_series'], function=_make_r1_series)
         get_r1_series = pe.Node(get_r1_series_func, name='get_r1_series')
-        base_wf.connect(dce_merge, 'out_file', get_r1_series, 'time_series')
+        base_wf.connect(input_spec, 'time_series', get_r1_series, 'time_series')
         base_wf.connect(
             input_spec, 'baseline_end_idx', get_r1_series, 'baseline_end')
         base_wf.connect(input_spec, 'mask', get_r1_series, 'mask_file')
@@ -398,7 +401,7 @@ class ModelingWorkflow(WorkflowBase):
         copy_meta = pe.Node(CopyMeta(), name='copy_meta')
         copy_meta.inputs.include_classes = [
             ('global', 'const'), ('time', 'samples')]
-        base_wf.connect(dce_merge, 'out_file', copy_meta, 'src_file')
+        base_wf.connect(input_spec, 'time_series', copy_meta, 'src_file')
         base_wf.connect(get_r1_series, 'r1_series', copy_meta, 'dest_file')
 
         # Get the pharmacokinetic mapping parameters.
@@ -406,7 +409,7 @@ class ModelingWorkflow(WorkflowBase):
             input_names=['time_series'], output_names=['params_csv'],
             function=_get_fit_params)
         get_params = pe.Node(get_params_func, name='get_params')
-        base_wf.connect(dce_merge, 'out_file', get_params, 'time_series')
+        base_wf.connect(input_spec, 'time_series', get_params, 'time_series')
 
         # Optimize the pharmacokinetic model.
         pk_map = pe.Node(Fastfit(), name='pk_map')
