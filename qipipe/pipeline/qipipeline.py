@@ -625,7 +625,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(new_reg, 'images', concat_reg, 'in2')
 
             # Merge the realigned images to 4D.
-            merge_reg_fname = "%_ts" % self.registration_reconstruction
+            merge_reg_fname = "%s_ts" % self.registration_reconstruction
             merge_reg = pe.Node(MergeNifti(out_format=merge_reg_fname),
                                 name='merge_reg')
             if reg_recon:
