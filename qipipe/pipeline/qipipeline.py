@@ -635,8 +635,8 @@ class QIPipelineWorkflow(WorkflowBase):
 
             # Upload the realigned time series to XNAT.
             upload_reg_ts_xfc = XNATUpload(project=project(),
-                                           reconstruction=reg_recon,
-                                           format='NIFTI')
+                reconstruction=self.registration_reconstruction,
+                format='NIFTI')
             upload_reg_ts = pe.Node(upload_reg_ts_xfc, name='upload_reg_ts')
             reg_wf.connect(input_spec, 'subject', upload_reg_ts, 'subject')
             reg_wf.connect(input_spec, 'session', upload_reg_ts, 'session')
