@@ -413,7 +413,7 @@ class ModelingWorkflow(WorkflowBase):
 
         # Optimize the pharmacokinetic model.
         pk_map = pe.Node(Fastfit(), name='pk_map')
-        pk_map.inputs.model_name = 'bolero_est'
+        pk_map.inputs.model_name = 'bolero_vascular.model'
         base_wf.connect(copy_meta, 'dest_file', pk_map, 'target_data')
         base_wf.connect(input_spec, 'mask', pk_map, 'mask')
         base_wf.connect(get_params, 'params_csv', pk_map, 'params_csv')
