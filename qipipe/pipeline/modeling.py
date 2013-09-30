@@ -273,13 +273,15 @@ class ModelingWorkflow(WorkflowBase):
         base_wf = self._create_base_workflow(base_dir=base_dir, **opts)
 
         # The workflow input fields.
-        in_fields = ['subject', 'session', 'images', 'mask']
+        in_fields = ['subject', 'session', 'images', 'time_series', 'mask']
         input_xfc = IdentityInterface(fields=in_fields)
         input_spec = pe.Node(input_xfc, name='input_spec')
         self._logger.debug("The modeling workflow input is %s with"
             " fields %s" % (input_spec.name, in_fields))
         reusable_wf.connect(input_spec, 'mask', base_wf, 'input_spec.mask')
         reusable_wf.connect(input_spec, 'images', base_wf, 'input_spec.images')
+        reusable_wf.connect(input_spec, 'time_series',
+                            base_wf, 'input_spec.time_series')
 
         # The upload nodes.
         base_output = base_wf.get_node('output_spec')
@@ -300,7 +302,7 @@ class ModelingWorkflow(WorkflowBase):
         for field in base_out_fields:
             base_field = 'output_spec.' + field
             reusable_wf.connect(base_wf, base_field, output_spec, field)
-        self._logger.debug("The modeling reusable workflow output is %s with"
+        self._logger.debug("The modeling workflow output is %s with"
             " fields %s" % (output_spec.name, out_fields))
 
         self._configure_nodes(reusable_wf)
@@ -329,9 +331,11 @@ class ModelingWorkflow(WorkflowBase):
         described in :class:`qipipe.pipeline.modeling.ModelingWorkflow` with
         the exception of XNAT upload.
         
-        :Note: This workflow is adapted from https://everett.ohsu.edu/hg/qin_dce.
-        Any change to the ``qin_dce`` workflow should be reflected in this
-        method.
+        :Note: This workflow is adapted from the AIRC workflow at
+        https://everett.ohsu.edu/hg/qin_dce. The AIRC workflow time series
+        merge is removed and added as input to the workflow created by this
+        method. Any change to the ``qin_dce`` workflow should be reflected in
+        this method.
         
         :param base_dir: the workflow working directory
         :param opts: the PK modeling parameters
