@@ -9,6 +9,8 @@ This module wraps the proprietary OHSU AIRC ``fastfit`` software.
     included, then qipipe would not compile in a non-AIRC cluster
     environment, even if this ``FastFit`` interface is unused.
 """
+from __future__ import absolute_import
+
 import os
 from os import path
 from glob import glob
