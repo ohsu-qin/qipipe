@@ -341,6 +341,7 @@ class XNAT(object):
             (default ``scan``)
         :keyword inout: the ``in``/``out`` container resource qualifier
             (default ``out`` for a container type that requires this option)
+        :keyword file: the XNAT file name (default all files in the resource)
         :keyword dest: the optional download location (default current directory)
         :return: the downloaded file names
         """
@@ -355,18 +356,27 @@ class XNAT(object):
         if not os.path.exists(dest):
             os.makedirs(dest)
 
-        logger(__name__).debug("Downloading the %s %s %s files to %s..." %
-              (subject, session, opts, dest))
+        # The XNAT file name.
+        fname = opts.pop('file', None)
+
+        if fname:
+            file_clause = "%s file" % fname
+        else:
+            file_clause = "files"
+        logger(__name__).debug("Downloading the %s %s %s %s to %s..." %
+                               (subject, session, opts, file_clause, dest))
 
         # The resource.
         rsc = self._infer_xnat_resource(exp, opts)
 
-        # Download the files.
-        rsc_files = list(rsc.files())
-        if not rsc_files:
-            logger(
-                __name__).debug("The %s %s %s resource does not contain any files." %
-                                (subject, session, opts))
+        # Download the file(s).
+        if fname:
+            rsc_files = [rsc.file(fname)]
+        else:
+            rsc_files = list(rsc.files())
+            if not rsc_files:
+                logger(__name__).debug("The %s %s %s resource does not contain"
+                                       " any files." % (subject, session, opts))
 
         return [self._download_file(f, dest) for f in rsc_files]
 
@@ -381,8 +391,8 @@ class XNAT(object):
             raise XNATError(
                 "XNAT file object does not have a name: %s" % file_obj)
         tgt = os.path.join(dest, fname)
-        logger(__name__).debug(
-            "Downloading the XNAT file %s to %s..." % (fname, dest))
+        logger(__name__).debug("Downloading the XNAT file %s to %s..." %
+                               (fname, dest))
         file_obj.get(tgt)
         logger(__name__).debug("Downloaded the XNAT file %s." % tgt)
 

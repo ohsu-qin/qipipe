@@ -3,6 +3,9 @@ from nipype.interfaces.base import (
     BaseInterface, File, Directory)
 from ..helpers import xnat_helper
 
+CONTAINER_OPTS = ['container_type', 'scan', 'reconstruction', 'assessor']
+"""The download input container options."""
+
 
 class XNATDownloadInputSpec(BaseInterfaceInputSpec):
     project = traits.Str(mandatory=True, desc='The XNAT project id')
@@ -23,6 +26,7 @@ class XNATDownloadInputSpec(BaseInterfaceInputSpec):
     container_type = traits.Enum('scan', 'reconstruction', 'assessor',
                                  desc='The XNAT resource container type')
 
+    file = traits.Str(desc="The XNAT file name (default all resource files)")
     dest = Directory(desc='The download location')
 
 
@@ -43,24 +47,30 @@ class XNATDownload(BaseInterface):
     Examples:
     >>> # Download the scan NiFTI files.
     >>> from qipipe.interfaces import XNATDownload
-    >>> XNATDownload(project='QIN', subject='BreastChemo003',
+    >>> XNATDownload(project='QIN', subject='Breast003',
     ...     session='Session02', dest='data').run()
     
     >>> # Download the scan DICOM files.
     >>> from qipipe.interfaces import XNATDownload
-    >>> XNATDownload(project='QIN', subject='BreastChemo003',
+    >>> XNATDownload(project='QIN', subject='Breast003',
     ...     session='Session02', format='DICOM',
     ...     dest='data').run()
     
     >>> # Download the XNAT registration result reg_H3pIz4s.
     >>> from qipipe.interfaces import XNATDownload
-    >>> XNATDownload(project='QIN', subject='BreastChemo003',
+    >>> XNATDownload(project='QIN', subject='Breast003',
     ...     session='Session02', reconstruction='reg_H3pIz4',
     ...     dest='data').run()
     
+    >>> # Download the XNAT registration result reg_H3pIz4s.
+    >>> from qipipe.interfaces import XNATDownload
+    >>> XNATDownload(project='QIN', subject='Breast003',
+    ...     session='Session02', reconstruction='reg_H3pIz4',
+    ...     file='series15_reg_H3pIz4.nii.gz', dest='data').run()
+    
     >>> # Download the XNAT modeling result pk_r8C4dY.
     >>> from qipipe.interfaces import XNATDownload
-    >>> XNATDownload(project='QIN', subject='BreastChemo003',
+    >>> XNATDownload(project='QIN', subject='Breast003',
     ...     session='Session02', assessor='pk_r8C4dY',
     ...     dest='data').run()
     """
@@ -71,7 +81,7 @@ class XNATDownload(BaseInterface):
 
     def _run_interface(self, runtime):
         opts = {}
-        for ctr_type in ['container_type', 'scan', 'reconstruction', 'assessor']:
+        for ctr_type in CONTAINER_OPTS:
             ctr_name = getattr(self.inputs, ctr_type)
             if ctr_name:
                 opts[ctr_type] = ctr_name
@@ -80,9 +90,12 @@ class XNATDownload(BaseInterface):
             opts['dest'] = self.inputs.dest
         if self.inputs.format:
             opts['format'] = self.inputs.format
+        if self.inputs.file:
+            opts['file'] = self.inputs.file
         with xnat_helper.connection() as xnat:
             self._out_files = xnat.download(self.inputs.project,
-                                            self.inputs.subject, self.inputs.session, **opts)
+                                            self.inputs.subject,
+                                            self.inputs.session, **opts)
 
         return runtime
 

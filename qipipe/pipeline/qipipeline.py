@@ -302,6 +302,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 raise PipelineError(
                     "The following %s %s %s scans are not registered: %s" %
                     (project, subject, session, unreg_scans))
+            # Download each scan file.
             download_reg.iterables = ('scan', reg_scans)
 
         # Execute the workflow.
@@ -567,6 +568,10 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(input_spec, 'subject', download_ref, 'subject')
             exec_wf.connect(input_spec, 'session', download_ref, 'session')
 
+        # The 4D time series file is created from the registration output
+        # realigned images and used by modeling.
+        ts_base = "%s_ts" % self.registration_reconstruction
+
         # If the reference workflow is enabled, then register the staged
         # images.
         if reg_wf:
@@ -625,8 +630,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(new_reg, 'images', concat_reg, 'in2')
 
             # Merge the realigned images to 4D.
-            merge_reg_fname = "%s_ts" % self.registration_reconstruction
-            merge_reg = pe.Node(MergeNifti(out_format=merge_reg_fname),
+            merge_reg = pe.Node(MergeNifti(out_format=ts_base),
                                 name='merge_reg')
             if reg_recon:
                 exec_wf.connect(concat_reg, 'out', merge_reg, 'in_files')
@@ -657,47 +661,26 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(download_mask, 'output_file',
                                 mdl_wf, 'input_spec.mask')
 
-            # Collect the registration workflow output.
+            # If registration is enabled, then the 4D time series
+            # is created by that workflow, otherwise download the
+            # previously created 4D time series.
             if reg_wf:
-                new_reg_xfc = IdentityInterface(fields=['images'])
-                new_reg = pe.JoinNode(new_reg_xfc, joinsource='iter_series',
-                                      name='new_reg')
-                exec_wf.connect(reg_wf, 'output_spec.image', new_reg, 'images')
-
-            # If the registration reconstruction name was specified,
-            # then download previously registered realigned images.
-            if reg_recon:
-                reg_dl_xfc = XNATDownload(project=project(),
-                                          reconstruction=reg_recon)
-                download_reg = pe.Node(reg_dl_xfc, name='download_reg')
-                exec_wf.connect(input_spec, 'subject',
-                                download_reg, 'subject')
-                exec_wf.connect(input_spec, 'session',
-                                download_reg, 'session')
-                downloaded_reg_xfc = IdentityInterface(fields=['images'])
-                downloaded_reg = pe.JoinNode(downloaded_reg_xfc,
-                                           joinsource=download_reg,
-                                           name='downloaded_reg')
-                exec_wf.connect(download_reg, 'out_file',
-                                downloaded_reg, 'images')
-
-                # If there is also a registration workflow, then
-                # merge the previously and newly realigned images.
-                if reg_wf:
-                    merge_reg = pe.Node(Merge(2), name='merge_reg')
-                    exec_wf.connect(downloaded_reg, 'images', merge_reg, 'in1')
-                    exec_wf.connect(new_reg, 'images', merge_reg, 'in2')
-                    exec_wf.connect(merge_reg, 'out',
-                                    mdl_wf, 'input_spec.images')
-                else:
-                    # No registration workflow, so all inputs were downloaded.
-                    exec_wf.connect(downloaded_reg, 'images',
-                                    mdl_wf, 'input_spec.images')
+                exec_wf.connect(merge_reg, 'out_file',
+                                mdl_wf, 'input_spec.time_series')
             else:
-                # No registration download, so all inputs come from the
-                # registration workflow output.
-                exec_wf.connect(new_reg, 'images',
-                                mdl_wf, 'input_spec.images')
+                # The 4D time series XNAT file name.
+                ts_fname = ts_base + '.nii.gz'
+                # Download the XNAT time series file.
+                ts_dl_xfc = XNATDownload(project=project(),
+                                         reconstruction=reg_recon,
+                                         file=ts_fname)
+                download_ts = pe.Node(ts_dl_xfc, name='download_ts')
+                exec_wf.connect(input_spec, 'subject',
+                                download_ts, 'subject')
+                exec_wf.connect(input_spec, 'session',
+                                download_ts, 'session')
+                exec_wf.connect(download_ts, 'out_file',
+                                mdl_wf, 'input_spec.time_series')
 
         # Set the configured workflow node inputs and plug-in options.
         self._configure_nodes(exec_wf)
