@@ -638,9 +638,9 @@ class QIPipelineWorkflow(WorkflowBase):
                 reconstruction=self.registration_reconstruction,
                 format='NIFTI')
             upload_reg_ts = pe.Node(upload_reg_ts_xfc, name='upload_reg_ts')
-            reg_wf.connect(input_spec, 'subject', upload_reg_ts, 'subject')
-            reg_wf.connect(input_spec, 'session', upload_reg_ts, 'session')
-            reg_wf.connect(merge_reg, 'out_file', upload_reg_ts, 'in_files')
+            exec_wf.connect(input_spec, 'subject', upload_reg_ts, 'subject')
+            exec_wf.connect(input_spec, 'session', upload_reg_ts, 'session')
+            exec_wf.connect(merge_reg, 'out_file', upload_reg_ts, 'in_files')
 
         # If the modeling workflow is enabled, then model the realigned
         # images.
