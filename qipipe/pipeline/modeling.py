@@ -76,9 +76,9 @@ class ModelingWorkflow(WorkflowBase):
     
     - `k_trans`: the |Ktrans| extra/intravasation transfer rate
     
-    - `v_e`: the |ve| interstitial volume fraction
+    - `v_b`: the |ve| interstitial volume fraction
     
-    - `tau_i`: the intracellular |H2O| mean lifetime
+    - `tau_b`: the intracellular |H2O| mean lifetime
     
     In addition, if |R10| is computed, then the output includes the
     following fields:
@@ -421,7 +421,7 @@ class ModelingWorkflow(WorkflowBase):
         pk_map.inputs.use_mpi = DISTRIBUTABLE
 
         # Set up the outputs.
-        outputs = ['r1_series', 'pk_params', 'k_trans', 'v_e', 'tau_i']
+        outputs = ['r1_series', 'pk_params', 'k_trans', 'v_b', 'tau_b']
         if not use_fixed_r1_0:
             outputs += ['pdw_image', 'dce_baseline', 'r1_0']
         output_spec = pe.Node(
@@ -429,8 +429,8 @@ class ModelingWorkflow(WorkflowBase):
         base_wf.connect(copy_meta, 'dest_file', output_spec, 'r1_series')
         base_wf.connect(get_params, 'params_csv', output_spec, 'pk_params')
         base_wf.connect(pk_map, 'k_trans', output_spec, 'k_trans')
-        base_wf.connect(pk_map, 'v_e', output_spec, 'v_e')
-        base_wf.connect(pk_map, 'tau_i', output_spec, 'tau_i')
+        base_wf.connect(pk_map, 'v_b', output_spec, 'v_b')
+        base_wf.connect(pk_map, 'tau_b', output_spec, 'tau_b')
 
         if not use_fixed_r1_0:
             base_wf.connect(pd_stack, 'out_file', output_spec, 'pdw_image')
