@@ -429,8 +429,8 @@ class ModelingWorkflow(WorkflowBase):
         # Compute the delta K_trans.
         delta_k_trans = pe.Node(fsl.ImageMaths(), name='delta_k_trans')
         delta_k_trans.inputs.op_string = '-sub'
-        workflow.connect(pk_map, 'k_trans', delta_k_trans, 'in_file')
-        workflow.connect(pk_map, 'guess_model.k_trans',
+        base_wf.connect(pk_map, 'k_trans', delta_k_trans, 'in_file')
+        base_wf.connect(pk_map, 'guess_model.k_trans',
                          delta_k_trans, 'in_file2')
 
         # Set up the outputs.
