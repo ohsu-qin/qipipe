@@ -38,6 +38,14 @@ def run(*inputs, **opts):
     return wf_gen.run(*inputs, **opts)
 
 
+class ArgumentError(Exception):
+    pass
+
+
+class NotFoundError(Exception):
+    pass
+
+
 class QIPipelineWorkflow(WorkflowBase):
 
     """
@@ -208,7 +216,7 @@ class QIPipelineWorkflow(WorkflowBase):
     def _run_with_dicom_input(self, *inputs, **opts):
         collection = opts.pop('collection', None)
         if not collection:
-            raise ValueError('QIPipeline is missing the collection argument')
+            raise ArgumentError('QIPipeline is missing the collection argument')
         opts['workflow'] = self.workflow
         opts['base_dir'] = self.workflow.base_dir
         stg_dict = staging.run(collection, *inputs, **opts)
@@ -238,7 +246,7 @@ class QIPipelineWorkflow(WorkflowBase):
         for spec in sess_specs:
             prj, _, _ = spec
             if prj != project():
-                raise ValueError("The project %s in the session label %s"
+                raise ArgumentError("The project %s in the session label %s"
                                  "differs from the current project %s" %
                                  (prj, spec, project()))
 
@@ -271,7 +279,7 @@ class QIPipelineWorkflow(WorkflowBase):
         # Get the scan numbers.
         scans = xnat.get_scans(project, subject, session)
         if not scans:
-            raise IOError("The QIN pipeline did not find a %s %s %s"
+            raise NotFoundError("The QIN pipeline did not find a %s %s %s"
                           " scan." % (project, subject, session))
 
         # Set the workflow input.
@@ -299,7 +307,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # If registration is disabled, then validate that all scans
             # are registered.
             if opts.get('skip_registration') and unreg_scans:
-                raise PipelineError(
+                raise NotFoundError(
                     "The following %s %s %s scans are not registered: %s" %
                     (project, subject, session, unreg_scans))
             # Download each scan file.
@@ -429,8 +437,8 @@ class QIPipelineWorkflow(WorkflowBase):
         if skip_modeling:
             self._logger.info("Skipping modeling.")
             mdl_wf = None
-        elif skip_registration:
-            raise ValueError(
+        elif skip_registration and not reg_recon:
+            raise ArgumentError(
                 "The QIN pipeline cannot perform modeling, since the"
                 " registration workflow is disabled and no realigned"
                 " images will be downloaded.")
@@ -482,7 +490,7 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # Validate that there is at least one constituent workflow.
         if not any([stg_wf, reg_wf, mdl_wf]):
-            raise ValueError("No workflow was enabled.")
+            raise ArgumentError("No workflow was enabled.")
 
         # The workflow input fields.
         input_fields = ['subject', 'session']
