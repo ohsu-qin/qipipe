@@ -61,24 +61,29 @@ class ModelingWorkflow(WorkflowBase):
     
     - the PK modeling parameters described below
     
-    If an input field is defined in the configuration file ``Parameters`` topic,
-    then the input field is set to that value.
+    If an input field is defined in the configuration file ``Parameters``
+    topic, then the input field is set to that value.
     
-    If the |R10| option is not set, then it is computed from the proton density
-    weighted scans and DCE series baseline image.
+    If the |R10| option is not set, then it is computed from the proton
+    density weighted scans and DCE series baseline image.
     
-    The outputs are collected in the `output_spec` node with the following
-    fields:
+    The outputs are collected in the `output_spec` node for the FXL (Tofts)
+    model and the FXR (shutter speed) model with the following fields:
     
     - `r1_series`: the R1 series files
     
     - `pk_params`: the AIF and R1 parameter CSV file
     
-    - `k_trans`: the |Ktrans| extra/intravasation transfer rate
+    - `fxr_k_trans`, `fxl_k_trans`: the |Ktrans| extra/intravasation transfer
+       rate
     
-    - `v_b`: the |ve| interstitial volume fraction
+    - `delta_k_trans`: the FXR-FXL |Ktrans| difference
     
-    - `tau_b`: the intracellular |H2O| mean lifetime
+    - `fxr_v_e`, `fxl_v_e`: the |ve| interstitial volume fraction
+    
+    - `fxr_tau_i`: the intracellular |H2O| mean lifetime
+    
+    - `fxr_chisq`, `fxl_chisq`: the intracellular |H2O| mean lifetime
     
     In addition, if |R10| is computed, then the output includes the
     following fields:
@@ -170,7 +175,7 @@ class ModelingWorkflow(WorkflowBase):
         The input is a *{subject: {session: image_dict}}* dictionary, where
         `image_dict` is a dictionary with the following content:
         
-            {'images': [DCE images], 'time_series': 4D time series, 'mask': mask file}
+            {'dce_nii': [images], 'time_series': 4D time series, 'mask': mask file}
         
         :param input_dict: the input *{subject: {session: image_dict}}*
             to model
@@ -186,7 +191,7 @@ class ModelingWorkflow(WorkflowBase):
         # The flattened image dictionary list.
         inmg_dicts = reduce(lambda x, y: x + y, img_dict_lists)
         # The [[images], ...] list of lists.
-        images_lists = [img_dict['images'] for img_dict in img_dicts]
+        images_lists = [img_dict['dce_nii'] for img_dict in img_dicts]
         # The number of images.
         img_cnt = sum(map(len, images_lists))
 
@@ -196,7 +201,7 @@ class ModelingWorkflow(WorkflowBase):
         for sbj, sess_dict in input_dict.iteritems():
             self._logger.debug("Modeling subject %s..." % sbj)
             for sess, img_dict in sess_dict.iteritems():
-                images = img_dict.get('images')
+                images = img_dict.get('dce_nii')
                 if not images:
                     raise ValueError("The modeling workflow %s %s images"
                                      " are missing" % (sbj, sess))
@@ -279,7 +284,7 @@ class ModelingWorkflow(WorkflowBase):
         self._logger.debug("The modeling workflow input is %s with"
             " fields %s" % (input_spec.name, in_fields))
         reusable_wf.connect(input_spec, 'mask', base_wf, 'input_spec.mask')
-        reusable_wf.connect(input_spec, 'images', base_wf, 'input_spec.images')
+        reusable_wf.connect(input_spec, 'images', base_wf, 'input_spec.dce_nii')
         reusable_wf.connect(input_spec, 'time_series',
                             base_wf, 'input_spec.time_series')
 
@@ -349,7 +354,7 @@ class ModelingWorkflow(WorkflowBase):
         use_fixed_r1_0 = not not opts.get('r1_0_val')
 
         # Set up the input node.
-        in_fields = ['images', 'time_series', 'mask'] + opts.keys()
+        in_fields = ['dce_nii', 'time_series', 'mask'] + opts.keys()
         input_xfc = IdentityInterface(fields=in_fields, **opts)
         input_spec = pe.Node(input_xfc, name='input_spec')
         # Set the config parameters.
@@ -360,29 +365,23 @@ class ModelingWorkflow(WorkflowBase):
         # If we are not using a fixed r1_0 value, then compute a map from a
         # proton density weighted scan and the baseline of the DCE series.
         if not use_fixed_r1_0:
-            # Convert each series dir to a Nifti.
-            pd_stack = pe.Node(DcmStack(), name='pd_stack')
-            pd_stack.inputs.embed_meta = True
-            base_wf.connect(input_spec, 'pd_dir', pd_stack, 'dicom_files')
-
             # Create the DCE baseline image.
             make_base_func = Function(
-                input_names=['dce_images', 'baseline_end_idx'],
+                input_names=['dce_nii', 'baseline_end_idx'],
                 output_names=['baseline_nii'],
                 function=_make_baseline),
             make_base = pe.Node(make_base_func, name='make_base')
-            base_wf.connect(input_spec, 'images', make_base, 'dce_images')
-            base_wf.connect(
-                input_spec, 'baseline_end_idx', make_base, 'baseline_end_idx')
+            base_wf.connect(input_spec, 'dce_nii', make_base, 'dce_nii')
+            base_wf.connect(input_spec, 'baseline_end_idx',
+                            make_base, 'baseline_end_idx')
 
             # Create the R1_0 map.
             get_r1_0_func = Function(
-                input_names=[
-                    'pdw_image', 't1w_image', 'max_r1_0', 'mask_file'],
+                input_names=['pdw_image', 't1w_image', 'max_r1_0', 'mask_file'],
                 output_names=['r1_0_map'],
                 function=_make_r1_0),
             get_r1_0 = pe.Node(get_r1_0_func, name='get_r1_0')
-            base_wf.connect(pd_stack, 'out_file', get_r1_0, 'pdw_image')
+            base_wf.connect(input_spec, 'pd_nii', get_r1_0, 'pdw_image')
             base_wf.connect(make_base, 'baseline_nii', get_r1_0, 't1w_image')
             base_wf.connect(input_spec, 'max_r1_0', get_r1_0, 'max_r1_0')
             base_wf.connect(input_spec, 'mask', get_r1_0, 'mask_file')
@@ -403,43 +402,58 @@ class ModelingWorkflow(WorkflowBase):
 
         # Copy the time series meta-data to the R1 series.
         copy_meta = pe.Node(CopyMeta(), name='copy_meta')
-        copy_meta.inputs.include_classes = [
-            ('global', 'const'), ('time', 'samples')]
+        copy_meta.inputs.include_classes = [('global', 'const'),
+                                            ('time', 'samples')]
         base_wf.connect(input_spec, 'time_series', copy_meta, 'src_file')
         base_wf.connect(get_r1_series, 'r1_series', copy_meta, 'dest_file')
 
         # Get the pharmacokinetic mapping parameters.
-        get_params_func = Function(
-            input_names=['time_series'], output_names=['params_csv'],
-            function=_get_fit_params)
+        get_params_func = Function(input_names=['time_series'],
+                                   output_names=['params_csv'],
+                                   function=_get_fit_params)
         get_params = pe.Node(get_params_func, name='get_params')
         base_wf.connect(input_spec, 'time_series', get_params, 'time_series')
 
         # Optimize the pharmacokinetic model.
         pk_map = pe.Node(Fastfit(), name='pk_map')
-        pk_map.inputs.model_name = 'bolero_vascular.model'
+        pk_map.inputs.model_name = 'fxr.model'
+        pk_map.inputs.optional_outs = ['chisq', 'guess_model.k_trans',
+                                       'guess_model.v_e', 'guess_model.chisq']
         base_wf.connect(copy_meta, 'dest_file', pk_map, 'target_data')
         base_wf.connect(input_spec, 'mask', pk_map, 'mask')
         base_wf.connect(get_params, 'params_csv', pk_map, 'params_csv')
         # Set the MPI flag.
         pk_map.inputs.use_mpi = DISTRIBUTABLE
 
+        # Compute the delta K_trans.
+        delta_k_trans = pe.Node(fsl.ImageMaths(), name='delta_k_trans')
+        delta_k_trans.inputs.op_string = '-sub'
+        workflow.connect(pk_map, 'k_trans', delta_k_trans, 'in_file')
+        workflow.connect(pk_map, 'guess_model.k_trans',
+                         delta_k_trans, 'in_file2')
+
         # Set up the outputs.
-        outputs = ['r1_series', 'pk_params', 'k_trans', 'v_b', 'tau_b']
+        outputs = ['r1_series', 'pk_params', 'fxr_k_trans', 'fxr_v_e',
+                   'fxr_tau_i', 'fxr_chisq', 'fxl_k_trans', 'fxl_v_e',
+                   'fxl_chisq', 'delta_k_trans']
         if not use_fixed_r1_0:
-            outputs += ['pdw_image', 'dce_baseline', 'r1_0']
+            outputs += ['dce_baseline', 'r1_0']
         output_spec = pe.Node(
             IdentityInterface(fields=outputs), name='output_spec')
         base_wf.connect(copy_meta, 'dest_file', output_spec, 'r1_series')
         base_wf.connect(get_params, 'params_csv', output_spec, 'pk_params')
-        base_wf.connect(pk_map, 'k_trans', output_spec, 'k_trans')
-        base_wf.connect(pk_map, 'v_b', output_spec, 'v_b')
-        base_wf.connect(pk_map, 'tau_b', output_spec, 'tau_b')
+        base_wf.connect(pk_map, 'k_trans', outputspec, 'fxr_k_trans')
+        base_wf.connect(pk_map, 'v_e', outputspec, 'fxr_v_e')
+        base_wf.connect(pk_map, 'tau_i', outputspec, 'fxr_tau_i')
+        base_wf.connect(pk_map, 'chisq', outputspec, 'fxr_chisq')
+        base_wf.connect(pk_map, 'guess_model.k_trans', outputspec, 'fxl_k_trans')
+        base_wf.connect(pk_map, 'guess_model.v_e', outputspec, 'fxl_v_e')
+        base_wf.connect(pk_map, 'guess_model.chisq', outputspec, 'fxl_chisq')
+        base_wf.connect(delta_k_trans, 'out_file', outputspec, 'delta_k_trans')
 
         if not use_fixed_r1_0:
-            base_wf.connect(pd_stack, 'out_file', output_spec, 'pdw_image')
-            base_wf.connect(
-                make_base, 'baseline_nii', output_spec, 'dce_baseline')
+            base_wf.connect(make_base, 'baseline_nii',
+                            output_spec, 'dce_baseline')
             base_wf.connect(get_r1_0, 'r1_0_map', output_spec, 'r1_0')
 
         self._configure_nodes(base_wf)
@@ -522,22 +536,28 @@ class ModelingWorkflow(WorkflowBase):
         return opts
 
 
-def _make_baseline(dce_images, baseline_end_idx):
-    from nipype.interfaces.dcmstack import MergeNifti
+def _make_baseline(dce_nii, baseline_end_idx):
+    from nipype.interfaces.dcmstack import SplitNifti, MergeNifti
     from nipype.interfaces import fsl
 
     assert baseline_end_idx > 0
-    if baseline_end_idx > 1:
-        baseline_images = dce_images[:baseline_end_idx]
-        merge_nii = MergeNifti()
-        merge_nii.inputs.in_files = baseline_images
-        merge_nii.inputs.out_format = 'baseline_merged'
-        merged = merge_nii.run().outputs.out_file
-        mean_image = fsl.MeanImage(name='mean_image')
-        mean_image.inputs.in_file = merged
-        return mean_image.run().outputs.out_file
+    nii = nb.load(dce_nii)
+    nw = NiftiWrapper(nii)
+    
+    baseline_niis = []
+    for idx, split_nii in nw.split():
+        if idx == baseline_end_idx:
+            break
+        baseline_niis.append(split_nii)
+        
+    if len(baseline_niis) == 1:
+        return baseline_niis[0]
     else:
-        return dce_images[0]
+        baseline_nii = NiftiWrapper.from_sequence(baseline_niis)
+    baseline_path = path.join(os.getcwd(), 'baseline.nii.gz')
+    nb.save(baseline_nii, baseline_path)
+    
+    return baseline_path
 
 
 def _make_r1_0(pdw_image, t1w_image, max_r1_0, mask_file, **kwargs):
