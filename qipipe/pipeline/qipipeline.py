@@ -4,7 +4,7 @@ import tempfile
 import logging
 from collections import defaultdict
 from nipype.pipeline import engine as pe
-from nipype.interfaces.utility import IdentityInterface
+from nipype.interfaces.utility import IdentityInterface, Merge
 from nipype.interfaces.dcmstack import MergeNifti
 from .. import project
 from . import staging
