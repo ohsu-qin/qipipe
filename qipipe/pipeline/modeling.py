@@ -443,14 +443,14 @@ class ModelingWorkflow(WorkflowBase):
             IdentityInterface(fields=outputs), name='output_spec')
         base_wf.connect(copy_meta, 'dest_file', output_spec, 'r1_series')
         base_wf.connect(get_params, 'params_csv', output_spec, 'pk_params')
-        base_wf.connect(pk_map, 'k_trans', outputspec, 'fxr_k_trans')
-        base_wf.connect(pk_map, 'v_e', outputspec, 'fxr_v_e')
-        base_wf.connect(pk_map, 'tau_i', outputspec, 'fxr_tau_i')
-        base_wf.connect(pk_map, 'chisq', outputspec, 'fxr_chisq')
-        base_wf.connect(pk_map, 'guess_model.k_trans', outputspec, 'fxl_k_trans')
-        base_wf.connect(pk_map, 'guess_model.v_e', outputspec, 'fxl_v_e')
-        base_wf.connect(pk_map, 'guess_model.chisq', outputspec, 'fxl_chisq')
-        base_wf.connect(delta_k_trans, 'out_file', outputspec, 'delta_k_trans')
+        base_wf.connect(pk_map, 'k_trans', output_spec, 'fxr_k_trans')
+        base_wf.connect(pk_map, 'v_e', output_spec, 'fxr_v_e')
+        base_wf.connect(pk_map, 'tau_i', output_spec, 'fxr_tau_i')
+        base_wf.connect(pk_map, 'chisq', output_spec, 'fxr_chisq')
+        base_wf.connect(pk_map, 'guess_model.k_trans', output_spec, 'fxl_k_trans')
+        base_wf.connect(pk_map, 'guess_model.v_e', output_spec, 'fxl_v_e')
+        base_wf.connect(pk_map, 'guess_model.chisq', output_spec, 'fxl_chisq')
+        base_wf.connect(delta_k_trans, 'out_file', output_spec, 'delta_k_trans')
 
         if not use_fixed_r1_0:
             base_wf.connect(make_base, 'baseline_nii',
