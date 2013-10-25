@@ -666,7 +666,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(mask_wf, 'output_spec.mask',
                                 mdl_wf, 'input_spec.mask')
             else:
-                exec_wf.connect(download_mask, 'output_file',
+                exec_wf.connect(download_mask, 'out_file',
                                 mdl_wf, 'input_spec.mask')
 
             # If registration is enabled, then the 4D time series
