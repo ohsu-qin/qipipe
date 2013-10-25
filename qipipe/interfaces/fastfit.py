@@ -2,8 +2,8 @@
 This module wraps the proprietary OHSU AIRC ``fastfit`` software.
 ``fastfit`` optimizes the input pharmacokinetic model.
 
-:Note: this interface is copied from the AIRC cluster
-    ``/usr/global/scripts/fastfit_iface.py`` file. It is included
+:Note: this interface is copied from the AIRC cluster file
+    ``/usr/global/scripts/fastfit_iface.py``. It is included
     in :mod:`qipipe.interfaces` in order to gather all custom OHSU
     QIN Python source code in the ``qipipe`` module. If it were not
     included, then qipipe would not compile in a non-AIRC cluster
@@ -19,31 +19,12 @@ from os import path
 from glob import glob
 import traits.api as traits
 from nipype.interfaces.base import (DynamicTraitedSpec,
-                                    CommandLine, 
-                                    CommandLineInputSpec,
+                                    MpiCommandLine, 
+                                    MpiCommandLineInputSpec,
                                     isdefined)
 from nipype.interfaces.traits_extension import Undefined
 from fastfit.fastfit_cli import get_available_models
 
-class MpiCommandLineInputSpec(CommandLineInputSpec):
-    use_mpi = traits.Bool(False, 
-                          desc='Whether or not to run the command with mpiexec',
-                          usedefault=True)
-    n_procs = traits.Int(desc='Num processors to specify to mpiexec')
-    
-
-class MpiCommandLine(CommandLine):
-    @property
-    def cmdline(self):
-        """Adds 'mpiexec' to begining of command"""
-        result = []
-        if self.inputs.use_mpi:
-            result.append('mpiexec')
-            if self.inputs.n_procs: 
-                result.append('-n %d' % self.inputs.n_procs)
-        result.append(super(MpiCommandLine, self).cmdline)
-        return ' '.join(result)
-        
 
 class FastfitInputSpec(MpiCommandLineInputSpec):
     model_name = traits.String(desc='The name of the model to optimize',
@@ -149,7 +130,6 @@ class Fastfit(MpiCommandLine):
         
         cwd = os.getcwd()
         for param_name in outputs.keys():
-            outputs[param_name] = path.join(cwd, 
-                                            '%s_map.nii.gz' % param_name)
+            outputs[param_name] = path.join(cwd, '%s_map.nii.gz' % param_name)
         
         return outputs
