@@ -431,7 +431,7 @@ class ModelingWorkflow(WorkflowBase):
         delta_k_trans.inputs.op_string = '-sub'
         base_wf.connect(pk_map, 'k_trans', delta_k_trans, 'in_file')
         base_wf.connect(pk_map, 'guess_model.k_trans',
-                         delta_k_trans, 'in_file2')
+                        delta_k_trans, 'in_file2')
 
         # Set up the outputs.
         outputs = ['r1_series', 'pk_params', 'fxr_k_trans', 'fxr_v_e',
@@ -439,8 +439,8 @@ class ModelingWorkflow(WorkflowBase):
                    'fxl_chisq', 'delta_k_trans']
         if not use_fixed_r1_0:
             outputs += ['dce_baseline', 'r1_0']
-        output_spec = pe.Node(
-            IdentityInterface(fields=outputs), name='output_spec')
+        output_spec = pe.Node(IdentityInterface(fields=outputs),
+                              name='output_spec')
         base_wf.connect(copy_meta, 'dest_file', output_spec, 'r1_series')
         base_wf.connect(get_params, 'params_csv', output_spec, 'pk_params')
         base_wf.connect(pk_map, 'k_trans', output_spec, 'fxr_k_trans')
@@ -538,10 +538,10 @@ class ModelingWorkflow(WorkflowBase):
 
 
 def _make_baseline(dce_nii, baseline_end_idx):
-    from nipype.interfaces.dcmstack import SplitNifti, MergeNifti
-    from nipype.interfaces import fsl
+    from dcmstack.dcmmeta import NiftiWrapper
 
-    assert baseline_end_idx > 0
+    assert baseline_end_idx > 0,
+           "The R1_0 computation baseline end index is negative: %s" % baseline_end_idx
     nii = nb.load(dce_nii)
     nw = NiftiWrapper(nii)
     
