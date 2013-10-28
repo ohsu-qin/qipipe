@@ -4,8 +4,8 @@ import tempfile
 import logging
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Function)
-from nipype.interfaces.ants import (
-    AverageImages, Registration, ApplyTransforms)
+from nipype.interfaces.ants import (AverageImages, Registration,
+                                    ApplyTransforms)
 from nipype.interfaces import fsl
 from nipype.interfaces.dcmstack import CopyMeta
 from .. import project
