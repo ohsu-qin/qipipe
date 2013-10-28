@@ -332,12 +332,27 @@ class QIPipelineWorkflow(WorkflowBase):
         # all of the scans are downloaded.
         if not reg_obj.exists():
             return [], scans
-        # The XNAT registration file names.
-        reg_files = reg_obj.out_resources().fetchone().files().get()
-        reg_scans = [int(QIPipelineWorkflow.REG_SERIES_PAT.match(f).group(1))
-                     for f in reg_files]
+        
+        # The realigned scan numbers.
+        reg_scans = self._registered_scans(reg_obj)
 
         return reg_scans, list(set(scans) - set(reg_scans))
+
+    def _registered_scans(self, reg_obj):
+            """
+            Returns the scans which have a corresponding registration
+            reconstruction file.
+
+            :param reg_obj: the XNAT registration reconstruction object
+            :return: the registered scan numbers
+            """
+            # The XNAT registration file names.
+            reg_files = reg_obj.out_resources().fetchone().files().get()
+            # Match on the realigned scan file pattern.
+            matches = ((QIPipelineWorkflow.REG_SERIES_PAT.match(f)
+                        for f in reg_files))
+            
+            return [int(match.group(1)) for match in matches if match]
 
     def _run_with_registration_download(self, *inputs):
         """
