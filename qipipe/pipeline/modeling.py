@@ -619,7 +619,7 @@ def _get_fit_params(time_series):
                              for idx in xrange(n_vols)])
     signal_diffs = np.diff(signal_means)
 
-    # If we see a difference in average signal larger than double the .
+    # If we see a difference in average signal larger than double the
     # difference from first two points, take that as bolus arrival.
     base_diff = np.abs(signal_diffs[0])
     for idx, diff_val in enumerate(signal_diffs[1:]):
@@ -629,7 +629,7 @@ def _get_fit_params(time_series):
     else:
         raise ValueError("Unable to determine bolus arrival")
 
-    # Figure out the time in between bolus_idx and bolus_idx+1.
+    # Figure out the time between bolus_idx and bolus_idx+1.
     nw = NiftiWrapper(nii)
     acq_time0 = dcm_time_to_sec(nw.get_meta('AcquisitionTime', (0, 0, 0, 0)))
     acq_time1 = dcm_time_to_sec(
