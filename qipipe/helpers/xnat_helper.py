@@ -348,8 +348,8 @@ class XNAT(object):
         # The XNAT experiment, which must exist.
         exp = self.get_session(project, subject, session)
         if not exp.exists():
-            raise XNATError(
-                "The XNAT download session was not found: %s" % session)
+            raise XNATError("The XNAT download session was not found: %s" %
+                            session)
 
         # The download location.
         dest = opts.pop('dest', None) or os.getcwd()
