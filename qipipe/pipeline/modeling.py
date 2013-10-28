@@ -540,8 +540,9 @@ class ModelingWorkflow(WorkflowBase):
 def _make_baseline(dce_nii, baseline_end_idx):
     from dcmstack.dcmmeta import NiftiWrapper
 
-    assert baseline_end_idx > 0, "The R1_0 computation baseline end index is"
-                                 " negative: %s" % baseline_end_idx
+    if baseline_end_idx <= 0:
+        raise ValueError("The R1_0 computation baseline end index input value"
+                         " is not a positive number: %s" % baseline_end_idx)
     nii = nb.load(dce_nii)
     nw = NiftiWrapper(nii)
     
