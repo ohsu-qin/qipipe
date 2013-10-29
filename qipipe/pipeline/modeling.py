@@ -293,7 +293,7 @@ class ModelingWorkflow(WorkflowBase):
         base_output = base_wf.get_node('output_spec')
         base_out_fields = base_output.outputs.copyable_trait_names()
         upload_dict = {field: self._create_upload_node(field)
-            for field in base_out_fields}
+                       for field in base_out_fields}
         for field, node in upload_dict.iteritems():
             reusable_wf.connect(input_spec, 'subject', node, 'subject')
             reusable_wf.connect(input_spec, 'session', node, 'session')
@@ -302,8 +302,8 @@ class ModelingWorkflow(WorkflowBase):
 
         # The output is the base outputs and the XNAT analysis name.
         out_fields = ['analysis'] + base_out_fields
-        output_xfc = IdentityInterface(
-            fields=out_fields, analysis=self.assessor)
+        output_xfc = IdentityInterface(fields=out_fields,
+                                       analysis=self.assessor)
         output_spec = pe.Node(output_xfc, name='output_spec')
         for field in base_out_fields:
             base_field = 'output_spec.' + field
@@ -326,7 +326,7 @@ class ModelingWorkflow(WorkflowBase):
         :return: the modeling parameter XNAT upload node
         """
         upload_xfc = XNATUpload(project=project(), assessor=self.assessor,
-            resource=resource)
+                                resource=resource)
         name = 'upload_' + resource
 
         return pe.Node(upload_xfc, name=name)
@@ -426,7 +426,7 @@ class ModelingWorkflow(WorkflowBase):
         # Set the MPI flag.
         pk_map.inputs.use_mpi = DISTRIBUTABLE
 
-        # Compute the delta K_trans.
+        # Compute the K_trans difference.
         delta_k_trans = pe.Node(fsl.ImageMaths(), name='delta_k_trans')
         delta_k_trans.inputs.op_string = '-sub'
         base_wf.connect(pk_map, 'k_trans', delta_k_trans, 'in_file')
