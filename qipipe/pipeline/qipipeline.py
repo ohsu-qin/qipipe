@@ -418,10 +418,10 @@ class QIPipelineWorkflow(WorkflowBase):
         # This order makes it easier to determine whether to create
         # an upstream workflow depending on the presence of downstream
         # workflows, e.g. the mask is not created if registration
-        # is not enabled.
+        # is not performed.
         #
-        # By contrast, the workflows are tied together in
-        # front-to-back order.
+        # By contrast, the workflows are tied together in front-to-back
+        # order.
 
         # The work directory used for the master workflow and all
         # constituent workflows.
@@ -593,7 +593,7 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(input_spec, 'session', download_ref, 'session')
 
         # The 4D time series file is created from the registration output
-        # realigned images and used by modeling.
+        # realigned images. The time series is used by modeling.
         ts_base = "%s_ts" % self.registration_reconstruction
 
         # If the reference workflow is enabled, then register the staged
