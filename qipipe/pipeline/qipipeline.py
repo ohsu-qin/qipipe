@@ -452,11 +452,14 @@ class QIPipelineWorkflow(WorkflowBase):
         if skip_modeling:
             self._logger.info("Skipping modeling.")
             mdl_wf = None
-        elif skip_registration and not reg_recon:
-            raise ArgumentError(
-                "The QIN pipeline cannot perform modeling, since the"
-                " registration workflow is disabled and no realigned"
-                " images will be downloaded.")
+        elif skip_registration:
+            if reg_recon:
+                self.registration_reconstruction = reg_recon
+            else:
+                raise ArgumentError(
+                    "The QIN pipeline cannot perform modeling, since the"
+                    " registration workflow is disabled and no realigned"
+                    " images will be downloaded.")
         else:
             mdl_wf_gen = ModelingWorkflow(base_dir=base_dir)
             mdl_wf = mdl_wf_gen.workflow
