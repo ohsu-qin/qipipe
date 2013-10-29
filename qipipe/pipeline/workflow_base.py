@@ -42,7 +42,15 @@ class WorkflowBase(object):
     """The configuration directory environment variable."""
 
     INTERFACE_PREFIX_PAT = re.compile('(\w+\.)+interfaces?\.?')
-    """Regexp matcher for an interface module."""
+    """
+    Regexp matcher for an interface module.
+    
+    Example:
+    
+    >>> from qipipe.pipeline.workflow_base import WorkflowBase
+    >>> WorkflowBase.INTERFACE_PREFIX_PAT.match('nipype.interfaces.ants.util.AverageImages').groups()
+    ('nipype.',)
+    """
 
     MODULE_PREFIX_PAT = re.compile('^((\w+\.)*)(\w+\.)(\w+)$')
     """
