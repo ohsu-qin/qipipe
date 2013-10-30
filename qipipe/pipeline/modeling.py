@@ -309,7 +309,7 @@ class ModelingWorkflow(WorkflowBase):
             base_field = 'output_spec.' + field
             reusable_wf.connect(base_wf, base_field, output_spec, field)
         self._logger.debug("The modeling workflow output is %s with"
-            " fields %s" % (output_spec.name, out_fields))
+                           " fields %s" % (output_spec.name, out_fields))
 
         self._configure_nodes(reusable_wf)
 
