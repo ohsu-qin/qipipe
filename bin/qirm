@@ -29,8 +29,6 @@ def main(argv=sys.argv):
         xnat_opts = {}
     if 'format' in opts:
         xnat_opts['format'] = opts['format']
-    if 'output' in opts:
-        xnat_opts['dest'] = opts['output']
 
     # Parse the XNAT session label argument.
     prj, sbj, sess = xnat_helper.parse_session_label(label)
@@ -64,13 +62,13 @@ def _parse_arguments():
 
     # The XNAT name options.
     target_grp = parser.add_mutually_exclusive_group()
-    target_grp.add_argument(
-        '-r', '--reconstruction', help='the XNAT reconstruction name')
+    target_grp.add_argument('-r', '--reconstruction',
+                            help='the XNAT reconstruction name')
     target_grp.add_argument('-a', '--assessor', help='the XNAT assessor name')
     parser.add_argument('-f', '--format',
                         help='the file format (default NiFTI)')
 
-    # The input sessions to process.
+    # The input session to process.
     parser.add_argument('session', help='the target XNAT session',
                         metavar='LABEL')
 
