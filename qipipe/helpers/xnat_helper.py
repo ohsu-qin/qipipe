@@ -543,6 +543,9 @@ class XNAT(object):
         ...     resource = xnat.find('QIN', 'Sarcoma003', 'Session01', scan=4,
         ...         resource='NIFTI')
 
+        :Note: pyxnat 0.9.1 incorrectly reports that an existing XNAT assessor
+        does not exist. This method assumes that an assessor exists.
+
         :param project: the XNAT project id
         :param subject: the XNAT subject name
         :param session: the session (XNAT experiment) name
@@ -551,6 +554,7 @@ class XNAT(object):
         :keyword reconstruction: the reconstruction name
         :keyword analysis: the analysis name
         :keyword resource: the resource name
+        :keyword inout: the resource direction (``in`` or ``out``)
         :keyword modality: the session modality
         :keyword create: flag indicating whether to create the XNAT object
             if it does not yet exist
@@ -615,7 +619,7 @@ class XNAT(object):
             raise ValueError("XNAT %s %s %s %s container id is missing" %
                             (project, subject, session, ctr_type))
         ctr = self._xnat_resource_parent(exp, ctr_type, ctr_id)
-        if not ctr.exists():
+        if not ctr.exists() and ctr_type != 'assessor':
             if create:
                 logger(__name__).debug("Creating the XNAT %s %s %s %s %s resource parent"
                                        " container..." %
