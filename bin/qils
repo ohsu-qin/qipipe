@@ -1,0 +1,73 @@
+#!/usr/bin/env python
+"""
+Lists XNAT resource files.
+"""
+
+import sys
+import argparse
+from qipipe.helpers import (logging_helper, xnat_helper)
+
+
+def main(argv=sys.argv):
+    # Parse the command line arguments.
+    label, opts = _parse_arguments()
+
+    # Configure the logger.
+    log_cfg = {}
+    if 'log' in opts:
+        log_cfg['filename'] = opts.pop('log')
+    if 'log_level' in opts:
+        log_cfg['level'] = opts.pop('log_level')
+    logging_helper.configure(**log_cfg)
+
+    # Parse the XNAT session label argument.
+    prj, sbj, sess = xnat_helper.parse_session_label(label)
+    # List the XNAT files.
+    with xnat_helper.connection() as xnat:
+        rsc = xnat.find(prj, sbj, sess, **opts)
+        if not rsc:
+            raise ValueError("XNAT resource %s %s %s %s does not exist" %
+                             (prj, sbj, sess, opts))
+        for f in rsc.files().get():
+            print f
+    return 0
+
+
+def _parse_arguments():
+    """Parses the command line arguments."""
+    parser = argparse.ArgumentParser()
+
+    # The logging options.
+    parser.add_argument('-l', '--log', help='the log file', metavar='FILE')
+    verbosity_grp = parser.add_mutually_exclusive_group()
+    verbosity_grp.add_argument('-q', '--quiet', help="don't print messages",
+                               dest='log_level', action='store_const',
+                               const='ERROR')
+    verbosity_grp.add_argument(
+        '-v', '--verbose', help='print informational messages',
+        dest='log_level', action='store_const', const='INFO')
+    verbosity_grp.add_argument('-d', '--debug', help='print debug messages',
+                               dest='log_level', action='store_const',
+                               const='DEBUG')
+
+    # The XNAT name options.
+    target_grp = parser.add_mutually_exclusive_group()
+    target_grp.add_argument('--scan', help='the XNAT scan number')
+    target_grp.add_argument('--reconstruction',
+                            help='the XNAT reconstruction name')
+    target_grp.add_argument('--assessor', help='the XNAT assessor name')
+    parser.add_argument('--resource', help='the XNAT resource name')
+    parser.add_argument('--inout', help='the XNAT resource direction (in or out)')
+
+    # The input session.
+    parser.add_argument('session', help='the target XNAT session',
+                        metavar='LABEL')
+
+    args = vars(parser.parse_args())
+    nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)
+
+    return nonempty_args.pop('session'), nonempty_args
+
+
+if __name__ == '__main__':
+    sys.exit(main())
