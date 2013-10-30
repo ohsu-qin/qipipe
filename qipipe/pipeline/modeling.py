@@ -20,7 +20,7 @@ def run(input_dict, **opts):
     """
     Creates a :class:`qipipe.pipeline.modeling.ModelingWorkflow` and runs it
     on the given inputs.
-    
+
     :param input_dict: the :meth:`qipipe.pipeline.modeling.ModelingWorkflow.run`
         inputs
     :param opts: the :class:`qipipe.pipeline.modeling.ModelingWorkflow`
@@ -35,77 +35,77 @@ class ModelingWorkflow(WorkflowBase):
     """
     The ModelingWorkflow builds and executes the Nipype pharmacokinetic
     mapping workflow.
-    
+
     The workflow calculates the modeling parameters for input images as
     follows:
-    
+
     - Compute the |R10| value, if it is not given in the options
-    
+
     - Convert the DCE time series to a R1 map series
-    
+
     - Determine the AIF and R1 fit parameters from the time series
-    
+
     - Optimize the BOLERO pharmacokinetic model
-    
+
     - Upload the modeling result to XNAT
-    
+
     The modeling workflow input is the `input_spec` node consisting of the
     following input fields:
-    
+
     - `subject`: the subject name
-    
+
     - `session`: the session name
-    
+
     - `mask`: the mask to apply to the images
-    
+
     - `images`: the session images to model
-    
+
     - the PK modeling parameters described below
-    
+
     If an input field is defined in the configuration file ``Parameters``
     topic, then the input field is set to that value.
-    
+
     If the |R10| option is not set, then it is computed from the proton
     density weighted scans and DCE series baseline image.
-    
+
     The outputs are collected in the `output_spec` node for the FXL (Tofts)
     model and the FXR (shutter speed) model with the following fields:
-    
+
     - `r1_series`: the R1 series files
-    
+
     - `pk_params`: the AIF and R1 parameter CSV file
-    
+
     - `fxr_k_trans`, `fxl_k_trans`: the |Ktrans| extra/intravasation transfer
        rate
-    
+
     - `delta_k_trans`: the FXR-FXL |Ktrans| difference
-    
+
     - `fxr_v_e`, `fxl_v_e`: the |ve| interstitial volume fraction
-    
+
     - `fxr_tau_i`: the intracellular |H2O| mean lifetime
-    
+
     - `fxr_chisq`, `fxl_chisq`: the intracellular |H2O| mean lifetime
-    
+
     In addition, if |R10| is computed, then the output includes the
     following fields:
-    
+
     - `pdw_image`: the proton density weighted image
-    
+
     - `dce_baseline`: the DCE series baseline image
-    
+
     - `r1_0`: the computed |R10| value
-    
+
     This workflow is adapted from https://everett.ohsu.edu/hg/qin_dce.
-    
+
     :Note: This workflow uses proprietary OHSU AIRC software, notably the
         BOLERO implementation of the `shutter speed model`_.
-    
+
     .. reST substitutions:
     .. |H2O| replace:: H\ :sub:`2`\ O
     .. |Ktrans| replace:: K\ :sup:`trans`
     .. |ve| replace:: v\ :sub:`e`
     .. |R10| replace:: R1\ :sub:`0`
-    
+
     .. _shutter speed model: http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2582583
     """
 
@@ -113,25 +113,25 @@ class ModelingWorkflow(WorkflowBase):
         """
         The modeling parameters can be defined in either the options or the
         configuration as follows:
-        
+
         - The parameters can be defined in the configuration
           ``Parameters`` section.
-        
+
         - The input options take precedence over the configuration
           settings.
-        
+
         - The *r1_0_val* takes precedence over the R1_0 computation
           fields *pd_dir* and *max_r1_0*. If *r1_0_val* is set
           in the input options, then *pd_dir* and *max_r1_0* are
           not included from the result.
-        
+
         - If *pd_dir* and *max_r1_0* are set in the input options
           and *r1_0_val* is not set in the input options, then
           a *r1_0_val* configuration setting is ignored.
-        
+
         - The *baseline_end_idx* defaults to 1 if it is not set in
           either the input options or the configuration.
-        
+
         :param opts: the following initialization options:
         :keyword cfg_file: the optional workflow inputs configuration file
         :keyword base_dir: the workflow execution directory
@@ -166,18 +166,18 @@ class ModelingWorkflow(WorkflowBase):
         Executes the modeling workflow described in
         :class:`qipipe.pipeline.modeling.ModelingWorkflow`
         on the given inputs.
-        
+
         This run method connects the given inputs to the modeling workflow
         inputs. The execution workflow is then executed, resulting in a
         new uploaded XNAT analysis resource for each input session. This
         method returns the uploaded XNAT *(subject, session, analysis)*
         name tuples.
-        
+
         The input is a *{subject: {session: image_dict}}* dictionary, where
         `image_dict` is a dictionary with the following content:
-        
+
             {'dce_nii': [images], 'time_series': 4D time series, 'mask': mask file}
-        
+
         :param input_dict: the input *{subject: {session: image_dict}}*
             to model
         :param opts: the following workflow options:
@@ -220,7 +220,7 @@ class ModelingWorkflow(WorkflowBase):
     def _model(self, subject, session, **opts):
         """
         Runs the modeling workflow on the given session images.
-        
+
         :param subject: the subject name
         :param session: the session name
         :param opts: the following keyword options:
@@ -240,7 +240,7 @@ class ModelingWorkflow(WorkflowBase):
     def _set_modeling_input(self, subject, session, **opts):
         """
         Sets the modeling input.
-        
+
         :param subject: the subject name
         :param session: the session name
         :param opts: the following keyword options:
@@ -262,7 +262,7 @@ class ModelingWorkflow(WorkflowBase):
     def _create_workflow(self, base_dir=None, **opts):
         """
         Builds the modeling workflow.
-        
+
         :param base_dir: the execution working directory
             (default is a new temp directory)
         :param opts: the additional workflow initialization options
@@ -336,13 +336,13 @@ class ModelingWorkflow(WorkflowBase):
         Creates the modeling base workflow. This workflow performs the steps
         described in :class:`qipipe.pipeline.modeling.ModelingWorkflow` with
         the exception of XNAT upload.
-        
+
         :Note: This workflow is adapted from the AIRC workflow at
         https://everett.ohsu.edu/hg/qin_dce. The AIRC workflow time series
         merge is removed and added as input to the workflow created by this
         method. Any change to the ``qin_dce`` workflow should be reflected in
         this method.
-        
+
         :param base_dir: the workflow working directory
         :param opts: the PK modeling parameters
         :return: the pyxnat Workflow
@@ -393,8 +393,8 @@ class ModelingWorkflow(WorkflowBase):
             output_names=['r1_series'], function=_make_r1_series)
         get_r1_series = pe.Node(get_r1_series_func, name='get_r1_series')
         base_wf.connect(input_spec, 'time_series', get_r1_series, 'time_series')
-        base_wf.connect(
-            input_spec, 'baseline_end_idx', get_r1_series, 'baseline_end')
+        base_wf.connect(input_spec, 'baseline_end_idx',
+                        get_r1_series, 'baseline_end')
         base_wf.connect(input_spec, 'mask', get_r1_series, 'mask_file')
         if use_fixed_r1_0:
             base_wf.connect(input_spec, 'r1_0_val', get_r1_series, 'r1_0')
@@ -466,7 +466,7 @@ class ModelingWorkflow(WorkflowBase):
         Collects the modeling parameters defined in either the options
         or the configuration as described in
         :meth:`qipipe.pipeline.modeling.ModelingWorkflow.__init__`.
-        
+
         :param opts: the input options
         :return: the parameter {name: value} dictionary
         """
@@ -545,20 +545,20 @@ def _make_baseline(dce_nii, baseline_end_idx):
                          " is not a positive number: %s" % baseline_end_idx)
     nii = nb.load(dce_nii)
     nw = NiftiWrapper(nii)
-    
+
     baseline_niis = []
     for idx, split_nii in nw.split():
         if idx == baseline_end_idx:
             break
         baseline_niis.append(split_nii)
-        
+
     if len(baseline_niis) == 1:
         return baseline_niis[0]
     else:
         baseline_nii = NiftiWrapper.from_sequence(baseline_niis)
     baseline_path = path.join(os.getcwd(), 'baseline.nii.gz')
     nb.save(baseline_nii, baseline_path)
-    
+
     return baseline_path
 
 
