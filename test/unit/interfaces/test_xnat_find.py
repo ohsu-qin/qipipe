@@ -17,7 +17,7 @@ SESSION = 'MR1'
 SCAN = 1
 """The test scan number."""
 
-RECON = 'reg'
+RECONSTRUCTION = 'reco'
 """The test reconstruction name."""
 
 ASSESSOR = 'pk'
@@ -26,7 +26,7 @@ ASSESSOR = 'pk'
 
 class TestXNATFind(object):
     """The XNAT find interface unit tests."""
-        
+
     def setUp(self):
         xnat_helper.delete_subjects(project(), SUBJECT)
         
@@ -43,18 +43,21 @@ class TestXNATFind(object):
     def test_find_scan(self):
         self._test_find(SUBJECT, SESSION, scan=SCAN)
     
-    def test_find_resource(self):
+    def test_find_experiment_resource(self):
+        self._test_find(SUBJECT, SESSION, resource='reg')
+    
+    def test_find_scan_resource(self):
         self._test_find(SUBJECT, SESSION, scan=SCAN, resource='NIFTI')
     
     def test_find_reconstruction(self):
-        self._test_find(SUBJECT, SESSION, reconstruction=RECON)
+        self._test_find(SUBJECT, SESSION, reconstruction=RECONSTRUCTION)
     
     def test_find_assessor(self):
         self._test_find(SUBJECT, SESSION, assessor=ASSESSOR)
     
     def _test_find(self, *args, **opts):
         logger(__name__).debug("Testing the XNATFind interface on %s %s..." %
-            (args, opts))
+                               (args, opts))        
         
         # Add the arguments to the inputs.
         inputs = opts

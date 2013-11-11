@@ -57,7 +57,7 @@ class TestReferenceWorkflow(StagedTestBase):
                                       reconstruction=recon)
                 assert_is_not_none(recon_obj, "The %s %s %s XNAT reconstruction"
                                    " object was not created" %
-                                   (sbj, sess, reference.REF_RECON))
+                                   (sbj, sess, reference.REFreg_obj))
 
 
 if __name__ == "__main__":

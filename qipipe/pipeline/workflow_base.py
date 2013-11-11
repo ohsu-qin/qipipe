@@ -138,8 +138,7 @@ class WorkflowBase(object):
         :param dest: the destination directory path
         :return: the download file paths
         """
-        return xnat.download(project(), subject, session, dest=dest,
-                             container_type='scan', format='NIFTI')
+        return xnat.download(project(), subject, session, dest=dest)
 
     def _depict_workflow(self, workflow):
         """Diagrams the given workflow graph."""

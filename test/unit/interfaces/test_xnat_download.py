@@ -25,7 +25,7 @@ SESSION = 'Session01'
 SCAN = 9
 """The test scan number."""
 
-FORMAT = 'DICOM'
+RESOURCE = 'DICOM'
 """The test format."""
 
 
@@ -49,10 +49,10 @@ class TestXNATDownload(object):
                         self._file_names.add(fname)
                         scan_obj = xnat.get_scan(
                             project(), SUBJECT, SESSION, SCAN)
-                        file_obj = scan_obj.resource(FORMAT).file(fname)
+                        file_obj = scan_obj.resource(RESOURCE).file(fname)
                         # Upload the file.
                         file_obj.insert(f, experiments='xnat:MRSessionData',
-                                        format=FORMAT)
+                                        resource=RESOURCE)
         logger(__name__).debug("Uploaded the test %s %s files %s." %
               (SUBJECT, SESSION, list(self._file_names)))
 
@@ -65,7 +65,7 @@ class TestXNATDownload(object):
                                "%s %s scan %d..." % (SUBJECT, SESSION, SCAN))
         # Download the files.
         download = XNATDownload(project=project(), subject=SUBJECT,
-                                session=SESSION, scan=9, format=FORMAT,
+                                session=SESSION, scan=9, resource=RESOURCE,
                                 dest=RESULTS)
         result = download.run()
 

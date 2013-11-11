@@ -21,12 +21,15 @@ class XNATDownloadInputSpec(BaseInterfaceInputSpec):
 
     assessor = traits.Str(desc='The XNAT assessor name')
 
-    format = traits.Str(desc='The XNAT image format (scan default is NIFTI')
+    resource = traits.Str(desc='The XNAT resource name (scan default is NIFTI)')
 
     container_type = traits.Enum('scan', 'reconstruction', 'assessor',
                                  desc='The XNAT resource container type')
 
+    inout = traits.Str(desc='The XNAT resource in/out designator')
+
     file = traits.Str(desc="The XNAT file name (default all resource files)")
+
     dest = Directory(desc='The download location')
 
 
@@ -53,7 +56,7 @@ class XNATDownload(BaseInterface):
     >>> # Download the scan DICOM files.
     >>> from qipipe.interfaces import XNATDownload
     >>> XNATDownload(project='QIN', subject='Breast003',
-    ...     session='Session02', format='DICOM',
+    ...     session='Session02', resource='DICOM',
     ...     dest='data').run()
     
     >>> # Download the XNAT registration result reg_H3pIz4s.
@@ -88,8 +91,8 @@ class XNATDownload(BaseInterface):
                 break
         if self.inputs.dest:
             opts['dest'] = self.inputs.dest
-        if self.inputs.format:
-            opts['format'] = self.inputs.format
+        if self.inputs.resource:
+            opts['resource'] = self.inputs.resource
         if self.inputs.file:
             opts['file'] = self.inputs.file
         with xnat_helper.connection() as xnat:

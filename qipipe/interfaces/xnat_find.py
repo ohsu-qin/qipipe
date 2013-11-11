@@ -72,14 +72,16 @@ class XNATFind(BaseInterface):
         with xnat_helper.connection() as xnat:
             obj = xnat.find(self.inputs.project, self.inputs.subject,
                             session, **opts)
-            if obj and (opts['create'] or obj.exists()):
+            if obj and obj.exists():
                 self._xnat_id = obj.id()
+            else:
+                self._xnat_id = None
 
         return runtime
 
     def _list_outputs(self):
         outputs = self._outputs().get()
-        if hasattr(self, '_xnat_id'):
+        if self._xnat_id:
             outputs['xnat_id'] = self._xnat_id
 
         return outputs

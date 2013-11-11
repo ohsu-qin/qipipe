@@ -10,10 +10,10 @@ from .workflow_base import WorkflowBase
 from ..helpers.logging_helper import logger
 
 
-MASK_RECON = 'mask'
+MASKreg_obj = 'mask'
 """The XNAT mask reconstruction name."""
 
-TS_RECON = 'scan_ts'
+TSreg_obj = 'scan_ts'
 """The XNAT scan time series reconstruction name."""
 
 
@@ -107,7 +107,7 @@ class MaskWorkflow(WorkflowBase):
         self._run_workflow(self.workflow)
         
         # Return the mask XNAT reconstruction name.
-        return MASK_RECON
+        return MASKreg_obj
     
     def _mask_session(self, subject, session, images):
         # Set the inputs.
@@ -142,8 +142,8 @@ class MaskWorkflow(WorkflowBase):
         workflow.connect(input_spec, 'images', dce_merge, 'in_files')
         
         # Upload the time series to XNAT.
-        upload_ts = pe.Node(XNATUpload(project=project(),
-            reconstruction=TS_RECON, format='NIFTI'), name='upload_ts')
+        upload_ts = pe.Node(XNATUpload(project=project(), resource=TSreg_obj),
+                            name='upload_ts')
         workflow.connect(input_spec, 'subject', upload_ts, 'subject')
         workflow.connect(input_spec, 'session', upload_ts, 'session')
         workflow.connect(dce_merge, 'out_file', upload_ts, 'in_files')
@@ -189,8 +189,8 @@ class MaskWorkflow(WorkflowBase):
         workflow.connect(mask_name, 'out_file', inv_mask, 'out_file')
         
         # Upload the mask to XNAT.
-        upload_mask = pe.Node(XNATUpload(project=project(),
-            reconstruction=MASK_RECON, format='NIFTI'), name='upload_mask')
+        upload_mask = pe.Node(XNATUpload(project=project(), resource=MASKreg_obj),
+                              name='upload_mask')
         workflow.connect(input_spec, 'subject', upload_mask, 'subject')
         workflow.connect(input_spec, 'session', upload_mask, 'session')
         workflow.connect(inv_mask, 'out_file', upload_mask, 'in_files')

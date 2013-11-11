@@ -337,7 +337,7 @@ class StagingWorkflow(WorkflowBase):
         # Since only one upload task can run at a time, this upload node is
         # a JoinNode that collects the iterated series DICOM files.
         upload_dicom = pe.JoinNode(
-            XNATUpload(project=project(), format='DICOM'),
+            XNATUpload(project=project(), resource='DICOM'),
             joinsource='iter_dicom', joinfield='in_files', name='upload_dicom')
         workflow.connect(input_spec, 'subject', upload_dicom, 'subject')
         workflow.connect(input_spec, 'session', upload_dicom, 'session')
@@ -352,20 +352,8 @@ class StagingWorkflow(WorkflowBase):
             name='stack')
         workflow.connect(fix_dicom, 'out_file', stack, 'dicom_files')
 
-        # # TODO - remove if unnecessary
-        # 
-        # # Gate the stack upload by the DICOM upload to ensure that only one
-        # # upload happens at a time.
-        # gate_upload_stack_xfc = Gate(fields=['image', 'xnat_files'])
-        # gate_upload_stack = pe.Node(
-        #     gate_upload_stack_xfc, name='gate_upload_dicom')
-        # workflow.connect(
-        #     upload_dicom, 'xnat_files', gate_upload_stack, 'xnat_files')
-        # workflow.connect(stack, 'out_file', gate_upload_stack, 'image')
-
         # Upload the stack to XNAT.
-        upload_stack = pe.Node(XNATUpload(project=project(), format='NIFTI'),
-                               name='upload_stack')
+        upload_stack = pe.Node(XNATUpload(project=project()), name='upload_stack')
         workflow.connect(input_spec, 'subject', upload_stack, 'subject')
         workflow.connect(input_spec, 'session', upload_stack, 'session')
         workflow.connect(iter_series, 'series', upload_stack, 'scan')

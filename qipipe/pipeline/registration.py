@@ -276,8 +276,7 @@ class RegistrationWorkflow(WorkflowBase):
 
         # Upload the realigned image to XNAT.
         upload_reg_xfc = XNATUpload(project=project(),
-                                    reconstruction=self.reconstruction,
-                                    format='NIFTI')
+                                    resource=self.reconstruction)
         upload_reg = pe.Node(upload_reg_xfc, name='upload_reg')
         reg_wf.connect(input_spec, 'subject', upload_reg, 'subject')
         reg_wf.connect(input_spec, 'session', upload_reg, 'session')

@@ -57,7 +57,7 @@ class TestMaskWorkflow(StagedTestBase):
                                       reconstruction=recon)
                 assert_is_not_none(recon_obj, "The %s %s %s XNAT reconstruction"
                                    " object was not created" %
-                                   (sbj, sess, mask.MASK_RECON))
+                                   (sbj, sess, mask.MASKreg_obj))
 
 
 if __name__ == "__main__":

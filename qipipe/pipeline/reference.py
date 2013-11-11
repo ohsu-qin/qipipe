@@ -10,7 +10,7 @@ from .workflow_base import WorkflowBase
 from ..helpers.logging_helper import logger
 
 
-REF_RECON = 'ref'
+REFreg_obj = 'ref'
 """The XNAT reference reconstruction name."""
 
 
@@ -104,7 +104,7 @@ class ReferenceWorkflow(WorkflowBase):
         self._run_workflow(self.workflow)
         
         # Return the reference XNAT reconstruction name.
-        return REF_RECON
+        return REFreg_obj
     
     def _create_session_reference(self, subject, session, images):
         # Set the inputs.
@@ -142,9 +142,7 @@ class ReferenceWorkflow(WorkflowBase):
         ref_wf.connect(input_spec, ('images', _middle, 3), average, 'images')
 
         # Upload the reference image to XNAT.
-        upload_ref_xfc = XNATUpload(project=project(),
-                                    reconstruction=REF_RECON,
-                                    format='NIFTI')
+        upload_ref_xfc = XNATUpload(project=project(), resource=REFreg_obj)
         upload_ref = pe.Node(upload_ref_xfc, name='upload_ref')
         ref_wf.connect(input_spec, 'subject', upload_ref, 'subject')
         ref_wf.connect(input_spec, 'session', upload_ref, 'session')
