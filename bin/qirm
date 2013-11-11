@@ -5,7 +5,11 @@ Deletes an OHSU QIN XNAT object.
 
 import sys
 import argparse
-from qipipe.helpers import (logging_helper, xnat_helper)
+
+# Import the command helper by path, since the log options must be
+# processed before importing any qipipe module.
+cmd = imp.load_source('command', 
+                      os.path.dirname(__file__) + '/../qipipe/helpers/command.py')
 
 
 def main(argv=sys.argv):
@@ -13,31 +17,19 @@ def main(argv=sys.argv):
     label, opts = _parse_arguments()
 
     # Configure the logger.
-    log_cfg = {}
-    if 'log' in opts:
-        log_cfg['filename'] = opts.pop('log')
-    if 'log_level' in opts:
-        log_cfg['level'] = opts.pop('log_level')
-    logging_helper.configure(**log_cfg)
-
-    # The XNAT hierarchy options.
-    if 'reconstruction' in opts:
-        xnat_opts = dict(reconstruction=opts['reconstruction'])
-    elif 'assessor' in opts:
-        xnat_opts = dict(assessor=opts['assessor'])
-    else:
-        xnat_opts = {}
-    if 'format' in opts:
-        xnat_opts['format'] = opts['format']
+    cmd.configure_log(opts)
+    
+    # Import the qipipe pipeline module after configuring the logger.
+    from qipipe.helpers import xnat_helper
 
     # Parse the XNAT session label argument.
     prj, sbj, sess = xnat_helper.parse_session_label(label)
     # Delete the XNAT object.
     with xnat_helper.connection() as xnat:
-        xnat_obj = xnat.find(prj, sbj, sess, **xnat_opts)
+        xnat_obj = xnat.find(prj, sbj, sess, **opts)
         if not xnat_obj.exists():
             raise ValueError("XNAT object %s %s %s %s does not exist" %
-                             (prj, sbj, sess, xnat_opts))
+                             (prj, sbj, sess, opts))
         xnat_obj.delete()
 
     return 0
@@ -47,26 +39,17 @@ def _parse_arguments():
     """Parses the command line arguments."""
     parser = argparse.ArgumentParser()
 
-    # The logging options.
-    parser.add_argument('-l', '--log', help='the log file', metavar='FILE')
-    verbosity_grp = parser.add_mutually_exclusive_group()
-    verbosity_grp.add_argument('-q', '--quiet', help="don't print messages",
-                               dest='log_level', action='store_const',
-                               const='ERROR')
-    verbosity_grp.add_argument(
-        '-v', '--verbose', help='print informational messages',
-        dest='log_level', action='store_const', const='INFO')
-    verbosity_grp.add_argument('-d', '--debug', help='print debug messages',
-                               dest='log_level', action='store_const',
-                               const='DEBUG')
+    # The log options.
+    cmd.add_log_options(parser)
 
     # The XNAT name options.
     target_grp = parser.add_mutually_exclusive_group()
-    target_grp.add_argument('-r', '--reconstruction',
+    target_grp.add_argument('-r', '--resource', metavar='LABEL',
+                            help='the XNAT resource name')
+    target_grp.add_argument('-a', '--assessor', metavar='LABEL',
+                            help='the XNAT assessor name')
+    target_grp.add_argument('--reconstruction', metavar='LABEL',
                             help='the XNAT reconstruction name')
-    target_grp.add_argument('-a', '--assessor', help='the XNAT assessor name')
-    parser.add_argument('-f', '--format',
-                        help='the file format (default NiFTI)')
 
     # The input session to process.
     parser.add_argument('session', help='the target XNAT session',

@@ -3,9 +3,15 @@
 Lists XNAT resource files.
 """
 
+import os
 import sys
+import imp
 import argparse
-from qipipe.helpers import (logging_helper, xnat_helper)
+
+# Import the command helper by path, since the log options must be
+# processed before importing any qipipe module.
+cmd = imp.load_source('command',
+                      os.path.dirname(__file__) + '/../qipipe/helpers/command.py')
 
 
 def main(argv=sys.argv):
@@ -13,49 +19,143 @@ def main(argv=sys.argv):
     label, opts = _parse_arguments()
 
     # Configure the logger.
-    log_cfg = {}
-    if 'log' in opts:
-        log_cfg['filename'] = opts.pop('log')
-    if 'log_level' in opts:
-        log_cfg['level'] = opts.pop('log_level')
-    logging_helper.configure(**log_cfg)
+    cmd.configure_log(opts)
+
+    # Import the qipipe pipeline module after configuring the logger.
+    from qipipe.helpers import xnat_helper
+    global xnat_helper
 
     # Parse the XNAT session label argument.
     prj, sbj, sess = xnat_helper.parse_session_label(label)
     # List the XNAT files.
     with xnat_helper.connection() as xnat:
-        rsc = xnat.find(prj, sbj, sess, **opts)
-        if not rsc:
+        # The container accessor read method, e.g. scans.
+        ctr_meth = opts.pop('container_method', None)
+        # The parent XNAT object. If there are no additional selection
+        # options, then the parent object is the session XNAT experiment.
+        # Additional options select a child of the experiment, e.g. a
+        # specific scan.
+        xnat_obj = xnat.find(prj, sbj, sess, **opts)
+        if not xnat_obj:
             raise ValueError("XNAT resource %s %s %s %s does not exist" %
                              (prj, sbj, sess, opts))
-        for f in rsc.files().get():
+        # The resource, in_resource or out_resource option.
+        rsc_type = next(((key for key in opts.iterkeys()
+                         if key.endswith('resource'))), None)
+        if rsc_type:
+            rsc_opt = {rsc_type: opts[rsc_type]}
+        else:
+            rsc_opt = {}
+        # Print the file names.
+        for f in _files(xnat_obj, ctr_meth, **rsc_opt):
             print f
+
     return 0
 
+
+def _files(xnat_obj, container_method=None, **rsc_opt):
+    """
+    Returns the files in the transitive closure of XNAT objects rooted at
+    the given XNAT object.
+
+    :param xnat_obj: the parent XNAT object
+    :param container_method: the XNAT child container method
+        (default all children)
+    :param rsc_opt: the XNAT resource {type : value}
+    :return: the XNAT file names of the resources recursively contained in
+        the given XNAT object
+    """
+    rscs = _collect_resources(xnat_obj, container_method, **rsc_opt)
+    files = [rsc.files().get() for rsc in rscs]
+
+    if files:
+        return reduce(lambda x, y: x + y, files)
+    else:
+        return []
+
+def _collect_resources(xnat_obj, container_method=None, resources=[], **opt):
+    """
+    Collects the resources in the transitive closure of XNAT objects rooted
+    at the given XNAT object.
+
+    :param xnat_obj: the parent XNAT object
+    :param container_method: the XNAT child container method
+        (default all children)
+    :param resources: the list into which the resources are added
+    :param opt: the target XNAT resource {type : value}
+    :return: the resources list
+    """
+    # The XNAT child methods, e.g. scans and reconstructions.
+    # Note that the helper works around a pyxnat children
+    # accessor bug.
+    child_meths = xnat_helper.children_methods(xnat_obj)
+    if not child_meths:
+        raise ValueError("The XNAT object %s does not contain children or"
+                         " resources." % xnat_obj)
+
+    # The resource accessor methods. This list can include resources,
+    # in_resources and out_resources.
+    rsc_meths = [meth for meth in child_meths
+                 if meth.endswith('resources')]
+    # The optional target resource accessor method and value. The
+    # option key is singular, i.e. resource, in_resource or
+    # out_resource.
+    if opt:
+        tgt_meth, tgt_val = next((opt.iteritems()))
+    else:
+        tgt_meth = None
+
+    # Collect the resources in the current XNAT object.
+    for meth in rsc_meths:
+        # If a specific target resource is specified, then only get
+        # that resource. Otherwise, get all resources.
+        if tgt_meth:
+            if meth.startswith(tgt_meth):
+                rsc_obj = getattr(xnat_obj, tgt_meth)(tgt_val)
+                if rsc_obj.exists():
+                    resources.append(rsc_obj)
+                    return resources
+        else:
+            for rsc in getattr(xnat_obj, meth)():
+                resources.append(rsc)
+        # Don't visit the resource children.
+        child_meths.remove(meth)
+
+    # Collect the resources from the child objects. If a container
+    # method was specified, e.g. scans, then those children are
+    # selected. Otherwise, all children are selected.
+    if container_method in child_meths:
+        child_meths = [container_method]
+    for meth in child_meths:
+        # TODO - pxynat assessors is broken. Replace with yet another
+        # xnat_helper work-around.
+        # Test with:
+        # bin/qils --debug --log log/qipipe.log --assessors QIN_Breast008_Session01
+        # Try the REST call directly. Try XML-based query?
+        # Post on pyxnat user forum.
+        for child in getattr(xnat_obj, meth)():
+            _collect_resources(child, container_method, resources, **opt)
+
+    return resources
 
 def _parse_arguments():
     """Parses the command line arguments."""
     parser = argparse.ArgumentParser()
 
-    # The logging options.
-    parser.add_argument('-l', '--log', help='the log file', metavar='FILE')
-    verbosity_grp = parser.add_mutually_exclusive_group()
-    verbosity_grp.add_argument('-q', '--quiet', help="don't print messages",
-                               dest='log_level', action='store_const',
-                               const='ERROR')
-    verbosity_grp.add_argument(
-        '-v', '--verbose', help='print informational messages',
-        dest='log_level', action='store_const', const='INFO')
-    verbosity_grp.add_argument('-d', '--debug', help='print debug messages',
-                               dest='log_level', action='store_const',
-                               const='DEBUG')
+    # The log options.
+    cmd.add_log_options(parser)
 
     # The XNAT name options.
     target_grp = parser.add_mutually_exclusive_group()
     target_grp.add_argument('--scan', help='the XNAT scan number')
-    target_grp.add_argument('--reconstruction',
-                            help='the XNAT reconstruction name')
+    target_grp.add_argument('--reconstruction', help='the XNAT reconstruction name')
     target_grp.add_argument('--assessor', help='the XNAT assessor name')
+    target_grp.add_argument('--scans', dest='container_method', action='store_const',
+       const='scans', help='all scans')
+    target_grp.add_argument('--reconstructions', dest='container_method', action='store_const',
+          const='reconstructions', help='all reconstructions')
+    target_grp.add_argument('--assessors', dest='container_method', action='store_const',
+             const='assessors', help='all assessors')
     parser.add_argument('--resource', help='the XNAT resource name')
     parser.add_argument('--inout', help='the XNAT resource direction (in or out)')
 

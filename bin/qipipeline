@@ -5,17 +5,21 @@ Runs the QIN pipeline.
 
 import sys
 import os
+import imp
 import argparse
-import logging
 
-NIPYPE_LOG_DIR_ENV_VAR = 'NIPYPE_LOG_DIR'
-"""The Nipype log directory environment variable."""
+# Import the command helper by path, since the log options must be
+# processed before importing any qipipe module.
+cmd = imp.load_source('command', 
+                      os.path.dirname(__file__) + '/../qipipe/helpers/command.py')
 
 
 def main(argv=sys.argv):
     # Parse the command line arguments.
     inputs, opts = _parse_arguments()
-    _configure_log(**opts)
+
+    # Configure the logger.
+    cmd.configure_log(opts)
 
     # Import the qipipe pipeline module after configuring the logger.
     from qipipe.pipeline import qipipeline as qip
@@ -34,6 +38,9 @@ def _parse_arguments():
         arguments and options is an {option: value} dictionary
     """
     parser = argparse.ArgumentParser()
+    
+    # The log options.
+    cmd.add_log_options(parser)
 
     # The AIRC collection to process.
     coll_grp = parser.add_mutually_exclusive_group()
@@ -48,8 +55,7 @@ def _parse_arguments():
     parser.add_argument(
         '-p', '--project', help='the XNAT project (default is QIN)')
 
-    # The log, output and work options.
-    _add_log_options(parser)
+    # The output and work options.
     parser.add_argument('-o', '--output',
                         help='the destination directory (default current directory)',
                         metavar='DIR', dest='dest')
@@ -62,16 +68,16 @@ def _parse_arguments():
                         dest='skip_staging', action='store_true', default=None)
 
     # The mask and reference arguments.
-    parser.add_argument('--mask', help="the mask XNAT reconstruction name",
-                        metavar='RECON')
+    parser.add_argument('--mask', help="the mask XNAT resource name",
+                        metavar='LABEL')
     parser.add_argument('--reference',
-                        help="the reference XNAT reconstruction name",
-                        metavar='RECON')
+                        help="the reference XNAT resource name",
+                        metavar='LABEL')
 
     # The registration arguments.
     parser.add_argument('--registration',
-                        help='the XNAT registration reconstruction name',
-                        metavar='RECON')
+                        help='the XNAT registration resource name',
+                        metavar='RESOURCE')
     parser.add_argument('--no-registration', help='skip registration',
                          dest='skip_registration', action='store_true',
                          default=None)
@@ -98,53 +104,6 @@ def _parse_arguments():
     nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)
 
     return nonempty_args.pop('inputs'), nonempty_args
-
-
-def _add_log_options(parser):
-    """
-    Adds the standard --log, --quiet, --verbose and --debug options to the
-    given command line arugment parser.
-    """
-    parser.add_argument('-l', '--log', help='the log file', metavar='FILE')
-    verbosity_grp = parser.add_mutually_exclusive_group()
-    verbosity_grp.add_argument(
-        '-q', '--quiet', help="obnly log error messages", dest='log_level',
-        action='store_const', const=logging.ERROR)
-    verbosity_grp.add_argument(
-        '-d', '--debug', help='log debug messages', dest='log_level',
-        action='store_const', const=logging.DEBUG)
-
-
-def _configure_log(**opts):
-    """
-    Configures the logger. This method should be called before importing
-    any qipipe or nipype module.
-
-    :param opts: the following keyword options:
-    :keyword log: the log file
-    :keyword log_level: the log level
-    """
-    log_cfg = {}
-    if 'log' in opts:
-        log_file = os.path.abspath(opts.pop('log'))
-        log_cfg['filename'] = log_file
-        # Set the Nipype log directory environment variable
-        # before importing qipipe. See the comments below.
-        log_dir = os.path.dirname(log_file)
-        if log_dir:
-            if not os.path.exists(log_dir):
-                os.makedirs(log_dir)
-            os.environ[NIPYPE_LOG_DIR_ENV_VAR] = log_dir
-    if 'log_level' in opts:
-        log_cfg['level'] = opts.pop('log_level')
-    # The Nipype log directory environment variable must be
-    # set before importing a nipype module which uses the
-    # nipype logger. qipipe imports the Nipype pipeline module.
-    # Therefore, import qipipe.helpers here after setting the
-    # log directory environment variable above.
-    from qipipe.helpers import logging_helper
-    # Make the qipipe logger.
-    logging_helper.configure(**log_cfg)
 
 
 if __name__ == '__main__':

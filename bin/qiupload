@@ -7,33 +7,24 @@ import sys
 import os
 import re
 import argparse
-from qipipe import project
-from qipipe.helpers import logging_helper
 from collections import defaultdict
-from qipipe.helpers import xnat_helper
-from qipipe.interfaces import XNATUpload
+
+# Import the command helper by path, since the log options must be
+# processed before importing any qipipe module.
+cmd = imp.load_source('command', 
+                      os.path.dirname(__file__) + '/../qipipe/helpers/command.py')
+
 
 def main(argv=sys.argv):
     # Parse the command line arguments.
     inputs, opts = _parse_arguments()
 
     # Configure the logger.
-    log_cfg = {}
-    if 'log' in opts:
-        log_cfg['filename'] = opts.pop('log')
-    if 'log_level' in opts:
-        log_cfg['level'] = opts.pop('log_level')
-    logging_helper.configure(**log_cfg)
-
-    # The options.
-    if 'reconstruction' in opts:
-        ul_opts = dict(reconstruction=opts['reconstruction'])
-    elif 'assessor' in opts:
-        ul_opts = dict(assessor=opts['assessor'])
-    else:
-        ul_opts = {}
-    if 'format' in opts:
-        ul_opts['format'] = opts['format']
+    cmd.configure_log(opts)
+    
+    # Import the qipipe pipeline module after configuring the logger.
+    from qipipe.helpers import xnat_helper
+    from qipipe.interfaces import XNATUpload
 
     # Parse the XNAT session label arguments.
     prj_sess_dict = _parse_session_labels(inputs)
@@ -43,7 +34,7 @@ def main(argv=sys.argv):
             for sbj, sess in sessions:
                 tgt_dir = os.path.join(dest, prj, sbj, sess)
                 # Upload the files.
-                upload = XNATUpload(dest=tgt_dir, **ul_opts)
+                upload = XNATUpload(dest=tgt_dir, **opts)
                 result = upload.run()
 
     return 0
@@ -69,33 +60,25 @@ def _parse_arguments():
     """Parses the command line arguments."""
     parser = argparse.ArgumentParser()
 
-    # The logging level.
-    verbosity_grp = parser.add_mutually_exclusive_group()
-    verbosity_grp.add_argument('-q', '--quiet', help="don't print messages",
-                               dest='log_level', action='store_const',
-                               const='ERROR')
-    verbosity_grp.add_argument(
-        '-v', '--verbose', help='print informational messages',
-        dest='log_level', action='store_const', const='INFO')
-    verbosity_grp.add_argument('-d', '--debug', help='print debug messages',
-                               dest='log_level', action='store_const',
-                               const='DEBUG')
+    # The log options.
+    cmd.add_log_options(parser)
 
     # The remaining options.
     target_grp = parser.add_mutually_exclusive_group()
-    target_grp.add_argument(
-        '-r', '--reconstruction', help='the XNAT reconstruction name')
-    target_grp.add_argument('-a', '--assessor', help='the XNAT assessor name')
-    parser.add_argument(
-        '-f', '--format', help='the file format (default NiFTI)')
-    parser.add_argument('-l', '--log', help='the log file', metavar='FILE')
+    target_grp.add_argument('-a', '--assessor', metavar='LABEL',
+                            help='the XNAT assessor name')
+    parser.add_argument('-r', '--resource', metavar='LABEL',
+                        help='the XNAT resource name')
+    target_grp.add_argument('--reconstruction', metavar='LABEL',
+                            help='the XNAT reconstruction name')
     parser.add_argument('-o', '--output',
-                        help='the destination directory (default current directory)',
+                        help='the destination directory'
+                             ' (default current directory)',
                         metavar='DIR')
 
     # The input sessions to process.
-    parser.add_argument('sessions', help='the input XNAT sessions to register',
-                        nargs='+')
+    parser.add_argument('sessions', nargs='+',
+                        help='the input XNAT sessions to register')
 
     args = vars(parser.parse_args())
     nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)
