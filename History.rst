@@ -1,9 +1,11 @@
 This history lists major release themes. See the GitHub commits
 (http://quip1:6060/qipipe) for change details.
 
-3.2.3 / 2013-10-25
+3.2.3 / 2013-11-11
 ------------------
 * Reflect qin_dce changes.
+
+* Use XNAT resource rather than reconstruction for realigned images.
 
 3.2.2 / 2013-09-25
 ------------------
