@@ -37,6 +37,13 @@ interfaces
     :members:
     :show-inheritance:
 
+:mod:`gate`
+----------------
+
+.. automodule:: qipipe.interfaces.gate
+    :members:
+    :show-inheritance:
+
 :mod:`group_dicom`
 ------------------
 
