@@ -2,7 +2,6 @@ import os
 import shutil
 import distutils
 from nose.tools import (assert_equal, assert_is_not_none, assert_true)
-from test.helpers.logging_helper import logger
 from qipipe.pipeline import qipipeline as qip
 from qipipe.helpers.dicom_helper import iter_dicom
 from qipipe.helpers import xnat_helper
@@ -10,6 +9,7 @@ from qipipe.staging import airc_collection as airc
 from qipipe.staging.staging_helper import get_subjects
 from qipipe.helpers.ast_config import read_config
 from test import (project, ROOT)
+from test.helpers.logging_helper import logger
 from test.unit.pipeline.test_mask import MASK_CONF
 from test.unit.pipeline.test_registration import REG_CONF
 from test.unit.pipeline.test_modeling import MODELING_CONF

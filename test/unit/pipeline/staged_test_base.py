@@ -1,15 +1,9 @@
 import os
-import re
 import glob
 import shutil
 from collections import defaultdict
-from nose.tools import assert_equal
-import nipype.pipeline.engine as pe
-
-from test.helpers.logging_helper import logger
-from qipipe.pipeline import registration
 from qipipe.helpers import xnat_helper
-from test import (project, ROOT)
+from test import project
 
 
 class StagedTestBase(object):
@@ -44,7 +38,7 @@ class StagedTestBase(object):
         shutil.rmtree(self._results, True)
 
     def tearDown(self):
-        shutil.rmtree(self._results, True)
+        pass #shutil.rmtree(self._results, True)
 
     def _test_breast(self, **opts):
         self._test_collection('Breast', **opts)
@@ -75,9 +69,12 @@ class StagedTestBase(object):
             # Delete the existing subjects.
             xnat_helper.delete_subjects(project(), *subjects)
             # Run the workflow.
-            result = self._run_workflow(fixture, input_dict, **opts)
-            # Verify the result.
-            self._verify_result(xnat, input_dict, result)
+            for sbj, sess_dict in input_dict.iteritems():
+                for sess, sess_opts in sess_dict.iteritems():
+                    sess_opts.update(opts)
+                    result = self._run_workflow(fixture, sbj, sess, **sess_opts)
+                    # Verify the result.
+                    self._verify_result(xnat, sbj, sess, result)
             # Clean up.
             xnat_helper.delete_subjects(project(), *subjects)
 
@@ -87,8 +84,8 @@ class StagedTestBase(object):
         parent directory which contains a subject/session/scans images hierarchy.
         
         :param fixture: the input data parent directory
-        :return: the input *{subject: {session: [files]}}* or
-            input *{subject: {session: ([files], mask)}}* dictionary
+        :return: the input *{subject: {session: [images]}}* or
+            input *{subject: {session: ([images], mask)}}* dictionary
         """
         # The {subject: {session: [files]}} dictionary return value.
         input_dict = defaultdict(dict)
@@ -98,35 +95,36 @@ class StagedTestBase(object):
             for sess_dir in glob.glob(sbj_dir + '/Session*'):
                 _, sess = os.path.split(sess_dir)
                 images = glob.glob(sess_dir + '/scans/*')
+                opts = dict(images=images)
                 if self._use_mask:
                     masks = glob.glob(sess_dir + '/*mask.*')
                     if not masks:
                         raise ValueError("Mask not found in %s" % sess_dir)
                     if len(masks) > 1:
-                        raise ValueError(
-                            "Too many masks found in %s" % sess_dir)
-                    input_dict[sbj][sess] = (images, masks[0])
-                else:
-                    input_dict[sbj][sess] = images
+                        raise ValueError("Too many masks found in %s" %
+                                         sess_dir)
+                    opts['mask'] = masks[0]
+                input_dict[sbj][sess] = opts
 
         return input_dict
 
-    def _run_workflow(self, fixture, input_dict, **opts):
+    def _run_workflow(self, fixture, subject, session, images, **opts):
         """
         This method is implemented by subclasses to execute the subclass
         target workflow on the given inputs.
         
         :param fixture: the test fixture directory
-        :param input_dict: the input *{subject: {session: [files]}}* dictionary
+        :param subject: the input subject
+        :param session: the input session
+        :param images: the input image files
         :param opts: the target workflow options
         :return: the execution result
-        :raise NotImplementedError: if the
-            class:`test.unit.pipeline.StagedTestBase` subclass does not
-            implement this method
+        :raise NotImplementedError: if the class:`StagedTestBase` subclass
+            does not implement this method
         """
         raise NotImplementedError("_run_workflow is a subclass responsibility")
 
-    def _verify_result(self, xnat, input_dict, result):
+    def _verify_result(self, xnat, subject, session, result):
         """
         This method is implemented by subclasses to verify the workflow
         execution result against the given session file inputs. The session
@@ -135,11 +133,11 @@ class StagedTestBase(object):
         in the test fixture directory.
         
         :param xnat: the :class:`qipipe.helpers.xnat_helpers.XNAT` connection
-        :param input_dict: the input *{subject: {session: [files]}}* dictionary
-        :param result: the workflow execution result
-        :raise NotImplementedError: if the
-            class:`test.unit.pipeline.StagedTestBase` subclass does not
-            implement this method
+        :param subject: the input subject
+        :param session: the input session
+        :param result: the :meth`_run_workflow` result
+        :raise NotImplementedError: if the class:`StagedTestBase` subclass
+            does not implement this method
         """
         raise NotImplementedError(
             "_verify_result is a subclass responsibility")
