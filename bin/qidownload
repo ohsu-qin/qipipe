@@ -76,7 +76,7 @@ def _parse_arguments():
                         help='the XNAT resource name')
     target_grp.add_argument('-a', '--assessor', metavar='LABEL',
                             help='the XNAT assessor name')
-    target_grp.add_argument('--reconstruction',, metavar='LABEL'
+    target_grp.add_argument('--reconstruction', metavar='LABEL',
                             help='the XNAT reconstruction name')
     parser.add_argument('--inout',
                         help='the XNAT resource direction (in or out)')
