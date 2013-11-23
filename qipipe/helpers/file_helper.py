@@ -1,10 +1,48 @@
 import os
+import re
 import inspect
 import base64
 import struct
 import time
 import calendar
 
+
+SPLITEXT_PAT = re.compile("""
+    (.*?)           # The file path without the extension
+    (               # The extension group
+        (\.\w+)+    # The (possibly composite) extension
+    )?              # The extension is optional
+    $               # Anchor to the end of the file path
+    """, re.VERBOSE)
+"""
+Regexp pattern that splits the name and extension.
+
+:see: :meth:`splitexts`
+"""
+
+
+def splitexts(path):
+    """
+    Splits the given file path into a name and extension.
+    Unlike ``os.path.splitext``, the resulting extension can be composite.
+    
+    Example:
+    
+    >>> import os
+    >>> os.path.splitext('/tmp/foo.nii.gz')
+    ('/tmp/foo.nii', '.gz')
+    >>> from qipipe.helpers.file_helper import splitexts
+    >>> splitexts('/tmp/foo.3/bar.nii.gz')
+    ('/tmp/foo.3/bar', '.nii.gz')
+    
+    :param path: the file path
+    :return: the *(prefix, extensions)* tuple
+    """
+    matches = SPLITEXT_PAT.match(path).groups()[:2]
+    # Pad with an empty extension, if necessary.
+    matches += (None,) * (2 - len(matches))
+    
+    return tuple(matches)
 
 def generate_file_name(ext=None):
     """
