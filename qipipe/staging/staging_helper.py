@@ -90,9 +90,10 @@ def iter_visits(collection, *subject_dirs, **opts):
     Each iteration item is a *(subject, session, files)* tuple, formed
     as follows:
     
-    - The *subject* is the XNAT subject ID formatted by ``SUBJECT_FMT``
+    - The *subject* is the XNAT subject ID formatted by :data:`SUBJECT_FMT`
     
-    - The *session* is the XNAT experiment name formatted by ``SESSION_FMT``
+    - The *session* is the XNAT experiment name formatted by
+      :data:`SESSION_FMT`
     
     - The *files* iterates over the files which match the
       :mod:`qipipe.staging.airc_collection` DICOM file include pattern

@@ -369,7 +369,7 @@ class StagingWorkflow(WorkflowBase):
         self._logger.debug("Created the %s workflow." % workflow.name)
         # If debug is set, then diagram the workflow graph.
         if self._logger.level <= logging.DEBUG:
-            self._depict_workflow(workflow)
+            self.depict_workflow(workflow)
 
         return workflow
 

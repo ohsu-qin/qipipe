@@ -2,10 +2,11 @@ import os
 import glob
 import shutil
 from nose.tools import (assert_equal, assert_true)
+from dicom import datadict as dd
 from qipipe.helpers.dicom_helper import edit_dicom_headers
 from qipipe.helpers.dicom_helper import iter_dicom
-from dicom import datadict as dd
 from test import ROOT
+from test.helpers.logging_helper import logger
 
 FIXTURE = os.path.join(ROOT, 'fixtures', 'helpers', 'edit_dicom')
 """The test fixture."""

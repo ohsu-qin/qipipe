@@ -17,13 +17,14 @@ class Lookup(IOBase):
 
     """
     The Lookup Interface wraps a dictionary look-up.
-    
+
     Example:
-        >>> from qipipe.interfaces import Lookup
-        >>> lookup = Lookup(key='a', dictionary=dict(a=1, b=2))
-        >>> result = lookup.run()
-        >>> result.outputs.value
-        1
+
+    >>> from qipipe.interfaces import Lookup
+    >>> lookup = Lookup(key='a', dictionary=dict(a=1, b=2))
+    >>> result = lookup.run()
+    >>> result.outputs.value
+    1
     """
 
     input_spec = LookupInputSpec

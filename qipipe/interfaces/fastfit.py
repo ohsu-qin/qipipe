@@ -46,9 +46,9 @@ class Fastfit(MpiCommandLine):
     Interface to the ``fastfit`` software package.
 
     Input parameters:
-    * min_outs : list
-      The minimum outputs expected. Required if the *model_name*
-      input is being set dynamically.
+    
+    * *min_outs*: The minimum outputs expected. Required if the *model_name*
+      input is set dynamically.
     """
 
     _cmd = 'fastfit'

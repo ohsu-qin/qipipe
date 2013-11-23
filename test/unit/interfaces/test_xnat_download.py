@@ -3,11 +3,11 @@ import glob
 import re
 import shutil
 from nose.tools import (assert_equal, assert_true)
-from test.helpers.logging_helper import logger
 from qipipe.interfaces import XNATDownload
 from qipipe.helpers import xnat_helper
 from test import (project, ROOT)
-from test.helpers.xnat_test_helper import generate_subject_name
+from test.helpers.logging_helper import logger
+from test.helpers.xnat_test_helper import generate_unique_name
 
 FIXTURE = os.path.join(
     ROOT, 'fixtures', 'interfaces', 'xnat', 'Sarcoma001', 'Session01')
@@ -16,7 +16,7 @@ FIXTURE = os.path.join(
 RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'xnat')
 """The test results directory."""
 
-SUBJECT = generate_subject_name(__name__)
+SUBJECT = generate_unique_name(__name__)
 """The test subject name."""
 
 SESSION = 'Session01'

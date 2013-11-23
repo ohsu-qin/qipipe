@@ -5,10 +5,10 @@ from qipipe.interfaces import XNATFind
 from qipipe.helpers import xnat_helper
 from test import project
 from test.helpers.logging_helper import logger
-from test.helpers.xnat_test_helper import generate_subject_name
+from test.helpers.xnat_test_helper import generate_unique_name
 from test.unit.helpers.test_xnat_helper import (FIXTURES, RESULTS)
 
-SUBJECT = generate_subject_name(__name__)
+SUBJECT = generate_unique_name(__name__)
 """The test subject name."""
 
 SESSION = 'MR1'
