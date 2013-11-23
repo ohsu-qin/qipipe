@@ -44,9 +44,9 @@ class WorkflowBase(object):
     INTERFACE_PREFIX_PAT = re.compile('(\w+\.)+interfaces?\.?')
     """
     Regexp matcher for an interface module.
-    
+
     Example:
-    
+
     >>> from qipipe.pipeline.workflow_base import WorkflowBase
     >>> WorkflowBase.INTERFACE_PREFIX_PAT.match('nipype.interfaces.ants.util.AverageImages').groups()
     ('nipype.',)
@@ -140,8 +140,13 @@ class WorkflowBase(object):
         """
         return xnat.download(project(), subject, session, dest=dest)
 
-    def _depict_workflow(self, workflow):
-        """Diagrams the given workflow graph."""
+    def depict_workflow(self, workflow):
+        """
+        Diagrams the given workflow graph. The diagram is written to the
+        *name*``.dot.png`` in the workflow base directory.
+        
+        :param workflow the workflow to diagram
+        """
         fname = workflow.name + '.dot'
         if workflow.base_dir:
             grf = os.path.join(workflow.base_dir, fname)
@@ -229,14 +234,14 @@ class WorkflowBase(object):
     def _configure_nodes(self, workflow):
         """
         Sets the input parameters defined for the given workflow in
-        this WorkflowBase's configuration.
+        this WorkflowBase's configuration. This method is called by
+        each WorkflowBase subclass after the workflow is built and
+        prior to execution.
 
         :Note: nested workflow nodes are not configured, e.g. if the
         ``registration`` workflow connects a `realign`` workflow
         node ``fnirt``, then the nested ``realign.fnirt`` node in
         ``registration`` is not configured.
-
-        See :meth:`qipipe.pipeline.WorkflowBase._node_input_configuration`
 
         :param workflow: the workflow containing the nodes
         """
