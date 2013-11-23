@@ -11,7 +11,7 @@ from . import staging
 from .workflow_base import WorkflowBase
 from .staging import StagingWorkflow
 from .mask import MaskWorkflow
-from .registration import RegistrationWorkflow
+import registration
 from .modeling import ModelingWorkflow
 from ..interfaces import (XnatFind, XNATDownload, XNATUpload)
 from ..helpers import xnat_helper
@@ -503,21 +503,25 @@ class QIPipelineWorkflow(WorkflowBase):
         # scans which have not yet been registered.
         if skip_registration:
             self._logger.info("Skipping registration.")
-            reg_wf = None
+            reg_node = None
         else:
+            reg_inputs = ['subject', 'session', 'in_files',
+                          'bolus_arrival_index', 'mask', 'opts']
             reg_opts = dict(base_dir=base_dir)
             if reg_technique:
                 reg_opts['technique'] = reg_technique
             if reg_rsc:
-                reg_opts['reconstruction'] = reg_rsc
-            reg_wf_gen = RegistrationWorkflow(**reg_opts)
-            self.registration_resource = reg_wf_gen.reconstruction
-            reg_wf = reg_wf_gen.workflow
+                reg_opts['resource'] = reg_rsc
+            reg_xfc = Function(input_names=reg_inputs,
+                               output_names=['out_files'],
+                               function=register_scans)
+            reg_node = pe.Node(reg_xfc, name = 'registration')
+            
 
         # The mask workflow.
         # Unless either registration or modeling are enabled, then
         # there is no need to create a mask.
-        if (reg_wf or mdl_wf) and not mask_rsc:
+        if (reg_node or mdl_wf) and not mask_rsc:
             mask_wf = MaskWorkflow(base_dir=base_dir).workflow
         else:
             self._logger.info("Skipping mask creation.")
@@ -532,7 +536,7 @@ class QIPipelineWorkflow(WorkflowBase):
             stg_wf = StagingWorkflow(base_dir=base_dir).workflow
 
         # Validate that there is at least one constituent workflow.
-        if not any([stg_wf, reg_wf, mdl_wf]):
+        if not any([stg_wf, reg_node, mdl_wf]):
             raise ArgumentError("No workflow was enabled.")
 
         # The workflow input fields.
@@ -547,7 +551,7 @@ class QIPipelineWorkflow(WorkflowBase):
         input_spec = pe.Node(input_spec_xfc, name='input_spec')
         # The staging and registration workflows require a series
         # iterator node.
-        if stg_wf or reg_wf:
+        if stg_wf or reg_node:
             iter_series_xfc = IdentityInterface(fields=iter_series_fields)
             iter_series = pe.Node(iter_series_xfc, name='iter_series')
         if stg_wf:
@@ -571,7 +575,7 @@ class QIPipelineWorkflow(WorkflowBase):
                                 stg_wf, 'iter_dicom.' + field)
 
         # The registration workflow requires the scans.
-        if reg_wf or mask_wf:
+        if reg_node or mask_wf:
             if stg_wf:
                 staged = pe.JoinNode(IdentityInterface(fields=['images']),
                                     joinsource='iter_series', name='staged')
@@ -598,11 +602,14 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(input_spec, 'session', dl_scan_ts, 'session')
                 exec_wf.connect(iter_series, 'series', dl_scan_ts, 'scan')
             elif stg_wf:
+                # Collect the staged files.
                 staged = pe.JoinNode(IdentityInterface(fields=['images']),
                                     joinsource='iter_series', name='staged')
                 exec_wf.connect(stg_wf, 'output_spec.image', staged, 'images')
+                # Merge the staged files.
                 dce_merge = pe.Node(MergeNifti(), name='dce_merge')
                 exec_wf.connect(staged, 'images', dce_merge, 'in_files')
+                # Upload the time series.
                 ul_scan_ts_xfc = XNATUpload(project=project(), resource=SCAN_TS_RSC)
                 ul_scan_ts = pe.Node(ul_scan_ts_xfc, name='upload_scan_time_series')
                 exec_wf.connect(input_spec, 'subject' ul_scan_ts, 'subject')
@@ -616,14 +623,14 @@ class QIPipelineWorkflow(WorkflowBase):
                             mask_wf, 'input_spec.session')
             exec_wf.connect(staged, 'images',
                             mask_wf, 'input_spec.images')
-        elif mask_rsc and (reg_wf or mdl_wf):
+        elif mask_rsc and (reg_node or mdl_wf):
             dl_xfc = XNATDownload(project=project(), reconstruction=mask_rsc)
             download_mask = pe.Node(dl_xfc, name='download_mask')
             exec_wf.connect(input_spec, 'subject', download_mask, 'subject')
             exec_wf.connect(input_spec, 'session', download_mask, 'session')
         
         # The registration and modeling workflows require a mask. 
-        if mask_rsc and (reg_wf or mdl_wf):
+        if mask_rsc and (reg_node or mdl_wf):
             dl_mask_xfc = XNATDownload(project=project(), resource=mask_rsc)
             download_mask = pe.Node(dl_mask_xfc, name='download_mask')
             exec_wf.connect(input_spec, 'subject', download_mask, 'subject')
@@ -648,7 +655,7 @@ class QIPipelineWorkflow(WorkflowBase):
                             mask_wf, 'input_spec.session')
             exec_wf.connect(staged, 'images',
                             mask_wf, 'input_spec.images')
-        elif mask_rsc and (reg_wf or mdl_wf):
+        elif mask_rsc and (reg_node or mdl_wf):
             dl_xfc = XNATDownload(project=project(), reconstruction=mask_rsc)
             download_mask = pe.Node(dl_xfc, name='download_mask')
             exec_wf.connect(input_spec, 'subject', download_mask, 'subject')
@@ -660,31 +667,26 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # If the reference workflow is enabled, then register the staged
         # images.
-        if reg_wf:
-            exec_wf.connect(input_spec, 'subject',
-                            reg_wf, 'input_spec.subject')
-            exec_wf.connect(input_spec, 'session',
-                            reg_wf, 'input_spec.session')
+        if reg_node:
+            exec_wf.connect(input_spec, 'subject', reg_node, 'subject')
+            exec_wf.connect(input_spec, 'session', reg_node, 'session')
+            exec_wf.connect(staged, 'images', reg_node, 'in_files')
             # The staged input.
             if stg_wf:
-                exec_wf.connect(stg_wf, 'output_spec.image',
-                                reg_wf, 'input_spec.image')
+                exec_wf.connect(stg_wf, 'output_spec.image', reg_node, 'image')
             else:
-                exec_wf.connect(download_scans, 'out_file',
-                                reg_wf, 'input_spec.image')
+                exec_wf.connect(staged, 'out_file', reg_node, 'in_files')
             # The mask input.
             if mask_wf:
-                exec_wf.connect(mask_wf, 'output_spec.mask',
-                                reg_wf, 'input_spec.mask')
+                exec_wf.connect(mask_wf, 'output_spec.mask', reg_node, 'mask')
             else:
-                exec_wf.connect(download_mask, 'out_file',
-                                reg_wf, 'input_spec.mask')
+                exec_wf.connect(download_mask, 'out_file', reg_node, 'mask')
             
             # Collect the registration realigned images output.
             new_reg_xfc = IdentityInterface(fields=['images'])
             new_reg = pe.JoinNode(new_reg_xfc, joinsource='iter_series',
                                   name='new_reg')
-            exec_wf.connect(reg_wf, 'output_spec.image', new_reg, 'images')
+            exec_wf.connect(reg_node, 'out_files', new_reg, 'images')
             
             # If the registration reconstruction name was specified,
             # then download previously registered realigned images.
@@ -742,7 +744,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # If registration is enabled, then the 4D time series
             # is created by that workflow, otherwise download the
             # previously created 4D time series.
-            if reg_wf:
+            if reg_node:
                 exec_wf.connect(merge_reg, 'out_file',
                                 mdl_wf, 'input_spec.time_series')
             else:
@@ -771,15 +773,26 @@ class QIPipelineWorkflow(WorkflowBase):
         return exec_wf
 
 
-def register_scans(subject, session, images, mask):
+def register_scans(subject, session, in_files, bolus_arrival_index, mask,
+                   opts):
     """
     Runs the registration workflow on the given session scan images.
     
+    :Note: contrary to Python convention, the opts method parameter
+    is a required dictionary rather than a keyword aggregate (i.e.,
+    ``**opts``). The Nipype Function interface does not support method
+    aggregates.
+    
     :param subject: the subject name
     :param session: the session name
-    :param images: the input session scan images
+    :param in_files: the input session scan images
     :param mask: the image mask file path
+    :param bolus_arrival_index: the bolus uptake series index
+    :param opts: the :meth:`qipipe.pipeline.registration.run` keyword
+        options
     :return: the realigned image file path array
     """
-    reg_wf = RegistrationWorkflow(base_dir=os.getcwd())
-    return reg_wf.register_scans(subject, session, images, mask)
+    from qipipe.pipeline import registration
+    
+    return registration.run(subject, session, images, bolus_arrival_index,
+                            mask, **opts)

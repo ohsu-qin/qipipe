@@ -414,10 +414,15 @@ class RegistrationWorkflow(WorkflowBase):
             realign_wf.connect(
                 apply_xfm, 'output_image', copy_meta, 'dest_file')
         elif technique.lower() == 'fnirt':
+            # Copy the input to a work directory, since FNIRT adds
+            # temporary files to the input image location.
+            fnirt_copy_moving = pe.Node(Copy(), name='fnirt_copy_moving')
+            realign_wf.connect(input_spec, 'moving_image',
+                               fnirt_copy_moving, 'in_file')
             # Register the image.
             fnirt = pe.Node(fsl.FNIRT(), name='fnirt')
             realign_wf.connect(input_spec, 'reference', fnirt, 'ref_file')
-            realign_wf.connect(input_spec, 'moving_image', fnirt, 'in_file')
+            realign_wf.connect(fnirt_copy_moving, 'out_file', fnirt, 'in_file')
             realign_wf.connect(input_spec, 'mask', fnirt, 'inmask_file')
             realign_wf.connect(input_spec, 'mask', fnirt, 'refmask_file')
             realign_wf.connect(realign_name, 'out_file', fnirt, 'warped_file')
