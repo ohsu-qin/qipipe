@@ -25,7 +25,8 @@ def main(argv=sys.argv):
     from qipipe.pipeline import qipipeline as qip
 
     # Run the QIN workflow.
-    qip.run(*inputs, **opts)
+    print opts
+    # qip.run(*inputs, **opts)
 
     return 0
 
@@ -67,11 +68,11 @@ def _parse_arguments():
     parser.add_argument('--no-staging', help='disable the staging workflow',
                         dest='skip_staging', action='store_true', default=None)
 
-    # The mask and reference arguments.
+    # The mask and time series arguments.
     parser.add_argument('--mask', help="the mask XNAT resource name",
                         metavar='LABEL')
-    parser.add_argument('--reference',
-                        help="the reference XNAT resource name",
+    parser.add_argument('--scan-time-series',
+                        help="the 4D scan time series XNAT resource name",
                         metavar='LABEL')
 
     # The registration arguments.
