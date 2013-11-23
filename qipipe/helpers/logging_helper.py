@@ -9,6 +9,7 @@ def logger(name):
     This method is the preferred way to obtain a logger.
     
     Example:
+    
     >>> from qipipe.helpers.logging_helper import logger
     >>> logger(__name__).debug("Starting my application...")
     
