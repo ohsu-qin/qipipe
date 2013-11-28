@@ -35,6 +35,16 @@ def run(subject, session, images, bolus_arrival_index, mask, **opts):
     return reg_wf.run(subject, session, images, bolus_arrival_index, mask)
 
 
+def generate_resource_name():
+    """
+    Makes a unique registration resource name. Uniqueness permits more than
+    one registration to be stored for a given session without a name conflict.
+    
+    :return: a unique XNAT registration resource name
+    """
+    return "%s_%s" % (REG_PREFIX, file_helper.generate_file_name())
+
+
 class RegistrationWorkflow(WorkflowBase):
 
     """
@@ -114,7 +124,7 @@ class RegistrationWorkflow(WorkflowBase):
 
         rsc = opts.pop('resource', None)
         if not rsc:
-            rsc = self._generate_resource_name()
+            rsc = self.generate_resource_name()
         self.resource = rsc
         """The XNAT resource name used for all runs against this workflow
         instance."""
@@ -262,16 +272,6 @@ class RegistrationWorkflow(WorkflowBase):
             self.depict_workflow(exec_wf)
         
         return exec_wf
-
-    def _generate_resource_name(self):
-        """
-        Makes a unique registration resource name for the registration
-        workflow input. Uniqueness permits more than one registration to be
-        stored without a name conflict.
-        
-        :return: a unique XNAT registration resource name
-        """
-        return "%s_%s" % (REG_PREFIX, file_helper.generate_file_name())
 
     def _create_reusable_workflow(self, **opts):
         """

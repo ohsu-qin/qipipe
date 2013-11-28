@@ -22,7 +22,7 @@ SESSION_FMT = 'Session%02d'
 def subject_for_directory(collection, path):
     """
     Infers the XNAT subject names from the given directory name.
-    
+
     :param collection: the AIRC collection name
     :return: the corresponding XNAT subject label
     :raise StagingError: if the name does not match the collection subject
@@ -40,7 +40,7 @@ def get_subjects(collection, source, pattern=None):
     The match pattern matches on the subdirectories and captures the
     subject number. The subject name is the collection name followed
     by the subject number, e.g. ``Breast004``.
-    
+
     :param collection: the AIRC collection name
     :param source: the input parent directory
     :param pattern: the subject directory name match pattern (default
@@ -71,7 +71,7 @@ def group_dicom_files_by_series(*dicom_files):
     """
     Groups the given DICOM files by series. Subtraction images, indicated by
     a ``SUB`` DICOM Image Type, are ignored.
-    
+
     :param dicom_files: the DICOM files or directories
     :return: a {series number: DICOM file names} dictionary
     """
@@ -84,23 +84,48 @@ def group_dicom_files_by_series(*dicom_files):
     return ser_files_dict
 
 
+def detect_new_visits(collection, *inputs):
+    """
+    Detects the new AIRC visits in the given input directories. The visit
+    DICOM files are grouped by series.
+
+    :param collection: the AIRC image collection name
+    :param inputs: the AIRC source subject directories
+    :return: the *{subject: {session: {series: [dicom files]}}}* dictionary
+    """
+    # Collect the AIRC visits into (subject, session, dicom_files)
+    # tuples.
+    visits = list(iter_new_visits(collection, *inputs))
+
+    # If no images were detected, then bail.
+    if not visits:
+        logger(__name__).info("No visits were detected in the input"
+                              " directories.")
+        return {}
+    logger(__name__).debug("%d visits were detected" % len(visits))
+
+    # Group the DICOM files by series.
+    return _group_sessions_by_series(*visits)
+
+
 def iter_visits(collection, *subject_dirs, **opts):
     """
     Iterates over the visits in the given subject directories.
     Each iteration item is a *(subject, session, files)* tuple, formed
     as follows:
-    
-    - The *subject* is the XNAT subject ID formatted by :data:`SUBJECT_FMT`
-    
+
+    - The *subject* is the XNAT subject name formatted by
+      :data:`SUBJECT_FMT`
+
     - The *session* is the XNAT experiment name formatted by
       :data:`SESSION_FMT`
-    
-    - The *files* iterates over the files which match the
+
+    - The *files* generator iterates over the files which match the
       :mod:`qipipe.staging.airc_collection` DICOM file include pattern
-    
+
     The supported AIRC collections are defined by
     :mod:`qipipe.staging.airc_collection`.
-    
+
     :param collection: the AIRC image collection name
     :param subject_dirs: the subject directories over which to iterate
     :param opts: the following keyword arguments:
@@ -114,12 +139,33 @@ def iter_new_visits(collection, *subject_dirs):
     """
     Filters :meth:`qipipe.staging.staging_helper.iter_visits` to iterate
     over the new visits in the given subject directories which are not in XNAT.
-    
+
     :param collection: the AIRC image collection name
     :param subject_dirs: the subject directories over which to iterate
     :return: the new visit `(subject, session, files)` tuples
     """
     return iter_visits(collection, *subject_dirs, filter=_is_new_session)
+
+
+def create_subject_map(self, collection, subjects, dest=None):
+    """
+    Maps each QIN Patient ID to a TCIA Patient ID for upload using CTP.
+
+    :param collection: the AIRC image collection name
+    :param subjects: the patient ids to map
+    :param dest: the directory in which to place the map
+        (default is current directory)
+    :return: the subject map file path
+    """
+    if not dest:
+        dest = os.getcwd()
+    logger(__name__).debug("Creating the TCIA subject map in %s..." % dest)
+    map_ctp = MapCTP(collection=collection, patient_ids=subjects, dest=dest)
+    result = map_ctp.run()
+    logger(__name__).debug("Created the TCIA subject map %s." %
+                       result.outputs.out_file)
+    
+    return result.outputs.out_file
 
 
 def _is_new_session(subject, session):
@@ -132,6 +178,33 @@ def _is_new_session(subject, session):
                                (project(), subject, session))
 
     return not exists
+
+
+def _group_sessions_by_series(*session_specs):
+    """
+    Creates the staging dictionary for the new images in the given
+    sessions.
+
+    :param session_specs: the *(subject, session, dicom_files)* tuples
+        to group
+    :return: the *{subject: {session: {series: [dicom files]}}}*
+        dictionary
+    """
+
+    # The {subject: {session: {series: [dicom files]}}} output.
+    stg_dict = defaultdict(dict)
+
+    for sbj, sess, dcm_file_iter in session_specs:
+        # Group the session DICOM input files by series.
+        ser_dcm_dict = group_dicom_files_by_series(dcm_file_iter)
+        if not ser_dcm_dict:
+            raise StagingError("No DICOM files were detected in the "
+                               "%s %s session source directory." %
+                               (sbj, sess))
+        # Collect the (series, dicom_files) tuples.
+        stg_dict[sbj][sess] = ser_dcm_dict
+
+    return stg_dict
 
 
 class VisitIterator(object):
@@ -171,8 +244,8 @@ class VisitIterator(object):
         with xnat_helper.connection():
             for sbj_dir in self.subject_dirs:
                 sbj_dir = os.path.abspath(sbj_dir)
-                logger(__name__).debug(
-                    "Discovering sessions in %s..." % sbj_dir)
+                logger(__name__).debug("Discovering sessions in %s..." %
+                                       sbj_dir)
                 # Make the XNAT subject name.
                 sbj_nbr = self.collection.path2subject_number(sbj_dir)
                 sbj = SUBJECT_FMT % (self.collection.name, sbj_nbr)
@@ -198,7 +271,6 @@ class VisitIterator(object):
                                 sess_dir, self.collection.dicom_pattern)
                             # The visit directory DICOM file iterator.
                             dcm_file_iter = glob.iglob(dcm_pat)
-                            logger(
-                                __name__).debug("Discovered session %s in %s" %
-                                                (sess, sess_dir))
+                            logger(__name__).debug("Discovered session %s in"
+                                                   " %s" % (sess, sess_dir))
                             yield (sbj, sess, dcm_file_iter)

@@ -7,28 +7,144 @@ from nipype.interfaces.dcmstack import DcmStack
 from .. import project
 from ..interfaces import (Gate, FixDicom, Compress, MapCTP, XNATUpload)
 from ..staging.staging_error import StagingError
-from ..staging.staging_helper import (subject_for_directory, iter_new_visits,
-                                      group_dicom_files_by_series)
 from ..helpers import xnat_helper
 from .workflow_base import WorkflowBase
 from ..helpers.logging_helper import logger
+from ..staging import staging_helper
 
 
-def run(*inputs, **opts):
+def iter_stage(collection, *inputs, **opts):
     """
-    Creates a :class:`qipipe.pipeline.staging.StagingWorkflow` and runs it
-    on the given inputs.
+    Runs the staging workflow on the new AIRC visits in the given
+    input directories.
 
-    :param inputs: the :meth:`qipipe.pipeline.staging.StagingWorkflow.run` inputs
-    :param opts: the :class:`qipipe.pipeline.staging.StagingWorkflow` initializer
-        and :meth:`qipipe.pipeline.staging.StagingWorkflow.run` options
-    :return: the :meth:`qipipe.pipeline.staging.StagingWorkflow.run` result
+    The new DICOM files to upload to TCIA are placed in the destination
+    `dicom` subdirectory in the following hierarchy:
+
+        */path/to/dest/*``dicom/``
+            *subject*/
+                *session*/
+                    series*series_number*/
+                        *file*.dcm.gz
+                        ...
+
+    where:
+    
+    * *subject* is the XNAT subject name
+    
+    * *session* is the XNAT session name
+    
+    * *series_number* is the DICOM Series Number
+    
+    * *file* is the DICOM file name
+
+    The new series stack NiFTI files are placed in the destination
+    `stacks` subdirectory in the following hierarchy:
+
+        */path/to/dest*``/staged/``
+            *subject*/
+                *session*/
+                    series*series_number*.dcm.gz
+                    ...
+
+    :param collection: the AIRC image collection name
+    :param inputs: the AIRC source subject directories to stage
+    :param opts: the following workflow execution options:
+    :keyword dest: the TCIA staging destination directory (default is a
+        subdirectory named ``staged`` in the current working directory)
     """
-    cfg_file = opts.pop('cfg_file', None)
+    # Validate that there is a collection
+    if not collection:
+        raise ValueError('Staging is missing the AIRC collection name')
     
-    stg_wf = StagingWorkflow(**opts)
+    # Group the new DICOM files into a
+    # {subject: {session: [(series, dicom_files), ...]}} dictionary.
+    stg_dict = self._detect_visits(collection, *inputs)
+    if not stg_dict:
+        return
+
+    # The staging location.
+    dest_opt = opts.pop('dest', None)
+    if dest_opt:
+        dest = os.path.abspath(dest_opt)
+    else:
+        dest = os.path.join(os.getcwd(), 'staged')
+
+    # The workflow subjects.
+    subjects = stg_dict.keys()
+
+    # Print a debug message.
+    series_cnt = sum(map(len, stg_dict.itervalues()))
+    logger(__name__).debug(
+        "Staging %d new %s series from %d subjects in %s..." %
+        (series_cnt, collection, len(subjects), dest))
     
-    return stg_wf.run(*inputs, **opts)
+    # Run the workflow for each session.
+    for sbj, sess_dict in stg_dict.iteritems():
+        self._logger.debug("Staging subject %s..." % sbj)
+        for sess, ser_dicom_dict in sess_dict.iteritems():
+            logger(__name__).debug("Staging %s session %s..." % (sbj, sess))
+            # Delegate to the workflow executor.
+            yield sbj, sess, ser_dicom_dict
+            logger(__name__).debug("Staged %s session %s." % (sbj, sess))
+        logger(__name__).debug("Staged subject %s." % sbj)
+    logger(__name__).debug("Staged %d new %s series from %d subjects in %s." %
+                     (series_cnt, collection, len(subjects), dest))
+    
+    # Make the TCIA subject map.
+    staging_helper.create_subject_map(collection, subjects, dest)
+
+
+def execute_workflow(exec_wf, collection, subject, session, ser_dicom_dict,
+                     dest=None):
+    """
+    Stages the given session's series DICOM files as described in
+    :class:`StagingWorkflow`.
+    
+    The execution workflow must have the same input and iterable
+    node names and fields as :class:`StagingWorkflow`.
+    
+    :param exec_wf: the workflow to execute
+    :param ser_dicom_dict: the input [(series, directory), ...] tuples
+    """
+    # Make the staging area.
+    ser_list = ser_dicom_dict.keys()
+    ser_dests = _create_staging_area(sbj, sess, ser_list, dest)
+    # Transpose the tuples into iterable lists.
+    sers, dests = map(list, zip(*ser_dicom_dict))
+    ser_iterables = dict(series=sers, dest=dests).items()
+
+    # Set the inputs.
+    input_spec = exec_wf.get_node('input_spec')
+    input_spec.inputs.subject = subject
+    input_spec.inputs.session = session
+    input_spec.inputs.collection = collection
+    
+    iter_series = exec_wf.get_node('iter_series')
+    iter_series.iterables = ser_iterables
+
+    iter_dicom = exec_wf.get_node('iter_dicom')
+    iter_dicom.iterables = ('dicom_file', ser_dicom_dict)
+
+    # Execute the workflow.
+    self._run_workflow(exec_wf)
+
+def _create_staging_area(subject, session, series_list, dest):
+    """
+    :return: the [(series, directory), ...] list
+    """
+    # Collect the (series, destination) tuples.
+    ser_dest_tuples = []
+    for series in series_list:
+        # Make the staging directories. Do this before running the
+        # workflow in order to avoid a directory creation race
+        # condition for distributed nodes that write to the series
+        # staging directory.
+        ser_dest = self._make_series_staging_directory(dest, subject,
+                                                       session, series)
+        ser_dest_tuples.append((series, ser_dest))
+    
+    return ser_dest_tuples
 
 
 class StagingWorkflow(WorkflowBase):
@@ -78,6 +194,28 @@ class StagingWorkflow(WorkflowBase):
     The *iter_dicom* node *itersource* is the ``iter_series.series``
     field. The ``iter_dicom.dicom_file`` iterables is set to the
     {series: [DICOM files]} dictionary.
+    Runs the staging workflow on the new AIRC visits in the given
+    input directories.
+
+    The new DICOM files to upload to TCIA are placed in the destination
+    `dicom` subdirectory in the following hierarchy:
+
+        ``/path/to/dest/dicom/``
+            *subject*/
+                *session*/
+                    ``Series``*series_number*/
+                        *file*``.dcm.gz``
+                        ...
+
+    where:
+    
+    * *subject* is the subject name, e.g. ``Breast011``
+    
+    * *session* is the session name, e.g. ``Session03``
+    
+    * *series_number* is the DICOM Series Number
+    
+    * *file* is the DICOM file name
    
     The staging workflow output is the *output_spec* node consisting
     of the following output field:
@@ -114,177 +252,6 @@ class StagingWorkflow(WorkflowBase):
         The staging workflow sequence described in
         :class:`qipipe.pipeline.staging.StagingWorkflow`.
         """
-
-    def run(self, collection, *inputs, **opts):
-        """
-        Runs the staging workflow on the new AIRC visits in the given
-        input directories.
-
-        The new DICOM files to upload to TCIA are placed in the destination
-        `dicom` subdirectory in the following hierarchy:
-
-            /path/to/dest/dicom/
-                subject/
-                    session/
-                        series/
-                            file.dcm.gz ...
-
-        where *file* is the DICOM file name.
-
-        The new series stack NiFTI files are placed in the destination
-        `stacks` subdirectory in the following hierarchy:
-
-            /path/to/dest/stacks/
-                subject/
-                    session/
-                        file.nii.gz ...
-
-        If the *workflow* parameter is set, then that execution workflow is
-        required to include a node named *input_spec* with inputs *subject*
-        and *session* which connect to the respective inputs in the child
-        staging workflow.
-
-        The return value is a *{subject: {session: [scans]}}* XNAT name
-        dictionary for each processed session.
-
-        :param collection: the AIRC image collection name
-        :param inputs: the AIRC source subject directories to stage
-        :param opts: the following workflow execution options:
-        :keyword dest: the TCIA staging destination directory (default is a
-            subdirectory named ``staged`` in the current working directory)
-        :keyword workflow: the workflow to run (default is the standard
-            staging workflow *workflow* instance variable)
-        :return: the XNAT *{subject: {session: [scans]}}* dictionary
-        """
-        # Validate that there is a collection
-        if not collection:
-            raise ValueError('Staging is missing the AIRC collection name')
-        
-        # Group the new DICOM files into a
-        # {subject: {session: [(series, dicom_files), ...]}} dictionary.
-        stg_dict = self._detect_visits(collection, *inputs)
-        if not stg_dict:
-            return {}
-
-        # The staging location.
-        dest_opt = opts.pop('dest', None)
-        if dest_opt:
-            dest = os.path.abspath(dest_opt)
-        else:
-            dest = os.path.join(os.getcwd(), 'staged')
-
-        # The workflow subjects.
-        subjects = stg_dict.keys()
-        # Make the TCIA subject map.
-        self._create_subject_map(collection, subjects, dest)
-
-        series_cnt = sum(map(len, stg_dict.itervalues()))
-        self._logger.debug(
-            "Staging %d new %s series from %d subjects in %s..." %
-            (series_cnt, collection, len(subjects), dest))
-
-        # The execution workflow (see method doc)
-        exec_wf = opts.get('workflow', self.workflow)
-        # Connect the series and DICOM iterators. This must be done before
-        # using the workflow.
-        iter_series = exec_wf.get_node('iter_series')
-        iter_dicom = exec_wf.get_node('iter_dicom')
-        exec_wf.connect(iter_series, 'series', iter_dicom, 'series')
-        iter_series.synchronize = True
-        iter_dicom.itersource = ('iter_series', 'series')
-        
-        # Run the workflow for each session.
-        for sbj, sess_dict in stg_dict.iteritems():
-            self._logger.debug("Staging subject %s..." % sbj)
-            for sess, ser_dict in sess_dict.iteritems():
-                self._logger.debug("Staging %s session %s..." % (sbj, sess))
-                self._stage_session(collection, sbj, sess,
-                                    ser_dict, dest, exec_wf)
-                self._logger.debug("Staged %s session %s." % (sbj, sess))
-            self._logger.debug("Staged subject %s." % sbj)
-        self._logger.debug("Staged %d new %s series from %d subjects in %s." %
-                         (series_cnt, collection, len(subjects), dest))
-
-        # Return the {subject: {session: [scans]}} dictionary.
-        output_dict = defaultdict(dict)
-        for sbj, sess_dict in stg_dict.iteritems():
-            for sess, ser_dict in sess_dict.iteritems():
-                output_dict[sbj][sess] = ser_dict.keys()
-        return output_dict
-
-    def _detect_visits(self, collection, *inputs):
-        """
-        Detects the new AIRC visits in the given input directories. The visit
-        images are grouped by series.
-
-        :param collection: the AIRC image collection name
-        :param inputs: the AIRC source subject directories
-        :return: the *{subject: {session: {series: [dicom files]}}}* dictionary
-        """
-        # Collect the AIRC visits into (subject, session, dicom_files)
-        # tuples.
-        visits = list(iter_new_visits(collection, *inputs))
-
-        # If no images were detected, then bail.
-        if not visits:
-            self._logger.info("No visits were detected in the input directories.")
-            return {}
-        self._logger.debug("%d visits were detected" % len(visits))
-
-        # Group the DICOM files by series.
-        return self._group_sessions_by_series(*visits)
-
-    def _create_subject_map(self, collection, subjects, dest):
-        """
-        Maps each QIN Patient ID to a TCIA Patient ID for upload using CTP.
-        """
-        self._logger.debug("Creating the TCIA subject map in %s..." % dest)
-        map_ctp = MapCTP(
-            collection=collection, patient_ids=subjects, dest=dest)
-        result = map_ctp.run()
-        self._logger.debug("Created the TCIA subject map %s." %
-                          result.outputs.out_file)
-
-    def _stage_session(self, collection, subject, session, ser_dicom_dict,
-                       dest, exec_wf):
-        """
-        Stages the given session's series DICOM files as described in
-        :meth:`qipipe.pipeline.staging.StagingWorkflow.run`.
-        """
-        # Collect the (series, destination) tuples.
-        ser_dest_tuples = []
-        for series, dicom_files in ser_dicom_dict.iteritems():
-            # Make the staging directories. Do this before running the
-            # workflow in order to avoid a directory creation race
-            # condition for distributed nodes that write to the series
-            # staging directory.
-            ser_dest = self._make_series_staging_directory(dest, subject,
-                                                           session, series)
-            ser_dest_tuples.append((series, ser_dest))
-            self._logger.debug(
-                "Staging %d %s %s series %s DICOM files in %s..." %
-                (len(dicom_files), subject, session, series, ser_dest))
-
-        # Transpose the tuples into iterable lists.
-        sers, dests = map(list, zip(*ser_dest_tuples))
-        ser_iterables = dict(series=sers, dest=dests).items()
-
-        # Set the inputs.
-        input_spec = exec_wf.get_node('input_spec')
-        input_spec.inputs.subject = subject
-        input_spec.inputs.session = session
-        input_spec.inputs.collection = collection
-        
-        iter_series = exec_wf.get_node('iter_series')
-        iter_series.iterables = ser_iterables
-
-        iter_dicom = exec_wf.get_node('iter_dicom')
-        iter_dicom.iterables = ('dicom_file', ser_dicom_dict)
-
-        # Execute the workflow.
-        self._run_workflow(exec_wf)
-        self._logger.debug("Staged %d %s %s series %d DICOM files in %s." %
-                         (len(dicom_files), subject, session, series, ser_dest))
 
     def _create_workflow(self, base_dir=None):
         """
@@ -372,32 +339,6 @@ class StagingWorkflow(WorkflowBase):
             self.depict_workflow(workflow)
 
         return workflow
-
-    def _group_sessions_by_series(self, *session_specs):
-        """
-        Creates the staging dictionary for the new images in the given
-        sessions.
-
-        :param session_specs: the *(subject, session, dicom_files)* tuples
-            to group
-        :return: the *{subject: {session: {series: [dicom files]}}}*
-            dictionary
-        """
-
-        # The {subject: {session: {series: [dicom files]}}} output.
-        stg_dict = defaultdict(dict)
-
-        for sbj, sess, dcm_file_iter in session_specs:
-            # Group the session DICOM input files by series.
-            ser_dcm_dict = group_dicom_files_by_series(dcm_file_iter)
-            if not ser_dcm_dict:
-                raise StagingError("No DICOM files were detected in the "
-                                   "%s %s session source directory." %
-                                   (sbj, sess))
-            # Collect the (series, dicom_files) tuples.
-            stg_dict[sbj][sess] = ser_dcm_dict
-
-        return stg_dict
 
     def _make_series_staging_directory(self, dest, subject, session, series):
         """

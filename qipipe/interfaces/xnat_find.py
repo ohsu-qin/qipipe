@@ -19,6 +19,8 @@ class XNATFindInputSpec(BaseInterfaceInputSpec):
 
     resource = traits.Str(desc='The XNAT resource name')
 
+    file = traits.Str(desc='The XNAT file name')
+
     inout = traits.Str(desc='The XNAT resource in/out designator')
 
     create = traits.Bool(default=False, desc='Flag indicating whether to '
@@ -67,6 +69,10 @@ class XNATFind(BaseInterface):
         # The resource.
         if isdefined(self.inputs.resource):
             opts['resource'] = self.inputs.resource
+
+        # The file.
+        if isdefined(self.inputs.file):
+            opts['file'] = self.inputs.file
 
         # Delegate to the XNAT helper.
         with xnat_helper.connection() as xnat:

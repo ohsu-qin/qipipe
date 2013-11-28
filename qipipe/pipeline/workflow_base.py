@@ -11,10 +11,14 @@ from .distributable import DISTRIBUTABLE
 class WorkflowBase(object):
 
     """
-    The WorkflowBase class is the base class for the QIN workflow wrapper
-    classes.
+    The WorkflowBase class is the base class for the QIN workflow
+    wrapper classes.
+    
+    If the :mod:`qipipe.pipeline.distributable' ``DISTRIBUTABLE`` flag
+    is set, then the execution is distributed using the
+    `AIRC Grid Engine`_.
 
-    The workflow plug-in arguments and node inputs can be specfied in an
+    The workflow plug-in arguments and node inputs can be specfied in a
     :class:`qipipe.helpers.ast_config.ASTConfig` file. The standard
     configuration file name is the lower-case name of the ``WorkflowBase``
     subclass with ``.cfg`` extension, e.g. ``registration.cfg``. The
@@ -30,6 +34,8 @@ class WorkflowBase(object):
        variable directory
 
     4. the *cfg_file* initialization parameter
+
+    .. _AIRC Grid Engine: https://everett.ohsu.edu/wiki/GridEngine
     """
 
     CLASS_NAME_PAT = re.compile("^(\w+)Workflow$")

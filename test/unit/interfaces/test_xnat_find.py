@@ -17,6 +17,8 @@ SESSION = 'MR1'
 SCAN = 1
 """The test scan number."""
 
+SCAN_FILE = os.path.join(FIXTURES, 'dummy_scan.nii.gz')
+
 RECONSTRUCTION = 'reco'
 """The test reconstruction name."""
 
@@ -31,7 +33,7 @@ class TestXNATFind(object):
         xnat_helper.delete_subjects(project(), SUBJECT)
         
     def tearDown(self):
-        xnat_helper.delete_subjects(project(), SUBJECT)
+        #xnat_helper.delete_subjects(project(), SUBJECT)
         shutil.rmtree(RESULTS, True)
     
     def test_find_subject(self):
@@ -48,6 +50,10 @@ class TestXNATFind(object):
     
     def test_find_scan_resource(self):
         self._test_find(SUBJECT, SESSION, scan=SCAN, resource='NIFTI')
+    
+    def test_find_scan_file(self):
+        self._test_find(SUBJECT, SESSION, scan=SCAN, resource='NIFTI',
+                        file=SCAN_FILE)
     
     def test_find_reconstruction(self):
         self._test_find(SUBJECT, SESSION, reconstruction=RECONSTRUCTION)

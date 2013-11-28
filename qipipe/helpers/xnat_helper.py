@@ -658,6 +658,13 @@ class XNAT(object):
         A capitalized modality value is a synonym for the XNAT session
         data type, e.g. ``MR`` is a synonym for ``xnat:mrSessionData``.
         The default modality is ``MR``.
+        
+        The *file* option specifies a file name or existing file path.
+        The *file* option is used in conjunction with a *resource* option.
+        If the *file* option is set, then this method searches for an XNAT
+        file object whose label matches the file name in the given resource.
+        If there is no such file object and the *create* flag is set, then
+        the file at the given path is uploaded to the specified resource.
 
         Example:
 
@@ -676,6 +683,7 @@ class XNAT(object):
         :keyword reconstruction: the reconstruction name
         :keyword analysis: the analysis name
         :keyword resource: the resource name
+        :keyword file: the file name
         :keyword inout: the resource direction (``in`` or ``out``)
         :keyword modality: the session modality (default ``MR``)
         :keyword create: flag indicating whether to create the XNAT object
@@ -789,8 +797,24 @@ class XNAT(object):
                                         rsc_obj.id()))
             else:
                 return
-
-        return rsc_obj
+        
+        if 'file' in opts:
+            path = opts['file']
+            _, fname = os.path.split(path)
+            file_obj = rsc_obj.file(fname)
+            if file_obj.exists():
+                return file_obj
+            elif create:
+                file_obj.insert(path, **opts)
+                self._logger.debug("Created the XNAT %s %s %s %s %s"
+                                   " file with id %s." %
+                                   (project, subject, session, resource,
+                                    fname, file_obj.id()))
+                return file_obj
+            else:
+                return
+        else:
+            return rsc_obj
 
     def _standardize_modality(self, modality):
         """

@@ -4,7 +4,7 @@ import tempfile
 import logging
 from collections import defaultdict
 from nipype.pipeline import engine as pe
-from nipype.interfaces.utility import IdentityInterface, Merge
+from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
 from nipype.interfaces.dcmstack import MergeNifti
 from .. import project
 from . import staging
@@ -13,9 +13,16 @@ from .staging import StagingWorkflow
 from .mask import MaskWorkflow
 import registration
 from .modeling import ModelingWorkflow
-from ..interfaces import (XnatFind, XNATDownload, XNATUpload)
+from ..interfaces import (XNATDownload, XNATUpload)
 from ..helpers import xnat_helper
 from ..helpers.logging_helper import logger
+from ..staging import staging_helper
+
+SCAN_TS_RSC = 'scan_ts'
+"""The XNAT scan time series resouce name."""
+
+MASK_RSC = 'mask'
+"""The XNAT mask resouce name."""
 
 
 def run(*inputs, **opts):
@@ -31,10 +38,155 @@ def run(*inputs, **opts):
     :return: the :meth:`qipipe.pipeline.qipipeline.QIPipelineWorkflow.run`
         result
     """
-    # If the inputs are not directories, then disable staging.
-    wf_gen = QIPipelineWorkflow(**opts)
+    # Tailor the actions.
+    actions = opts.get('actions', _default_actions(**opts))
+    opts['actions'] = set(actions)
+    if 'stage' in opts['actions']:
+        # Delegate to the staging workflow.
+        _run_with_dicom_input(*inputs, **opts)
+    else:
+        _run_with_xnat_input(*inputs, **opts)
 
-    return wf_gen.run(*inputs, **opts)
+
+def _default_actions(**opts):
+    """
+    Returns the default actions from the given options, as follows:
+
+    * The default actions always include ``model``.
+
+    * If the ``registration`` resource option is not set, then ``stage``
+      is included in the actions.
+
+    :param opts: the :meth:`run` options
+    :return: the default actions
+    """
+    if 'registration' in opts:
+        return ['register', 'model']
+    else:
+        return  ['stage', 'register', 'model']
+
+
+def _run_with_dicom_input(*inputs, **opts):
+    collection = opts.pop('collection', None)
+    dest = opts.pop('dest', None)
+    wf_gen = QIPipelineWorkflow(**opts)
+    wf_gen.run_with_dicom_input(collection, subject, session,
+                                *inputs, dest=dest)
+
+
+def _run_with_xnat_input(*inputs, **opts):
+    with xnat_helper.connection() as xnat:
+        for label in inputs:
+            prj, sbj, sess = xnat_helper.parse_session_label(label)
+            # Check for an existing mask.
+            if xnat.find(project=prj, subject=sbj, session=sess,
+                         resource=MASK_RSC):
+                opts['mask'] = MASK_RSC
+            # If registration will be performed, then check for an
+            # existing scan time series.
+            # Otherwise, if modeling will be performed on a specified
+            # registration resource, then check for an existing
+            # realigned time series.
+            if 'register' in opts['actions']:
+                if xnat.find(project=prj, subject=sbj, session=sess,
+                          resource=SCAN_TS_RSC):
+                    opts['scan_time_series'] = SCAN_TS_RSC
+            elif 'model' in opts['actions'] and 'registration' in opts:
+                reg_ts_rsc = opts['registration'] + '_ts'
+                reg_ts_file = reg_rsc + '_ts.nii.gz'
+                if xnat.find(project=prj, subject=sbj, session=sess,
+                             resource=reg_ts_rsc):
+                    opts['realigned_time_series'] = reg_ts_rsc
+
+            # Execute the workflow.
+            wf_gen = QIPipelineWorkflow(**opts)
+            wf_gen.run_with_scan_download(xnat, prj, sbj, sess)
+
+
+# def _run_on_downloaded_scans(exec_wf, exec_wf, project, subject, session):
+#     """
+#     Runs the given execution workflow on downloaded scan image files.
+#     """
+#     self._logger.debug("Processing the %s %s %s scans..." %
+#                        (project, subject, session))
+# 
+#     # Get the scan numbers.
+#     scans = xnat.get_scans(project, subject, session)
+#     if not scans:
+#         raise NotFoundError("The QIN pipeline did not find a %s %s %s"
+#                             " scan." % (project, subject, session))
+# 
+#     # Partition the input scans into those which are already
+#     # registered and those which need to be registered.
+#     reg_scans, unreg_scans = _partition_scans(xnat, project, subject,
+#                                               session, scans)
+# 
+#     # Set the workflow input.
+#     input_spec = exec_wf.get_node('input_spec')
+#     input_spec.inputs.subject = subject
+#     input_spec.inputs.session = session
+# 
+#     # If registration is enabled, then there is a series iterator
+#     # node. In that case, set the series iterables to the
+#     # unregistered scans.
+#     iter_series = exec_wf.get_node('iter_series')
+#     if iter_series:
+#         iter_series.iterables = ('series', unreg_scans)
+# 
+#     # If the XNAT registration resource was specified and modeling
+#     # is enabled, then there is a download registered scans node.
+#     # If that is the case, then set the download scan input iterables.
+#     download_reg = exec_wf.get_node('download_reg')
+#     if download_reg:
+#         # If registration is disabled, then validate that all scans
+#         # are registered.
+#         if opts.get('skip_registration') and unreg_scans:
+#             raise NotFoundError(
+#                 "The following %s %s %s scans are not registered: %s" %
+#                 (prj, sbj, sess, unreg_scans))
+#         # Download each scan file.
+#         download_reg.iterables = ('scan', reg_scans)
+# 
+#     # Execute the workflow.
+#     self._run_workflow(self.workflow)
+#     self._logger.debug("Processed %d %s %s %s scans." %
+#                        (len(scans), prj, sbj, sess))
+# 
+# def _partition_scans(xnat, project, subject, session, scans):
+#     """
+#     Partitions the given scans into those which have a corresponding
+#     registration reconstruction file and those which don't.
+# 
+#     :return: the [registered, unregistered] scan numbers
+#     """
+#     # The XNAT registration object.
+#     reg_obj = xnat.get_resource(project, subject, session,
+#                                       self.registration_resource)
+#     # If the registration has not yet been performed, then
+#     # all of the scans are downloaded.
+#     if not reg_obj.exists():
+#         return [], scans
+# 
+#     # The realigned scan numbers.
+#     reg_scans = self._registered_scans(reg_obj)
+# 
+#     return reg_scans, list(set(scans) - set(reg_scans))
+# 
+# def _registered_scans(self, reg_obj):
+#     """
+#     Returns the scans which have a corresponding registration
+#     reconstruction file.
+# 
+#     :param reg_obj: the XNAT registration reconstruction object
+#     :return: the registered scan numbers
+#     """
+#     # The XNAT registration file names.
+#     reg_files = reg_obj.out_resources().fetchone().files().get()
+#     # Match on the realigned scan file pattern.
+#     matches = ((QIPipelineWorkflow.REG_SERIES_PAT.match(f)
+#                 for f in reg_files))
+# 
+#     return [int(match.group(1)) for match in matches if match]
 
 
 class ArgumentError(Exception):
@@ -120,9 +272,6 @@ class QIPipelineWorkflow(WorkflowBase):
     """
 
     REG_SERIES_PAT = re.compile('series(\d+)_reg_')
-    
-    SCAN_TS_RSC = 'scan_ts'
-    """The XNAT scan time series resouce name."""
 
     def __init__(self, **opts):
         """
@@ -153,120 +302,72 @@ class QIPipelineWorkflow(WorkflowBase):
         method.
         """
 
-    def run(self, *inputs, **opts):
+    # def run(self, project, subject, session, *inputs):
+    #     """
+    #     Runs the OHSU QIN pipeline on the the given inputs, as follows:
+    #
+    #     This method returns a *{subject: {session: results}}*  dictionary
+    #     for the processed sessions, where results is a dictionary with
+    #     the following items:
+    #
+    #     - *registration*: the registration XNAT reconstruction name
+    #
+    #     - *modeling*: the modeling XNAT assessor name
+    #
+    #     If the :mod:`qipipe.pipeline.distributable' ``DISTRIBUTABLE`` flag
+    #     is set, then the execution is distributed using the
+    #     `AIRC Grid Engine`_.
+    #
+    #     .. _AIRC Grid Engine: https://everett.ohsu.edu/wiki/GridEngine
+    #
+    #     :param inputs: the AIRC subject directories or XNAT session
+    #         names
+    #     :param opts: the meth:`qipipe.pipeline.staging.run` options,
+    #         augmented with the following keyword arguments:
+    #     :keyword collection: the AIRC collection name defined by
+    #         :mod:`qipipe.staging.airc_collection`, required if
+    #         staging is enabled
+    #     :return: the new *{subject: session: results}*  dictionary
+    #     """
+        # # If staging is enabled, then start with the DICOM inputs.
+        # # Otherwise, if registration is enabled, then start with a
+        # # scan download. Otherwise, start with registration download.
+        # if self.workflow.get_node('staging.input_spec'):
+        #     sbj_sess_dict = self._run_with_dicom_input(*inputs, **opts)
+        # elif self.workflow.get_node('registration.input_spec'):
+        #     sbj_sess_dict = self._run_with_scan_download(*inputs, **opts)
+        # else:
+        #     sbj_sess_dict = self._run_with_registration_download(*inputs)
+        #
+        # # Return the new {subject: {session: {results}}} dictionary,
+        # # where the results dictionary has keys registration and modeling.
+        # # Each session has the same unqualified XNAT registration
+        # # reconstruction and modeling assessor name. Therefore, make a
+        # # template containing these names and copy the template into the
+        # # {subject: {session: {results}}} output dictionary.
+        # template = {}
+        # if self.registration_resource:
+        #     template['registration'] = self.registration_resource
+        # if self.modeling_assessor:
+        #     template['modeling'] = self.modeling_assessor
+        # output_dict = defaultdict(lambda: defaultdict(dict))
+        # for sbj, sessions in sbj_sess_dict.iteritems():
+        #     for sess in sessions:
+        #         output_dict[sbj][sess] = template.copy()
+        #
+        # return output_dict
+
+    def run_with_dicom_input(self, collection, subject, session,
+                             *inputs, **opts):
         """
-        Runs the OHSU QIN pipeline on the the given inputs, as follows:
-
-        This method returns a *{subject: {session: results}}*  dictionary
-        for the processed sessions, where results is a dictionary with
-        the following items:
-
-        - *registration*: the registration XNAT reconstruction name
-
-        - *modeling*: the modeling XNAT assessor name
-
-        If the :mod:`qipipe.pipeline.distributable' ``DISTRIBUTABLE`` flag
-        is set, then the execution is distributed using the
-        `AIRC Grid Engine`_.
-
-        .. _AIRC Grid Engine: https://everett.ohsu.edu/wiki/GridEngine
-
-        :param inputs: the AIRC subject directories or XNAT session
-            names
-        :param opts: the meth:`qipipe.pipeline.staging.run` options,
-            augmented with the following keyword arguments:
-        :keyword collection: the AIRC collection name defined by
-            :mod:`qipipe.staging.airc_collection`, required if
-            staging is enabled
-        :return: the new *{subject: session: results}*  dictionary
+        Delegates to :meth:`qipipe.pipeline.staging.execute_workflow`.
         """
-        # If staging is enabled, then start with the DICOM inputs.
-        # Otherwise, if registration is enabled, then start with a
-        # scan download. Otherwise, start with registration download.
-        if self.workflow.get_node('staging.input_spec'):
-            sbj_sess_dict = self._run_with_dicom_input(*inputs, **opts)
-        elif self.workflow.get_node('registration.input_spec'):
-            sbj_sess_dict = self._run_with_scan_download(*inputs, **opts)
-        else:
-            sbj_sess_dict = self._run_with_registration_download(*inputs)
+        staging.execute_workflow(self.workflow, collection, subject,
+                                 session, *inputs, **opts)
 
-        # Return the new {subject: {session: {results}}} dictionary,
-        # where the results dictionary has keys registration and modeling.
-        # Each session has the same unqualified XNAT registration
-        # reconstruction and modeling assessor name. Therefore, make a
-        # template containing these names and copy the template into the
-        # {subject: {session: {results}}} output dictionary.
-        template = {}
-        if self.registration_resource:
-            template['registration'] = self.registration_resource
-        if self.modeling_assessor:
-            template['modeling'] = self.modeling_assessor
-        output_dict = defaultdict(lambda: defaultdict(dict))
-        for sbj, sessions in sbj_sess_dict.iteritems():
-            for sess in sessions:
-                output_dict[sbj][sess] = template.copy()
-
-        return output_dict
-
-    def _run_with_dicom_input(self, *inputs, **opts):
-        collection = opts.pop('collection', None)
-        if not collection:
-            raise ArgumentError('QIPipeline is missing the collection argument')
-        opts['workflow'] = self.workflow
-        opts['base_dir'] = self.workflow.base_dir
-        stg_dict = staging.run(collection, *inputs, **opts)
-
-        return {sbj: sess_dict.keys()
-                for sbj, sess_dict in stg_dict.iteritems()}
-
-    def _run_with_scan_download(self, *inputs, **opts):
+    def run_with_scan_download(self, xnat, project, subject, session):
         """
         Runs the execution workflow on downloaded scan image files.
-
-        :param inputs: the XNAT session labels
-        :param opts: the meth:`qipipe.pipeline.qipipeline._run_on_scans`
-            keyword options:
-        :keyword skip_registration: flag indicating whether to register
-            the scan images
-        :return: the the XNAT *{subject: [session]}* dictionary
-        """
-        self._logger.debug("Running the QIN pipeline execution workflow...")
-
-        # The {subject: [session]} return value.
-        result_dict = defaultdict(list)
-
-        # Parse the XNAT hierarchy for the inputs.
-        sess_specs = self._parse_session_labels(inputs)
-        # Validate the project.
-        for spec in sess_specs:
-            prj, _, _ = spec
-            if prj != project():
-                raise ArgumentError("The project %s in the session label %s"
-                                 "differs from the current project %s" %
-                                 (prj, spec, project()))
-
-        # Run the workflow on each session's downloaded scans.
-        with xnat_helper.connection() as xnat:
-            for prj, sbj, sess in sess_specs:
-                # Run the workflow.
-                self._run_on_scans(xnat, prj, sbj, sess, **opts)
-                # Capture the result.
-                result_dict[sbj].append(sess)
-
-        self._logger.debug("Completed the QIN pipeline execution workflow.")
-
-        return result_dict
-
-    def _run_on_scans(self, xnat, project, subject, session, **opts):
-        """
-        Runs the execution workflow on downloaded scan image files.
-
-        :param project: the project name
-        :param subject: the subject name
-        :param session: the session name
-        :param opts: the following keyword options:
-        :keyword skip_registration: flag indicating whether to register
-            the scan images
         """
         self._logger.debug("Processing the %s %s %s scans..." %
                            (project, subject, session))
@@ -275,17 +376,17 @@ class QIPipelineWorkflow(WorkflowBase):
         scans = xnat.get_scans(project, subject, session)
         if not scans:
             raise NotFoundError("The QIN pipeline did not find a %s %s %s"
-                          " scan." % (project, subject, session))
-
-        # Set the workflow input.
-        input_spec = self.workflow.get_node('input_spec')
-        input_spec.inputs.subject = subject
-        input_spec.inputs.session = session
+                                " scan." % (project, subject, session))
 
         # Partition the input scans into those which are already
         # registered and those which need to be registered.
         reg_scans, unreg_scans = self._partition_scans(
             xnat, project, subject, session, scans)
+
+        # Set the workflow input.
+        input_spec = self.workflow.get_node('input_spec')
+        input_spec.inputs.subject = subject
+        input_spec.inputs.session = session
 
         # If registration is enabled, then there is a series iterator
         # node. In that case, set the series iterables to the
@@ -299,53 +400,7 @@ class QIPipelineWorkflow(WorkflowBase):
         # If that is the case, then set the download scan input iterables.
         download_reg = self.workflow.get_node('download_reg')
         if download_reg:
-            # If registration is disabled, then validate that all scans
-            # are registered.
-            if opts.get('skip_registration') and unreg_scans:
-                raise NotFoundError(
-                    "The following %s %s %s scans are not registered: %s" %
-                    (project, subject, session, unreg_scans))
-            # Download each scan file.
             download_reg.iterables = ('scan', reg_scans)
-        
-        # The XNAT scan time series file path. 
-        scan_ts = None
-        # If all scans were registered and there is an uploaded XNAT scan
-        # time series resource, then download it. Otherwise, create and
-        # upload it.
-        if unreg_scans:
-            find_scan_ts = XNATFind(project=project(), subject=subject,
-                                    session=session, resource=SCAN_TS_RSC)
-            if find_scan_ts.run().outputs.xnat_id:
-                scan_ts_rsc = SCAN_TS_RSC
-                dl_scan_ts = XNATDownload(project=project(), subject=subject,
-                                          session=session, resource=SCAN_TS_RSC,
-                                          dest=self.workflow.base_dir))
-                scan_ts = dl_scan_ts.run().outputs.out_file
-            else:
-                
-            
-        
-        
-                exec_wf.connect(input_spec, 'subject',
-                                download_scans, 'subject')
-                exec_wf.connect(input_spec, 'session',
-                                download_scans, 'session')
-                exec_wf.connect(iter_series, 'series',
-                                download_scans, 'scan')
-       # If there is a scan time series, the download it. Otherwise,
-       # create and upload it.
-       if scan_ts_rsc:
-            dl_scan_ts_xfc = XNATFind(project=project())
-            download_scan_ts = pe.Node(dl_scans_xfc, name='download_scan_ts')
-            exec_wf.connect(input_spec, 'subject',
-                            download_scans, 'subject')
-            exec_wf.connect(input_spec, 'session',
-                            download_scans, 'session')
-            exec_wf.connect(iter_series, 'series',
-                            download_scans, 'scan')
-            
-            XnatFind()
 
         # Execute the workflow.
         self._run_workflow(self.workflow)
@@ -360,76 +415,60 @@ class QIPipelineWorkflow(WorkflowBase):
         :return: the [registered, unregistered] scan numbers
         """
         # The XNAT registration object.
-        reg_obj = xnat.get_rscstruction(project, subject, session,
-                                          self.registration_resource)
+        reg_obj = xnat.get_experiment_resource(project, subject, session,
+                                self.registration_resource)
         # If the registration has not yet been performed, then
         # all of the scans are downloaded.
         if not reg_obj.exists():
             return [], scans
-        
+
         # The realigned scan numbers.
         reg_scans = self._registered_scans(reg_obj)
 
         return reg_scans, list(set(scans) - set(reg_scans))
 
     def _registered_scans(self, reg_obj):
-            """
-            Returns the scans which have a corresponding registration
-            reconstruction file.
-
-            :param reg_obj: the XNAT registration reconstruction object
-            :return: the registered scan numbers
-            """
-            # The XNAT registration file names.
-            reg_files = reg_obj.out_resources().fetchone().files().get()
-            # Match on the realigned scan file pattern.
-            matches = ((QIPipelineWorkflow.REG_SERIES_PAT.match(f)
-                        for f in reg_files))
-            
-            return [int(match.group(1)) for match in matches if match]
-
-    def _run_with_registration_download(self, *inputs):
         """
-        Runs the execution workflow on downloaded reconstruction image files.
+        Returns the scans which have a corresponding registration
+        reconstruction file.
 
-        :param inputs: the XNAT reconstruction labels
+        :param reg_obj: the XNAT registration reconstruction object
+        :return: the registered scan numbers
+        """
+        # The XNAT registration file names.
+        reg_files = reg_obj.out_resources().fetchone().files().get()
+        # Match on the realigned scan file pattern.
+        matches = ((QIPipelineWorkflow.REG_SERIES_PAT.match(f)
+                    for f in reg_files))
+
+        return [int(match.group(1)) for match in matches if match]
+
+    def _run_with_registration_download(self, label):
+        """
+        Runs the execution workflow on downloaded registration resource
+        image files.
+
+        :param label: the XNAT session label
         :return: the the XNAT *{subject: [session]}* dictionary
         """
-        self._logger.debug("Running the QIN pipeline execution workflow...")
+        prj, sbj, sess = self._parse_session_label(label)
+        self._logger.debug("Processing the %s %s %s realigned images..." %
+                           (prj, sbj, sess))
 
-        result_dict = defaultdict(list)
+        # Set the project id.
+        project(prj)
+
+        # Set the workflow input.
         exec_wf = self.workflow
         input_spec = exec_wf.get_node('input_spec')
+        input_spec.inputs.subject = sbj
+        input_spec.inputs.session = sess
 
-        for prj, sbj, sess in self._parse_session_labels(inputs):
-            self._logger.debug("Processing the %s %s %s realigned images..." %
-                               (prj, sbj, sess))
+        # Execute the workflow.
+        self._run_workflow(exec_wf)
 
-            # Set the project id.
-            project(prj)
-            # Set the workflow input.
-            input_spec.inputs.subject = sbj
-            input_spec.inputs.session = sess
-
-            # Execute the workflow.
-            self._run_workflow(exec_wf)
-            # Capture the result.
-            result_dict[sbj].append(sess)
-
-        self._logger.debug("Completed the QIN pipeline execution workflow.")
-
-        return result_dict
-
-    def _parse_session_labels(self, labels):
-        """
-        Parse the given XNAT session labels.
-
-        :param labels: the XNAT session labels to parse
-        :return: the [*(project, subject, session)*] name tuples
-        :raise ValueError: if a label is not in
-            *project*``_``*subject*``_``*session* format
-        """
-        return [xnat_helper.parse_session_label(label) for label in labels]
+        self._logger.debug("Completed the %s %s %s QIN pipeline execution." %
+                           (prj, sbj, sess))
 
     def _create_workflow(self, **opts):
         """
@@ -469,10 +508,12 @@ class QIPipelineWorkflow(WorkflowBase):
         exec_wf = pe.Workflow(name='qin_exec', base_dir=base_dir)
 
         # The workflow options.
+        actions = opts.get('actions', ['stage', 'register', 'model'])
         mask_rsc = opts.get('mask')
         bolus_arrival_index = opts.get('bolus_arrival_index')
-        reg_rsc = opts.get('registration')
         scan_ts_rsc = opts.get('scan_time_series')
+        reg_rsc = opts.get('registration')
+        reg_ts_rsc = opts.get('realigned_time_series')
         reg_technique = opts.get('technique')
         skip_staging = opts.get('skip_staging')
         skip_registration = opts.get('skip_registration')
@@ -484,43 +525,36 @@ class QIPipelineWorkflow(WorkflowBase):
             self._logger.debug("Set the XNAT project to %s." % project())
 
         # The modeling workflow.
-        if skip_modeling:
-            self._logger.info("Skipping modeling.")
-            mdl_wf = None
-        else:
-            if skip_registration:
-                if not reg_rsc:
-                    raise ArgumentError(
-                        "The QIN pipeline cannot perform modeling, since the"
-                        " registration workflow is disabled and no realigned"
-                        " images will be downloaded.")
-                self.registration_resource = reg_rsc
+        if 'model' in actions:
             mdl_wf_gen = ModelingWorkflow(base_dir=base_dir)
             mdl_wf = mdl_wf_gen.workflow
             self.modeling_assessor = mdl_wf_gen.assessor
-
-        # The registration workflow. A resubmission registers only those
-        # scans which have not yet been registered.
-        if skip_registration:
-            self._logger.info("Skipping registration.")
-            reg_node = None
         else:
-            reg_inputs = ['subject', 'session', 'in_files',
-                          'bolus_arrival_index', 'mask', 'opts']
+            mdl_wf = None
+
+        # The registration workflow node.
+        if 'register' in actions:
+            reg_inputs = ['subject', 'session', 'resource', 'in_files',
+                          'bolus_arrival_index', 'mask']
             reg_opts = dict(base_dir=base_dir)
             if reg_technique:
                 reg_opts['technique'] = reg_technique
             if reg_rsc:
-                reg_opts['resource'] = reg_rsc
+                self.registration_resource = reg_rsc
+            else:
+                new_reg_rsc = registration.generate_resource_name()
+                self.registration_resource = new_reg_rsc
+            reg_opts['resource'] = self.registration_resource
+            self.registration_resource = reg_opts['resource']
             reg_xfc = Function(input_names=reg_inputs,
                                output_names=['out_files'],
                                function=register_scans)
-            reg_node = pe.Node(reg_xfc, name = 'registration')
-            
+            reg_node = pe.Node(reg_xfc, name='registration', opts=reg_opts)
+        else:
+            self._logger.info("Skipping registration.")
+            reg_node = None
 
-        # The mask workflow.
-        # Unless either registration or modeling are enabled, then
-        # there is no need to create a mask.
+        # Registration and modeling require a mask.
         if (reg_node or mdl_wf) and not mask_rsc:
             mask_wf = MaskWorkflow(base_dir=base_dir).workflow
         else:
@@ -528,12 +562,11 @@ class QIPipelineWorkflow(WorkflowBase):
             mask_wf = None
 
         # The staging workflow.
-        if skip_staging or reg_rsc or mask_rsc:
+        if 'stage' in actions:
+            stg_wf = StagingWorkflow(base_dir=base_dir).workflow
+        else:
             self._logger.info("Skipping staging.")
             stg_wf = None
-        else:
-            # Stage the input DICOM files.
-            stg_wf = StagingWorkflow(base_dir=base_dir).workflow
 
         # Validate that there is at least one constituent workflow.
         if not any([stg_wf, reg_node, mdl_wf]):
@@ -554,6 +587,7 @@ class QIPipelineWorkflow(WorkflowBase):
         if stg_wf or reg_node:
             iter_series_xfc = IdentityInterface(fields=iter_series_fields)
             iter_series = pe.Node(iter_series_xfc, name='iter_series')
+        # Staging requires a DICOM iterator node.
         if stg_wf:
             iter_dicom_xfc = IdentityInterface(fields=['series', 'dicom_file'])
             iter_dicom = pe.Node(iter_dicom_xfc, name='iter_dicom')
@@ -574,21 +608,26 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(iter_dicom, field,
                                 stg_wf, 'iter_dicom.' + field)
 
-        # The registration workflow requires the scans.
+        # The registration workflow requires the scans. If staging is
+        # enabled then collect the staged NiFTI scan images. Otherwise,
+        # download the XNAT NiFTI scan images. In either case, the
+        # staged images are collected in a node named 'staged' with
+        # output 'images'.
         if reg_node or mask_wf:
+            staged = pe.JoinNode(IdentityInterface(fields=['images']),
+                                joinsource='iter_series', name='staged')
             if stg_wf:
-                staged = pe.JoinNode(IdentityInterface(fields=['images']),
-                                    joinsource='iter_series', name='staged')
                 exec_wf.connect(stg_wf, 'output_spec.image', staged, 'images')
-                
-            dl_scans_xfc = XNATDownload(project=project())
-            download_scans = pe.Node(dl_scans_xfc, name='download_scans')
-            exec_wf.connect(input_spec, 'subject',
-                            download_scans, 'subject')
-            exec_wf.connect(input_spec, 'session',
-                            download_scans, 'session')
-            exec_wf.connect(iter_series, 'series',
-                            download_scans, 'scan')
+            else:
+                dl_scans_xfc = XNATDownload(project=project())
+                download_scans = pe.Node(dl_scans_xfc, name='download_scans')
+                exec_wf.connect(input_spec, 'subject',
+                                download_scans, 'subject')
+                exec_wf.connect(input_spec, 'session',
+                                download_scans, 'session')
+                exec_wf.connect(iter_series, 'series',
+                                download_scans, 'scan')
+                exec_wf.connect(download_scans, 'out_file', staged, 'images')
 
         # The mask and modeling workflows require the time series.
         if mask_wf or mdl_wf:
@@ -597,121 +636,83 @@ class QIPipelineWorkflow(WorkflowBase):
             if scan_ts_rsc:
                 dl_scan_ts_xfc = XNATDownload(project=project(),
                                               resource=scan_ts_rsc)
-                dl_scan_ts = pe.Node(dl_scan_ts_xfc, name='download_scan_time_series')
-                exec_wf.connect(input_spec, 'subject' dl_scan_ts, 'subject')
+                dl_scan_ts = pe.Node(dl_scan_ts_xfc,
+                                     name='download_scan_time_series')
+                exec_wf.connect(input_spec, 'subject', dl_scan_ts, 'subject')
                 exec_wf.connect(input_spec, 'session', dl_scan_ts, 'session')
-                exec_wf.connect(iter_series, 'series', dl_scan_ts, 'scan')
-            elif stg_wf:
-                # Collect the staged files.
-                staged = pe.JoinNode(IdentityInterface(fields=['images']),
-                                    joinsource='iter_series', name='staged')
-                exec_wf.connect(stg_wf, 'output_spec.image', staged, 'images')
+            else:
                 # Merge the staged files.
-                dce_merge = pe.Node(MergeNifti(), name='dce_merge')
-                exec_wf.connect(staged, 'images', dce_merge, 'in_files')
+                merge_scans = pe.Node(MergeNifti(out_format=SCAN_TS_RSC),
+                                      name='merge_scans')
+                exec_wf.connect(staged, 'images', merge_scans, 'in_files')
                 # Upload the time series.
-                ul_scan_ts_xfc = XNATUpload(project=project(), resource=SCAN_TS_RSC)
-                ul_scan_ts = pe.Node(ul_scan_ts_xfc, name='upload_scan_time_series')
-                exec_wf.connect(input_spec, 'subject' ul_scan_ts, 'subject')
+                ul_scan_ts_xfc = XNATUpload(project=project(),
+                                            resource=SCAN_TS_RSC)
+                ul_scan_ts = pe.Node(ul_scan_ts_xfc,
+                                     name='upload_scan_time_series')
+                exec_wf.connect(input_spec, 'subject', ul_scan_ts, 'subject')
                 exec_wf.connect(input_spec, 'session', ul_scan_ts, 'session')
-        
-        # If the mask workflow is enabled, then make the mask.
-        if mask_wf:
-            exec_wf.connect(input_spec, 'subject',
-                            mask_wf, 'input_spec.subject')
-            exec_wf.connect(input_spec, 'session',
-                            mask_wf, 'input_spec.session')
-            exec_wf.connect(staged, 'images',
-                            mask_wf, 'input_spec.images')
-        elif mask_rsc and (reg_node or mdl_wf):
-            dl_xfc = XNATDownload(project=project(), reconstruction=mask_rsc)
-            download_mask = pe.Node(dl_xfc, name='download_mask')
-            exec_wf.connect(input_spec, 'subject', download_mask, 'subject')
-            exec_wf.connect(input_spec, 'session', download_mask, 'session')
-        
-        # The registration and modeling workflows require a mask. 
-        if mask_rsc and (reg_node or mdl_wf):
-            dl_mask_xfc = XNATDownload(project=project(), resource=mask_rsc)
-            download_mask = pe.Node(dl_mask_xfc, name='download_mask')
-            exec_wf.connect(input_spec, 'subject', download_mask, 'subject')
-            exec_wf.connect(input_spec, 'session', download_mask, 'session')
-        
-        # Merge the realigned data to 4D.
-        dce_merge = pe.Node(MergeNifti(), name='dce_merge')
-        workflow.connect(input_spec, 'images', dce_merge, 'in_files')
-        # Upload the realigned time series to XNAT.
-        upload_reg_ts = pe.Node(XNATUpload(project=project(), resource=TIME_SERIES),
-                            name='upload_reg_ts')
-        workflow.connect(input_spec, 'subject', upload_reg_ts, 'subject')
-        workflow.connect(input_spec, 'session', upload_reg_ts, 'session')
-        workflow.connect(dce_merge, 'out_file', upload_reg_ts, 'in_files')
+                exec_wf.connect(merge_scans, 'out_file',
+                                ul_scan_ts, 'in_files')
 
-        # If the mask workflow is enabled, then make the mask.
-        # Otherwise, download the mask if necessary.
-        if mask_wf:
-            exec_wf.connect(input_spec, 'subject',
-                            mask_wf, 'input_spec.subject')
-            exec_wf.connect(input_spec, 'session',
-                            mask_wf, 'input_spec.session')
-            exec_wf.connect(staged, 'images',
-                            mask_wf, 'input_spec.images')
-        elif mask_rsc and (reg_node or mdl_wf):
-            dl_xfc = XNATDownload(project=project(), reconstruction=mask_rsc)
-            download_mask = pe.Node(dl_xfc, name='download_mask')
-            exec_wf.connect(input_spec, 'subject', download_mask, 'subject')
-            exec_wf.connect(input_spec, 'session', download_mask, 'session')
+        # Registration and modeling require a mask.
+        if reg_node or mdl_wf:
+            if mask_rsc:
+                dl_mask_xfc = XNATDownload(project=project(), resource=mask_rsc)
+                download_mask = pe.Node(dl_mask_xfc, name='download_mask')
+                exec_wf.connect(input_spec, 'subject', download_mask, 'subject')
+                exec_wf.connect(input_spec, 'session', download_mask, 'session')
+            else:
+                assert mask_wf, "The mask workflow is missing"
+                exec_wf.connect(input_spec, 'subject',
+                                mask_wf, 'input_spec.subject')
+                exec_wf.connect(input_spec, 'session',
+                                mask_wf, 'input_spec.session')
+                exec_wf.connect(merge_scans, 'out_file',
+                                mask_wf, 'input_spec.time_series')
 
-        # The 4D time series file is created from the registration output
-        # realigned images. The time series is used by modeling.
-        ts_base = "%s_ts" % self.registration_resource
-
-        # If the reference workflow is enabled, then register the staged
-        # images.
+        # If registration is enabled, then register the staged images.
         if reg_node:
             exec_wf.connect(input_spec, 'subject', reg_node, 'subject')
             exec_wf.connect(input_spec, 'session', reg_node, 'session')
-            exec_wf.connect(staged, 'images', reg_node, 'in_files')
             # The staged input.
-            if stg_wf:
-                exec_wf.connect(stg_wf, 'output_spec.image', reg_node, 'image')
-            else:
-                exec_wf.connect(staged, 'out_file', reg_node, 'in_files')
+            exec_wf.connect(staged, 'images', reg_node, 'in_files')
             # The mask input.
             if mask_wf:
                 exec_wf.connect(mask_wf, 'output_spec.mask', reg_node, 'mask')
             else:
                 exec_wf.connect(download_mask, 'out_file', reg_node, 'mask')
-            
+
             # Collect the registration realigned images output.
             new_reg_xfc = IdentityInterface(fields=['images'])
             new_reg = pe.JoinNode(new_reg_xfc, joinsource='iter_series',
                                   name='new_reg')
             exec_wf.connect(reg_node, 'out_files', new_reg, 'images')
-            
+
             # If the registration reconstruction name was specified,
-            # then download previously registered realigned images.
+            # then download previously realigned images.
             if reg_rsc:
                 reg_dl_xfc = XNATDownload(project=project(),
-                                          reconstruction=reg_rsc)
+                                          resource=reg_rsc)
                 download_reg = pe.Node(reg_dl_xfc, name='download_reg')
                 exec_wf.connect(input_spec, 'subject',
                                 download_reg, 'subject')
                 exec_wf.connect(input_spec, 'session',
                                 download_reg, 'session')
-                downloaded_reg_xfc = IdentityInterface(fields=['images'])
-                downloaded_reg = pe.JoinNode(downloaded_reg_xfc,
-                                             joinsource=download_reg,
-                                             name='downloaded_reg')
+                old_reg_xfc = IdentityInterface(fields=['images'])
+                old_reg = pe.JoinNode(old_reg_xfc, joinsource=download_reg,
+                                      name='old_reg')
                 exec_wf.connect(download_reg, 'out_file',
-                                downloaded_reg, 'images')
+                                old_reg, 'images')
 
                 # Merge the previously and newly realigned images.
                 concat_reg = pe.Node(Merge(2), name='concat_reg')
-                exec_wf.connect(downloaded_reg, 'images', concat_reg, 'in1')
+                exec_wf.connect(old_reg, 'images', concat_reg, 'in1')
                 exec_wf.connect(new_reg, 'images', concat_reg, 'in2')
 
             # Merge the realigned images to 4D.
-            merge_reg = pe.Node(MergeNifti(out_format=ts_base),
+            reg_ts_rsc = self.registration_resource + '_ts'
+            merge_reg = pe.Node(MergeNifti(out_format=reg_ts_rsc),
                                 name='merge_reg')
             if reg_rsc:
                 exec_wf.connect(concat_reg, 'out', merge_reg, 'in_files')
@@ -720,7 +721,7 @@ class QIPipelineWorkflow(WorkflowBase):
 
             # Upload the realigned time series to XNAT.
             upload_reg_ts_xfc = XNATUpload(project=project(),
-                reconstruction=self.registration_resource)
+                                           resource=reg_ts_rsc)
             upload_reg_ts = pe.Node(upload_reg_ts_xfc, name='upload_reg_ts')
             exec_wf.connect(input_spec, 'subject', upload_reg_ts, 'subject')
             exec_wf.connect(input_spec, 'session', upload_reg_ts, 'session')
@@ -747,12 +748,12 @@ class QIPipelineWorkflow(WorkflowBase):
             if reg_node:
                 exec_wf.connect(merge_reg, 'out_file',
                                 mdl_wf, 'input_spec.time_series')
-            else:
+            elif reg_rsc:
                 # The 4D time series XNAT file name.
-                ts_fname = ts_base + '.nii.gz'
+                ts_fname = reg_rsc + '_ts.nii.gz'
                 # Download the XNAT time series file.
                 ts_dl_xfc = XNATDownload(project=project(),
-                                         reconstruction=reg_rsc,
+                                         resource=reg_rsc,
                                          file=ts_fname)
                 download_ts = pe.Node(ts_dl_xfc, name='download_ts')
                 exec_wf.connect(input_spec, 'subject',
@@ -761,6 +762,11 @@ class QIPipelineWorkflow(WorkflowBase):
                                 download_ts, 'session')
                 exec_wf.connect(download_ts, 'out_file',
                                 mdl_wf, 'input_spec.time_series')
+            else:
+                raise ArgumentError(
+                    "The QIN pipeline cannot perform modeling, since the"
+                    " registration workflow is disabled and no registration"
+                    " resource was specified.")
 
         # Set the configured workflow node inputs and plug-in options.
         self._configure_nodes(exec_wf)
@@ -773,16 +779,16 @@ class QIPipelineWorkflow(WorkflowBase):
         return exec_wf
 
 
-def register_scans(subject, session, in_files, bolus_arrival_index, mask,
-                   opts):
+def register_scans(subject, session, in_files, bolus_arrival_index,
+                   mask, opts):
     """
     Runs the registration workflow on the given session scan images.
-    
+
     :Note: contrary to Python convention, the opts method parameter
     is a required dictionary rather than a keyword aggregate (i.e.,
     ``**opts``). The Nipype Function interface does not support method
     aggregates.
-    
+
     :param subject: the subject name
     :param session: the session name
     :param in_files: the input session scan images
@@ -793,6 +799,6 @@ def register_scans(subject, session, in_files, bolus_arrival_index, mask,
     :return: the realigned image file path array
     """
     from qipipe.pipeline import registration
-    
+
     return registration.run(subject, session, images, bolus_arrival_index,
                             mask, **opts)
