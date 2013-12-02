@@ -50,8 +50,6 @@ def hierarchical_label(*names):
     'QIN_Breast003_Session01'
     >>> hierarchical_label('QIN', 'Breast003', 'QIN_Breast003_Session01')
     'QIN_Breast003_Session01'
-    >>> hierarchical_label('QIN', 'Breast003', 'QIN_Breast003_Session01', 'reg_pzR3tW')
-    'QIN_Breast003_Session01_reg_pzR3tW'
 
     :param names: the object names
     :return: the corresponding XNAT label
@@ -71,38 +69,25 @@ def hierarchical_label(*names):
         return last
 
 
-def parse_hierarchical_label(label):
-    """
-    Returns the names for the given XNAT session
-    label, as defined by :meth:`hierarchical_label`.
-
-    Example:
-
-    >>> from qipipe.helpers.xnat_helper import parse_hierarchical_label
-    >>> parse_hierarchical_label('QIN_Breast003_Session01')
-    >>> ('QIN', 'Breast003', 'Session01')
-
-    :param: the XNAT session label
-    :return: the name tuple
-    """
-    return tuple(label.split('_'))
-
-
 def parse_session_label(label):
     """
     Parses the given XNAT session label into *project*, *subject* and
-    *session* based on the :meth:`hierarchical_label`
-    naming standard.
+    *session* based on the :meth:`hierarchical_label` naming
+    standard.
 
     :param label: the label to parse
     :return: the *(project, subject, session)* tuple
+    :raise ValueError: if there fewer than three hierarchical levels
     """
-    names = parse_hierarchical_label(label)
-    if len(names) != 3:
+    names = label.split('_')
+    if len(names) < 3:
         raise ValueError("The XNAT session label argument is not in"
                          " project_subject_session format: %s" % label)
+    sess = names.pop()
+    sbj = names.pop()
+    prj = '_'.join(names)
 
-    return names
+    return (prj, sbj, sess)
 
 
 def delete_subjects(project, *subjects):
