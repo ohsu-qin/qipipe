@@ -16,7 +16,7 @@ from .modeling import ModelingWorkflow
 from ..interfaces import (XNATDownload, XNATUpload)
 from ..helpers import xnat_helper
 from ..helpers.logging_helper import logger
-from ..helpers import bolus_arrival
+from ..helpers.bolus_arrival import bolus_arrival_index
 
 from ..staging import staging_helper
 
@@ -510,7 +510,6 @@ class QIPipelineWorkflow(WorkflowBase):
         # The workflow options.
         actions = opts.get('actions', ['stage', 'register', 'model'])
         mask_rsc = opts.get('mask')
-        bolus_arrival_index = opts.get('bolus_arrival_index')
         scan_ts_rsc = opts.get('scan_time_series')
         reg_rsc = opts.get('registration')
         reg_ts_rsc = opts.get('realigned_time_series')
@@ -586,6 +585,7 @@ class QIPipelineWorkflow(WorkflowBase):
         if stg_wf:
             input_fields.append('collection')
             iter_series_fields.append('dest')
+        
         # The workflow input node.
         input_spec_xfc = IdentityInterface(fields=input_fields)
         input_spec = pe.Node(input_spec_xfc, name='input_spec')
@@ -636,15 +636,16 @@ class QIPipelineWorkflow(WorkflowBase):
                                 download_scans, 'scan')
                 exec_wf.connect(download_scans, 'out_file', staged, 'images')
 
-        # The mask and modeling workflows require the time series.
-        if mask_wf or mdl_wf:
+
+        # Registration and modeling require a time series, mask and bolus arrival.
+        if reg_node or mdl_wf:
             # If a time series resource name was specified, then download
             # the time series. Otherwise, make the time series.
             if scan_ts_rsc:
                 dl_scan_ts_xfc = XNATDownload(project=project(),
                                               resource=scan_ts_rsc)
                 scan_ts = pe.Node(dl_scan_ts_xfc,
-                                     name='download_scan_time_series')
+                                  name='download_scan_time_series')
                 exec_wf.connect(input_spec, 'subject', scan_ts, 'subject')
                 exec_wf.connect(input_spec, 'session', scan_ts, 'session')
             else:
@@ -661,8 +662,8 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(input_spec, 'session', ul_scan_ts, 'session')
                 exec_wf.connect(scan_ts, 'out_file', ul_scan_ts, 'in_files')
 
-        # Registration and modeling require a mask.
-        if reg_node or mdl_wf:
+            # If a mask resource name was specified, then download the mask.
+            # Otherwise, make the mask.
             if mask_rsc:
                 dl_mask_xfc = XNATDownload(project=project(), resource=mask_rsc)
                 download_mask = pe.Node(dl_mask_xfc, name='download_mask')
@@ -676,21 +677,13 @@ class QIPipelineWorkflow(WorkflowBase):
                                 mask_wf, 'input_spec.session')
                 exec_wf.connect(scan_ts, 'out_file',
                                 mask_wf, 'input_spec.time_series')
-
-        # Registration and modeling require the bolus arrival index.
-        if (reg_node or mdl_wf):
-            if bolus_arrival_index:
-                # The bolus arrival is set in the input.
-                input_spec.inputs.bolus_arrival_index = bolus_arrival_index
-                bolus_arv = input_spec
-            if not bolus_arrival_index:
-                # The bolus arrival is computed from the scan time series.
-                bolus_arv_func = bolus_arrival.bolus_arrival_index
-                bolus_arv_xfc = Function(input_names=['time_series'],
-                                         output_names=['bolus_arrival_index'],
-                                         function=bolus_arv_func)
-                bolus_arv = pe.Node(bolus_arv_xfc, name='bolus_arrival_index')
-                exec_wf.connect(scan_ts, 'out_file', bolus_arv, 'time_series')
+            
+            # Compute the bolus arrival from the scan time series.
+            bolus_arv_xfc = Function(input_names=['time_series'],
+                                     output_names=['bolus_arrival_index'],
+                                     function=bolus_arrival_index)
+            bolus_arv = pe.Node(bolus_arv_xfc, name='bolus_arrival_index')
+            exec_wf.connect(scan_ts, 'out_file', bolus_arv, 'time_series')
 
         # If registration is enabled, then register the staged images.
         if reg_node:
@@ -703,6 +696,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(mask_wf, 'output_spec.mask', reg_node, 'mask')
             else:
                 exec_wf.connect(download_mask, 'out_file', reg_node, 'mask')
+            # The bolus arrival.
             exec_wf.connect(bolus_arv, 'bolus_arrival_index',
                             reg_node, 'bolus_arrival_index')
 
