@@ -388,9 +388,7 @@ class QIPipelineWorkflow(WorkflowBase):
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
 
-        # If registration is enabled, then there is a series iterator
-        # node. In that case, set the series iterables to the
-        # unregistered scans.
+        # Set the series iterables to the unregistered scans.
         iter_series = self.workflow.get_node('iter_series')
         if iter_series:
             iter_series.iterables = ('series', unreg_scans)
@@ -443,32 +441,32 @@ class QIPipelineWorkflow(WorkflowBase):
 
         return [int(match.group(1)) for match in matches if match]
 
-    def _run_with_registration_download(self, label):
-        """
-        Runs the execution workflow on downloaded registration resource
-        image files.
-
-        :param label: the XNAT session label
-        :return: the the XNAT *{subject: [session]}* dictionary
-        """
-        prj, sbj, sess = self._parse_session_label(label)
-        self._logger.debug("Processing the %s %s %s realigned images..." %
-                           (prj, sbj, sess))
-
-        # Set the project id.
-        project(prj)
-
-        # Set the workflow input.
-        exec_wf = self.workflow
-        input_spec = exec_wf.get_node('input_spec')
-        input_spec.inputs.subject = sbj
-        input_spec.inputs.session = sess
-
-        # Execute the workflow.
-        self._run_workflow(exec_wf)
-
-        self._logger.debug("Completed the %s %s %s QIN pipeline execution." %
-                           (prj, sbj, sess))
+    # def _run_with_registration_download(self, project, subject, session):
+    #     """
+    #     Runs the execution workflow on downloaded registration resource
+    #     image files.
+    # 
+    #     :param label: the XNAT session label
+    #     :return: the the XNAT *{subject: [session]}* dictionary
+    #     """
+    #     prj, sbj, sess = self._parse_session_label(label)
+    #     self._logger.debug("Processing the %s %s %s realigned images..." %
+    #                        (project, subject, session))
+    # 
+    #     # Set the project id.
+    #     project(project)
+    # 
+    #     # Set the workflow input.
+    #     exec_wf = self.workflow
+    #     input_spec = exec_wf.get_node('input_spec')
+    #     input_spec.inputs.subject = subject
+    #     input_spec.inputs.session = session
+    # 
+    #     # Execute the workflow.
+    #     self._run_workflow(exec_wf)
+    # 
+    #     self._logger.debug("Completed the %s %s %s QIN pipeline execution." %
+    #                        (project, subject, session))
 
     def _create_workflow(self, **opts):
         """
