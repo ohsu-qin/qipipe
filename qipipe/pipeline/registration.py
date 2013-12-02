@@ -9,7 +9,7 @@ from nipype.interfaces.ants import (AverageImages, Registration,
 from nipype.interfaces import fsl
 from nipype.interfaces.dcmstack import CopyMeta
 from .. import project
-from ..interfaces import Copy, XNATUpload
+from ..interfaces import (Copy, XNATUpload)
 from ..helpers import (bolus_arrival, file_helper)
 from .workflow_base import WorkflowBase
 from ..helpers.logging_helper import logger
