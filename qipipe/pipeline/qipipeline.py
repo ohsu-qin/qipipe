@@ -617,7 +617,7 @@ class QIPipelineWorkflow(WorkflowBase):
             if stg_wf:
                 exec_wf.connect(stg_wf, 'output_spec.image', staged, 'images')
             else:
-                dl_scans_xfc = XNATDownload(project=project())
+                dl_scans_xfc = XNATDownload(project=project(), resource='NIFTI')
                 download_scans = pe.Node(dl_scans_xfc, name='download_scans')
                 exec_wf.connect(input_spec, 'subject',
                                 download_scans, 'subject')
