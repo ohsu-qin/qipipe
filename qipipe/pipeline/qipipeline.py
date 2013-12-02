@@ -820,5 +820,5 @@ def register_scans(subject, session, in_files, bolus_arrival_index,
     """
     from qipipe.pipeline import registration
 
-    return registration.run(subject, session, images, bolus_arrival_index,
+    return registration.run(subject, session, in_files, bolus_arrival_index,
                             mask, **opts)
