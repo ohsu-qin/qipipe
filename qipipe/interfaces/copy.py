@@ -9,7 +9,8 @@ class CopyInputSpec(BaseInterfaceInputSpec):
     in_file = traits.Either(File, Directory, exists=True, mandatory=True,
                             desc='The file or directory to copy')
 
-    dest = Directory(mandatory=True, desc='The destination directory path')
+    dest = Directory(desc='The destination directory path'
+                          ' (default current directory)')
 
     out_fname = traits.Either(File, Directory,
                               desc='The destination file name'
@@ -38,19 +39,23 @@ class Copy(BaseInterface):
 
         return outputs
 
-    def _copy(self, in_file, dest, out_fname=None):
+    def _copy(self, in_file, dest=None, out_fname=None):
         """
         Copies the given file.
     
         :param in_file: the path of the file or directory to copy
         :param dest: the destination directory path
+            (default is the current directory)
         :param out_fname: the destination file name
             (default is the input file name)
         :return: the copied file path
         """
-        dest = os.path.abspath(dest)
-        if not os.path.exists(dest):
-            os.makedirs(dest)
+        if dest:
+            dest = os.path.abspath(dest)
+            if not os.path.exists(dest):
+                os.makedirs(dest)
+        else:
+            dest = os.getcwd()
         if not out_fname:
             _, out_fname = os.path.split(in_file)
         out_file = os.path.join(dest, out_fname)
