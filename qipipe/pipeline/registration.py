@@ -146,9 +146,8 @@ class RegistrationWorkflow(WorkflowBase):
         # Sort the images by series number.
         images = sorted(images)
         
-        # The initial reference image is the immediate bolus arrival successor.
-        # The scans to register, excluding the initial reference.
-        ref_0_image = images.pop(bolus_arrival_index + 1)
+        # The initial reference image occurs at bolus arrival.
+        ref_0_image = images.pop(bolus_arrival_index)
         
         # The execution workflow.
         exec_wf = self._create_execution_workflow(bolus_arrival_index,
@@ -479,35 +478,24 @@ def connect_reference(workflow, realigned_nodes, input_nodes,
     :param bolus_arrival_index: the bolus uptake series index
     :param initial_reference: the starting reference input node
     """
-    # The reference is the successor realignment up to the bolus arrival. 
-    for i in range(0, bolus_arrival_index):
+    # The number of input and realigned nodes.
+    node_cnt = len(input_nodes)
+    # The reference is the successor realignment up to the bolus arrival.
+    end = min(bolus_arrival_index - 1, node_cnt - 1)
+    for i in range(0, end):
         workflow.connect(realigned_nodes[i + 1], 'out_file',
                          input_nodes[i], 'reference')
-
-
-        print ">>CR %s -> %s" % (realigned_nodes[i + 1], input_nodes[i])
- 
- 
     
-    # The reference for the bolus arrival node and the initial reference
-    # successor node is the initial reference.
-    start = bolus_arrival_index
-    end = min(bolus_arrival_index + 2, len(input_nodes))
+    # The reference for the bolus arrival predecessor and successor
+    # is the initial reference.
+    start = bolus_arrival_index - 1
+    end = min(bolus_arrival_index + 1, node_cnt)
     for i in range(start, end):
         input_nodes[i].inputs.reference = initial_reference
-        
-        
-        print ">>CR %s -< %s" % (input_nodes[i], initial_reference)
-    
     
     # The reference is the predecessor realignment for the remaining
     # nodes.
-    for i in range(bolus_arrival_index + 1, len(input_nodes) - 1):
+    for i in range(bolus_arrival_index, node_cnt - 1):
         workflow.connect(realigned_nodes[i], 'out_file',
                          input_nodes[i + 1], 'reference')
-
-
-        print ">>CR %s -> %s" % (realigned_nodes[i], input_nodes[i + 1])
-
-
 
