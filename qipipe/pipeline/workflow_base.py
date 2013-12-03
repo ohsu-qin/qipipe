@@ -184,7 +184,7 @@ class WorkflowBase(object):
         self._logger.debug("Executing the workflow %s in %s..." %
                          (workflow.name, workflow.base_dir))
         with xnat_helper.connection():
-            pass #workflow.run(**args)
+            workflow.run(**args)
 
     def _inspect_workflow_inputs(self, workflow):
         """
