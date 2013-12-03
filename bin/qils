@@ -31,6 +31,15 @@ def main(argv=sys.argv):
     with xnat_helper.connection() as xnat:
         # The container accessor read method, e.g. scans.
         ctr_meth = opts.pop('container_method', None)
+        
+        # The resource, in_resource or out_resource option.
+        rsc_type = next(((key for key in opts.iterkeys()
+                         if key.endswith('resource'))), None)
+        if rsc_type:
+            rsc_opt = {rsc_type: opts.pop(rsc_type)}
+        else:
+            rsc_opt = {}
+        
         # The parent XNAT object. If there are no additional selection
         # options, then the parent object is the session XNAT experiment.
         # Additional options select a child of the experiment, e.g. a
@@ -39,13 +48,6 @@ def main(argv=sys.argv):
         if not xnat_obj:
             raise ValueError("XNAT resource %s %s %s %s does not exist" %
                              (prj, sbj, sess, opts))
-        # The resource, in_resource or out_resource option.
-        rsc_type = next(((key for key in opts.iterkeys()
-                         if key.endswith('resource'))), None)
-        if rsc_type:
-            rsc_opt = {rsc_type: opts[rsc_type]}
-        else:
-            rsc_opt = {}
         # Print the file names.
         for f in _files(xnat_obj, ctr_meth, **rsc_opt):
             print f
