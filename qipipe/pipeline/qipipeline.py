@@ -505,7 +505,7 @@ class QIPipelineWorkflow(WorkflowBase):
             base_dir = tempfile.mkdtemp()
 
         # The execution workflow.
-        exec_wf = pe.Workflow(name='qin_exec', base_dir=base_dir)
+        exec_wf = pe.Workflow(name='qipipeline', base_dir=base_dir)
 
         # The workflow options.
         actions = opts.get('actions', ['stage', 'register', 'model'])
