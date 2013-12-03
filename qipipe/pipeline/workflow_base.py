@@ -184,7 +184,7 @@ class WorkflowBase(object):
         self._logger.debug("Executing the workflow %s in %s..." %
                          (workflow.name, workflow.base_dir))
         with xnat_helper.connection():
-            workflow.run(**args)
+            pass #workflow.run(**args)
 
     def _inspect_workflow_inputs(self, workflow):
         """
@@ -271,8 +271,8 @@ class WorkflowBase(object):
         for node in nodes:
             # An input {field: value} dictionary to format a debug log message.
             input_dict = {}
-            # The node interface class configuration entry.
-            cfg = self._interface_configuration(node.interface.__class__)
+            # The node configuration.
+            cfg = self._node_configuration(workflow, node)
 
             # Set the node inputs or plug-in argument.
             for attr, value in cfg.iteritems():
@@ -320,6 +320,38 @@ class WorkflowBase(object):
                                   " were set from the configuration: %s" %
                                  (workflow.name, node, input_dict))
 
+    def _node_configuration(self, workflow, node):
+        """
+        Returns the {parameter: value} dictionary defined for the given
+        node in this WorkflowBase's configuration. The configuration topic
+        is determined as follows:
+        
+        * the node class, as described in :meth:`_interface_configuration`
+        
+        * the node name, qualified by the node hierarchy if the node is
+          defined in a child workflow
+        
+        :param node: the interface class to check
+        :return: the corresponding {field: value} dictionary
+        """
+        return (self._interface_configuration(node.interface.__class__) or
+         self._node_name_configuration(workflow, node) or EMPTY_DICT)
+
+    def _node_name_configuration(self, workflow, node):
+        """
+        Returns the {parameter: value} dictionary defined for the given
+        node name, qualified by the node hierarchy if the node is
+        defined in a child workflow.
+        
+        :param workflow: the active workflow
+        :param node: the interface class to check
+        :return: the corresponding {field: value} dictionary
+        """
+        if node._hierarchy == workflow.name:
+            return self.configuration.get(node.name)
+        else:
+            return self.configuration.get(node.fullname)
+
     def _interface_configuration(self, klass):
         """
         Returns the {parameter: value} dictionary defined for the given
@@ -353,7 +385,3 @@ class WorkflowBase(object):
                     abbr = prefix + name
                 else:
                     abbr = None
-
-        # Use a constant for the default return value, since most
-        # interfaces do not have a configuration entry.
-        return EMPTY_DICT
