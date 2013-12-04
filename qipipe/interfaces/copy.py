@@ -56,7 +56,11 @@ class Copy(BaseInterface):
                 os.makedirs(dest)
         else:
             dest = os.getcwd()
-        if not out_fname:
+        if out_fname:
+            # Remove the out file name directory.
+            _, out_fname = os.path.split(out_fname)
+        else:
+            # The default out file name is the input file name. 
             _, out_fname = os.path.split(in_file)
         out_file = os.path.join(dest, out_fname)
         if os.path.isdir(in_file):
