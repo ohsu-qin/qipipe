@@ -8,8 +8,11 @@ from test.helpers.logging_helper import logger
 RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'touch')
 """The test results directory."""
 
-FNAME = os.path.join(RESULTS, 'empty.txt')
-"""The file to create."""
+FNAME = 'empty.txt'
+"""The name of the file to create."""
+
+PATH = os.path.join(RESULTS, FNAME)
+"""The path of the file to create."""
 
 
 class TestTouch(object):
@@ -22,23 +25,39 @@ class TestTouch(object):
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
 
-    def test_touch(self):
+    def test_touch_with_dir(self):
         # Touch the file.
-        touch = Touch(fname=FNAME)
+        touch = Touch(in_file=PATH)
         result = touch.run()
         # Verify the result.
-        assert_equal(result.outputs.fname, FNAME, "Touch target file name"
-                     " incorrect: %s" % result.outputs.fname)
-        assert_true(os.path.exists(FNAME), "Touch target file does not"
-                    " exist: %s" % FNAME)
+        assert_equal(result.outputs.out_file, PATH, "Touch target file name"
+                     " incorrect: %s" % result.outputs.out_file)
+        assert_true(os.path.exists(PATH), "Touch target file does not"
+                    " exist: %s" % PATH)
 
         # Retouch the file.
         result = touch.run()
         # Verify the result.
-        assert_equal(result.outputs.fname, FNAME, "Touch target file name"
-                     " incorrect: %s" % result.outputs.fname)
-        assert_true(os.path.exists(FNAME), "Touch target file does not"
-                    " exist: %s" % FNAME)
+        assert_equal(result.outputs.out_file, PATH, "Touch target file name"
+                     " incorrect: %s" % result.outputs.out_file)
+        assert_true(os.path.exists(PATH), "Touch target file does not"
+                    " exist: %s" % PATH)
+
+    def test_touch_without_dir(self):
+        os.makedirs(RESULTS)
+        prev_wd = os.getcwd()
+        os.chdir(RESULTS)
+        try:
+            # Touch the file.
+            touch = Touch(in_file=FNAME)
+            result = touch.run()
+        finally:
+            os.chdir(prev_wd)
+        # Verify the result.
+        assert_equal(result.outputs.out_file, PATH, "Touch target file name"
+                     " incorrect: %s" % result.outputs.out_file)
+        assert_true(os.path.exists(PATH), "Touch target file does not"
+                    " exist: %s" % PATH)
 
 
 if __name__ == "__main__":
