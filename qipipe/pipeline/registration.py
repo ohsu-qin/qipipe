@@ -415,9 +415,10 @@ def gen_realign_filename(resource, in_file):
     :param in_file: the input scan image file name
     :return: the registered image file name, without a directory
     """
+    import os
     from qipipe.helpers import file_helper
-    _, in_fname = os.path.split(in_file)
 
+    _, in_fname = os.path.split(in_file)
     base, ext = file_helper.splitexts(in_fname)
 
     return "%s_%s%s" % (base, resource, ext)
