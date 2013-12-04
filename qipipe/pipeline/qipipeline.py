@@ -643,7 +643,6 @@ class QIPipelineWorkflow(WorkflowBase):
                                 download_scans, 'scan')
                 exec_wf.connect(download_scans, 'out_file', staged, 'images')
 
-
         # Registration and modeling require a time series, mask and bolus arrival.
         if reg_node or mdl_wf:
             # If a time series resource name was specified, then download
