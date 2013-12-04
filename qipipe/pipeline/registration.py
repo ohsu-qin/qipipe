@@ -124,13 +124,13 @@ class RegistrationWorkflow(WorkflowBase):
 
         rsc = opts.pop('resource', None)
         if not rsc:
-            rsc = self.generate_resource_name()
+            rsc = generate_resource_name()
         self.resource = rsc
         """The XNAT resource name used for all runs against this workflow
         instance."""
 
-        self.workflow = self._create_reusable_workflow(**opts)
-        """The registration workflow."""
+        self.workflow = self._create_realignment_workflow(**opts)
+        """The registration realignment workflow."""
 
     def run(self, subject, session, images, bolus_arrival_index, mask):
         """
@@ -158,7 +158,10 @@ class RegistrationWorkflow(WorkflowBase):
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
         input_spec.inputs.mask = mask
-        input_spec.iterables = ('image', images)
+        
+        # Iterate over the images
+        iter_image = exec_wf.get_node('iter_image')
+        iter_image.iterables = ('image', images)
         
         # Execute the workflow.
         self._logger.debug("Executing the %s workflow on %s %s..." %
@@ -202,55 +205,59 @@ class RegistrationWorkflow(WorkflowBase):
         # The execution workflow.
         exec_wf = pe.Workflow(name='reg_exec', base_dir=self.workflow.base_dir)
         
-        # Set the registration workflow inputs.
-        input_fields = ['subject', 'session', 'image', 'mask', 'reference']
+        # The registration workflow input.
+        input_fields = ['subject', 'session', 'image', 'mask', 'ref_0', 'resource']
         input_spec = pe.Node(IdentityInterface(fields=input_fields),
                              name='input_spec')
+        input_spec.inputs.ref_0 = ref_0_image
         exec_wf.connect(input_spec, 'subject',
                         self.workflow, 'input_spec.subject')
         exec_wf.connect(input_spec, 'session',
                         self.workflow, 'input_spec.session')
-        exec_wf.connect(input_spec, 'image',
-                        self.workflow, 'input_spec.image')
         exec_wf.connect(input_spec, 'mask',
                         self.workflow, 'input_spec.mask')
-        exec_wf.connect(input_spec, 'reference',
-                        self.workflow, 'input_spec.reference')
+        input_spec.inputs.resource = self.resource
         
-        # Copy the initial reference and output realigned images
-        # into the destination directory.
+        # The input images are iterable. The reference is set by the
+        # connect_reference method below.          
+        iter_image = pe.Node(IdentityInterface(fields=['image', 'reference']),
+                             name='iter_image')
+        exec_wf.connect(iter_image, 'image',
+                        self.workflow, 'input_spec.moving_image')
+        
+        # The output destination directory.
         dest = os.path.join(exec_wf.base_dir, 'realigned')
         os.makedirs(dest)
+        
         # Make a file name for the initial reference that is consistent
         # with the realigned file names.
-        ref_0_realigned = gen_realign_filename(self.resource, ref_0_image)
+        ref_0_fname_xfc = Function(input_names=['resource', 'in_file'],
+                                   output_names=['out_file'],
+                                   function=gen_realign_filename)
+        ref_0_fname = pe.Node(ref_0_fname_xfc, name='ref_0_fname')
+        exec_wf.connect(input_spec, 'resource', ref_0_fname, 'resource')
+        exec_wf.connect(input_spec, 'ref_0', ref_0_fname, 'in_file')
+
         # Copy the initial reference to the destination directory.
-        copy_ref_0_xfc = Copy(dest=dest, in_file=ref_0_image,
-                              out_fname=ref_0_realigned)
+        copy_ref_0_xfc = Copy(dest=dest)
         copy_ref_0 = pe.Node(copy_ref_0_xfc, name='copy_ref_0')
-        # Copy the realigned images to the destination directory.
+        exec_wf.connect(input_spec, 'ref_0', copy_ref_0, 'in_file')
+        exec_wf.connect(ref_0_fname, 'out_file', copy_ref_0, 'out_fname')
+
+        # Copy the realigned image to the destination directory.
         copy_realigned = pe.Node(Copy(dest=dest), name='copy_realigned')
-        exec_wf.connect(self.workflow, 'output_spec.image',
+        exec_wf.connect(self.workflow, 'output_spec.out_file',
                         copy_realigned, 'in_file')
         
-        # Set the realigned -> reference connections.
+        # Set the recursive realigned -> reference connections.
         connect_ref_args = dict(bolus_arrival_index=bolus_arrival_index,
                                 initial_reference=ref_0_image)
-        exec_wf.connect_iterables(copy_realigned, input_spec,
+        exec_wf.connect_iterables(copy_realigned, iter_image,
                                   connect_reference, **connect_ref_args)
-        
-        # Upload the initial reference image into the XNAT
-        # registration resource.
-        upload_ref_0_xfc = XNATUpload(project=project(),
-                                      resource=self.resource)
-        upload_ref_0 = pe.Node(upload_ref_0_xfc, name='upload_ref_0')
-        exec_wf.connect(input_spec, 'subject', upload_ref_0, 'subject')
-        exec_wf.connect(input_spec, 'session', upload_ref_0, 'session')
-        exec_wf.connect(copy_ref_0, 'out_file', upload_ref_0, 'in_files')
         
         # Collect the realigned images.
         join_realigned = pe.JoinNode(IdentityInterface(fields=['images']),
-                                     joinsource='input_spec',
+                                     joinsource='iter_image',
                                      joinfield='images',
                                      name='join_realigned')
         exec_wf.connect(copy_realigned, 'out_file', join_realigned, 'images')
@@ -259,6 +266,14 @@ class RegistrationWorkflow(WorkflowBase):
         concat_reg = pe.Node(Merge(2), name='concat_reg')
         exec_wf.connect(copy_ref_0, 'out_file', concat_reg, 'in1')
         exec_wf.connect(join_realigned, 'images', concat_reg, 'in2')
+        
+        # Upload the registration result into the XNAT registration resource.
+        upload_reg_xfc = XNATUpload(project=project(),
+                                    resource=self.resource)
+        upload_reg = pe.Node(upload_reg_xfc, name='upload_reg')
+        exec_wf.connect(input_spec, 'subject', upload_reg, 'subject')
+        exec_wf.connect(input_spec, 'session', upload_reg, 'session')
+        exec_wf.connect(concat_reg, 'out', upload_reg, 'in_files')
         
         # The execution output.
         output_spec = pe.Node(IdentityInterface(fields=['images']),
@@ -272,10 +287,10 @@ class RegistrationWorkflow(WorkflowBase):
         
         return exec_wf
 
-    def _create_reusable_workflow(self, **opts):
+    def _create_realignment_workflow(self, **opts):
         """
-        Creates the base registration workflow. The registration workflow
-        performs the following steps:
+        Creates the workflow which registers and resamples images.
+        The registration workflow performs the following steps:
         
         - Generates a unique XNAT resource name
         
@@ -291,78 +306,22 @@ class RegistrationWorkflow(WorkflowBase):
             ('``ANTS`` or ``FNIRT``, default ``ANTS``)
         :return: the Workflow object
         """
-        self._logger.debug("Creating the reusable registration workflow...")
+        self._logger.debug("Creating the registration realignment workflow...")
 
         # The workflow.
         base_dir = opts.get('base_dir', tempfile.mkdtemp())
-        reg_wf = pe.Workflow(name='registration', base_dir=base_dir)
+        realign_wf = pe.Workflow(name='registration', base_dir=base_dir)
 
         # The workflow input.
-        in_fields = ['subject', 'session', 'mask', 'reference', 'image']
+        in_fields = ['subject', 'session', 'moving_image', 'reference',
+                     'mask', 'resource']
         input_spec = pe.Node(IdentityInterface(fields=in_fields),
                              name='input_spec')
 
         # The realign workflow.
         technique = opts.get('technique')
-        realign_wf = self._create_realign_workflow(base_dir, technique)
-
-        # Register and resample the image.
-        reg_wf.connect(input_spec, 'subject',
-                       realign_wf, 'input_spec.subject')
-        reg_wf.connect(input_spec, 'session',
-                       realign_wf, 'input_spec.session')
-        reg_wf.connect(input_spec, 'mask',
-                       realign_wf, 'input_spec.mask')
-        reg_wf.connect(input_spec, 'reference',
-                       realign_wf, 'input_spec.reference')
-        reg_wf.connect(input_spec, 'image',
-                       realign_wf, 'input_spec.moving_image')
-
-        # Upload the realigned image to XNAT.
-        upload_reg_xfc = XNATUpload(project=project(),
-                                    resource=self.resource)
-        upload_reg = pe.Node(upload_reg_xfc, name='upload_reg')
-        reg_wf.connect(input_spec, 'subject', upload_reg, 'subject')
-        reg_wf.connect(input_spec, 'session', upload_reg, 'session')
-        reg_wf.connect(realign_wf, 'output_spec.out_file',
-                       upload_reg, 'in_files')
-
-        # The workflow output is the realigned image file.
-        output_spec = pe.Node(IdentityInterface(fields=['image']),
-                              name='output_spec')
-        reg_wf.connect(realign_wf, 'output_spec.out_file',
-                       output_spec, 'image')
-
-        self._configure_nodes(reg_wf)
-
-        self._logger.debug("Created the %s workflow." % reg_wf.name)
-        # If debug is set, then diagram the workflow graph.
-        if self._logger.level <= logging.DEBUG:
-            self.depict_workflow(reg_wf)
-
-        return reg_wf
-
-    def _create_realign_workflow(self, base_dir, technique=None):
-        """
-        Creates the workflow which registers and resamples images.
-        
-        :param base_dir: the workflow execution directory
-        :param technique: the registration technique (``ANTS`` or ``FNIRT``,
-            default ``ANTS``)
-        :return: the Workflow object
-        """
-        self._logger.debug('Creating the realign workflow...')
-
-        realign_wf = pe.Workflow(name='realign', base_dir=base_dir)
-        
         if not technique:
             technique = 'ANTS'
-
-        # The workflow input image iterator.
-        in_fields = ['subject', 'session', 'mask', 'reference',
-                     'moving_image', 'resource']
-        input_spec = pe.Node(
-            IdentityInterface(fields=in_fields), name='input_spec')
         input_spec.inputs.resource = self.resource
 
         # Make the realigned image file name.
@@ -370,8 +329,7 @@ class RegistrationWorkflow(WorkflowBase):
                                      output_names=['out_file'],
                                      function=gen_realign_filename)
         realign_name = pe.Node(realign_name_func, name='realign_name')
-        realign_wf.connect(
-            input_spec, 'resource', realign_name, 'resource')
+        realign_wf.connect(input_spec, 'resource', realign_name, 'resource')
         realign_wf.connect(input_spec, 'moving_image', realign_name, 'in_file')
 
         # Copy the DICOM meta-data. The copy target is set by the technique
@@ -438,6 +396,10 @@ class RegistrationWorkflow(WorkflowBase):
 
         self._configure_nodes(realign_wf)
 
+        self._logger.debug("Created the %s workflow." % realign_wf.name)
+        # If debug is set, then diagram the workflow graph.
+        if self._logger.level <= logging.DEBUG:
+            self.depict_workflow(realign_wf)
         return realign_wf
 
 
@@ -488,7 +450,7 @@ def connect_reference(workflow, realigned_nodes, input_nodes,
     
     # The reference for the bolus arrival predecessor and successor
     # is the initial reference.
-    start = bolus_arrival_index - 1
+    start = max(bolus_arrival_index - 1, 0)
     end = min(bolus_arrival_index + 1, node_cnt)
     for i in range(start, end):
         input_nodes[i].inputs.reference = initial_reference
