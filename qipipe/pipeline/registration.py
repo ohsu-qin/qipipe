@@ -22,7 +22,7 @@ REG_PREFIX = 'reg'
 def run(subject, session, images, bolus_arrival_index, mask, **opts):
     """
     Runs the registration workflow on the given session scan images.
-    
+
     :param subject: the subject name
     :param session: the session name
     :param images: the input session scan images
@@ -39,7 +39,7 @@ def generate_resource_name():
     """
     Makes a unique registration resource name. Uniqueness permits more than
     one registration to be stored for a given session without a name conflict.
-    
+
     :return: a unique XNAT registration resource name
     """
     return "%s_%s" % (REG_PREFIX, file_helper.generate_file_name())
@@ -51,52 +51,52 @@ class RegistrationWorkflow(WorkflowBase):
     The RegistrationWorkflow class builds and executes the registration workflow.
     The workflow registers an input NiFTI scan image against the input reference
     image and uploads the realigned image to XNAT.
-    
+
     The registration workflow input is the *input_spec* node consisting of the
     following input fields:
-    
+
     - *subject*: the subject name
-    
+
     - *session*: the session name
-    
+
     - *mask*: the mask to apply to the images
-    
+
     - *reference*: the fixed reference image
-    
+
     - *image*: the image file to register
-    
+
     The mask can be obtained by running the
     :class:`qipipe.pipeline.mask.MaskWorkflow` workflow.
-    
+
     The reference can be obtained by running the
     :class:`qipipe.pipeline.reference.ReferenceWorkflow` workflow.
-    
+
     The registration workflow output is the *output_spec* node consisting of
     the following output field:
-    
+
     - *image*: the realigned image file
-    
+
     Two registration techniques are supported:
-    
+
     - ANTS_ SyN_ symmetric normalization diffeomorphic registration (default)
-    
+
     - FSL_ FNIRT_ non-linear registration
-    
+
     The optional workflow configuration file can contain overrides for the
     Nipype interface inputs in the following sections:
-    
+
     - ``ants.Registration``: the ANTS `Registration interface`_ options
-    
+
     - ``ants.ApplyTransforms``: the ANTS `ApplyTransform interface`_ options
-    
+
     - ``fsl.FNIRT``: the FSL `FNIRT interface`_ options
-    
+
     :Note: Since the XNAT *resource* name is unique, a
         :class:`qipipe.pipeline.registration.RegistrationWorkflow` instance
         can be used for only one registration workflow. Different registration
         inputs require different
         :class:`qipipe.pipeline.registration.RegistrationWorkflow` instances.
-    
+
     .. _ANTS: http://stnava.github.io/ANTs/
     .. _ApplyTransform interface: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.ants.resampling.html
     .. _FNIRT: http://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FNIRT#Research_Overview
@@ -110,7 +110,7 @@ class RegistrationWorkflow(WorkflowBase):
         """
         If the optional configuration file is specified, then the workflow
         settings in that file override the default settings.
-        
+
         :param opts: the following initialization options:
         :keyword base_dir: the workflow execution directory
             (default a new temp directory)
@@ -135,7 +135,7 @@ class RegistrationWorkflow(WorkflowBase):
     def run(self, subject, session, images, bolus_arrival_index, mask):
         """
         Runs the registration workflow on the given session scan images.
-        
+
         :param subject: the subject name
         :param session: the session name
         :param images: the input session scan images
@@ -145,55 +145,56 @@ class RegistrationWorkflow(WorkflowBase):
         """
         # Sort the images by series number.
         images = sorted(images)
-        
+
         # The initial reference image occurs at bolus arrival.
         ref_0_image = images.pop(bolus_arrival_index)
-        
+
         # The execution workflow.
         exec_wf = self._create_execution_workflow(bolus_arrival_index,
                                                   ref_0_image)
-        
+
         # Set the execution workflow inputs.
         input_spec = exec_wf.get_node('input_spec')
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
         input_spec.inputs.mask = mask
-        
+
         # Iterate over the images
         iter_image = exec_wf.get_node('iter_image')
         iter_image.iterables = ('image', images)
-        
+
         # Execute the workflow.
         self._logger.debug("Executing the %s workflow on %s %s..." %
                          (self.workflow.name, subject, session))
         self._run_workflow(exec_wf)
         self._logger.debug("Executed the %s workflow on %s %s." %
                          (self.workflow.name, subject, session))
-        
+
         # Return the output files.
-        return [os.path.join(dest, gen_realign_filename(self.reference, scan))
+        return [os.path.join(dest,
+                             gen_realign_filename(self.registration, scan))
                 for scan in images]
 
     def _create_execution_workflow(self, bolus_arrival_index, ref_0_image):
         """
         Makes the registration execution workflow on the given session
         scan images.
-    
+
         The execution workflow input is the *input_spec* node consisting of the
         following input fields:
-    
+
         - *subject*: the subject name
-    
+
         - *session*: the session name
-    
+
         - *image*: the image file to register
-    
+
         - *mask*: the mask to apply to the images
-        
+
         - *reference*: the fixed reference for the given image registration
-        
+
         The *reference* input is set by :meth:`connect_reference`.
-    
+
         :param ref_0_image: the initial fixed reference image
         :param bolus_arrival_index: the bolus uptake series index
         :return: the execution workflow
@@ -201,10 +202,10 @@ class RegistrationWorkflow(WorkflowBase):
         self._logger.debug("Creating the registration execution workflow"
                            " with bolus arrival index %d and initial reference"
                            " %s..." % (bolus_arrival_index, ref_0_image))
-        
+
         # The execution workflow.
         exec_wf = pe.Workflow(name='reg_exec', base_dir=self.workflow.base_dir)
-        
+
         # The registration workflow input.
         input_fields = ['subject', 'session', 'image', 'mask', 'ref_0', 'resource']
         input_spec = pe.Node(IdentityInterface(fields=input_fields),
@@ -217,20 +218,21 @@ class RegistrationWorkflow(WorkflowBase):
         exec_wf.connect(input_spec, 'mask',
                         self.workflow, 'input_spec.mask')
         input_spec.inputs.resource = self.resource
-        
+
         # The input images are iterable. The reference is set by the
-        # connect_reference method below.          
+        # connect_reference method below.
         iter_image = pe.Node(IdentityInterface(fields=['image', 'reference']),
                              name='iter_image')
         exec_wf.connect(iter_image, 'image',
                         self.workflow, 'input_spec.moving_image')
         exec_wf.connect(iter_image, 'reference',
                         self.workflow, 'input_spec.reference')
-        
+
         # The output destination directory.
         dest = os.path.join(exec_wf.base_dir, 'realigned')
-        os.makedirs(dest)
-        
+        if not os.path.exists(dest):
+            os.makedirs(dest)
+
         # Make a file name for the initial reference that is consistent
         # with the realigned file names.
         ref_0_fname_xfc = Function(input_names=['resource', 'in_file'],
@@ -250,25 +252,25 @@ class RegistrationWorkflow(WorkflowBase):
         copy_realigned = pe.Node(Copy(dest=dest), name='copy_realigned')
         exec_wf.connect(self.workflow, 'output_spec.out_file',
                         copy_realigned, 'in_file')
-        
+
         # Set the recursive realigned -> reference connections.
         connect_ref_args = dict(bolus_arrival_index=bolus_arrival_index,
                                 initial_reference=ref_0_image)
         exec_wf.connect_iterables(copy_realigned, iter_image,
                                   connect_reference, **connect_ref_args)
-        
+
         # Collect the realigned images.
         join_realigned = pe.JoinNode(IdentityInterface(fields=['images']),
                                      joinsource='iter_image',
                                      joinfield='images',
                                      name='join_realigned')
         exec_wf.connect(copy_realigned, 'out_file', join_realigned, 'images')
-        
+
         # Merge the initial reference and the realigned images.
         concat_reg = pe.Node(Merge(2), name='concat_reg')
         exec_wf.connect(copy_ref_0, 'out_file', concat_reg, 'in1')
         exec_wf.connect(join_realigned, 'images', concat_reg, 'in2')
-        
+
         # Upload the registration result into the XNAT registration resource.
         upload_reg_xfc = XNATUpload(project=project(),
                                     resource=self.resource)
@@ -276,7 +278,7 @@ class RegistrationWorkflow(WorkflowBase):
         exec_wf.connect(input_spec, 'subject', upload_reg, 'subject')
         exec_wf.connect(input_spec, 'session', upload_reg, 'session')
         exec_wf.connect(concat_reg, 'out', upload_reg, 'in_files')
-        
+
         # The execution output.
         output_spec = pe.Node(IdentityInterface(fields=['images']),
                               name='output_spec')
@@ -286,20 +288,20 @@ class RegistrationWorkflow(WorkflowBase):
         # If debug is set, then diagram the workflow graph.
         if self._logger.level <= logging.DEBUG:
             self.depict_workflow(exec_wf)
-        
+
         return exec_wf
 
     def _create_realignment_workflow(self, **opts):
         """
         Creates the workflow which registers and resamples images.
         The registration workflow performs the following steps:
-        
+
         - Generates a unique XNAT resource name
-        
+
         - Set the mask and realign workflow inputs
-        
+
         - Run these workflows
-        
+
         - Upload the realign outputs to XNAT
         :param opts: the following workflow options:
         :keyword base_dir: the workflow execution directory
@@ -410,13 +412,14 @@ class RegistrationWorkflow(WorkflowBase):
 def gen_realign_filename(resource, in_file):
     """
     :param resource: the resource name
-    :param in_file: the input scan image filename
-    :return: the registered image filename
+    :param in_file: the input scan image file name
+    :return: the registered image file name, without a directory
     """
     from qipipe.helpers import file_helper
+    _, in_fname = os.path.split(in_file)
 
-    base, ext = file_helper.splitexts(in_file)
-    
+    base, ext = file_helper.splitexts(in_fname)
+
     return "%s_%s%s" % (base, resource, ext)
 
 def connect_reference(workflow, realigned_nodes, input_nodes,
@@ -424,18 +427,18 @@ def connect_reference(workflow, realigned_nodes, input_nodes,
     """
     Connects the reference input for the given reference workflow input nodes
     as follows:
-    
+
     * Prior to bolus arrival, the reference is the successor realignment.
-    
+
     * The reference for the nodes before and after the given initial reference
       node is that initial reference.
-    
+
     * The bolus arrival successor node reference is the *initial_reference*.
-    
+
     The initial reference is the input node for the scan immediately
     following bolus uptake. This node is not included in the iterable
     expansion nodes.
-    
+
     :param workflow: the workflow delegate which connects nodes
     :param ref_nodes: the iterable expansion reference input nodes
     :param realigned_nodes: the iterable expansion realignment output nodes
@@ -449,17 +452,16 @@ def connect_reference(workflow, realigned_nodes, input_nodes,
     for i in range(0, end):
         workflow.connect(realigned_nodes[i + 1], 'out_file',
                          input_nodes[i], 'reference')
-    
+
     # The reference for the bolus arrival predecessor and successor
     # is the initial reference.
     start = max(bolus_arrival_index - 1, 0)
     end = min(bolus_arrival_index + 1, node_cnt)
     for i in range(start, end):
         input_nodes[i].inputs.reference = initial_reference
-    
+
     # The reference is the predecessor realignment for the remaining
     # nodes.
     for i in range(bolus_arrival_index, node_cnt - 1):
         workflow.connect(realigned_nodes[i], 'out_file',
                          input_nodes[i + 1], 'reference')
-
