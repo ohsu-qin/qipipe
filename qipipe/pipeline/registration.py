@@ -224,6 +224,8 @@ class RegistrationWorkflow(WorkflowBase):
                              name='iter_image')
         exec_wf.connect(iter_image, 'image',
                         self.workflow, 'input_spec.moving_image')
+        exec_wf.connect(iter_image, 'reference',
+                        self.workflow, 'input_spec.reference')
         
         # The output destination directory.
         dest = os.path.join(exec_wf.base_dir, 'realigned')
