@@ -71,7 +71,7 @@ class WorkflowBase(object):
     None
     """
 
-    def __init__(self, logger, cfg_file=None):
+    def __init__(self, logger, cfg_file=None, dry_run=False):
         """
         Initializes this workflow wrapper object.
         If the optional configuration file is specified, then the workflow
@@ -81,8 +81,12 @@ class WorkflowBase(object):
         :param cfg_file: the optional workflow inputs configuration file
         """
         self._logger = logger
+        
         self.configuration = self._load_configuration(cfg_file)
         """The workflow configuration."""
+        
+        self.dry_run = dry_run
+        """Flag indicating whether to skip workflow job submission."""
 
     def _load_configuration(self, cfg_file=None):
         """
@@ -182,9 +186,14 @@ class WorkflowBase(object):
 
         # Run the workflow.
         self._logger.debug("Executing the workflow %s in %s..." %
-                         (workflow.name, workflow.base_dir))
-        with xnat_helper.connection():
-            workflow.run(**args)
+                           (workflow.name, workflow.base_dir))
+        if self.dry_run:
+            self._logger.debug("Skipped workflow %s job submission,"
+                               " since the dry run flag is set." %
+                               workflow.name)
+        else:
+            with xnat_helper.connection():
+                workflow.run(**args)
 
     def _inspect_workflow_inputs(self, workflow):
         """

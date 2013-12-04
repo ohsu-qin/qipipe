@@ -280,6 +280,8 @@ class QIPipelineWorkflow(WorkflowBase):
         :param opts: the following initialization options:
         :keyword base_dir: the workflow execution directory
             (default a new temp directory)
+        :keyword dry_run: flag indicating whether to prepare but do not
+            run the pipeline
         :keyword mask: the XNAT mask reconstruction name
         :keyword registration: the XNAT registration reconstruction name
         :keyword skip_registration: flag indicating whether to skip
@@ -289,7 +291,13 @@ class QIPipelineWorkflow(WorkflowBase):
             technique
         :keyword skip_modeling: flag indicating whether to skip modeling
         """
-        super(QIPipelineWorkflow, self).__init__(logger(__name__))
+        # Flag indicating whether to skip job submission.
+        if 'dry_run' in opts:
+            wf_opts = dict(dry_run=opts['dry_run'])
+        else:
+            wf_opts = {}
+
+        super(QIPipelineWorkflow, self).__init__(logger(__name__), **wf_opts)
 
         self.registration_resource = None
         """The registration XNAT reconstruction name."""
@@ -498,9 +506,8 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # The work directory used for the master workflow and all
         # constituent workflows.
-        base_dir_opt = opts.get('base_dir')
-        if base_dir_opt:
-            base_dir = os.path.abspath(base_dir_opt)
+        if 'base_dir' in opts:
+            base_dir = os.path.abspath(opts['base_dir'])
         else:
             base_dir = tempfile.mkdtemp()
 
@@ -520,7 +527,7 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # Set the project, if necessary.
         if 'project' in opts:
-            project(opts.pop('project'))
+            project(opts['project'])
             self._logger.debug("Set the XNAT project to %s." % project())
 
         # The modeling workflow.
@@ -798,6 +805,21 @@ class QIPipelineWorkflow(WorkflowBase):
 
         return exec_wf
 
+    def _run_workflow(self, workflow):
+        """
+        Overrides the superclass method to build the registration
+        workflow if the *dry_run* instance variable flag is set.
+
+        :param workflow: the workflow to run
+        """
+        super(QIPipelineWorkflow, self)._run_workflow(workflow)
+        if self.dry_run:
+            _, ref_0 = tempfile.mkstemp()
+            try:
+                opts = dict(base_dir=self.workflow.base_dir, dry_run=True)
+                register_scans('Dummy', 'Dummy', [ref_0], 0, ref_0, opts)
+            finally:
+                os.remove(ref_0)
 
 def register_scans(subject, session, in_files, bolus_arrival_index,
                    mask, opts):
