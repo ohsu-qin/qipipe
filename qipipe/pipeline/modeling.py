@@ -277,8 +277,8 @@ class ModelingWorkflow(WorkflowBase):
         # Each output field contains a modeling result file.
         # Upload each file to a separate analysis resource.
         base_output = base_wf.get_node('output_spec')
-        base_out_fields = base_output.outputs.copyable_trait_names()
-        for field in base_out_fields:
+        out_fields = base_output.outputs.copyable_trait_names()
+        for field in out_fields:
             upload_node = self._create_upload_node(field)
             mdl_wf.connect(input_spec, 'subject', upload_node, 'subject')
             mdl_wf.connect(input_spec, 'session', upload_node, 'session')
@@ -286,9 +286,9 @@ class ModelingWorkflow(WorkflowBase):
             mdl_wf.connect(base_wf, base_field, upload_node, 'in_files')
 
         # The output is the modeling outputs.
-        output_xfc = IdentityInterface(fields=base_out_fields)
+        output_xfc = IdentityInterface(fields=out_fields)
         output_spec = pe.Node(output_xfc, name='output_spec')
-        for field in base_out_fields:
+        for field in out_fields:
             base_field = 'output_spec.' + field
             mdl_wf.connect(base_wf, base_field, output_spec, field)
         self._logger.debug("The modeling workflow output is %s with"
