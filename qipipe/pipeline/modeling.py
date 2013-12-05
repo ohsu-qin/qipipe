@@ -261,30 +261,32 @@ class ModelingWorkflow(WorkflowBase):
         base_wf = self._create_base_workflow(base_dir=base_dir, **opts)
 
         # The workflow input fields.
-        in_fields = ['subject', 'session', 'time_series', 'mask']
+        in_fields = ['subject', 'session', 'time_series', 'mask',
+                     'bolus_arrival_index']
         input_xfc = IdentityInterface(fields=in_fields)
         input_spec = pe.Node(input_xfc, name='input_spec')
         self._logger.debug("The modeling workflow input is %s with"
             " fields %s" % (input_spec.name, in_fields))
         mdl_wf.connect(input_spec, 'time_series',
-                            base_wf, 'input_spec.time_series')
+                       base_wf, 'input_spec.time_series')
         mdl_wf.connect(input_spec, 'mask', base_wf, 'input_spec.mask')
+        mdl_wf.connect(input_spec, 'bolus_arrival_index',
+                       base_wf, 'input_spec.bolus_arrival_index')
 
-        # The upload nodes.
+        # Upload the modeling results to XNAT.
+        # Each output field contains a modeling result file.
+        # Upload each file to a separate analysis resource.
         base_output = base_wf.get_node('output_spec')
         base_out_fields = base_output.outputs.copyable_trait_names()
-        upload_dict = {field: self._create_upload_node(field)
-                       for field in base_out_fields}
-        for field, node in upload_dict.iteritems():
-            mdl_wf.connect(input_spec, 'subject', node, 'subject')
-            mdl_wf.connect(input_spec, 'session', node, 'session')
+        for field in base_out_fields:
+            upload_node = self._create_upload_node(field)
+            mdl_wf.connect(input_spec, 'subject', upload_node, 'subject')
+            mdl_wf.connect(input_spec, 'session', upload_node, 'session')
             base_field = 'output_spec.' + field
-            mdl_wf.connect(base_wf, base_field, node, 'in_files')
+            mdl_wf.connect(base_wf, base_field, upload_node, 'in_files')
 
-        # The output is the base outputs and the XNAT analysis name.
-        out_fields = ['analysis'] + base_out_fields
-        output_xfc = IdentityInterface(fields=out_fields,
-                                       analysis=self.assessor)
+        # The output is the modeling outputs.
+        output_xfc = IdentityInterface(fields=base_out_fields)
         output_spec = pe.Node(output_xfc, name='output_spec')
         for field in base_out_fields:
             base_field = 'output_spec.' + field
@@ -336,7 +338,8 @@ class ModelingWorkflow(WorkflowBase):
         use_fixed_r1_0 = not not opts.get('r1_0_val')
 
         # Set up the input node.
-        in_fields = ['time_series', 'mask'] + opts.keys()
+        non_pk_flds = ['time_series', 'mask', 'bolus_arrival_index']
+        in_fields = non_pk_flds + opts.keys()
         input_xfc = IdentityInterface(fields=in_fields, **opts)
         input_spec = pe.Node(input_xfc, name='input_spec')
         # Set the config parameters.
