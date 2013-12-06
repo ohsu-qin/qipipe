@@ -292,12 +292,11 @@ class QIPipelineWorkflow(WorkflowBase):
         :keyword skip_modeling: flag indicating whether to skip modeling
         """
         # Flag indicating whether to skip job submission.
-        if 'dry_run' in opts:
-            wf_opts = dict(dry_run=opts['dry_run'])
-        else:
-            wf_opts = {}
-
-        super(QIPipelineWorkflow, self).__init__(logger(__name__), **wf_opts)
+        base_opts = {}
+        for opt in ['cfg_file', 'dry_run']:
+            if opt in opts:
+                base_opts[opt] = opts.pop(opt)
+        super(QIPipelineWorkflow, self).__init__(logger(__name__), **base_opts)
 
         self.registration_resource = None
         """The registration XNAT reconstruction name."""
