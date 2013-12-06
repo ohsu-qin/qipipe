@@ -119,8 +119,8 @@ class RegistrationWorkflow(WorkflowBase):
         :keyword technique: the case-insensitive workflow technique
             (``ANTS`` or ``FNIRT``, default ``ANTS``)
         """
-        super(RegistrationWorkflow, self).__init__(logger(__name__),
-                                                   opts.pop('cfg_file', None))
+        cfg_file = opts.pop('cfg_file', None)
+        super(RegistrationWorkflow, self).__init__(logger(__name__), cfg_file)
 
         rsc = opts.pop('resource', None)
         if not rsc:
