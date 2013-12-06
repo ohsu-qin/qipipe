@@ -42,7 +42,7 @@ class ASTConfig(Config):
         [Tuning]
         method = FFT
         iterations = [[1, 2], 5]
-        parameters = [(1,), (2, 3)]
+        parameters = [(1,), (2, 3), -0.4]
         two_tailed = false
         threshold = 4.0
         plugin_args = {'qsub_args': '-pe mpi 48-120'}
@@ -51,9 +51,10 @@ class ASTConfig(Config):
     
     >>> cfg = ASTConfig('tuning.cfg')
     >>> cfg['Tuning']
-    {'method': u'FFT', 'parameters' = [(1,), (2, 3)], 'iterations': [[1, 2], 5],
-    'two_tailed': False, 'threshold': 4.0,
-    'plugin_args': {'qsub_args': '-pe mpi 48-120'}}
+    {'method': u'FFT', 'parameters' = [(1,), (2, 3), -0.4],
+     'iterations': [[1, 2], 5],
+     'two_tailed': False, 'threshold': 4.0,
+     'plugin_args': {'qsub_args': '-pe mpi 48-120'}}
     """
 
     BUNCH_PAT = """
@@ -93,15 +94,14 @@ class ASTConfig(Config):
 
     PARSEABLE_ITEM_PAT = re.compile("""
         (
-            True            # The True literal
-            | False         # The False literal
-            | \.\d+         # A decimal with leading period
-            | \d+\.         # A decimal with trailing period
-            | \d+(\.\d+)?   # A number
-            | \d+\.e[+-]\d+ # A floating point
-            | \'.*\'        # A single-quoted string
-            | \".*\"        # A double-quoted string
-        )$                  # The end of the value
+            True              # The True literal
+            | False           # The False literal
+            | -?\.\d+         # A decimal with leading period
+            | -?\d+(\.\d*)?   # A number
+            | -?\d+(\.\d*)?e[+-]\d+ # A floating point
+            | \'.*\'          # A single-quoted string
+            | \".*\"          # A double-quoted string
+        )$                    # The end of the value
         """, re.VERBOSE)
     """A non-list string parseable by AST."""
 
