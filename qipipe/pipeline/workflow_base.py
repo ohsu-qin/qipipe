@@ -1,6 +1,7 @@
 import os
 import re
 import tempfile
+import networkx as nx
 from .. import project
 from ..helpers import xnat_helper
 from ..helpers.collection_helper import EMPTY_DICT
@@ -13,12 +14,12 @@ class WorkflowBase(object):
     """
     The WorkflowBase class is the base class for the QIN workflow
     wrapper classes.
-    
+
     If the :mod:`qipipe.pipeline.distributable' ``DISTRIBUTABLE`` flag
     is set, then the execution is distributed using the
     `AIRC Grid Engine`_.
 
-    The workflow plug-in arguments and node inputs can be specfied in a
+    The workflow plug-in arguments and node inputs can be specified in a
     :class:`qipipe.helpers.ast_config.ASTConfig` file. The standard
     configuration file name is the lower-case name of the ``WorkflowBase``
     subclass with ``.cfg`` extension, e.g. ``registration.cfg``. The
@@ -81,10 +82,10 @@ class WorkflowBase(object):
         :param cfg_file: the optional workflow inputs configuration file
         """
         self._logger = logger
-        
+
         self.configuration = self._load_configuration(cfg_file)
         """The workflow configuration."""
-        
+
         self.dry_run = dry_run
         """Flag indicating whether to skip workflow job submission."""
 
@@ -154,7 +155,7 @@ class WorkflowBase(object):
         """
         Diagrams the given workflow graph. The diagram is written to the
         *name*``.dot.png`` in the workflow base directory.
-        
+
         :param workflow the workflow to diagram
         """
         fname = workflow.name + '.dot'
@@ -307,11 +308,9 @@ class WorkflowBase(object):
                                           (workflow.name, node, value))
                 elif value != getattr(node.inputs, attr):
                     # The config value differs from the default value.
-                    # Set the field to the config value and collect it
-                    # for the debug log message.
-                    setattr(node.inputs, attr, value)
+                    # Capture the config entry for update.
                     input_dict[attr] = value
-
+            
             # If:
             # 1) the configuration specifies a default,
             # 2) the node itself is not configured with plug-in arguments, and
@@ -325,21 +324,39 @@ class WorkflowBase(object):
             # If a field was set to a config value, then print the config
             # setting to the log.
             if input_dict:
+                self._set_inputs(node, input_dict)
                 self._logger.debug("The following %s workflow node %s inputs"
-                                  " were set from the configuration: %s" %
-                                 (workflow.name, node, input_dict))
+                                   " were set from the configuration: %s" %
+                                   (workflow.name, node, input_dict))
+
+    def _set_inputs(self, node, input_dict):
+        # Sort the input config fields by the requires dependency.
+        traits = node.inputs.traits()
+        attrs = set(input_dict)
+        req_dict = {attr: set(traits[attr].requires).intersection(attrs)
+                    for attr in input_dict
+                    if traits[attr].requires}
+        req_grf = nx.DiGraph()
+        req_grf.add_nodes_from(input_dict)
+        for attr, reqs in req_dict.iteritems():
+            for req in reqs:
+                req_grf.add_edge(req, attr)
+        sorted_attrs = nx.topological_sort(req_grf)
+        # Set the input config fields.
+        for attr in sorted_attrs:
+            setattr(node.inputs, attr, input_dict[attr])
 
     def _node_configuration(self, workflow, node):
         """
         Returns the {parameter: value} dictionary defined for the given
         node in this WorkflowBase's configuration. The configuration topic
         is determined as follows:
-        
+
         * the node class, as described in :meth:`_interface_configuration`
-        
+
         * the node name, qualified by the node hierarchy if the node is
           defined in a child workflow
-        
+
         :param node: the interface class to check
         :return: the corresponding {field: value} dictionary
         """
@@ -351,7 +368,7 @@ class WorkflowBase(object):
         Returns the {parameter: value} dictionary defined for the given
         node name, qualified by the node hierarchy if the node is
         defined in a child workflow.
-        
+
         :param workflow: the active workflow
         :param node: the interface class to check
         :return: the corresponding {field: value} dictionary
