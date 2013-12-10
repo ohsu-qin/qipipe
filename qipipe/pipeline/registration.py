@@ -171,9 +171,16 @@ class RegistrationWorkflow(WorkflowBase):
                          (self.workflow.name, subject, session))
 
         # Return the output files.
-        return [os.path.join(dest,
-                             gen_realign_filename(self.registration, scan))
-                for scan in images]
+        return [self-_realigned_file(scan, dest) for scan in images]
+    
+    def _realigned_file(self, scan, dest):
+        """
+        :param scan: the scan file name or path
+        :param dest: the target directory
+        :return: the realigned file path
+        """
+        fname = gen_realign_filename(self.registration, scan)
+        return os.path.join(dest, fname)
 
     def _create_execution_workflow(self, bolus_arrival_index, ref_0_image):
         """
