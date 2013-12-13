@@ -37,7 +37,7 @@ class TestQIPipeline(object):
     Note:: the modeling workflow is only executed if the ``fastfit``
         executable is found.
     
-    Note:: this test takes app. four days to run.
+    Note:: this test takes app. four days to run serially without modeling.
     """
 
     def setUp(self):
@@ -90,6 +90,7 @@ class TestQIPipeline(object):
         :param fixture: the test input
         """
         logger(__name__).debug("Testing the QIN pipeline on %s..." % fixture)
+        return
 
         # The staging destination and work area.
         dest = os.path.join(RESULTS, 'data')
@@ -125,24 +126,25 @@ class TestQIPipeline(object):
                 for sess, results in sess_dict.iteritems():
                     if opts['mask'] == False:
                         continue
-                    # Verify the registration
+                    # Verify the registration resource.
                     if opts['registration'] == False:
                         continue
-                    recon = results['registration']
-                    assert_is_not_none(recon, 
+                    # The XNAT registration resource name.
+                    rsc = results['registration']
+                    assert_is_not_none(rsc, 
                                        "The %s %s result does not have a"
-                                       " registration reconstruction" %
+                                       " registration resource" %
                                        (sbj, sess))
-                    reg_obj = xnat.get_reconstruction(
-                        project(), sbj, sess, recon)
+                    reg_obj = xnat.get_resource(
+                        project(), sbj, sess, resource=rsc)
                     assert_true(reg_obj.exists(),
-                                "The %s %s registration reconstruction %s"
-                                " was not created in XNAT" % (sbj, sess, recon))
-                    # Verify the modeling assessor
+                                "The %s %s registration resource %s was not"
+                                " created in XNAT" % (sbj, sess, rsc))
+                    # Verify the modeling assessor.
                     if opts['modeling'] != False:
                         assessor = results['modeling']
-                        mdl_obj = xnat.get_assessor(
-                            project(), sbj, sess, assessor)
+                        mdl_obj = xnat.get_assessor(project(), sbj, sess,
+                                                    assessor)
                         assert_true(mdl_obj.exists(),
                                     "The %s %s modeling assessor %s was not"
                                     " created in XNAT" % (sbj, sess, assessor))
