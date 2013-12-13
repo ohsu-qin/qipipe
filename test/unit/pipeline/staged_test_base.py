@@ -38,7 +38,7 @@ class StagedTestBase(object):
         shutil.rmtree(self._results, True)
 
     def tearDown(self):
-        pass #shutil.rmtree(self._results, True)
+        shutil.rmtree(self._results, True)
 
     def _test_breast(self, **opts):
         self._test_collection('Breast', **opts)
