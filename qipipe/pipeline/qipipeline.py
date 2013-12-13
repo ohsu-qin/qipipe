@@ -31,20 +31,22 @@ def run(*inputs, **opts):
     """
     Creates a :class:`qipipe.pipeline.qipipeline.QIPipelineWorkflow`
     and runs it on the given inputs.
+    
+    If the *actions* option includes ``stage``, then the input is
+    the :meth:`QIPipelineWorkflow.run_with_dicom_input` DICOM
+    directories input. Otherwise, the input is the
+    :meth:`QIPipelineWorkflow.run_with_scan_download` XNAT session
+    labels input.
 
-    :param inputs: the
-        :meth:`qipipe.pipeline.qipipeline.QIPipelineWorkflow.run` inputs
-    :param opts: the :class:`qipipe.pipeline.qipipeline.QIPipelineWorkflow`
-        initializer and
-        :meth:`qipipe.pipeline.qipipeline.QIPipelineWorkflow.run` options
-    :return: the :meth:`qipipe.pipeline.qipipeline.QIPipelineWorkflow.run`
-        result
+    :param inputs: the DICOM directories or XNAT session labels to
+        process
+    :param opts: the :class:`QIPipelineWorkflow` initializer and
+        execution options
     """
     # Tailor the actions.
     actions = opts.get('actions', _default_actions(**opts))
-    opts['actions'] = set(actions)
-    if 'stage' in opts['actions']:
-        # Delegate to the staging workflow.
+    opts['actions'] = actions
+    if 'stage' in actions:
         _run_with_dicom_input(*inputs, **opts)
     else:
         _run_with_xnat_input(*inputs, **opts)
@@ -69,6 +71,14 @@ def _default_actions(**opts):
 
 
 def _run_with_dicom_input(*inputs, **opts):
+    """
+    :param inputs: the :meth:`QIPipelineWorkflow.run_with_dicom_input`
+        inputs
+    :param opts: the :class:`QIPipelineWorkflow` initializer options,
+        as well as the following keyword options:
+    :keyword collection: the input AIRC collection
+    :keyword dest: the target staging parent directory
+    """
     collection = opts.pop('collection', None)
     dest = opts.pop('dest', None)
     wf_gen = QIPipelineWorkflow(**opts)
@@ -77,6 +87,10 @@ def _run_with_dicom_input(*inputs, **opts):
 
 
 def _run_with_xnat_input(*inputs, **opts):
+    """
+    :param inputs: the XNAT session labels
+    :param opts: the :class:`QIPipelineWorkflow` initializer options
+    """
     with xnat_helper.connection() as xnat:
         for label in inputs:
             prj, sbj, sess = xnat_helper.parse_session_label(label)
@@ -103,92 +117,6 @@ def _run_with_xnat_input(*inputs, **opts):
             # Execute the workflow.
             wf_gen = QIPipelineWorkflow(**opts)
             wf_gen.run_with_scan_download(xnat, prj, sbj, sess)
-
-
-# def _run_on_downloaded_scans(exec_wf, exec_wf, project, subject, session):
-#     """
-#     Runs the given execution workflow on downloaded scan image files.
-#     """
-#     self._logger.debug("Processing the %s %s %s scans..." %
-#                        (project, subject, session))
-# 
-#     # Get the scan numbers.
-#     scans = xnat.get_scans(project, subject, session)
-#     if not scans:
-#         raise NotFoundError("The QIN pipeline did not find a %s %s %s"
-#                             " scan." % (project, subject, session))
-# 
-#     # Partition the input scans into those which are already
-#     # registered and those which need to be registered.
-#     reg_scans, unreg_scans = _partition_scans(xnat, project, subject,
-#                                               session, scans)
-# 
-#     # Set the workflow input.
-#     input_spec = exec_wf.get_node('input_spec')
-#     input_spec.inputs.subject = subject
-#     input_spec.inputs.session = session
-# 
-#     # If registration is enabled, then there is a series iterator
-#     # node. In that case, set the series iterables to the
-#     # unregistered scans.
-#     iter_series = exec_wf.get_node('iter_series')
-#     if iter_series:
-#         iter_series.iterables = ('series', unreg_scans)
-# 
-#     # If the XNAT registration resource was specified and modeling
-#     # is enabled, then there is a download registered scans node.
-#     # If that is the case, then set the download scan input iterables.
-#     download_reg = exec_wf.get_node('download_reg')
-#     if download_reg:
-#         # If registration is disabled, then validate that all scans
-#         # are registered.
-#         if opts.get('skip_registration') and unreg_scans:
-#             raise NotFoundError(
-#                 "The following %s %s %s scans are not registered: %s" %
-#                 (prj, sbj, sess, unreg_scans))
-#         # Download each scan file.
-#         download_reg.iterables = ('scan', reg_scans)
-# 
-#     # Execute the workflow.
-#     self._run_workflow(self.workflow)
-#     self._logger.debug("Processed %d %s %s %s scans." %
-#                        (len(scans), prj, sbj, sess))
-# 
-# def _partition_scans(xnat, project, subject, session, scans):
-#     """
-#     Partitions the given scans into those which have a corresponding
-#     registration reconstruction file and those which don't.
-# 
-#     :return: the [registered, unregistered] scan numbers
-#     """
-#     # The XNAT registration object.
-#     reg_obj = xnat.get_resource(project, subject, session,
-#                                       self.registration_resource)
-#     # If the registration has not yet been performed, then
-#     # all of the scans are downloaded.
-#     if not reg_obj.exists():
-#         return [], scans
-# 
-#     # The realigned scan numbers.
-#     reg_scans = self._registered_scans(reg_obj)
-# 
-#     return reg_scans, list(set(scans) - set(reg_scans))
-# 
-# def _registered_scans(self, reg_obj):
-#     """
-#     Returns the scans which have a corresponding registration
-#     reconstruction file.
-# 
-#     :param reg_obj: the XNAT registration reconstruction object
-#     :return: the registered scan numbers
-#     """
-#     # The XNAT registration file names.
-#     reg_files = reg_obj.out_resources().fetchone().files().get()
-#     # Match on the realigned scan file pattern.
-#     matches = ((QIPipelineWorkflow.REG_SERIES_PAT.match(f)
-#                 for f in reg_files))
-# 
-#     return [int(match.group(1)) for match in matches if match]
 
 
 class ArgumentError(Exception):
@@ -264,13 +192,12 @@ class QIPipelineWorkflow(WorkflowBase):
     - The modeling workflow input images is the combination of previously
       and newly realigned image files.
 
-    The easiest way to execute the pipeline is to call the
-    :meth:`qipipe.pipeline.qipipeline.run` method.
-
     The pipeline execution workflow is also available as the *workflow*
     instance variable. The workflow input node is named *input_spec*
     with the same input fields as the
     :class:`qipipe.staging.RegistrationWorkflow` workflow *input_spec*.
+
+    .. _AIRC Grid Engine: https://everett.ohsu.edu/wiki/GridEngine
     """
 
     REG_SERIES_PAT = re.compile('series(\d+)_reg_')
@@ -307,64 +234,9 @@ class QIPipelineWorkflow(WorkflowBase):
         self.workflow = self._create_workflow(**opts)
         """
         The pipeline execution workflow. The execution workflow is executed by
-        calling the :meth:`qipipe.pipeline.modeling.QIPipelineWorkflow.run`
-        method.
+        calling the :meth:`run_with_dicom_input` or
+        :meth:`run_with_scan_download` method.
         """
-
-    # def run(self, project, subject, session, *inputs):
-    #     """
-    #     Runs the OHSU QIN pipeline on the the given inputs, as follows:
-    #
-    #     This method returns a *{subject: {session: results}}*  dictionary
-    #     for the processed sessions, where results is a dictionary with
-    #     the following items:
-    #
-    #     - *registration*: the registration XNAT reconstruction name
-    #
-    #     - *modeling*: the modeling XNAT assessor name
-    #
-    #     If the :mod:`qipipe.pipeline.distributable' ``DISTRIBUTABLE`` flag
-    #     is set, then the execution is distributed using the
-    #     `AIRC Grid Engine`_.
-    #
-    #     .. _AIRC Grid Engine: https://everett.ohsu.edu/wiki/GridEngine
-    #
-    #     :param inputs: the AIRC subject directories or XNAT session
-    #         names
-    #     :param opts: the meth:`qipipe.pipeline.staging.run` options,
-    #         augmented with the following keyword arguments:
-    #     :keyword collection: the AIRC collection name defined by
-    #         :mod:`qipipe.staging.airc_collection`, required if
-    #         staging is enabled
-    #     :return: the new *{subject: session: results}*  dictionary
-    #     """
-        # # If staging is enabled, then start with the DICOM inputs.
-        # # Otherwise, if registration is enabled, then start with a
-        # # scan download. Otherwise, start with registration download.
-        # if self.workflow.get_node('staging.input_spec'):
-        #     sbj_sess_dict = self._run_with_dicom_input(*inputs, **opts)
-        # elif self.workflow.get_node('registration.input_spec'):
-        #     sbj_sess_dict = self._run_with_scan_download(*inputs, **opts)
-        # else:
-        #     sbj_sess_dict = self._run_with_registration_download(*inputs)
-        #
-        # # Return the new {subject: {session: {results}}} dictionary,
-        # # where the results dictionary has keys registration and modeling.
-        # # Each session has the same unqualified XNAT registration
-        # # reconstruction and modeling assessor name. Therefore, make a
-        # # template containing these names and copy the template into the
-        # # {subject: {session: {results}}} output dictionary.
-        # template = {}
-        # if self.registration_resource:
-        #     template['registration'] = self.registration_resource
-        # if self.modeling_assessor:
-        #     template['modeling'] = self.modeling_assessor
-        # output_dict = defaultdict(lambda: defaultdict(dict))
-        # for sbj, sessions in sbj_sess_dict.iteritems():
-        #     for sess in sessions:
-        #         output_dict[sbj][sess] = template.copy()
-        #
-        # return output_dict
 
     def run_with_dicom_input(self, collection, subject, session,
                              *inputs, **opts):
@@ -449,33 +321,6 @@ class QIPipelineWorkflow(WorkflowBase):
                     for f in reg_files))
 
         return [int(match.group(1)) for match in matches if match]
-
-    # def _run_with_registration_download(self, project, subject, session):
-    #     """
-    #     Runs the execution workflow on downloaded registration resource
-    #     image files.
-    # 
-    #     :param label: the XNAT session label
-    #     :return: the the XNAT *{subject: [session]}* dictionary
-    #     """
-    #     prj, sbj, sess = self._parse_session_label(label)
-    #     self._logger.debug("Processing the %s %s %s realigned images..." %
-    #                        (project, subject, session))
-    # 
-    #     # Set the project id.
-    #     project(project)
-    # 
-    #     # Set the workflow input.
-    #     exec_wf = self.workflow
-    #     input_spec = exec_wf.get_node('input_spec')
-    #     input_spec.inputs.subject = subject
-    #     input_spec.inputs.session = session
-    # 
-    #     # Execute the workflow.
-    #     self._run_workflow(exec_wf)
-    # 
-    #     self._logger.debug("Completed the %s %s %s QIN pipeline execution." %
-    #                        (project, subject, session))
 
     def _create_workflow(self, **opts):
         """
