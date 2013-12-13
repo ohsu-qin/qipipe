@@ -29,10 +29,15 @@ def run(subject, session, images, bolus_arrival_index, mask, **opts):
     :param mask: the image mask
     :param bolus_arrival_index: the bolus uptake series index
     :param opts: the :class:`RegistrationWorkflow` initializer options
+        and :meth:`RegistrationWorkflow.run` *dest* option
     :return: the realigned image file path array
     """
+    run_opts = {}
+    if 'dest' in opts:
+        run_opts['dest'] = opts.pop('dest')
     reg_wf = RegistrationWorkflow(**opts)
-    return reg_wf.run(subject, session, images, bolus_arrival_index, mask)
+    return reg_wf.run(subject, session, images, bolus_arrival_index, mask,
+                      **run_opts)
 
 
 def generate_resource_name():
@@ -71,16 +76,21 @@ class RegistrationWorkflow(WorkflowBase):
     The reference can be obtained by running the
     :class:`qipipe.pipeline.reference.ReferenceWorkflow` workflow.
 
-    The registration workflow output is the *output_spec* node consisting of
-    the following output field:
+    The output realigned image file is named
+    *scan*``_``*resource*``.nii.gz``, where *scan* is the input
+    image file name without extension and *resource* is the XNAT
+    registration resource name
 
-    - *image*: the realigned image file
+    Three registration techniques are supported:
 
-    Two registration techniques are supported:
+    - ``ants``: ANTS_ SyN_ symmetric normalization diffeomorphic registration
+      (default)
 
-    - ANTS_ SyN_ symmetric normalization diffeomorphic registration (default)
-
-    - FSL_ FNIRT_ non-linear registration
+    - ``fnirt``: FSL_ FNIRT_ non-linear registration
+    
+    - ``mock``: Test technique which copies each input scan image to
+      the output image file
+      
 
     The optional workflow configuration file can contain overrides for the
     Nipype interface inputs in the following sections:
@@ -132,7 +142,8 @@ class RegistrationWorkflow(WorkflowBase):
         self.workflow = self._create_realignment_workflow(**opts)
         """The registration realignment workflow."""
 
-    def run(self, subject, session, images, bolus_arrival_index, mask):
+    def run(self, subject, session, images, bolus_arrival_index, mask,
+            dest=None):
         """
         Runs the registration workflow on the given session scan images.
 
@@ -141,6 +152,8 @@ class RegistrationWorkflow(WorkflowBase):
         :param images: the input session scan images
         :param bolus_arrival_index: the bolus uptake series index
         :param mask: the image mask file path
+        :param dest: the realigned image target directory
+            (default is the current directory)
         :return: the realigned output file paths
         """
         # Sort the images by series number.
@@ -149,9 +162,15 @@ class RegistrationWorkflow(WorkflowBase):
         # The initial reference image occurs at bolus arrival.
         ref_0_image = images.pop(bolus_arrival_index)
 
+        # The target location.
+        if dest:
+            dest = os.path.abspath(dest)
+        else:
+            dest = os.getcwd()
+
         # The execution workflow.
         exec_wf = self._create_execution_workflow(bolus_arrival_index,
-                                                  ref_0_image)
+                                                  ref_0_image, dest)
 
         # Set the execution workflow inputs.
         input_spec = exec_wf.get_node('input_spec')
@@ -171,7 +190,7 @@ class RegistrationWorkflow(WorkflowBase):
                          (self.workflow.name, subject, session))
 
         # Return the output files.
-        return [self-_realigned_file(scan, dest) for scan in images]
+        return [self._realigned_file(scan, dest) for scan in images]
     
     def _realigned_file(self, scan, dest):
         """
@@ -179,10 +198,11 @@ class RegistrationWorkflow(WorkflowBase):
         :param dest: the target directory
         :return: the realigned file path
         """
-        fname = gen_realign_filename(self.registration, scan)
+        fname = gen_realign_filename(self.resource, scan)
         return os.path.join(dest, fname)
 
-    def _create_execution_workflow(self, bolus_arrival_index, ref_0_image):
+    def _create_execution_workflow(self, bolus_arrival_index, ref_0_image,
+        dest):
         """
         Makes the registration execution workflow on the given session
         scan images.
@@ -204,6 +224,7 @@ class RegistrationWorkflow(WorkflowBase):
 
         :param ref_0_image: the initial fixed reference image
         :param bolus_arrival_index: the bolus uptake series index
+        :param dest: the target realigned image directory
         :return: the execution workflow
         """
         self._logger.debug("Creating the registration execution workflow"
@@ -236,7 +257,6 @@ class RegistrationWorkflow(WorkflowBase):
                         self.workflow, 'input_spec.reference')
 
         # The output destination directory.
-        dest = os.path.join(exec_wf.base_dir, 'realigned')
         if not os.path.exists(dest):
             os.makedirs(dest)
 
@@ -314,7 +334,7 @@ class RegistrationWorkflow(WorkflowBase):
         :keyword base_dir: the workflow execution directory
             (default is a new temp directory)
         :keyword technique: the registration technique
-            ('``ANTS`` or ``FNIRT``, default ``ANTS``)
+            (``ants``, `fnirt`` or ``mock``, default ``ants``)
         :return: the Workflow object
         """
         self._logger.debug("Creating the registration realignment workflow...")
@@ -332,7 +352,7 @@ class RegistrationWorkflow(WorkflowBase):
         # The realign workflow.
         technique = opts.get('technique')
         if not technique:
-            technique = 'ANTS'
+            technique = 'ants'
         input_spec.inputs.resource = self.resource
 
         # Make the realigned image file name.
@@ -349,6 +369,7 @@ class RegistrationWorkflow(WorkflowBase):
         realign_wf.connect(input_spec, 'moving_image', copy_meta, 'src_file')
 
         if technique.lower() == 'ants':
+            # Nipype bug work-around:
             # Setting the registration metric and metric_weight inputs after the
             # node is created results in a Nipype input trait dependency warning.
             # Avoid this warning by setting these inputs in the constructor
@@ -357,8 +378,8 @@ class RegistrationWorkflow(WorkflowBase):
             metric_inputs = {field: reg_cfg[field]
                              for field in ['metric', 'metric_weight']
                              if field in reg_cfg}
-            # Register the images to create the warp and affine
-            # transformations.
+            # Register the images to create the rigid, affine and SyN
+            # ANTS transformations.
             register = pe.Node(Registration(**metric_inputs), name='register')
             realign_wf.connect(
                 input_spec, 'reference', register, 'fixed_image')
@@ -396,6 +417,13 @@ class RegistrationWorkflow(WorkflowBase):
             realign_wf.connect(realign_name, 'out_file', fnirt, 'warped_file')
             # Copy the meta-data.
             realign_wf.connect(fnirt, 'warped_file', copy_meta, 'dest_file')
+        elif technique.lower() == 'mock':
+            # Copy the input scan file to an output file.
+            mock_copy = pe.Node(Copy(), name='mock_copy')
+            realign_wf.connect(input_spec, 'moving_image',
+                               mock_copy, 'in_file')
+            realign_wf.connect(realign_name, 'out_file', mock_copy, 'out_fname')
+            realign_wf.connect(mock_copy, 'out_file', copy_meta, 'dest_file')
         else:
             raise ValueError("Registration technique not recognized: %s" %
                              technique)
