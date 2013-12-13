@@ -105,13 +105,13 @@ def execute_workflow(exec_wf, collection, subject, session, ser_dicom_dict,
     node names and fields as :class:`StagingWorkflow`.
     
     :param exec_wf: the workflow to execute
-    :param ser_dicom_dict: the input [(series, directory), ...] tuples
+    :param ser_dicom_dict: the input {series: directory} dictionary
     """
     # Make the staging area.
     ser_list = ser_dicom_dict.keys()
     ser_dests = _create_staging_area(sbj, sess, ser_list, dest)
-    # Transpose the tuples into iterable lists.
-    sers, dests = map(list, zip(*ser_dicom_dict))
+    # Transpose the [(series, directory), ...] tuples into iterable lists.
+    sers, dests = map(list, zip(*ser_dests))
     ser_iterables = dict(series=sers, dest=dests).items()
 
     # Set the inputs.
