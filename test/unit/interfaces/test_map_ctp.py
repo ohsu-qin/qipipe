@@ -20,8 +20,8 @@ class TestMapCTP(object):
 
     def test_map_ctp(self):
         logger(__name__).debug("Testing Map CTP on %s..." % SUBJECTS)
-        map_ctp = MapCTP(
-            collection=COLLECTION, patient_ids=SUBJECTS, dest=RESULTS)
+        map_ctp = MapCTP(collection=COLLECTION, subjects=SUBJECTS,
+                         dest=RESULTS)
         result = map_ctp.run()
         prop_file = result.outputs.out_file
         assert_true(os.path.exists(prop_file), "Property file was not created:"
