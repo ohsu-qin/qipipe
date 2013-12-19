@@ -102,8 +102,8 @@ def delete_subjects(project, *subjects):
             sbj_obj = xnat.get_subject(project, sbj)
             if sbj_obj.exists():
                 sbj_obj.delete()
-                logger(__name__).debug("Deleted the XNAT test subject %s." %
-                                       sbj)
+                logger(__name__).debug("Deleted the %s subject %s." %
+                                       (project, sbj))
 
 
 def children_methods(obj):
