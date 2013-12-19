@@ -46,7 +46,7 @@ class TestQIPipeline(object):
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
 
-    def test_breast(self):
+    def test_breast_scans(self):
         data = os.getenv('QIN_DATA')
         if data:
             fixture = os.path.join(RESULTS, 'data', 'breast')
@@ -64,7 +64,7 @@ class TestQIPipeline(object):
                                   " test, since the QIN_DATA environment"
                                   " variable is not set.")
 
-    def test_sarcoma(self):
+    def test_sarcoma_scans(self):
         data = os.getenv('QIN_DATA')
         if data:
             fixture = os.path.join(RESULTS, 'data', 'sarcoma')
@@ -81,7 +81,7 @@ class TestQIPipeline(object):
                                   " test, since the QIN_DATA environment"
                                   " variable is not set.")
 
-    def _test_collection(self, collection, fixture):
+    def _test_collection_scans(self, collection, fixture):
         """
         Run the pipeline on the given collection and verify that scans are
         created in XNAT.
@@ -90,7 +90,6 @@ class TestQIPipeline(object):
         :param fixture: the test input
         """
         logger(__name__).debug("Testing the QIN pipeline on %s..." % fixture)
-        return
 
         # The staging destination and work area.
         dest = os.path.join(RESULTS, 'data')
@@ -99,11 +98,10 @@ class TestQIPipeline(object):
         # The pipeline options.
         opts = dict(base_dir=base_dir, dest=dest, mask=MASK_CONF,
                     registration=REG_CONF)
-        # Check whether the modeling workflow is executable.
+        # If fastfit is not available, then only execute the staging and
+        # registration workflows. Otherwise, execute all workflows.
         if not distutils.spawn.find_executable('fastfit'):
-            opts['modeling'] = False
-        else:
-            opts['modeling'] = MODELING_CONF
+            opts['actions'] = ['stage', 'register']
 
         # The test subject => directory dictionary.
         sbj_dir_dict = get_subjects(collection, fixture)
