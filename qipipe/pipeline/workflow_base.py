@@ -89,6 +89,22 @@ class WorkflowBase(object):
         self.dry_run = dry_run
         """Flag indicating whether to skip workflow job submission."""
 
+    def depict_workflow(self, workflow):
+        """
+        Diagrams the given workflow graph. The diagram is written to the
+        *name*``.dot.png`` in the workflow base directory.
+
+        :param workflow the workflow to diagram
+        """
+        fname = workflow.name + '.dot'
+        if workflow.base_dir:
+            grf = os.path.join(workflow.base_dir, fname)
+        else:
+            grf = fname
+        workflow.write_graph(dotfilename=grf)
+        self._logger.debug("The %s workflow graph is depicted at %s.png." %
+                         (workflow.name, grf))
+
     def _load_configuration(self, cfg_file=None):
         """
         Loads the workflow configuration, as defined in
@@ -151,22 +167,6 @@ class WorkflowBase(object):
         """
         return xnat.download(project(), subject, session, dest=dest)
 
-    def depict_workflow(self, workflow):
-        """
-        Diagrams the given workflow graph. The diagram is written to the
-        *name*``.dot.png`` in the workflow base directory.
-
-        :param workflow the workflow to diagram
-        """
-        fname = workflow.name + '.dot'
-        if workflow.base_dir:
-            grf = os.path.join(workflow.base_dir, fname)
-        else:
-            grf = fname
-        workflow.write_graph(dotfilename=grf)
-        self._logger.debug("The %s workflow graph is depicted at %s.png." %
-                         (workflow.name, grf))
-
     def _run_workflow(self, workflow):
         """
         Executes the given workflow.
@@ -186,7 +186,7 @@ class WorkflowBase(object):
             workflow.base_dir = tempfile.mkdtemp()
 
         # Run the workflow.
-        self._logger.debug("Executing the workflow %s in %s..." %
+        self._logger.debug("Executing the %s workflow in %s..." %
                            (workflow.name, workflow.base_dir))
         if self.dry_run:
             self._logger.debug("Skipped workflow %s job submission,"
