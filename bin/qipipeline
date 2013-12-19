@@ -91,10 +91,13 @@ def _parse_arguments():
     technique_grp.add_argument('--ants',
                                help="ANTS registration (the default)",
                                dest='technique', action='store_const',
-                               const='ANTS')
+                               const='ants')
     technique_grp.add_argument('--fnirt', help="FNIRT registration",
                                dest='technique', action='store_const',
-                               const='FNIRT')
+                               const='fnirt')
+    technique_grp.add_argument('--mock', help="Mock registration",
+                               dest='technique', action='store_const',
+                               const='mock')
 
     # The input subject directories or XNAT labels to process.
     parser.add_argument('inputs', help='the input AIRC DICOM subject directory'
