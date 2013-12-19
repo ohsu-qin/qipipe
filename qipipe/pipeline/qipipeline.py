@@ -17,8 +17,7 @@ from ..interfaces import (XNATDownload, XNATUpload)
 from ..helpers import xnat_helper
 from ..helpers.logging_helper import logger
 from ..helpers.bolus_arrival import bolus_arrival_index
-
-from ..staging import staging_helper
+from ..staging.staging_helper import iter_stage
 
 SCAN_TS_RSC = 'scan_ts'
 """The XNAT scan time series resouce name."""
@@ -76,14 +75,17 @@ def _run_with_dicom_input(*inputs, **opts):
         inputs
     :param opts: the :class:`QIPipelineWorkflow` initializer options,
         as well as the following keyword options:
-    :keyword collection: the input AIRC collection
+    :keyword collection: the AIRC collection name
     :keyword dest: the target staging parent directory
     """
     collection = opts.pop('collection', None)
     dest = opts.pop('dest', None)
     wf_gen = QIPipelineWorkflow(**opts)
-    wf_gen.run_with_dicom_input(collection, subject, session,
-                                *inputs, dest=dest)
+    # Run the workflow on each session fixture.
+    for sbj, sess, ser_dicom_dict in iter_stage(collection, *inputs,
+                                                dest=dest):
+        wf_gen.run_with_dicom_input(collection, sbj, sess, ser_dicom_dict,
+                                    dest)
 
 
 def _run_with_xnat_input(*inputs, **opts):
@@ -239,12 +241,18 @@ class QIPipelineWorkflow(WorkflowBase):
         """
 
     def run_with_dicom_input(self, collection, subject, session,
-                             *inputs, **opts):
+                             ser_dicom_dict, dest=None):
         """
-        Delegates to :meth:`qipipe.pipeline.staging.execute_workflow`.
+        :param collection: the AIRC collection name
+        :param subject: the subject name
+        :param session: the session name
+        :param inputs: the input AIRC visit directories
+        :param dest: the TCIA staging destination directory (default is
+            the current working directory)
         """
-        staging.execute_workflow(self.workflow, collection, subject,
-                                 session, *inputs, **opts)
+        staging.set_workflow_inputs(self.workflow, collection, subject,
+                                    session, ser_dicom_dict, dest=dest)
+        self._run_workflow(self.workflow)
 
     def run_with_scan_download(self, xnat, project, subject, session):
         """
@@ -449,6 +457,7 @@ class QIPipelineWorkflow(WorkflowBase):
         if stg_wf:
             iter_dicom_xfc = IdentityInterface(fields=['series', 'dicom_file'])
             iter_dicom = pe.Node(iter_dicom_xfc, name='iter_dicom')
+            exec_wf.connect(iter_series, 'series', iter_dicom, 'series')
 
         # Stitch together the workflows:
 
@@ -462,9 +471,8 @@ class QIPipelineWorkflow(WorkflowBase):
             for field in iter_series.inputs.copyable_trait_names():
                 exec_wf.connect(iter_series, field,
                                 stg_wf, 'iter_series.' + field)
-            for field in iter_dicom.inputs.copyable_trait_names():
-                exec_wf.connect(iter_dicom, field,
-                                stg_wf, 'iter_dicom.' + field)
+            exec_wf.connect(iter_dicom, 'dicom_file',
+                            stg_wf, 'iter_dicom.dicom_file')
 
         # The registration workflow requires the scans. If staging is
         # enabled then collect the staged NiFTI scan images. Otherwise,
