@@ -7,16 +7,74 @@ from collections import defaultdict
 from .. import project
 from ..helpers import xnat_helper
 from ..helpers.dicom_helper import iter_dicom_headers
-from . import airc_collection as airc
-
 from ..helpers.logging_helper import logger
-
+from . import airc_collection as airc
+from .map_ctp import map_ctp
 
 SUBJECT_FMT = '%s%03d'
 """The QIN subject name format with arguments (collection, subject number)."""
 
 SESSION_FMT = 'Session%02d'
 """The QIN series name format with arguments (subject, series number)."""
+
+
+def iter_stage(collection, *inputs, **opts):
+    """
+    Iterates over the the new AIRC visits in the given input directories.
+    This method is a staging generator which yields the DICOM files for
+    each new visit. After iteration is completed, the TCIA subject map
+    is created in the given destination directory.
+
+    :param collection: the AIRC image collection name
+    :param inputs: the AIRC source subject directories to stage
+    :param opts: the following keyword option:
+    :keyword dest: the TCIA staging destination directory (default is
+        the current working directory)
+    :yield: stage the DICOM files
+    :yieldparam subject: the subject name
+    :yieldparam session: the session name
+    :yieldparam ser_dicom_dict: the *{series: [dicom files]}* dictionary
+    """
+    # Validate that there is a collection
+    if not collection:
+        raise ValueError('Staging is missing the AIRC collection name')
+    
+    # Group the new DICOM files into a
+    # {subject: {session: [(series, dicom_files), ...]}} dictionary.
+    stg_dict = detect_new_visits(collection, *inputs)
+    if not stg_dict:
+        return
+
+    # The staging location.
+    dest = opts.get('dest')
+    if dest:
+        dest = os.path.abspath(dest)
+    else:
+        dest = os.getcwd()
+
+    # The workflow subjects.
+    subjects = stg_dict.keys()
+
+    # Print a debug message.
+    series_cnt = sum(map(len, stg_dict.itervalues()))
+    logger(__name__).debug(
+        "Staging %d new %s series from %d subjects in %s..." %
+        (series_cnt, collection, len(subjects), dest))
+    
+    # Delegate to the input function for each session.
+    for sbj, sess_dict in stg_dict.iteritems():
+        logger(__name__).debug("Staging subject %s..." % sbj)
+        for sess, ser_dicom_dict in sess_dict.iteritems():
+            logger(__name__).debug("Staging %s session %s..." % (sbj, sess))
+            # Delegate to the workflow executor.
+            yield sbj, sess, ser_dicom_dict
+            logger(__name__).debug("Staged %s session %s." % (sbj, sess))
+        logger(__name__).debug("Staged subject %s." % sbj)
+    logger(__name__).debug("Staged %d new %s series from %d subjects in %s." %
+                     (series_cnt, collection, len(subjects), dest))
+    
+    # Make the TCIA subject map.
+    map_ctp(collection, *subjects, dest=dest)
 
 
 def subject_for_directory(collection, path):
@@ -108,7 +166,7 @@ def detect_new_visits(collection, *inputs):
     return _group_sessions_by_series(*visits)
 
 
-def iter_visits(collection, *subject_dirs, **opts):
+def iter_visits(collection, *inputs, **opts):
     """
     Iterates over the visits in the given subject directories.
     Each iteration item is a *(subject, session, files)* tuple, formed
@@ -127,45 +185,24 @@ def iter_visits(collection, *subject_dirs, **opts):
     :mod:`qipipe.staging.airc_collection`.
 
     :param collection: the AIRC image collection name
-    :param subject_dirs: the subject directories over which to iterate
+    :param inputs: the subject directories over which to iterate
     :param opts: the following keyword arguments:
     :keyword filter: a *(subject, session)* selection filter
-    :return: the visit *(subject, session, files)* tuples
+    :yield: iterate over the visit *(subject, session, files)* tuples
     """
-    return VisitIterator(collection, *subject_dirs, **opts)
+    return VisitIterator(collection, *inputs, **opts)
 
 
-def iter_new_visits(collection, *subject_dirs):
+def iter_new_visits(collection, *inputs):
     """
     Filters :meth:`qipipe.staging.staging_helper.iter_visits` to iterate
     over the new visits in the given subject directories which are not in XNAT.
 
     :param collection: the AIRC image collection name
-    :param subject_dirs: the subject directories over which to iterate
-    :return: the new visit `(subject, session, files)` tuples
+    :param inputs: the subject directories over which to iterate
+    :yield: iterate over the new visit *(subject, session, files)* tuples
     """
-    return iter_visits(collection, *subject_dirs, filter=_is_new_session)
-
-
-def create_subject_map(self, collection, subjects, dest=None):
-    """
-    Maps each QIN Patient ID to a TCIA Patient ID for upload using CTP.
-
-    :param collection: the AIRC image collection name
-    :param subjects: the patient ids to map
-    :param dest: the directory in which to place the map
-        (default is current directory)
-    :return: the subject map file path
-    """
-    if not dest:
-        dest = os.getcwd()
-    logger(__name__).debug("Creating the TCIA subject map in %s..." % dest)
-    map_ctp = MapCTP(collection=collection, patient_ids=subjects, dest=dest)
-    result = map_ctp.run()
-    logger(__name__).debug("Created the TCIA subject map %s." %
-                       result.outputs.out_file)
-    
-    return result.outputs.out_file
+    return iter_visits(collection, *inputs, filter=_is_new_session)
 
 
 def _is_new_session(subject, session):
@@ -210,7 +247,7 @@ def _group_sessions_by_series(*session_specs):
 class VisitIterator(object):
 
     """
-    **VisitIterator** is a generator class for detecting AIRC visits.
+    **VisitIterator** is a generator class for AIRC visits.
     """
 
     def __init__(self, collection, *subject_dirs, **opts):
