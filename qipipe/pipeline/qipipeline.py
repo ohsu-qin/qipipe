@@ -323,7 +323,7 @@ class QIPipelineWorkflow(WorkflowBase):
         :return: the registered scan numbers
         """
         # The XNAT registration file names.
-        reg_files = reg_obj.out_resources().fetchone().files().get()
+        reg_files = reg_obj.files().get()
         # Match on the realigned scan file pattern.
         matches = ((QIPipelineWorkflow.REG_SERIES_PAT.match(f)
                     for f in reg_files))
