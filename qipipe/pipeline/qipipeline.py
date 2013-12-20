@@ -282,13 +282,6 @@ class QIPipelineWorkflow(WorkflowBase):
         if iter_series:
             iter_series.iterables = ('series', unreg_scans)
 
-        # If the XNAT registration resource was specified and modeling
-        # is enabled, then there is a download registered scans node.
-        # If that is the case, then set the download scan input iterables.
-        download_reg = self.workflow.get_node('download_reg')
-        if download_reg:
-            download_reg.iterables = ('scan', reg_scans)
-
         # Execute the workflow.
         self._run_workflow(self.workflow)
         self._logger.debug("Processed %d %s %s %s scans." %
@@ -299,7 +292,7 @@ class QIPipelineWorkflow(WorkflowBase):
         Partitions the given scans into those which have a corresponding
         registration reconstruction file and those which don't.
 
-        :return: the [registered, unregistered] scan numbers
+        :return: the (registered, unregistered) scan numbers
         """
         # The XNAT registration object.
         reg_obj = xnat.get_experiment_resource(project, subject, session,
@@ -310,9 +303,16 @@ class QIPipelineWorkflow(WorkflowBase):
             return [], scans
 
         # The realigned scan numbers.
-        reg_scans = self._registered_scans(reg_obj)
+        reg_scans = set(self._registered_scans(reg_obj))
+        
+        # The unregistered scan numbers.
+        unreg_scans = set(scans) - reg_scans
+        self._logger.debug("The %s %s %s resource has %d registered scans"
+                           " and %d unregistered scans." %
+                           (project, subject, session, len(reg_scans),
+                            len(unreg_scans)))
 
-        return reg_scans, list(set(scans) - set(reg_scans))
+        return (reg_scans, unreg_scans)
 
     def _registered_scans(self, reg_obj):
         """
@@ -568,15 +568,10 @@ class QIPipelineWorkflow(WorkflowBase):
                                 download_reg, 'subject')
                 exec_wf.connect(input_spec, 'session',
                                 download_reg, 'session')
-                old_reg_xfc = IdentityInterface(fields=['images'])
-                old_reg = pe.JoinNode(old_reg_xfc, joinsource=download_reg,
-                                      name='old_reg')
-                exec_wf.connect(download_reg, 'out_file',
-                                old_reg, 'images')
 
                 # Merge the previously and newly realigned images.
                 concat_reg = pe.Node(Merge(2), name='concat_reg')
-                exec_wf.connect(old_reg, 'images', concat_reg, 'in1')
+                exec_wf.connect(download_reg, 'out_files', concat_reg, 'in1')
                 exec_wf.connect(reg_node, 'out_files', concat_reg, 'in2')
 
             # Merge the realigned images to 4D.
