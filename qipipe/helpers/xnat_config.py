@@ -1,5 +1,7 @@
 import os
 
+__all__ = ['default_configuration']
+
 
 def default_configuration():
     """
@@ -14,9 +16,12 @@ def default_configuration():
 
     :return: the configuration location, if any
     """
-    for f in [DOT_CFG, HOME_CFG, ETC_CFG]:
+    for f in [CWD_CFG, DOT_CFG, HOME_CFG, ETC_CFG]:
         if os.path.exists(f):
             return f
+
+CWD_CFG = os.path.join(os.getcwd(), 'xnat.cfg')
+"""The XNAT current directory configuration location."""
 
 DOT_CFG = os.path.join(os.path.expanduser('~'), '.xnat', 'xnat.cfg')
 """The XNAT home ``.xnat`` subdirectory configuration location."""
