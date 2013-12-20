@@ -1,7 +1,5 @@
 import os
 
-__all__ = ['default_configuration']
-
 
 def default_configuration():
     """
