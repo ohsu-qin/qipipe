@@ -558,12 +558,6 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(bolus_arv, 'bolus_arrival_index',
                             reg_node, 'bolus_arrival_index')
 
-            # Collect the registration realigned images output.
-            new_reg_xfc = IdentityInterface(fields=['images'])
-            new_reg = pe.JoinNode(new_reg_xfc, joinsource='iter_series',
-                                  name='new_reg')
-            exec_wf.connect(reg_node, 'out_files', new_reg, 'images')
-
             # If the registration reconstruction name was specified,
             # then download previously realigned images.
             if reg_rsc:
@@ -583,7 +577,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 # Merge the previously and newly realigned images.
                 concat_reg = pe.Node(Merge(2), name='concat_reg')
                 exec_wf.connect(old_reg, 'images', concat_reg, 'in1')
-                exec_wf.connect(new_reg, 'images', concat_reg, 'in2')
+                exec_wf.connect(reg_node, 'out_files', concat_reg, 'in2')
 
             # Merge the realigned images to 4D.
             reg_ts_rsc = self.registration_resource + '_ts'
@@ -592,7 +586,7 @@ class QIPipelineWorkflow(WorkflowBase):
             if reg_rsc:
                 exec_wf.connect(concat_reg, 'out', merge_reg, 'in_files')
             else:
-                exec_wf.connect(new_reg, 'images', merge_reg, 'in_files')
+                exec_wf.connect(reg_node, 'out_files', merge_reg, 'in_files')
 
             # Upload the realigned time series to XNAT.
             upload_reg_ts_xfc = XNATUpload(project=project(),
