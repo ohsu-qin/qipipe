@@ -156,6 +156,8 @@ class RegistrationWorkflow(WorkflowBase):
             (default is the current directory)
         :return: the realigned output file paths
         """
+        if not images:
+            return []
         # Sort the images by series number.
         images = sorted(images)
 
