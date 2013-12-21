@@ -47,6 +47,7 @@ def set_workflow_inputs(exec_wf, collection, subject, session, ser_dicom_dict,
     iter_series.synchronize = True
 
     iter_dicom = exec_wf.get_node('iter_dicom')
+    iter_dicom.itersource = ('iter_series', 'series')
     iter_dicom.iterables = ('dicom_file', ser_dicom_dict)
 
 
@@ -246,7 +247,6 @@ class StagingWorkflow(WorkflowBase):
         # The DICOM file iterator.
         iter_dicom_fields = ['series', 'dicom_file']
         iter_dicom = pe.Node(IdentityInterface(fields=iter_dicom_fields),
-                             itersource=('iter_series', 'series'),
                              name='iter_dicom')
         self._logger.debug("The %s workflow DICOM iterable node is %s with"
                            " iterable source %s and iterables"
