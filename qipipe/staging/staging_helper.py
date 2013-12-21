@@ -57,9 +57,9 @@ def iter_stage(collection, *inputs, **opts):
 
     # Print a debug message.
     series_cnt = sum(map(len, stg_dict.itervalues()))
-    logger(__name__).debug(
-        "Staging %d new %s series from %d subjects in %s..." %
-        (series_cnt, collection, len(subjects), dest))
+    logger(__name__).debug("Staging %d new %s series from %d subjects in"
+                           " %s..." % (series_cnt, collection, len(subjects),
+                                       dest))
     
     # Delegate to the input function for each session.
     for sbj, sess_dict in stg_dict.iteritems():
