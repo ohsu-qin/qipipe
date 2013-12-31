@@ -14,7 +14,7 @@ import dicom
 def main(argv=sys.argv):
     # Parse the command line arguments.
     args = _parse_arguments()
-    
+
     # Import the qipipe modules after parsing the log options.
     from qipipe.helpers.collection_helper import to_series
     from qipipe.helpers.dicom_helper import (iter_dicom_headers,
@@ -44,10 +44,10 @@ def main(argv=sys.argv):
 def _parse_arguments():
     """Parses the command line arguments."""
     parser = argparse.ArgumentParser()
-    
+
     # The log options.
     _add_log_options(parser)
-    
+
     # The output content options.
     tag_grp = parser.add_mutually_exclusive_group()
     tag_grp.add_argument('-s', '--summary',
@@ -63,7 +63,7 @@ def _parse_arguments():
         dest='header', action='store_false')
     parser.add_argument(
         '-o', '--output', help='print the values to the given file')
-    
+
     # The input file argument.
     parser.add_argument(
         'files', help='the DICOM files or directories to list (default stdin)',
@@ -85,6 +85,7 @@ def _add_log_options(parser):
     verbosity_grp.add_argument(
         '-d', '--debug', help='log debug messages', dest='log_level',
         action='store_const', const=logging.DEBUG)
+
 
 def _configure_log(**opts):
     """
@@ -121,12 +122,13 @@ def _configure_log(**opts):
 def _print_tag_values(tags, *files, **opts):
     """
     Prints the tab-delimited tag value lines.
-    
+
     :param tags: the tags to print (default all tags)
     :param files: the DICOM files
     :param opts: the print options
     :keyword output: the destination (default stdout)
-    :keyword header: flag indicating whether to print a header line (default True)
+    :keyword header: flag indicating whether to print a header line
+        (default True)
     """
     # The default tags include any tag defined in at least one file.
     # This preparatory step requires reading each DICOM file to collect
@@ -162,7 +164,7 @@ def _print_tag_values(tags, *files, **opts):
 def _collect_default_tags(*files):
     """
     Collects the tags which occur in at least one of the given files.
-    
+
     :param fps: the DICOM file paths, streams or datasets
     :return: the tags with a valid value
     """
@@ -182,7 +184,7 @@ def _read_tags(ds, *tags):
     """
     Reads the DICOM tags in the given file
     Filters the given tag dictionary to exclude empty or multi-line tag values.
-    
+
     :param ds: the pydicom dataset
     :param tags: the DICOM tags to read (default all tags)
     :return: the filtered tag dictionary
