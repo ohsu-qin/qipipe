@@ -11,14 +11,16 @@ qipipe processes the OHSU QIN study images.
 
 :API: http://quip1.ohsu.edu:8080/qipipe/api
 
-:Git: git\@quip1.ohsu.edu:qipipe (`Browse <http://quip1.ohsu.edu:6060/qipipe>`__)
+:Git: git\@quip1.ohsu.edu:qipipe
+      (`Browse <http://quip1.ohsu.edu:6060/qipipe>`__)
 
 ************
 Feature List
 ************
 1. Recognizes new AIRC QIN study images.
 
-2. Stages images for submission to `The Cancer Imaging Archive`_ (TCIA) `QIN collection`_.
+2. Stages images for submission to 
+   `The Cancer Imaging Archive`_ (TCIA) `QIN collection`_.
 
 3. Masks images to subtract extraneous image content.
 
@@ -26,15 +28,16 @@ Feature List
 
 5. Performs pharmokinetic modeling.
 
-6. Imports the input scans and processing results into the OSHU `QIN XNAT`_ instance.
+6. Imports the input scans and processing results into the OSHU `QIN XNAT`_
+   instance.
 
-**********
-Installing
-**********
+************
+Installation
+************
 1. Install Git_ on your workstation.
 
-2. Contact the qipipe `OHSU QIN Git administrator`_ to get permission to access the qipipe Git
-   repository.
+2. Contact the qipipe `OHSU QIN Git administrator`_ to get permission to
+   access the qipipe Git repository.
 
 3. Clone the `qipipe repository`_::
 
@@ -54,14 +57,15 @@ Usage
 *****
 Run the following command for the pipeline options::
 
-     qipipeline --help
+     qipipe --help
 
-The `OHSU QIN Sharepoint`_ `TCIA Upload Procedure`_ document describes how to import the staged QIN
-images into TCIA.
+The `OHSU QIN Sharepoint`_ `TCIA Upload Procedure`_ document describes how to
+import the staged QIN images into TCIA.
 
 ---------
 
-Copyright (C) 2013, Oregon Health & Science University `Knight Cancer Institute`_. All rights reserved.
+Copyright (C) 2013, 2014 Oregon Health & Science University `Knight Cancer Institute`_.
+All rights reserved.
 qipipe is confidential and may not be distributed in any form without authorization.
 
 
