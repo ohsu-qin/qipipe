@@ -131,7 +131,7 @@ class StagingWorkflow(WorkflowBase):
 
     The staging workflow has two iterables:
 
-    - the *iter_series* node with input fields *series and *dest*
+    - the *iter_series* node with input fields *series* and *dest*
 
     - the *iter_dicom* node with input fields *series* and *dicom_file*
 
@@ -147,10 +147,10 @@ class StagingWorkflow(WorkflowBase):
     directory in the following hierarchy:
 
         ``/path/to/dest/``
-          *subject*/
-            *session*/
-              ``Series``*series_number*/
-                *file*``.dcm.gz``
+          *subject*\ /
+            *session*\ /
+              ``Series``\ *series_number*\ /
+                *file*\ ``.dcm.gz``
                 ...
 
     where:

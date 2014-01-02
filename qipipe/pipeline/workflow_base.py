@@ -92,7 +92,7 @@ class WorkflowBase(object):
     def depict_workflow(self, workflow):
         """
         Diagrams the given workflow graph. The diagram is written to the
-        *name*``.dot.png`` in the workflow base directory.
+        *name*\ ``.dot.png`` in the workflow base directory.
 
         :param workflow the workflow to diagram
         """

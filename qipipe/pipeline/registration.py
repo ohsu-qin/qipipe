@@ -77,7 +77,7 @@ class RegistrationWorkflow(WorkflowBase):
     :class:`qipipe.pipeline.reference.ReferenceWorkflow` workflow.
 
     The output realigned image file is named
-    *scan*``_``*resource*``.nii.gz``, where *scan* is the input
+    *scan*\ ``_``\ *resource*\ ``.nii.gz``, where *scan* is the input
     image file name without extension and *resource* is the XNAT
     registration resource name
 
