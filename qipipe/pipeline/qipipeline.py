@@ -667,9 +667,9 @@ def register_scans(subject, session, in_files, bolus_arrival_index,
     Runs the registration workflow on the given session scan images.
 
     :Note: contrary to Python convention, the opts method parameter
-    is a required dictionary rather than a keyword aggregate (i.e.,
-    ``**opts``). The Nipype Function interface does not support method
-    aggregates.
+      is a required dictionary rather than a keyword aggregate (i.e.,
+      ``**opts``). The Nipype Function interface does not support method
+      aggregates.
 
     :param subject: the subject name
     :param session: the session name
