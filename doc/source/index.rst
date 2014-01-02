@@ -14,6 +14,7 @@ qipipe processes the OHSU QIN study images.
 :Git: git\@quip1.ohsu.edu:qipipe
       (`Browse <http://quip1.ohsu.edu:6060/qipipe>`__)
 
+
 ************
 Feature List
 ************
@@ -30,6 +31,7 @@ Feature List
 
 6. Imports the input scans and processing results into the OSHU `QIN XNAT`_
    instance.
+
 
 ************
 Installation
@@ -52,6 +54,7 @@ Installation
        cd ~/workspace/qipipe
        pip install -e .
 
+
 *****
 Usage
 *****
@@ -59,14 +62,16 @@ Run the following command for the pipeline options::
 
      qipipe --help
 
-The `OHSU QIN Sharepoint`_ `TCIA Upload Procedure`_ document describes how to
-import the staged QIN images into TCIA.
+The `OHSU QIN Sharepoint`_ `TCIA Upload Procedure`_ document describes how
+to import the staged QIN images into TCIA.
 
 ---------
 
-Copyright (C) 2013, 2014 Oregon Health & Science University `Knight Cancer Institute`_.
-All rights reserved.
-qipipe is confidential and may not be distributed in any form without authorization.
+.. container:: copyright
+
+  Copyright (C) 2014 Oregon Health & Science University
+  `Knight Cancer Institute`_. All rights reserved. ``qipipe`` is confidential
+  and may not be distributed in any form without authorization.
 
 
 .. Targets:

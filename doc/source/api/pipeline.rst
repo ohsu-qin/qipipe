@@ -37,13 +37,6 @@ pipeline
     :members:
     :show-inheritance:
 
-:mod:`reference`
--------------------
-
-.. automodule:: qipipe.pipeline.reference
-    :members:
-    :show-inheritance:
-
 :mod:`registration`
 -------------------
 
