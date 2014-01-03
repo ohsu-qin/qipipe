@@ -3,3 +3,7 @@
 div.copyright {
     font-size: 0.8em;
 }
+
+tt {
+    background-color: transparent;
+}
