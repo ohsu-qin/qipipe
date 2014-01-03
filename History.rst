@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub commits
 (http://quip1:6060/qipipe) for change details.
 
+3.3.1 / 2014-01-04
+------------------
+* Recursive realignment.
+
 3.2.3 / 2013-11-11
 ------------------
 * Reflect qin_dce changes.
