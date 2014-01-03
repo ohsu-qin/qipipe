@@ -2,7 +2,7 @@ import tempfile
 import logging
 from nipype.pipeline import engine as pe
 from nipype.interfaces import fsl
-from nipype.interfaces.dcmstack import (DcmStack, MergeNifti, CopyMeta)
+from nipype.interfaces.dcmstack import CopyMeta
 from nipype.interfaces.utility import (IdentityInterface, Function)
 from .. import project
 from ..interfaces import (XNATUpload, Fastfit)
