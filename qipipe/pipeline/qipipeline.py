@@ -111,7 +111,7 @@ def _run_with_xnat_input(*inputs, **opts):
                     opts['scan_time_series'] = SCAN_TS_RSC
             elif 'model' in opts['actions'] and 'registration' in opts:
                 reg_ts_rsc = opts['registration'] + '_ts'
-                reg_ts_file = reg_rsc + '_ts.nii.gz'
+                reg_ts_file = reg_ts_rsc + '.nii.gz'
                 if xnat.find(project=prj, subject=sbj, session=sess,
                              resource=reg_ts_rsc):
                     opts['realigned_time_series'] = reg_ts_rsc
