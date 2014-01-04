@@ -479,7 +479,7 @@ class QIPipelineWorkflow(WorkflowBase):
         # download the XNAT NiFTI scan images. In either case, the
         # staged images are collected in a node named 'staged' with
         # output 'images'.
-        if reg_node or mask_wf:
+        if reg_node or mask_wf or (mdl_wf and not scan_ts_rsc):
             staged = pe.JoinNode(IdentityInterface(fields=['images']),
                                 joinsource='iter_series', name='staged')
             if stg_wf:
