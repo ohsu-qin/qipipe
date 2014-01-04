@@ -448,9 +448,8 @@ class QIPipelineWorkflow(WorkflowBase):
         # The workflow input node.
         input_spec_xfc = IdentityInterface(fields=input_fields)
         input_spec = pe.Node(input_spec_xfc, name='input_spec')
-        # The staging and registration workflows require a series
-        # iterator node.
-        if stg_wf or reg_node:
+        # Most workflows require a series iterator node.
+        if stg_wf or reg_node or mask_wf or (mdl_wf and not scan_ts_rsc):
             iter_series_xfc = IdentityInterface(fields=iter_series_fields)
             iter_series = pe.Node(iter_series_xfc, name='iter_series')
         # Staging requires a DICOM iterator node.
