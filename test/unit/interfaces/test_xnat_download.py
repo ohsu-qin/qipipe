@@ -25,9 +25,6 @@ SESSION = 'Session01'
 SCAN = 9
 """The test scan number."""
 
-RESOURCE = 'DICOM'
-"""The test format."""
-
 
 class TestXNATDownload(object):
 
@@ -44,15 +41,24 @@ class TestXNATDownload(object):
             self._file_names = set()
             for scan_dir in glob.glob(FIXTURE + '/Series*'):
                     _, scan = os.path.split(scan_dir)
+                    scan_obj = xnat.get_scan(project(), SUBJECT, SESSION,
+                                             SCAN)
+                    rsc_obj = scan_obj.resource('DICOM')
                     for f in glob.glob(scan_dir + '/*.dcm.gz'):
                         _, fname = os.path.split(f)
                         self._file_names.add(fname)
-                        scan_obj = xnat.get_scan(
-                            project(), SUBJECT, SESSION, SCAN)
-                        file_obj = scan_obj.resource(RESOURCE).file(fname)
-                        # Upload the file.
+                        file_obj = rsc_obj.file(fname)
+                        # Upload the DICOM file.
                         file_obj.insert(f, experiments='xnat:MRSessionData',
-                                        resource=RESOURCE)
+                                        resource='DICOM')
+                    rsc_obj = scan_obj.resource('NIFTI')
+                    for f in glob.glob(scan_dir + '/*.nii.gz'):
+                        _, fname = os.path.split(f)
+                        self._file_names.add(fname)
+                        file_obj = rsc_obj.file(fname)
+                        # Upload the NiFTI file.
+                        file_obj.insert(f, experiments='xnat:MRSessionData',
+                                        resource='NIFTI')
         logger(__name__).debug("Uploaded the test %s %s files %s." %
               (SUBJECT, SESSION, list(self._file_names)))
 
@@ -65,7 +71,7 @@ class TestXNATDownload(object):
                                "%s %s scan %d..." % (SUBJECT, SESSION, SCAN))
         # Download the files.
         download = XNATDownload(project=project(), subject=SUBJECT,
-                                session=SESSION, scan=9, resource=RESOURCE,
+                                session=SESSION, scan=SCAN, resource='DICOM',
                                 dest=RESULTS)
         result = download.run()
 
@@ -73,6 +79,30 @@ class TestXNATDownload(object):
         dl_files = result.outputs.out_files
         assert_equal(len(dl_files), 2,
                      "The %s download file count is incorrect: %s" %
+                            (SESSION, dl_files))
+        for f in dl_files:
+            assert_true(os.path.exists(f),
+                        "The file was not downloaded: %s" % f)
+            fdir, fname = os.path.split(f)
+            assert_true(os.path.samefile(RESULTS, fdir),
+                        "The download location is incorrect: %s" % fdir)
+            _, srcname = os.path.split(FIXTURE)
+            assert_true(fname in self._file_names,
+                        "The download file name is incorrect: %s" % fname)
+
+    def test_download_nii_scans(self):
+        logger(__name__).debug("Testing the XNATDownload interface on all"
+                               "%s %s NiFTI scans..." % (SUBJECT, SESSION))
+        # Download the files.
+        download = XNATDownload(project=project(), subject=SUBJECT,
+                                session=SESSION, container_type='scan',
+                                resource='NIFTI', dest=RESULTS)
+        result = download.run()
+
+        # Verify the result
+        dl_files = result.outputs.out_files
+        assert_equal(len(dl_files), 2,
+                     "The %s scan NiFTI download file count is incorrect: %s" %
                             (SESSION, dl_files))
         for f in dl_files:
             assert_true(os.path.exists(f),
