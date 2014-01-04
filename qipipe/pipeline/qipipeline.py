@@ -558,39 +558,6 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(bolus_arv, 'bolus_arrival_index',
                             reg_node, 'bolus_arrival_index')
 
-            # If the registration reconstruction name was specified,
-            # then download previously realigned images.
-            if reg_rsc:
-                reg_dl_xfc = XNATDownload(project=project(),
-                                          resource=reg_rsc)
-                download_reg = pe.Node(reg_dl_xfc, name='download_reg')
-                exec_wf.connect(input_spec, 'subject',
-                                download_reg, 'subject')
-                exec_wf.connect(input_spec, 'session',
-                                download_reg, 'session')
-
-                # Merge the previously and newly realigned images.
-                concat_reg = pe.Node(Merge(2), name='concat_reg')
-                exec_wf.connect(download_reg, 'out_files', concat_reg, 'in1')
-                exec_wf.connect(reg_node, 'out_files', concat_reg, 'in2')
-
-            # Merge the realigned images to 4D.
-            reg_ts_rsc = self.registration_resource + '_ts'
-            merge_reg = pe.Node(MergeNifti(out_format=reg_ts_rsc),
-                                name='merge_reg')
-            if reg_rsc:
-                exec_wf.connect(concat_reg, 'out', merge_reg, 'in_files')
-            else:
-                exec_wf.connect(reg_node, 'out_files', merge_reg, 'in_files')
-
-            # Upload the realigned time series to XNAT.
-            upload_reg_ts_xfc = XNATUpload(project=project(),
-                                           resource=reg_ts_rsc)
-            upload_reg_ts = pe.Node(upload_reg_ts_xfc, name='upload_reg_ts')
-            exec_wf.connect(input_spec, 'subject', upload_reg_ts, 'subject')
-            exec_wf.connect(input_spec, 'session', upload_reg_ts, 'session')
-            exec_wf.connect(merge_reg, 'out_file', upload_reg_ts, 'in_files')
-
         # If the modeling workflow is enabled, then model the realigned
         # images.
         if mdl_wf:
@@ -612,15 +579,10 @@ class QIPipelineWorkflow(WorkflowBase):
             # If registration is enabled, then the 4D time series
             # is created by that workflow, otherwise download the
             # previously created 4D time series.
-            if reg_node:
-                exec_wf.connect(merge_reg, 'out_file',
-                                mdl_wf, 'input_spec.time_series')
-            elif reg_rsc:
-                # The 4D time series XNAT file name.
-                ts_fname = reg_rsc + '_ts.nii.gz'
+            if reg_ts_rsc:
                 # Download the XNAT time series file.
                 ts_dl_xfc = XNATDownload(project=project(),
-                                         resource=reg_rsc,
+                                         resource=reg_ts_rsc,
                                          file=ts_fname)
                 download_ts = pe.Node(ts_dl_xfc, name='download_ts')
                 exec_wf.connect(input_spec, 'subject',
@@ -630,10 +592,60 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(download_ts, 'out_file',
                                 mdl_wf, 'input_spec.time_series')
             else:
-                raise ArgumentError(
-                    "The QIN pipeline cannot perform modeling, since the"
-                    " registration workflow is disabled and no registration"
-                    " resource was specified.")
+                # Merge the realigned images to 4D.
+                reg_ts_rsc = self.registration_resource + '_ts'
+                merge_reg = pe.Node(MergeNifti(out_format=reg_ts_rsc),
+                                    name='merge_reg')
+                
+                # If the registration reconstruction name was specified,
+                # then download the previously realigned images.
+                if reg_rsc:
+                    reg_dl_xfc = XNATDownload(project=project(),
+                                              resource=reg_rsc)
+                    download_reg = pe.Node(reg_dl_xfc, name='download_reg')
+                    exec_wf.connect(input_spec, 'subject',
+                                    download_reg, 'subject')
+                    exec_wf.connect(input_spec, 'session',
+                                    download_reg, 'session')
+                    if reg_node:
+                        # Merge the previously and newly realigned images.
+                        concat_reg = pe.Node(Merge(2), name='concat_reg')
+                        exec_wf.connect(download_reg, 'out_files',
+                                        concat_reg, 'in1')
+                        exec_wf.connect(reg_node, 'out_files',
+                                        concat_reg, 'in2')
+                        exec_wf.connect(concat_reg, 'out',
+                                        merge_reg, 'in_files')
+                    else:
+                        # All of the realigned files were downloaded.
+                        exec_wf.connect(download_reg, 'out',
+                                        merge_reg, 'in_files')
+                elif reg_node:
+                    # All of the realigned files were created by the
+                    # registration workflow.
+                    exec_wf.connect(reg_node, 'out_files',
+                                    merge_reg, 'in_files')
+                else:
+                    raise ArgumentError(
+                        "The QIN pipeline cannot perform modeling, since the"
+                        " registration workflow is disabled and no registration"
+                        " resource was specified.")
+
+                # Upload the realigned time series to XNAT.
+                upload_reg_ts_xfc = XNATUpload(project=project(),
+                                               resource=reg_ts_rsc)
+                upload_reg_ts = pe.Node(upload_reg_ts_xfc,
+                                        name='upload_reg_ts')
+                exec_wf.connect(input_spec, 'subject',
+                                upload_reg_ts, 'subject')
+                exec_wf.connect(input_spec, 'session',
+                                upload_reg_ts, 'session')
+                exec_wf.connect(merge_reg, 'out_file',
+                                upload_reg_ts, 'in_files')
+                
+                # Pass the realigned time series to modeling.
+                exec_wf.connect(merge_reg, 'out_file',
+                                mdl_wf, 'input_spec.time_series')
 
         # Set the configured workflow node inputs and plug-in options.
         self._configure_nodes(exec_wf)
