@@ -481,20 +481,17 @@ class QIPipelineWorkflow(WorkflowBase):
         # staged images are collected in a node named 'staged' with
         # output 'images'.
         if reg_node or mask_wf or (mdl_wf and not scan_ts_rsc):
-            staged = pe.JoinNode(IdentityInterface(fields=['images']),
-                                joinsource='iter_series', name='staged')
             if stg_wf:
-                exec_wf.connect(stg_wf, 'output_spec.image', staged, 'images')
+                staged = pe.JoinNode(IdentityInterface(fields=['out_files']),
+                                    joinsource='iter_series', name='staged')
+                exec_wf.connect(stg_wf, 'output_spec.image',
+                                staged, 'out_files')
             else:
-                dl_scans_xfc = XNATDownload(project=project(), resource='NIFTI')
-                download_scans = pe.Node(dl_scans_xfc, name='download_scans')
-                exec_wf.connect(input_spec, 'subject',
-                                download_scans, 'subject')
-                exec_wf.connect(input_spec, 'session',
-                                download_scans, 'session')
-                exec_wf.connect(iter_series, 'series',
-                                download_scans, 'scan')
-                exec_wf.connect(download_scans, 'out_file', staged, 'images')
+                dl_scans_xfc = XNATDownload(project=project(),
+                                            resource='NIFTI')
+                staged = pe.Node(dl_scans_xfc, name='staged')
+                exec_wf.connect(input_spec, 'subject', staged, 'subject')
+                exec_wf.connect(input_spec, 'session', staged, 'session')
 
         # Registration and modeling require a time series, mask and bolus arrival.
         if reg_node or mdl_wf:
@@ -511,7 +508,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 # Merge the staged files.
                 scan_ts = pe.Node(MergeNifti(out_format=SCAN_TS_RSC),
                                   name='merge_scans')
-                exec_wf.connect(staged, 'images', scan_ts, 'in_files')
+                exec_wf.connect(staged, 'out_files', scan_ts, 'in_files')
                 # Upload the time series.
                 ul_scan_ts_xfc = XNATUpload(project=project(),
                                             resource=SCAN_TS_RSC)
@@ -549,7 +546,7 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(input_spec, 'subject', reg_node, 'subject')
             exec_wf.connect(input_spec, 'session', reg_node, 'session')
             # The staged input.
-            exec_wf.connect(staged, 'images', reg_node, 'in_files')
+            exec_wf.connect(staged, 'out_files', reg_node, 'in_files')
             # The mask input.
             if mask_wf:
                 exec_wf.connect(mask_wf, 'output_spec.mask', reg_node, 'mask')
