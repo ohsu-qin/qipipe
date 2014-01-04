@@ -488,6 +488,7 @@ class QIPipelineWorkflow(WorkflowBase):
                                 staged, 'out_files')
             else:
                 dl_scans_xfc = XNATDownload(project=project(),
+                                            container_type='scan',
                                             resource='NIFTI')
                 staged = pe.Node(dl_scans_xfc, name='staged')
                 exec_wf.connect(input_spec, 'subject', staged, 'subject')
