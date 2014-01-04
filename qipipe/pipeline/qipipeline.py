@@ -381,6 +381,10 @@ class QIPipelineWorkflow(WorkflowBase):
         if 'project' in opts:
             project(opts['project'])
             self._logger.debug("Set the XNAT project to %s." % project())
+        
+        # Set the registration resource instance variable.
+        if reg_rsc:
+            self.registration_resource = reg_rsc
 
         # The modeling workflow.
         if 'model' in actions:
@@ -399,11 +403,9 @@ class QIPipelineWorkflow(WorkflowBase):
             reg_opts = dict(base_dir=base_dir)
             if reg_technique:
                 reg_opts['technique'] = reg_technique
-            # If the resource was specified, then use it. Otherwise,
-            # make a new resource name.
-            if reg_rsc:
-                self.registration_resource = reg_rsc
-            else:
+            # If the resource was not specified, then make a new
+            # resource name.
+            if not reg_rsc:
                 new_reg_rsc = registration.generate_resource_name()
                 self.registration_resource = new_reg_rsc
             reg_opts['resource'] = self.registration_resource
