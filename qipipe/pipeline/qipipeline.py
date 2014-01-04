@@ -580,14 +580,11 @@ class QIPipelineWorkflow(WorkflowBase):
             if reg_ts_rsc:
                 # Download the XNAT time series file.
                 ts_dl_xfc = XNATDownload(project=project(),
-                                         resource=reg_ts_rsc,
-                                         file=ts_fname)
-                download_ts = pe.Node(ts_dl_xfc, name='download_ts')
-                exec_wf.connect(input_spec, 'subject',
-                                download_ts, 'subject')
-                exec_wf.connect(input_spec, 'session',
-                                download_ts, 'session')
-                exec_wf.connect(download_ts, 'out_file',
+                                         resource=reg_ts_rsc)
+                reg_ts = pe.Node(ts_dl_xfc, name='download_reg_time_series')
+                exec_wf.connect(input_spec, 'subject', reg_ts, 'subject')
+                exec_wf.connect(input_spec, 'session', reg_ts, 'session')
+                exec_wf.connect(reg_ts, 'out_file',
                                 mdl_wf, 'input_spec.time_series')
             else:
                 # Merge the realigned images to 4D.
@@ -600,7 +597,8 @@ class QIPipelineWorkflow(WorkflowBase):
                 if reg_rsc:
                     reg_dl_xfc = XNATDownload(project=project(),
                                               resource=reg_rsc)
-                    download_reg = pe.Node(reg_dl_xfc, name='download_reg')
+                    download_reg = pe.Node(reg_dl_xfc,
+                                           name='download_realigned_images')
                     exec_wf.connect(input_spec, 'subject',
                                     download_reg, 'subject')
                     exec_wf.connect(input_spec, 'session',
