@@ -619,7 +619,7 @@ class QIPipelineWorkflow(WorkflowBase):
                                         merge_reg, 'in_files')
                     else:
                         # All of the realigned files were downloaded.
-                        exec_wf.connect(download_reg, 'out',
+                        exec_wf.connect(download_reg, 'out_files',
                                         merge_reg, 'in_files')
                 elif reg_node:
                     # All of the realigned files were created by the
