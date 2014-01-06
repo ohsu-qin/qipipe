@@ -7,8 +7,6 @@ import os
 import sys
 import imp
 import argparse
-from pyxnat.core.resources import Reconstruction
-from qipipe.helpers.xnat_helper import XNAT
 
 # Import the command helper by path, since the log options must be
 # processed before importing any qipipe module.
@@ -16,14 +14,8 @@ cmd = imp.load_source('command',
                       (os.path.dirname(__file__) +
                        '/../qipipe/helpers/command.py'))
 
-XNAT_CHILD_TYPES = set(XNAT.CONTAINER_TYPES + ['resource', 'file'])
-
 
 class SessionNotFoundError(Exception):
-    pass
-
-
-class ChildNotFoundError(Exception):
     pass
 
 
@@ -34,9 +26,10 @@ def main(argv=sys.argv):
     # Configure the logger.
     cmd.configure_log(opts)
 
-    # Import the qipipe pipeline module after configuring the logger.
+    # Import the pyxnat and qipipe pipeline module after configuring
+    # the logger.
+    from pyxnat.core.resources import Reconstruction
     from qipipe.helpers import xnat_helper
-    global xnat_helper
 
     # Parse the XNAT hierarchy argument.
     path_items = path_str.split('/')
@@ -44,92 +37,19 @@ def main(argv=sys.argv):
         raise ValueError("The search path must include at least three items,"
                          " e.g. QIN/Breast003/Session01")
     prj, sbj, sess = path_items[0:3]
-    child_path = _parse_child_path(path_items[3:])
+    child_path = xnat_helper.standardize_experiment_child_hierarchy(path_items[3:])
     with xnat_helper.connection() as xnat:
         sess_obj = xnat.get_session(prj, sbj, sess)
         if not sess_obj.exists():
             raise SessionNotFoundError("No such XNAT session: %s %s %s" %
                                        (prj, sbj, sess))
-        for child in _closure(sess_obj, child_path):
+        for child in xnat_helper.expand_child_hierarchy(sess_obj, child_path):
             if isinstance(child, Reconstruction):
                 print child.id()
             else:
                 print child.label()
     
     return 0
-    
-
-def _parse_child_path(in_path):
-    out_path = []
-    curr_type = None
-    for item in in_path:
-        if curr_type:
-            out_path.append((curr_type, item))
-            curr_type = None
-        else:
-            curr_type = _parse_child_type(item)
-            if not curr_type:
-                raise ValueError("The XNAT path %s item %s XNAT type is not"
-                                 " recognized as an XNAT object type" %
-                                 (in_path, item))
-    if curr_type:
-        if curr_type.endswith('s'):
-            out_path.append(curr_type)
-        else:
-            raise ValueError("The XNAT path %s is not terminated with a"
-                             " value" % in_path)
-    
-    return out_path
-
-
-def _parse_child_type(name):
-    if name in XNAT.ASSESSOR_SYNONYMS:
-        return 'assessor'
-    elif name in XNAT_CHILD_TYPES:
-        return name
-    elif name.endswith('s'):
-        child_type = _parse_child_type(name[:-1])
-        if child_type:
-            return child_type + 's'
-
-
-def _closure(xnat_obj, child_path):
-    """
-    Returns the XNAT object children in the given path.
-
-    :param xnat_obj: the parent XNAT object
-    :param child_path: the XNAT child path
-    :return: the XNAT child labels
-    """
-    # The trivial case.
-    if not child_path:
-        return [xnat_obj]
-    
-    child_spec = child_path[0]
-    children = _children(xnat_obj, child_spec)
-    closures = [_closure(child, child_path[1:]) for child in children]
-    return reduce(lambda x, y: x + y, closures, [])
-
-
-def _children(xnat_obj, child_spec):
-    """
-    Returns the XNAT object children for the given child specification.
-    The specification is either a pluralized XNAT child type, e.g. ``scans``,
-    or a (type, value) pair, e.g. ``(scan, '1')``
-
-    :param xnat_obj: the parent XNAT object
-    :param child_spec: the XNAT child specification
-    :return: the XNAT child objects
-    """
-    if isinstance(child_spec, tuple):
-        child_type, child_label = child_spec
-        child = getattr(xnat_obj, child_type)(child_label)
-        if not child.exists():
-            raise ChildNotFoundError("No such XNAT %s %s child: %s" %
-                                     (xnat_obj, child_type, child_label))
-        return [child]
-    else:
-        return getattr(xnat_obj, child_spec)()
 
 
 def _parse_arguments():

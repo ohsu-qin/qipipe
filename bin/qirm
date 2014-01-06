@@ -3,35 +3,50 @@
 Deletes an OHSU QIN XNAT object.
 """
 
+import os
 import sys
+import imp
 import argparse
 
 # Import the command helper by path, since the log options must be
 # processed before importing any qipipe module.
-cmd = imp.load_source('command', 
-                      os.path.dirname(__file__) + '/../qipipe/helpers/command.py')
+cmd = imp.load_source('command',
+                      (os.path.dirname(__file__) +
+                       '/../qipipe/helpers/command.py'))
+
+
+class SessionNotFoundError(Exception):
+    pass
 
 
 def main(argv=sys.argv):
     # Parse the command line arguments.
-    label, opts = _parse_arguments()
+    path_str, opts = _parse_arguments()
 
     # Configure the logger.
     cmd.configure_log(opts)
-    
-    # Import the qipipe pipeline module after configuring the logger.
+
+    # Import the pyxnat and qipipe pipeline module after configuring
+    # the logger.
+    from pyxnat.core.resources import Reconstruction
     from qipipe.helpers import xnat_helper
 
-    # Parse the XNAT session label argument.
-    prj, sbj, sess = xnat_helper.parse_session_label(label)
-    # Delete the XNAT object.
+    # Parse the XNAT hierarchy argument.
+    path_items = path_str.split('/')
+    if len(path_items) < 3:
+        raise ValueError("The search path must include at least three items,"
+                         " e.g. QIN/Breast003/Session01")
+    prj, sbj, sess = path_items[0:3]
+    child_path = xnat_helper.standardize_experiment_child_hierarchy(path_items[3:])
     with xnat_helper.connection() as xnat:
-        xnat_obj = xnat.find(prj, sbj, sess, **opts)
-        if not xnat_obj.exists():
-            raise ValueError("XNAT object %s %s %s %s does not exist" %
-                             (prj, sbj, sess, opts))
-        xnat_obj.delete()
-
+        sess_obj = xnat.get_session(prj, sbj, sess)
+        if not sess_obj.exists():
+            raise SessionNotFoundError("No such XNAT session: %s %s %s" %
+                                       (prj, sbj, sess))
+        for child in xnat_helper.expand_child_hierarchy(sess_obj, child_path):
+            if child.exists():
+                child.delete()
+    
     return 0
 
 
@@ -42,23 +57,14 @@ def _parse_arguments():
     # The log options.
     cmd.add_log_options(parser)
 
-    # The XNAT name options.
-    target_grp = parser.add_mutually_exclusive_group()
-    target_grp.add_argument('-r', '--resource', metavar='LABEL',
-                            help='the XNAT resource name')
-    target_grp.add_argument('-a', '--assessor', metavar='LABEL',
-                            help='the XNAT assessor name')
-    target_grp.add_argument('--reconstruction', metavar='LABEL',
-                            help='the XNAT reconstruction name')
-
-    # The input session to process.
-    parser.add_argument('session', help='the target XNAT session',
-                        metavar='LABEL')
+    # The input XNAT path.
+    parser.add_argument('path', help='the target XNAT object path',
+                        metavar='PATH')
 
     args = vars(parser.parse_args())
     nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)
 
-    return nonempty_args.pop('session'), nonempty_args
+    return nonempty_args.pop('path'), nonempty_args
 
 
 if __name__ == '__main__':

@@ -88,6 +88,67 @@ def parse_session_label(label):
     prj = '_'.join(names)
 
     return (prj, sbj, sess)
+    
+
+def standardize_experiment_child_hierarchy(hierarchy):
+    """
+    Standardizes the given XNAT experiment hierarchy as a list of
+    *(type, value)* or *container_method* items.
+
+    Examples:
+
+    >> from qipipe.helpers import xnat_helper
+    >> hiearchy = ['resource', 'reg_Qzu7R', 'files']
+    >> xnat_helper.standardize_experiment_child_hierarchy(hiearchy)
+    [('resource', 'reg_Qzu7R'), 'files']
+    >> hiearchy = ['analysis', 'pk_tYv4A', 'resource', 'k_trans', 'files']
+    >> xnat_helper.standardize_experiment_child_hierarchy(hiearchy)
+    [('assessor', 'pk_tYv4A'), ('resource', 'k_trans'), 'files']
+
+    :param hierarchy: the XNAT path components
+    :return: the path component list
+    """
+    out_path = []
+    curr_type = None
+    for item in hierarchy:
+        if curr_type:
+            out_path.append((curr_type, item))
+            curr_type = None
+        else:
+            curr_type = standardize_child_attribute(item)
+            if not curr_type:
+                raise ValueError("The XNAT path %s item %s XNAT type is not"
+                                 " recognized as an XNAT object type" %
+                                 (in_path, item))
+    if curr_type:
+        if curr_type.endswith('s'):
+            out_path.append(curr_type)
+        else:
+            raise ValueError("The XNAT path %s is not terminated with a"
+                             " value" % in_path)
+    
+    return out_path
+
+
+def expand_child_hierarchy(parent, hierarchy):
+    """
+    Returns the XNAT object children in the given hierarchy.
+    The *hierarchy* consists of child path components as described in
+    the :meth:`standardize_experiment_child_hierarchy` result.
+
+    :param parent: the parent XNAT object
+    :param hierarchy: the child hierarchy
+    :return: the XNAT child label list
+    """
+    # The trivial case.
+    if not hierarchy:
+        return [parent]
+    
+    child_spec = hierarchy[0]
+    children = xnat_children(parent, child_spec)
+    closures = [expand_child_hierarchy(child, hierarchy[1:])
+                for child in children]
+    return reduce(lambda x, y: x + y, closures, [])
 
 
 def delete_subjects(project, *subjects):
@@ -151,7 +212,57 @@ def children_methods(obj):
         return methods
 
 
+def standardize_child_attribute(name):
+    """
+    Returns the standardized XNAT attribute for the given name.
+    
+    Examples:
+    
+    >> from qipipe.helpers import xnat_helper
+    >> xnat_helper.standardize_child_attribute('assessment')
+    'assessor'
+    >> xnat_helper.standardize_child_attribute('analyses')
+    'assessors'
+    
+    :param name: the attribute name
+    :return: the standardized XNAT attribute
+    """
+    if name == 'analyses':
+        return 'assessors'
+    elif name in XNAT.ASSESSOR_SYNONYMS:
+        return 'assessor'
+    elif name.endswith('s'):
+        return standardize_child_attribute(name[:-1]) + 's'
+    else:
+        return name
+
+
+def xnat_children(xnat_obj, child_spec):
+    """
+    Returns the XNAT object children for the given child specification.
+    The specification is either a pluralized XNAT child type, e.g. ``scans``,
+    or a (type, value) pair, e.g. ``(scan, '1')``
+
+    :param xnat_obj: the parent XNAT object
+    :param child_spec: the XNAT child specification
+    :return: the XNAT child objects
+    """
+    if isinstance(child_spec, tuple):
+        child_type, child_label = child_spec
+        child = getattr(xnat_obj, child_type)(child_label)
+        if not child.exists():
+            raise ChildNotFoundError("No such XNAT %s %s child: %s" %
+                                     (xnat_obj, child_type, child_label))
+        return [child]
+    else:
+        return getattr(xnat_obj, child_spec)()
+
+
 class XNATError(Exception):
+    pass
+
+
+class ChildNotFoundError(Exception):
     pass
 
 
@@ -229,7 +340,10 @@ class XNAT(object):
     """The subject query template."""
 
     CONTAINER_TYPES = ['scan', 'reconstruction', 'assessor']
-    """The supported XNAT resource container types."""
+    """The XNAT resource container types."""
+
+    XNAT_CHILD_TYPES = set(CONTAINER_TYPES + ['resource', 'file'])
+    """The XNAT experiment or resource container child types."""
 
     ASSESSOR_SYNONYMS = ['analysis', 'assessment']
     """Alternative designations for the XNAT ``assessor`` container type."""
