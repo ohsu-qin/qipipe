@@ -1,4 +1,5 @@
 import os
+import re
 from contextlib import contextmanager
 import pyxnat
 from pyxnat.core.resources import (Experiment, Scan, Reconstruction,
@@ -119,13 +120,13 @@ def standardize_experiment_child_hierarchy(hierarchy):
             if not curr_type:
                 raise ValueError("The XNAT path %s item %s XNAT type is not"
                                  " recognized as an XNAT object type" %
-                                 (in_path, item))
+                                 (hierarchy, item))
     if curr_type:
         if curr_type.endswith('s'):
             out_path.append(curr_type)
         else:
             raise ValueError("The XNAT path %s is not terminated with a"
-                             " value" % in_path)
+                             " value" % hierarchy)
     
     return out_path
 
@@ -240,8 +241,10 @@ def standardize_child_attribute(name):
 def xnat_children(xnat_obj, child_spec):
     """
     Returns the XNAT object children for the given child specification.
-    The specification is either a pluralized XNAT child type, e.g. ``scans``,
-    or a (type, value) pair, e.g. ``(scan, '1')``
+    The specification is either a pluralized XNAT child type, e.g.
+    ``scans``, or a (type, value) pair, e.g. ``('scan', '1')``. If the
+    value includes a wildcard, e.g. ``('resource', 'reg_*')``, then
+    all matching XNAT objects are returned.
 
     :param xnat_obj: the parent XNAT object
     :param child_spec: the XNAT child specification
@@ -249,6 +252,11 @@ def xnat_children(xnat_obj, child_spec):
     """
     if isinstance(child_spec, tuple):
         child_type, child_label = child_spec
+        if '*' in child_label:
+            label_pat = re.escape(child_label).replace('\*', '.*') + '$'
+            children = xnat_children(xnat_obj, child_type + 's')
+            return [child for child in children
+                    if re.match(label_pat, child.label())]
         child = getattr(xnat_obj, child_type)(child_label)
         if not child.exists():
             raise ChildNotFoundError("No such XNAT %s %s child: %s" %
