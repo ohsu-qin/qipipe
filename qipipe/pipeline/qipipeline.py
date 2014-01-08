@@ -269,18 +269,14 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # Partition the input scans into those which are already
         # registered and those which need to be registered.
-        reg_scans, unreg_scans = self._partition_scans(
-            xnat, project, subject, session, scans)
+        reg_scans, unreg_scans = self._partition_scans(xnat, project, subject,
+                                                       session, scans)
 
         # Set the workflow input.
         input_spec = self.workflow.get_node('input_spec')
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
-
-        # Set the series iterables to the unregistered scans.
-        iter_series = self.workflow.get_node('iter_series')
-        if iter_series:
-            iter_series.iterables = ('series', unreg_scans)
+        input_spec.inputs.unregistered_series = unreg_scans
 
         # Execute the workflow.
         self._run_workflow(self.workflow)
@@ -443,9 +439,12 @@ class QIPipelineWorkflow(WorkflowBase):
         input_fields = ['subject', 'session']
         iter_series_fields = ['series']
         # The staging workflow has additional input fields.
+        # Partial registration requires the unregistered scans input.
         if stg_wf:
             input_fields.append('collection')
             iter_series_fields.append('dest')
+        elif reg_node and reg_rsc:
+            input_fields.append('unregistered_series')
         
         # The workflow input node.
         input_spec_xfc = IdentityInterface(fields=input_fields)
@@ -547,7 +546,18 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(input_spec, 'subject', reg_node, 'subject')
             exec_wf.connect(input_spec, 'session', reg_node, 'session')
             # The staged input.
-            exec_wf.connect(staged, 'out_files', reg_node, 'in_files')
+            if stg_wf or not reg_rsc:
+                exec_wf.connect(staged, 'out_files', reg_node, 'in_files')
+            else:
+                # Select only the unregistered scans.
+                sel_unreg_xfc = Function(input_names=['scans', 'in_files'],
+                                         output_names=['out_files'],
+                                         function=select_scan_files)
+                unreged = pe.Node(sel_unreg_xfc, name='unregistered')
+                exec_wf.connect(input_spec, 'unregistered_series',
+                                unreged, 'scans')
+                exec_wf.connect(staged, 'out_files', unreged, 'in_files')
+                exec_wf.connect(unreged, 'out_files', reg_node, 'in_files')
             # The mask input.
             if mask_wf:
                 exec_wf.connect(mask_wf, 'output_spec.mask', reg_node, 'mask')
@@ -670,15 +680,30 @@ class QIPipelineWorkflow(WorkflowBase):
             finally:
                 os.remove(ref_0)
 
+
+def select_scan_files(scans, in_files):
+    """
+    :param scans: the scan numbers
+    :param in_files: the scan files
+    :return: the scan files for the given series 
+    """
+    import re
+    
+    scans = set(scans)
+    series_pat = re.compile("series(\d{3}).nii.gz$")
+    return [f for f in in_files
+            if int(series_pat.search(f).group(1)) in scans]
+
+
 def register_scans(subject, session, in_files, bolus_arrival_index,
                    mask, opts):
     """
     Runs the registration workflow on the given session scan images.
 
     :Note: contrary to Python convention, the opts method parameter
-      is a required dictionary rather than a keyword aggregate (i.e.,
-      ``**opts``). The Nipype Function interface does not support method
-      aggregates.
+      is a required dictionary rather than a keyword aggregate (e.g.
+      ``**opts``). The Nipype ``Function`` interface does not support
+      method aggregates.
 
     :param subject: the subject name
     :param session: the session name
