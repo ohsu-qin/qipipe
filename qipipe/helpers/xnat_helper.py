@@ -11,7 +11,7 @@ from .logging_helper import logger
 
 
 @contextmanager
-def connection():
+def connection(config=None):
     """
     Yields a :class:`XNAT` instance.
     The XNAT connection is closed when the outermost connection
@@ -29,7 +29,7 @@ def connection():
     if not hasattr(connection, 'connect_cnt'):
         connection.connect_cnt = 0
     if not connection.connect_cnt:
-        connection.xnat = XNAT()
+        connection.xnat = XNAT(config)
     connection.connect_cnt += 1
     try:
         yield connection.xnat
@@ -89,7 +89,7 @@ def parse_session_label(label):
     prj = '_'.join(names)
 
     return (prj, sbj, sess)
-    
+
 
 def standardize_experiment_child_hierarchy(hierarchy):
     """
@@ -116,18 +116,16 @@ def standardize_experiment_child_hierarchy(hierarchy):
             out_path.append((curr_type, item))
             curr_type = None
         else:
-            curr_type = standardize_child_attribute(item)
-            if not curr_type:
-                raise ValueError("The XNAT path %s item %s XNAT type is not"
-                                 " recognized as an XNAT object type" %
-                                 (hierarchy, item))
+            child_attr = standardize_child_attribute(item)
+            if child_attr.endswith('s'):
+                out_path.append(child_attr)
+            else:
+                curr_type = child_attr
     if curr_type:
-        if curr_type.endswith('s'):
-            out_path.append(curr_type)
-        else:
-            raise ValueError("The XNAT path %s is not terminated with a"
-                             " value" % hierarchy)
-    
+        path = '/'.join(hierarchy)
+        raise ValueError("The XNAT search path is not terminated with a"
+                         " %s value" % curr_type)
+
     return out_path
 
 
@@ -144,7 +142,7 @@ def expand_child_hierarchy(parent, hierarchy):
     # The trivial case.
     if not hierarchy:
         return [parent]
-    
+
     child_spec = hierarchy[0]
     children = xnat_children(parent, child_spec)
     closures = [expand_child_hierarchy(child, hierarchy[1:])
@@ -216,15 +214,15 @@ def children_methods(obj):
 def standardize_child_attribute(name):
     """
     Returns the standardized XNAT attribute for the given name.
-    
+
     Examples:
-    
+
     >> from qipipe.helpers import xnat_helper
     >> xnat_helper.standardize_child_attribute('assessment')
     'assessor'
     >> xnat_helper.standardize_child_attribute('analyses')
     'assessors'
-    
+
     :param name: the attribute name
     :return: the standardized XNAT attribute
     """
@@ -234,8 +232,11 @@ def standardize_child_attribute(name):
         return 'assessor'
     elif name.endswith('s'):
         return standardize_child_attribute(name[:-1]) + 's'
-    else:
+    elif name in XNAT.XNAT_CHILD_TYPES:
         return name
+    else:
+        raise ValueError("The XNAT path item %s is not recognized as an"
+                         " XNAT object type" % name)
 
 
 def xnat_children(xnat_obj, child_spec):
@@ -286,23 +287,25 @@ class XNAT(object):
     >>>     sbj = xnat.get_subject('QIN', 'Sarcoma001')
 
     This XNAT wrapper class implements methods to access XNAT objects in
-    a hierarchical name space using a labeling convention. The method
-    parameters take name values which are used to build a XNAT label,
-    as shown in the following example:
+    a hierarchical name space using a labeling convention. The access
+    method parameters are XNAT hierarchy object name values. Here, the
+    *name* refers to the ending portion of the XNAT label that strips
+    out the parent label. The name parameters are used to build the
+    XNAT label, as shown in the following example:
 
     +----------------+-------------+------------+-------------------------------------+
     | Class          | Name        | Id         | Label                               |
     +================+=============+============+=====================================+
     | Project        | QIN         | QIN        | QIN                                 |
     +----------------+-------------+------------+-------------------------------------+
-    | Subject        | Breast003   | QIN_E00580 | QIN_Breast003                       |
+    | Subject        | Breast003   | QIN_S00580 | QIN_Breast003                       |
     +----------------+-------------+------------+-------------------------------------+
     | Experiment     | Session01   | QIN_E00604 | QIN_Breast003_Session01             |
     +----------------+-------------+------------+-------------------------------------+
     | Scan           | 1           | 1          | 1                                   |
-    +----------------+-------------+--------------------------------------+-----------+
-    | Reconstruction | reco_fTkr4Y | QIN_Breast003_Session01_reco_fTkr4Y  |  -        |
-    +----------------+-------------+--------------------------------------+-----------+
+    +----------------+-------------+------------+-------------------------------------+
+    | Reconstruction | reco_fTkr4Y | -          | QIN_Breast003_Session01_reco_fTkr4Y |
+    +----------------+-------------+------------+-------------------------------------+
     | Assessor       | pk_4kbEv3r  | QIN_E00868 | QIN_Breast003_Session01_pk_4kbEv3r  |
     +----------------+-------------+------------+-------------------------------------+
     | Resource       | reg_zaK1Bd  | 3187       | reg_zaK1Bd                          |
@@ -310,20 +313,134 @@ class XNAT(object):
     | File           |series37.nii |series37.nii| series37.nii                        |
     +----------------+-------------+------------+-------------------------------------+
 
-    :Note: The XNAT Reconstruction data type is deprecated. An experiment Resource
-        should be used instead.
+    The XNAT wrapper class implements methods to access XNAT objects in
+    a hierarchical name space using a labeling convention. The method
+    parameters take the XNAT hierarchy object name values which are used
+    to build a XNAT label, as shown in the following example:
 
-    The XNAT label is set by the user and required to be unique in the XNAT
-    database, with the following exceptions:
 
-    * the Scan label is unique within the scope of the experiment.
+    The following table shows example XNAT ids and label.
+    
+    +----------------+------------+-------------------------------------+
+    | Class          | Id         | Label                               |
+    +================+============+=====================================+
+    | Project        | QIN        | QIN                                 |
+    +----------------+------------+-------------------------------------+
+    | Subject        | QIN_S00580 | Breast003                           |
+    +----------------+------------+-------------------------------------+
+    | Experiment     | QIN_E00604 | Breast003_Session01                 |
+    +----------------+------------+-------------------------------------+
+    | Scan           | 1          | 1                                   |
+    +----------------+------------+-------------------------------------+
+    | Reconstruction | --         | Breast003_Session01_reco_fTkr4Y     |
+    +----------------+------------+-------------------------------------+
+    | Assessor       | QIN_E00868 | Breast003_Session01_pk_4kbEv3r      |
+    +----------------+------------+-------------------------------------+
+    | Resource       | 3187       | reg_zaK1Bd                          |
+    +----------------+------------+-------------------------------------+
+    | File           |series37.nii| series37.nii                        |
+    +----------------+------------+-------------------------------------+
+
+    :Note: The XNAT Reconstruction data type is deprecated. An experiment
+      Resource should be used instead.
+
+    The XNAT label is set by the user and conforms to the following
+    uniqueness constraints:
+
+    * the Project label is unique within the database.
+
+    * the Subject, Experiment, Assessor and Reconstruction label is unique
+      within the Project.
+
+    * the Scan label is unique within the scope of the Experiment.
 
     * the Resource label is unique within the scope of its parent container.
 
-    The XNAT id is an opaque XNAT-generated identifier. Like the label, it is
-    unique in the database, with the exception of the Scan id which is unique
-    within the scope of the experiment. Oddly, XNAT does not generate a
-    Reconstruction object id.
+    * the File label is unique within the scope of its parent Resource.
+
+    A constraint violation results in a ``DatabaseError`` with REST
+    HTTP status 409 or 500, with the following exception:
+
+    * If a *subject1* Experiment is created with the same label as a
+      *subject2* Experiment in the same Project, then the *subject1*
+      Experiment is moved to *subject2*
+      , e.g.::
+
+          >> sbj1 = xnat.select('/project/QIN/subjects/Breast003')
+          >> sbj1.experiment('Session01').create()
+          >> sbj1.experiment('Session01').exists()
+          True
+          >> sbj2 = xnat.select('/project/QIN/subjects/Breast004')
+          >> sbj2.experiment('Session01').create()
+          >> sbj2.experiment('Session01').exists()
+          True
+          >> sbj1.experiment('Session01').exists()
+          False
+
+    :Note: In XNAT 1.6 and pyxnat 0.9.4, if a Subject with label\ 
+      *subject1* is shared with a second project as label *subject2*,
+      then pyxnat can fetch the Subject with both labels under the
+      primary project but only with label *subject1* under the second
+      project, For example, given Subject ``Breast003`` with primary
+      project ``QIN`` shared in project ``QIN_Test`` with label
+      ``Breast003_Test``, then pyxnat (mis)behaves as follows::
+
+          >> sbj1 = xnat.select('/project/QIN/subjects/Breast003')
+          >> sbj1.exists()
+          True
+          >> sbj2 = xnat.select('/project/QIN/subjects/Breast003_Test')
+          >> sbj2.exists()
+          True
+          >> sbj1 == sbj2
+          False
+          >> sbj3 = xnat.select('/project/QIN_Test/subjects/Breast003')
+          >> sbj3.exists()
+          True
+          >> sbj4 = xnat.select('/project/QIN_Test/subjects/Breast003_Test')
+          >> sbj4.exists()
+          False
+
+      This counter-intuitive pyxnat behavior contrasts with the XNAT web
+      application, which exhibits the expected behavior by displaying the
+      Project ``QIN_Test`` subject as label ``QIN_Breast003_Test``.
+
+    The pyxnat access methods specify an *id* parameter, but in fact either
+    the id or label can be used for the *id* parameter, consistent with the
+    XNAT REST interface, e.g.::
+
+        >> sbj1 = xnat.select('/project/QIN/subjects/Breast003')
+        >> exp1 = sbj1.experiment('Session04')
+        >> exp1.exists()
+        False
+        >> exp1.id() == None
+        True
+        >> exp1.label() == None
+        True
+        >> exp1.create()
+        >> exp1.id() == None
+        False
+        >> exp1.label()
+        'Session04'
+        >> exp2 = sbj1.experiment(exp1.id())
+        >> exp1.label() == exp2.label()
+        True
+    
+    The XNAT id is generated as follows:
+    
+    * The Project, Scan and File id and label are identical
+    
+    * A Reconstruction does not have an XNAT id
+    
+    * The Subject id is an opaque XNAT-generated value starting with
+      *project*\ ``_S_``.
+    
+    * The Experiment and Assessor id is an opaque XNAT-generated value
+      starting with *project*\ ``_E_``.
+    
+    * The Resource is an opaque XNAT-generated string value consisting
+      of digits.
+    
+    Each opaque XNAT-generated identifier is unique within the database.
 
     In the example above, the XNAT assessor object is obtained as follows:
 
@@ -418,7 +535,7 @@ class XNAT(object):
 
         return self.get_subject(project, subject).experiment(label)
 
-    def get_scans(self, project, subject, session):
+    def get_scan_numbers(self, project, subject, session):
         """
         Returns the XNAT scan numbers for the given XNAT lineage.
         The session name is qualified by the subject name prefix, if necessary.
@@ -466,7 +583,7 @@ class XNAT(object):
         """
         label = hierarchical_label(project, subject, session, recon)
         sess_obj = self.get_session(project, subject, session)
-        
+
         return sess_obj.reconstruction(label)
 
     def get_experiment_resource(self, project, subject, session, resource):
@@ -522,7 +639,7 @@ class XNAT(object):
         types are described in :meth:`upload`.
 
         The session value is qualified by the subject, if necessary.
-        An analysis option value is qualified by the session label, if 
+        An analysis option value is qualified by the session label, if
         necessary. For example::
 
             download('QIN', 'Breast001', 'Session03', resource='reg_jA4K')
@@ -573,7 +690,7 @@ class XNAT(object):
 
         # The resource.
         rsc = self._infer_resource(exp, opts)
-        
+
         # The XNAT file object list.
         if fname:
             file_obj = rsc.file(fname)
@@ -710,7 +827,7 @@ class XNAT(object):
 
         # The XNAT resource parent container.
         rsc_obj = self.find(project, subject, session, create=True, **opts)
-        
+
         # Upload each file.
         self._logger.debug("Uploading %d %s %s %s %s files to XNAT..." %
                            (len(in_files), project, subject, session,
@@ -767,7 +884,7 @@ class XNAT(object):
         A capitalized modality value is a synonym for the XNAT session
         data type, e.g. ``MR`` is a synonym for ``xnat:mrSessionData``.
         The default modality is ``MR``.
-        
+
         The *file* option specifies a file name or existing file path.
         The *file* option is used in conjunction with a *resource* option.
         If the *file* option is set, then this method searches for an XNAT
@@ -846,7 +963,7 @@ class XNAT(object):
 
         # The resource parent container.
         ctr_spec = self._infer_resource_container(opts)
-        
+
         # If the container was specified, then obtain the container object.
         # Otherwise, the default resource parent is the session.
         if ctr_spec:
@@ -906,7 +1023,7 @@ class XNAT(object):
                                         rsc_obj.id()))
             else:
                 return
-        
+
         if 'file' in opts:
             path = opts['file']
             _, fname = os.path.split(path)
@@ -1024,7 +1141,7 @@ class XNAT(object):
         type. The resource parent is the experiment child with the given
         container type, e.g a MR session scan. The ``resource`` container
         type parent is the experiment.
-        
+
         If there is a name, then the parent is the object with that name,
         e.g. a scan object. Otherwise, the parent is a container group, e.g.
         the experiment XNAT ``Scans`` instance.
