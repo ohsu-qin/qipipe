@@ -553,8 +553,8 @@ class XNAT(object):
     def get_scan(self, project, subject, session, scan):
         """
         Returns the XNAT scan object for the given XNAT lineage.
-
-        See :meth:`get_session`
+        The lineage names are qualified by a prefix, if necessary,
+        as described in :meth:`get_session`.
 
         :param project: the XNAT project id
         :param subject: the XNAT subject label
@@ -567,9 +567,8 @@ class XNAT(object):
     def get_reconstruction(self, project, subject, session, recon):
         """
         Returns the XNAT reconstruction object for the given XNAT lineage.
-        The lineage names are qualified by a prefix, if necessary.
-
-        See :meth:`get_session`
+        The lineage names are qualified by a prefix, if necessary,
+        as described in :meth:`get_session`.
 
         :Note: The XNAT reconstruction data type is deprecated. Use an
             experiment resource instead.
@@ -590,9 +589,8 @@ class XNAT(object):
         """
         Returns the XNAT resource object for the given XNAT lineage.
         The resource parent is the XNAT session experiment.
-        The lineage names are qualified by a prefix, if necessary.
-
-        See :meth:`get_session`
+        The lineage names are qualified by a prefix, if necessary,
+        as described in :meth:`get_session`.
 
         :param project: the XNAT project id
         :param subject: the subject name
@@ -607,9 +605,8 @@ class XNAT(object):
     def get_assessor(self, project, subject, session, assessor):
         """
         Returns the XNAT assessor object for the given XNAT lineage.
-        The lineage names are qualified by a prefix, if necessary.
-
-        See :meth:`get_session`
+        The lineage names are qualified by a prefix, if necessary,
+        as described in :meth:`get_session`.
 
         :param project: the XNAT project id
         :param subject: the subject name
@@ -625,6 +622,27 @@ class XNAT(object):
     # Define the get_assessor function aliases.
     get_assessment = get_assessor
     get_analysis = get_assessor
+
+    def get_assessors(self, project, subject, session):
+        """
+        Returns the XNAT assessor objects for the given XNAT lineage.
+        The lineage names are qualified by a prefix, if necessary,
+        as described in :meth:`get_session`.
+
+        :param project: the XNAT project id
+        :param subject: the subject name
+        :param session: the session name
+        :param assessor: the assessor name
+        :return: the corresponding XNAT assessor object
+            (which may not exist)
+        """
+        label = hierarchical_label(project, subject, session, assessor)
+
+        return self.get_session(project, subject, session).assessor(label)
+
+    # Define the get_assessors function aliases.
+    get_assessments = get_assessors
+    get_analyses = get_assessors
 
     def download(self, project, subject, session, **opts):
         """
