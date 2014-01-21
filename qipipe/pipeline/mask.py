@@ -21,10 +21,8 @@ def run(input_dict, **opts):
     Creates a :class:`qipipe.pipeline.mask.MaskWorkflow` and runs it
     on the given inputs.
     
-    :param input_dict: the :meth:`qipipe.pipeline.mask.MaskWorkflow.run`
-        inputs
-    :param opts: the :meth:`qipipe.pipeline.mask.MaskWorkflow.__init__`
-        options
+    :param input_dict: the :meth:`MaskWorkflow.run` inputs
+    :param opts: the :class:`MaskWorkflow` initialization parameters
     :return: the XNAT mask reconstruction name
     """
     return MaskWorkflow(**opts).run(input_dict)
