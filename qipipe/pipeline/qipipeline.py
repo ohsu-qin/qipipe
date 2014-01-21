@@ -262,7 +262,7 @@ class QIPipelineWorkflow(WorkflowBase):
                            (project, subject, session))
 
         # Get the scan numbers.
-        scans = xnat.get_scans(project, subject, session)
+        scans = xnat.get_scan_numbers(project, subject, session)
         if not scans:
             raise NotFoundError("The QIN pipeline did not find a %s %s %s"
                                 " scan." % (project, subject, session))
