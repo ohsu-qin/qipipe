@@ -157,10 +157,10 @@ def detect_new_visits(collection, *inputs):
 
     # If no images were detected, then bail.
     if not visits:
-        logger(__name__).info("No visits were detected in the input"
+        logger(__name__).info("No new visits were detected in the input"
                               " directories.")
         return {}
-    logger(__name__).debug("%d visits were detected" % len(visits))
+    logger(__name__).debug("%d new visits were detected" % len(visits))
 
     # Group the DICOM files by series.
     return _group_sessions_by_series(*visits)
