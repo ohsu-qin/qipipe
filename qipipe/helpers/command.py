@@ -7,6 +7,15 @@ NIPYPE_LOG_DIR_ENV_VAR = 'NIPYPE_LOG_DIR'
 """The Nipype log directory environment variable."""
 
 
+def add_standard_options(parser):
+    # The log options
+    add_log_options(parser)
+    
+    # The XNAT configuration option.
+    parser.add_argument('-c', '--config', help='the XNAT configuration file',
+                        metavar='FILE')
+
+
 def add_log_options(parser):
     """
     Adds the standard --log, --quiet, --verbose and --debug options to the

@@ -22,6 +22,9 @@ class SessionNotFoundError(Exception):
 def main(argv=sys.argv):
     # Parse the command line arguments.
     path_str, opts = _parse_arguments()
+    
+    # The XNAT configuration.
+    config = opts.pop('config', None)
 
     # Configure the logger.
     cmd.configure_log(opts)
@@ -38,7 +41,7 @@ def main(argv=sys.argv):
                          " e.g. QIN/Breast003/Session01")
     prj, sbj, sess = path_items[0:3]
     child_path = xnat_helper.standardize_experiment_child_hierarchy(path_items[3:])
-    with xnat_helper.connection() as xnat:
+    with xnat_helper.connection(config) as xnat:
         sess_obj = xnat.get_session(prj, sbj, sess)
         if not sess_obj.exists():
             raise SessionNotFoundError("No such XNAT session: %s %s %s" %
@@ -57,11 +60,10 @@ def _parse_arguments():
     parser = argparse.ArgumentParser()
 
     # The log options.
-    cmd.add_log_options(parser)
+    cmd.add_standard_options(parser)
 
-    # The input XNAT path.
-    parser.add_argument('path', help='the target XNAT object path',
-                        metavar='PATH')
+    # The input XNAT hierarchy path.
+    parser.add_argument('path', help='the target XNAT object path')
 
     args = vars(parser.parse_args())
     nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)

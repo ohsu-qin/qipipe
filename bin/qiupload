@@ -11,13 +11,17 @@ from collections import defaultdict
 
 # Import the command helper by path, since the log options must be
 # processed before importing any qipipe module.
-cmd = imp.load_source('command', 
-                      os.path.dirname(__file__) + '/../qipipe/helpers/command.py')
+cmd = imp.load_source('command',
+                      (os.path.dirname(__file__) +
+                       '/../qipipe/helpers/command.py'))
 
 
 def main(argv=sys.argv):
     # Parse the command line arguments.
     inputs, opts = _parse_arguments()
+    
+    # The XNAT configuration.
+    config = opts.pop('config', None)
 
     # Configure the logger.
     cmd.configure_log(opts)
@@ -29,7 +33,7 @@ def main(argv=sys.argv):
     # Parse the XNAT session label arguments.
     prj_sess_dict = _parse_session_labels(inputs)
     # Register the session images.
-    with xnat_helper.connection() as xnat:
+    with xnat_helper.connection(config) as xnat:
         for prj, sessions in prj_sess_dict.iteritems():
             for sbj, sess in sessions:
                 tgt_dir = os.path.join(dest, prj, sbj, sess)
@@ -61,7 +65,7 @@ def _parse_arguments():
     parser = argparse.ArgumentParser()
 
     # The log options.
-    cmd.add_log_options(parser)
+    cmd.add_standard_options(parser)
 
     # The remaining options.
     target_grp = parser.add_mutually_exclusive_group()
