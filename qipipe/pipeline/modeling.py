@@ -247,7 +247,7 @@ class ModelingWorkflow(WorkflowBase):
 
         :param base_dir: the execution working directory
             (default is a new temp directory)
-        :param opts: the additional workflow initialization options
+        :param opts: the additional workflow initialization parameters
         :return: the Nipype workflow
         """
         self._logger.debug("Building the modeling workflow...")
@@ -456,8 +456,7 @@ class ModelingWorkflow(WorkflowBase):
     def _pk_parameters(self, **opts):
         """
         Collects the modeling parameters defined in either the options
-        or the configuration as described in
-        :meth:`qipipe.pipeline.modeling.ModelingWorkflow.__init__`.
+        or the configuration, as described in :class:`ModelingWorkflow`.
 
         :param opts: the input options
         :return: the parameter {name: value} dictionary
