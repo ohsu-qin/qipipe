@@ -9,6 +9,10 @@ from .xnat_config import default_configuration
 from .collection_helper import is_nonstring_iterable
 from .logging_helper import logger
 
+"""
+The xnat_helper module includes utility functions for interaction with XNAT.
+"""
+
 
 @contextmanager
 def connection(config=None):
@@ -98,12 +102,12 @@ def standardize_experiment_child_hierarchy(hierarchy):
 
     Examples:
 
-    >> from qipipe.helpers import xnat_helper
-    >> hiearchy = ['resource', 'reg_Qzu7R', 'files']
-    >> xnat_helper.standardize_experiment_child_hierarchy(hiearchy)
+    >>> from qipipe.helpers import xnat_helper
+    >>> hiearchy = ['resource', 'reg_Qzu7R', 'files']
+    >>> xnat_helper.standardize_experiment_child_hierarchy(hiearchy)
     [('resource', 'reg_Qzu7R'), 'files']
-    >> hiearchy = ['analysis', 'pk_tYv4A', 'resource', 'k_trans', 'files']
-    >> xnat_helper.standardize_experiment_child_hierarchy(hiearchy)
+    >>> hiearchy = ['analysis', 'pk_tYv4A', 'resource', 'k_trans', 'files']
+    >>> xnat_helper.standardize_experiment_child_hierarchy(hiearchy)
     [('assessor', 'pk_tYv4A'), ('resource', 'k_trans'), 'files']
 
     :param hierarchy: the XNAT path components
@@ -217,10 +221,10 @@ def standardize_child_attribute(name):
 
     Examples:
 
-    >> from qipipe.helpers import xnat_helper
-    >> xnat_helper.standardize_child_attribute('assessment')
+    >>> from qipipe.helpers import xnat_helper
+    >>> xnat_helper.standardize_child_attribute('assessment')
     'assessor'
-    >> xnat_helper.standardize_child_attribute('analyses')
+    >>> xnat_helper.standardize_child_attribute('analyses')
     'assessors'
 
     :param name: the attribute name
@@ -267,6 +271,35 @@ def xnat_children(xnat_obj, child_spec):
         return getattr(xnat_obj, child_spec)()
 
 
+def setup_module(module):
+    """Changes the doctest current directory to a test results directory."""
+    import os, tempfile
+    
+    setup_module.cwd = os.getcwd()
+    setup_module.test_dir = tempfile.mkdtemp()
+    os.chdir(setup_module.test_dir)
+    with connection() as xnat:
+        for sbj in ['Breast003', 'Breast004']:
+            sbj_obj = xnat.get_subject('QIN_Test', sbj)
+            if  sbj_obj.exists():
+                sbj_obj.delete()
+            sbj_obj.create()
+            
+
+
+def teardown_module(module):
+    """Restores the current directory."""
+    import os, shutil
+    
+    shutil.rmtree(setup_module.test_dir)
+    os.chdir(setup_module.cwd)
+    with connection() as xnat:
+        for sbj in ['Breast003', 'Breast004']:
+            sbj_obj = xnat.get_subject('QIN_Test', sbj)
+            if  sbj_obj.exists():
+                sbj_obj.delete()
+    
+
 class XNATError(Exception):
     pass
 
@@ -283,8 +316,8 @@ class XNAT(object):
     context, e.g.:
 
     >>> from qipipe.helpers import xnat_helper
-    >>> with xnat.connection() as xnat:
-    >>>     sbj = xnat.get_subject('QIN', 'Sarcoma001')
+    >>> with xnat_helper.connection() as xnat:
+    ...     sbj = xnat.get_subject('QIN_Test', 'Breast003')
 
     This XNAT wrapper class implements methods to access XNAT objects in
     a hierarchical name space using a labeling convention. The access
@@ -363,67 +396,38 @@ class XNAT(object):
 
     * If a *subject1* Experiment is created with the same label as a
       *subject2* Experiment in the same Project, then the *subject1*
-      Experiment is moved to *subject2*
-      , e.g.::
+      Experiment is moved to *subject2*, e.g.:
 
-          >> sbj1 = xnat.select('/project/QIN/subjects/Breast003')
-          >> sbj1.experiment('Session01').create()
-          >> sbj1.experiment('Session01').exists()
-          True
-          >> sbj2 = xnat.select('/project/QIN/subjects/Breast004')
-          >> sbj2.experiment('Session01').create()
-          >> sbj2.experiment('Session01').exists()
-          True
-          >> sbj1.experiment('Session01').exists()
-          False
-
-    :Note: In XNAT 1.6 and pyxnat 0.9.4, if a Subject with label\ 
-      *subject1* is shared with a second project as label *subject2*,
-      then pyxnat can fetch the Subject with both labels under the
-      primary project but only with label *subject1* under the second
-      project, For example, given Subject ``Breast003`` with primary
-      project ``QIN`` shared in project ``QIN_Test`` with label
-      ``Breast003_Test``, then pyxnat (mis)behaves as follows::
-
-          >> sbj1 = xnat.select('/project/QIN/subjects/Breast003')
-          >> sbj1.exists()
-          True
-          >> sbj2 = xnat.select('/project/QIN/subjects/Breast003_Test')
-          >> sbj2.exists()
-          True
-          >> sbj1 == sbj2
-          False
-          >> sbj3 = xnat.select('/project/QIN_Test/subjects/Breast003')
-          >> sbj3.exists()
-          True
-          >> sbj4 = xnat.select('/project/QIN_Test/subjects/Breast003_Test')
-          >> sbj4.exists()
-          False
-
-      This counter-intuitive pyxnat behavior contrasts with the XNAT web
-      application, which exhibits the expected behavior by displaying the
-      Project ``QIN_Test`` subject as label ``QIN_Breast003_Test``.
+      >>> from qipipe.helpers.xnat_helper import XNAT
+      >>> xnat = XNAT().interface
+      >>> sbj1 = xnat.select('/project/QIN_Test/subject/Breast003')
+      >>> exp1 = sbj1.experiment('Session01').create()
+      >>> sbj2 = xnat.select('/project/QIN_Test/subject/Breast004')
+      >>> exp2 = sbj2.experiment('Session01').create()
+      >>> exp1.exists()
+      False
 
     The pyxnat access methods specify an *id* parameter, but in fact either
     the id or label can be used for the *id* parameter, consistent with the
-    XNAT REST interface, e.g.::
+    XNAT REST interface, e.g.:
 
-        >> sbj1 = xnat.select('/project/QIN/subjects/Breast003')
-        >> exp1 = sbj1.experiment('Session04')
-        >> exp1.exists()
-        False
-        >> exp1.id() == None
-        True
-        >> exp1.label() == None
-        True
-        >> exp1.create()
-        >> exp1.id() == None
-        False
-        >> exp1.label()
-        'Session04'
-        >> exp2 = sbj1.experiment(exp1.id())
-        >> exp1.label() == exp2.label()
-        True
+    >>> from qipipe.helpers.xnat_helper import XNAT
+    >>> xnat = XNAT().interface
+    >>> sbj1 = xnat.select('/project/QIN_Test/subject/Breast003')
+    >>> exp1 = sbj1.experiment('Breast003_Session01')
+    >>> if exp1.exists():
+    ...     exp1.delete()
+    >>> exp1.id() == None
+    True
+    >>> exp1.label() == None
+    True
+    >>> exp1.create().id() == None
+    False
+    >>> exp1.label()
+    'Breast003_Session01'
+    >>> exp2 = sbj1.experiment(exp1.id())
+    >>> exp1.label() == exp2.label()
+    True
     
     The XNAT id is generated as follows:
     
@@ -442,11 +446,12 @@ class XNAT(object):
     
     Each opaque XNAT-generated identifier is unique within the database.
 
-    In the example above, the XNAT assessor object is obtained as follows:
+    In the example above, the XNAT assessor object is obtained as
+    follows:
 
     >>> from qipipe.helpers import xnat_helper
-    >>> with xnat.connection() as xnat:
-    >>>     recon = xnat.get_assessor('QIN', 'Breast003', 'Session01',
+    >>> with xnat_helper.connection() as xnat:
+    ...     recon = xnat.get_assessor('QIN', 'Breast003', 'Session01',
     ...                               'pk_4kbEv3r')
 
     A scan NiFTI file ``series1.nii.gz`` is uploaded using the following
@@ -607,6 +612,12 @@ class XNAT(object):
         Returns the XNAT assessor object for the given XNAT lineage.
         The lineage names are qualified by a prefix, if necessary,
         as described in :meth:`get_session`.
+        
+        :Note: an XNAT bug results in missing assessors if the accessing
+          XNAT user has administrative priveleges, but is not a member
+          or owner of the project. See the XNAT users forum
+          `post <https://groups.google.com/forum/#!topic/xnat_discussion/w6M74PTqgi4>`__
+          on this topic.
 
         :param project: the XNAT project id
         :param subject: the subject name
@@ -622,27 +633,6 @@ class XNAT(object):
     # Define the get_assessor function aliases.
     get_assessment = get_assessor
     get_analysis = get_assessor
-
-    def get_assessors(self, project, subject, session):
-        """
-        Returns the XNAT assessor objects for the given XNAT lineage.
-        The lineage names are qualified by a prefix, if necessary,
-        as described in :meth:`get_session`.
-
-        :param project: the XNAT project id
-        :param subject: the subject name
-        :param session: the session name
-        :param assessor: the assessor name
-        :return: the corresponding XNAT assessor object
-            (which may not exist)
-        """
-        label = hierarchical_label(project, subject, session, assessor)
-
-        return self.get_session(project, subject, session).assessor(label)
-
-    # Define the get_assessors function aliases.
-    get_assessments = get_assessors
-    get_analyses = get_assessors
 
     def download(self, project, subject, session, **opts):
         """
@@ -1065,12 +1055,12 @@ class XNAT(object):
         Examples:
 
         >>> from qipipe.helpers import xnat_helper
-        >>> xnat_helper.connection()._standardize_modality('MR')
-        xnat:mrSessionData
-
-        >>> from qipipe.helpers import xnat_helper
-        >>> xnat_helper.connection()._standardize_modality('ctSessionData')
-        xnat:ctSessionData
+        >>> with xnat_helper.connection() as xnat:
+        ...     xnat._standardize_modality('ctSessionData')
+        'xnat:ctSessionData'
+        >>> with xnat_helper.connection() as xnat:
+        ...     xnat._standardize_modality('MR')
+        'xnat:mrSessionData'
 
         :param modality: the modality option described in
             :meth:`find`
