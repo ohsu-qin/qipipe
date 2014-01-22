@@ -5,6 +5,10 @@ This history lists major release themes. See the GitHub commits
 ------------------
 * XNAT data model extensions.
 
+4.1.2 / 2014-01-22
+------------------
+* The realigned file names are the same as the scan file names.
+
 4.1.1 / 2014-01-21
 ------------------
 * Recursive realignment.
