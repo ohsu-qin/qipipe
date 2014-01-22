@@ -38,7 +38,7 @@ class TestRegistrationWorkflow(StagedTestBase):
 
     def test_breast(self):
         super(TestRegistrationWorkflow, self)._test_breast(technique='mock')
-    
+
     def test_sarcoma(self):
         super(TestRegistrationWorkflow, self)._test_sarcoma(technique='mock')
 
@@ -67,25 +67,38 @@ class TestRegistrationWorkflow(StagedTestBase):
                                 **opts)
 
     def _verify_result(self, xnat, subject, session, result):
-        # Confirm that the XNAT resource object was created.
+        """
+        :param xnat: the XNAT connection
+        :param subject: the registration subject
+        :param session: the registration session
+        :param result: the meth:`qipipe.pipeline.registration.run` result
+            output file paths
+        """
+        # Verify that the XNAT resource object was created.
         rsc_obj = xnat.find(project(), subject, session, resource=RESOURCE)
         assert_is_not_none(rsc_obj,
                            "The %s %s %s XNAT registration resource object was"
                            " not created" % (subject, session, RESOURCE))
-        out_split = [os.path.split() for f in result]
-        out_dirs, out_files = zip(out_split)
-        rsc_files = rsc_obj.files().get()
-        assert_equals(out_files, rsc_files,
-                      "The %s %s %s XNAT registration resource files are incorrect"
-                      ": %s" % (subject, session, RESOURCE, rsc_files))
         
-        # Confirm that the output files were created.
+        # Verify that the registration result is accurate.
         dest = os.path.join(RESULTS, subject, session)
-        dest_files = [os.path.join(dest, f) for f in os.listdir(dest)]
-        assert_equals(set(dest_files), set(result),
-                      "The %s %s %s XNAT registration result is incorrect:"
-                      " %s" % (subject, session, RESOURCE, result))
+        split = (os.path.split(f) for f in result)
+        out_dirs, out_files = (set(files) for files in zip(*split))
+        rsc_files = set(rsc_obj.files().get())
+        assert_equal(out_dirs, set([dest]),
+                     "The %s %s %s XNAT registration result directory is"
+                      " incorrect - expected %s, found %s" %
+                      (subject, session, RESOURCE, dest, out_dirs))
+        assert_equal(out_files, rsc_files,
+                     "The %s %s %s XNAT registration result file names are"
+                     " incorrect - expected %s, found %s" %
+                     (subject, session, RESOURCE, rsc_files, out_files))
 
+        # Verify that the output files were created.
+        dest_files = (os.path.join(dest, f) for f in os.listdir(dest))
+        assert_equal(set(dest_files), set(result),
+                     "The %s %s %s XNAT registration result is incorrect:"
+                     " %s" % (subject, session, RESOURCE, result))
 
 
 if __name__ == "__main__":

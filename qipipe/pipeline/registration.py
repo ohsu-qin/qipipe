@@ -159,10 +159,10 @@ class RegistrationWorkflow(WorkflowBase):
         if not images:
             return []
         # Sort the images by series number.
-        images = sorted(images)
+        reg_input = sorted(images)
 
         # The initial reference image occurs at bolus arrival.
-        ref_0_image = images.pop(bolus_arrival_index)
+        ref_0_image = reg_input.pop(bolus_arrival_index)
 
         # The target location.
         if dest:
@@ -182,7 +182,7 @@ class RegistrationWorkflow(WorkflowBase):
 
         # Iterate over the images
         iter_image = exec_wf.get_node('iter_image')
-        iter_image.iterables = ('image', images)
+        iter_image.iterables = ('image', reg_input)
 
         # Execute the workflow.
         self._logger.debug("Executing the %s workflow on %s %s..." %
@@ -192,16 +192,7 @@ class RegistrationWorkflow(WorkflowBase):
                          (self.workflow.name, subject, session))
 
         # Return the output files.
-        return [self._realigned_file(scan, dest) for scan in images]
-    
-    def _realigned_file(self, scan, dest):
-        """
-        :param scan: the scan file name or path
-        :param dest: the target directory
-        :return: the realigned file path
-        """
-        fname = gen_realign_filename(self.resource, scan)
-        return os.path.join(dest, fname)
+        return [os.path.join(dest, filename(scan)) for scan in images]
 
     def _create_execution_workflow(self, bolus_arrival_index, ref_0_image,
         dest):
@@ -262,20 +253,10 @@ class RegistrationWorkflow(WorkflowBase):
         if not os.path.exists(dest):
             os.makedirs(dest)
 
-        # Make a file name for the initial reference that is consistent
-        # with the realigned file names.
-        ref_0_fname_xfc = Function(input_names=['resource', 'in_file'],
-                                   output_names=['out_file'],
-                                   function=gen_realign_filename)
-        ref_0_fname = pe.Node(ref_0_fname_xfc, name='ref_0_fname')
-        exec_wf.connect(input_spec, 'resource', ref_0_fname, 'resource')
-        exec_wf.connect(input_spec, 'ref_0', ref_0_fname, 'in_file')
-
         # Copy the initial reference to the destination directory.
         copy_ref_0_xfc = Copy(dest=dest)
         copy_ref_0 = pe.Node(copy_ref_0_xfc, name='copy_ref_0')
         exec_wf.connect(input_spec, 'ref_0', copy_ref_0, 'in_file')
-        exec_wf.connect(ref_0_fname, 'out_file', copy_ref_0, 'out_fname')
 
         # Copy the realigned image to the destination directory.
         copy_realigned = pe.Node(Copy(dest=dest), name='copy_realigned')
@@ -357,14 +338,6 @@ class RegistrationWorkflow(WorkflowBase):
             technique = 'ants'
         input_spec.inputs.resource = self.resource
 
-        # Make the realigned image file name.
-        realign_name_func = Function(input_names=['resource', 'in_file'],
-                                     output_names=['out_file'],
-                                     function=gen_realign_filename)
-        realign_name = pe.Node(realign_name_func, name='realign_name')
-        realign_wf.connect(input_spec, 'resource', realign_name, 'resource')
-        realign_wf.connect(input_spec, 'moving_image', realign_name, 'in_file')
-
         # Copy the DICOM meta-data. The copy target is set by the technique
         # node defined below.
         copy_meta = pe.Node(CopyMeta(), name='copy_meta')
@@ -383,27 +356,34 @@ class RegistrationWorkflow(WorkflowBase):
             # Register the images to create the rigid, affine and SyN
             # ANTS transformations.
             register = pe.Node(Registration(**metric_inputs), name='register')
-            realign_wf.connect(
-                input_spec, 'reference', register, 'fixed_image')
-            realign_wf.connect(
-                input_spec, 'moving_image', register, 'moving_image')
-            realign_wf.connect(
-                input_spec, 'mask', register, 'fixed_image_mask')
-            realign_wf.connect(
-                input_spec, 'mask', register, 'moving_image_mask')
+            realign_wf.connect(input_spec, 'reference',
+                               register, 'fixed_image')
+            realign_wf.connect(input_spec, 'moving_image',
+                               register, 'moving_image')
+            realign_wf.connect(input_spec, 'mask',
+                               register, 'fixed_image_mask')
+            realign_wf.connect(input_spec, 'mask',
+                               register, 'moving_image_mask')
+            # Get the file name without directory.
+            input_filename_xfc = Function(input_names=['in_file'],
+                                          output_names=['out_file'],
+                                          function=filename)
+            input_filename = pe.Node(input_filename_xfc, name='input_filename')
+            realign_wf.connect(input_spec, 'moving_image',
+                               input_filename, 'path')
             # Apply the transforms to the input image.
             apply_xfm = pe.Node(ApplyTransforms(), name='apply_xfm')
-            realign_wf.connect(
-                input_spec, 'reference', apply_xfm, 'reference_image')
-            realign_wf.connect(
-                input_spec, 'moving_image', apply_xfm, 'input_image')
-            realign_wf.connect(
-                realign_name, 'out_file', apply_xfm, 'output_image')
-            realign_wf.connect(
-                register, 'forward_transforms', apply_xfm, 'transforms')
+            realign_wf.connect(input_spec, 'reference',
+                               apply_xfm, 'reference_image')
+            realign_wf.connect(input_spec, 'moving_image',
+                               apply_xfm, 'input_image')
+            realign_wf.connect(input_filename, 'out_file',
+                               apply_xfm, 'output_image')
+            realign_wf.connect(register, 'forward_transforms',
+                               apply_xfm, 'transforms')
             # Copy the meta-data.
-            realign_wf.connect(
-                apply_xfm, 'output_image', copy_meta, 'dest_file')
+            realign_wf.connect(apply_xfm, 'output_image',
+                               copy_meta, 'dest_file')
         elif technique.lower() == 'fnirt':
             # Copy the input to a work directory, since FNIRT adds
             # temporary files to the input image location.
@@ -416,7 +396,7 @@ class RegistrationWorkflow(WorkflowBase):
             realign_wf.connect(fnirt_copy_moving, 'out_file', fnirt, 'in_file')
             realign_wf.connect(input_spec, 'mask', fnirt, 'inmask_file')
             realign_wf.connect(input_spec, 'mask', fnirt, 'refmask_file')
-            realign_wf.connect(realign_name, 'out_file', fnirt, 'warped_file')
+            # realign_wf.connect(realign_name, 'out_file', fnirt, 'warped_file')
             # Copy the meta-data.
             realign_wf.connect(fnirt, 'warped_file', copy_meta, 'dest_file')
         elif technique.lower() == 'mock':
@@ -424,7 +404,7 @@ class RegistrationWorkflow(WorkflowBase):
             mock_copy = pe.Node(Copy(), name='mock_copy')
             realign_wf.connect(input_spec, 'moving_image',
                                mock_copy, 'in_file')
-            realign_wf.connect(realign_name, 'out_file', mock_copy, 'out_fname')
+            # realign_wf.connect(realign_name, 'out_file', mock_copy, 'out_fname')
             realign_wf.connect(mock_copy, 'out_file', copy_meta, 'dest_file')
         else:
             raise ValueError("Registration technique not recognized: %s" %
@@ -446,19 +426,15 @@ class RegistrationWorkflow(WorkflowBase):
 
 ### Utility functions called by the workflow nodes. ###
 
-def gen_realign_filename(resource, in_file):
+def filename(in_file):
     """
-    :param resource: the resource name
-    :param in_file: the input scan image file name
-    :return: the registered image file name, without a directory
+    :param in_file: the input file path
+    :return: the file name without a directory
     """
     import os
-    from qipipe.helpers import file_helper
 
-    _, in_fname = os.path.split(in_file)
-    base, ext = file_helper.splitexts(in_fname)
+    return os.path.split(in_file)[1]
 
-    return "%s_%s%s" % (base, resource, ext)
 
 def connect_reference(workflow, realigned_nodes, input_nodes,
                       bolus_arrival_index, initial_reference):
