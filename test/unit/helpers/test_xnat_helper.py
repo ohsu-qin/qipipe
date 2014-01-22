@@ -105,6 +105,7 @@ class TestXNATHelper(object):
                         "Subject %s session %s assessor not found: %s" %
                         (SUBJECT, SESSION, ASSESSOR))
     
+    
     def test_scan_round_trip(self):
         with xnat_helper.connection() as xnat:
             # Upload the file.
