@@ -7,16 +7,16 @@ def default_configuration():
     """
     Returns the XNAT configuration file location determined as the first file
     found in the following precedence order:
-    
+
     1. The ``XNAT_CFG`` environment variable, if it is set.
-    
-    1. ``xnat.cfg`` in the current working directory
-    
-    2. ``xnat.cfg`` in the home ``.xnat`` subdirectory
-    
-    3. ``xnat.cfg`` in the home directory
-    
-    4. ``xnat.cfg`` in the ``/etc`` directory
+
+    2. ``xnat.cfg`` in the current working directory
+
+    3. ``xnat.cfg`` in the home ``.xnat`` subdirectory
+
+    4. ``xnat.cfg`` in the home directory
+
+    5. ``xnat.cfg`` in the ``/etc`` directory
 
     :return: the configuration location, if any
     """
