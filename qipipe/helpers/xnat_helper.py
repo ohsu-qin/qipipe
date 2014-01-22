@@ -1290,10 +1290,10 @@ class XNAT(object):
                             " resource" % (fname, resource.label()))
 
         # Upload the file.
+        rsc_ctr_type = rsc_ctr.__class__.__name__.lower()
         self._logger.debug("Inserting the XNAT file %s into the %s %s %s"
-                           " resource..." %
-                           (fname, rsc_ctr.__class__.__name__.lower(),
-                            rsc_ctr.id(), resource.label()))
+                           " resource..." % (fname, rsc_ctr.label(),
+                                             rsc_ctr_type, resource.label()))
         file_obj.insert(in_file, **opts)
         self._logger.debug("Uploaded the XNAT file %s." % fname)
 
