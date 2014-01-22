@@ -37,8 +37,8 @@ def main(argv=sys.argv):
     # Parse the XNAT hierarchy argument.
     path_items = path_str.split('/')
     if len(path_items) < 3:
-        raise ValueError("The search path must include at least three items,"
-                         " e.g. QIN/Breast003/Session01")
+        raise ValueError('The search path must include at least three items,'
+                         ' e.g. QIN/Breast003/Session01')
     prj, sbj, sess = path_items[0:3]
     child_path = xnat_helper.standardize_experiment_child_hierarchy(path_items[3:])
     with xnat_helper.connection(config) as xnat:
