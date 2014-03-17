@@ -52,10 +52,6 @@ def _parse_arguments():
     parser.add_argument('--dry-run', action='store_true',
                         help='Prepare but do not run the pipeline')
 
-    # The XNAT project id.
-    parser.add_argument(
-        '-p', '--project', help='the XNAT project (default is QIN)')
-
     # The AIRC collection to stage.
     coll_grp = parser.add_mutually_exclusive_group()
     coll_grp.add_argument('-b', '--breast', help='the breast TCIA collection',

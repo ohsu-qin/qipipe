@@ -1,18 +1,20 @@
 import glob
 from setuptools import (setup, find_packages)
 
-from qipipe import __version__
 
-requires = ['httplib2', 'lxml', 'nipy', 'dipy', 'traits', 'nibabel',
-            'pydicom', 'dcmstack', 'nipype', 'nose', 'pyyaml']
+def requires():
+    with open('requirements.txt') as f:
+        return f.read().splitlines()
+
 
 def readme():
     with open("README.rst") as f:
         return f.read()
 
+
 setup(
     name = 'qipipe',
-    version = __version__,
+    version = '4.1.2',
     author = 'OHSU Knight Cancer Institute',
     author_email = 'loneyf@ohsu.edu',
     packages = find_packages(),
@@ -32,5 +34,5 @@ setup(
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
     ],
-    install_requires = requires
+    install_requires = requires()
 )

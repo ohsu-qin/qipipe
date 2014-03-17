@@ -1,0 +1,12 @@
+httplib2
+lxml
+pydicom
+nibabel
+numpy
+nipy
+dipy
+traits
+dcmstack
+nipype
+nose
+pyyaml

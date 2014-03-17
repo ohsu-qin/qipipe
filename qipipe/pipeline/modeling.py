@@ -71,8 +71,9 @@ class ModelingWorkflow(WorkflowBase):
     If the |R10| option is not set, then it is computed from the proton
     density weighted scans and DCE series baseline image.
 
-    The outputs are collected in the `output_spec` node for the FXL (Tofts)
-    model and the FXR (shutter speed) model with the following fields:
+    The outputs are collected in the `output_spec` node for the FXL
+    (`Tofts standard`_) model and the FXR (`shutter speed`_) model with
+    the following fields:
 
     - `r1_series`: the R1 series files
 
@@ -99,10 +100,10 @@ class ModelingWorkflow(WorkflowBase):
 
     - `r1_0`: the computed |R10| value
 
-    This workflow is adapted from https://everett.ohsu.edu/hg/qin_dce.
+    This workflow is adapted from the `AIRC DCE`_ implementation.
 
     :Note: This workflow uses proprietary OHSU AIRC software, notably the
-        BOLERO implementation of the `shutter speed model`_.
+        BOLERO implementation of the shutter speed model.
 
     .. reST substitutions:
     .. |H2O| replace:: H\ :sub:`2`\ O
@@ -110,7 +111,9 @@ class ModelingWorkflow(WorkflowBase):
     .. |ve| replace:: v\ :sub:`e`
     .. |R10| replace:: R1\ :sub:`0`
 
-    .. _shutter speed model: http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2582583
+    .. _Tofts standard: http://onlinelibrary.wiley.com/doi/10.1002/(SICI)1522-2586(199909)10:3%3C223::AID-JMRI2%3E3.0.CO;2-S/abstract
+    .. _shutter speed: http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2582583
+    .. _AIRC DCE: https://everett.ohsu.edu/hg/qin_dce
     """
 
     def __init__(self, **opts):
@@ -280,10 +283,15 @@ class ModelingWorkflow(WorkflowBase):
         out_fields = base_output.outputs.copyable_trait_names()
         for field in out_fields:
             upload_node = self._create_upload_node(field)
-            mdl_wf.connect(input_spec, 'subject', upload_node, 'subject')
-            mdl_wf.connect(input_spec, 'session', upload_node, 'session')
             base_field = 'output_spec.' + field
             mdl_wf.connect(base_wf, base_field, upload_node, 'in_files')
+
+        # TODO - Get the summary parameters.
+
+        # TODO - Add the session to qiprofile.
+        update_profile_db = pe.Node(UpdateQIProfile())
+        mdl_wf.connect(input_spec, 'subject', upload_node, 'subject')
+        mdl_wf.connect(input_spec, 'session', upload_node, 'session')
 
         # The output is the modeling outputs.
         output_xfc = IdentityInterface(fields=out_fields)

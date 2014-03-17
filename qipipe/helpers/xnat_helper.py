@@ -51,16 +51,16 @@ def hierarchical_label(*names):
     Example:
 
     >>> from qipipe.helpers.xnat_helper import hierarchical_label
-    >>> hierarchical_label('QIN', 'Breast003', 'Session01')
-    'QIN_Breast003_Session01'
-    >>> hierarchical_label('QIN', 'Breast003', 'QIN_Breast003_Session01')
-    'QIN_Breast003_Session01'
+    >>> hierarchical_label('Breast003', 'Session01')
+    'Breast003_Session01'
+    >>> hierarchical_label('Breast003', 'Breast003_Session01')
+    'Breast003_Session01'
 
     :param names: the object names
     :return: the corresponding XNAT label
     """
     names = list(names)
-    if any((not n for n in names)):
+    if not all(names):
         raise ValueError("The XNAT label name hierarchy is invalid: %s" %
                          names)
     last = names.pop()
@@ -76,23 +76,22 @@ def hierarchical_label(*names):
 
 def parse_session_label(label):
     """
-    Parses the given XNAT session label into *project*, *subject* and
+    Parses the given XNAT session label into *subject* and
     *session* based on the :meth:`hierarchical_label` naming
     standard.
 
     :param label: the label to parse
-    :return: the *(project, subject, session)* tuple
+    :return: the *(subject, session)* tuple
     :raise ValueError: if there fewer than three hierarchical levels
     """
     names = label.split('_')
-    if len(names) < 3:
+    if len(names) < 2:
         raise ValueError("The XNAT session label argument is not in"
-                         " project_subject_session format: %s" % label)
+                         " subject_session format: %s" % label)
     sess = names.pop()
-    sbj = names.pop()
-    prj = '_'.join(names)
+    sbj = '_'.join(names)
 
-    return (prj, sbj, sess)
+    return (sbj, sess)
 
 
 def standardize_experiment_child_hierarchy(hierarchy):
@@ -326,25 +325,25 @@ class XNAT(object):
     out the parent label. The name parameters are used to build the
     XNAT label, as shown in the following example:
 
-    +----------------+-------------+------------+-------------------------------------+
-    | Class          | Name        | Id         | Label                               |
-    +================+=============+============+=====================================+
-    | Project        | QIN         | QIN        | QIN                                 |
-    +----------------+-------------+------------+-------------------------------------+
-    | Subject        | Breast003   | QIN_S00580 | QIN_Breast003                       |
-    +----------------+-------------+------------+-------------------------------------+
-    | Experiment     | Session01   | QIN_E00604 | QIN_Breast003_Session01             |
-    +----------------+-------------+------------+-------------------------------------+
-    | Scan           | 1           | 1          | 1                                   |
-    +----------------+-------------+------------+-------------------------------------+
-    | Reconstruction | reco_fTkr4Y | -          | QIN_Breast003_Session01_reco_fTkr4Y |
-    +----------------+-------------+------------+-------------------------------------+
-    | Assessor       | pk_4kbEv3r  | QIN_E00868 | QIN_Breast003_Session01_pk_4kbEv3r  |
-    +----------------+-------------+------------+-------------------------------------+
-    | Resource       | reg_zaK1Bd  | 3187       | reg_zaK1Bd                          |
-    +----------------+-------------+------------+-------------------------------------+
-    | File           |series37.nii |series37.nii| series37.nii                        |
-    +----------------+-------------+------------+-------------------------------------+
+    +----------------+-------------+------------+---------------------------------+
+    | Class          | Name        | Id         | Label                           |
+    +================+=============+============+=================================+
+    | Project        | QIN         | QIN        | QIN                             |
+    +----------------+-------------+------------+---------------------------------+
+    | Subject        | Breast003   | QIN_S00580 | Breast003                       |
+    +----------------+-------------+------------+---------------------------------+
+    | Experiment     | Session01   | QIN_E00604 | Breast003_Session01             |
+    +----------------+-------------+------------+---------------------------------+
+    | Scan           | 1           | 1          | 1                               |
+    +----------------+-------------+------------+---------------------------------+
+    | Reconstruction | reco_fTkr4Y | -          | Breast003_Session01_reco_fTkr4Y |
+    +----------------+-------------+------------+---------------------------------+
+    | Assessor       | pk_4kbEv3r  | QIN_E00868 | Breast003_Session01_pk_4kbEv3r  |
+    +----------------+-------------+------------+---------------------------------+
+    | Resource       | reg_zaK1Bd  | 3187       | reg_zaK1Bd                      |
+    +----------------+-------------+------------+---------------------------------+
+    | File           |series37.nii |series37.nii| series37.nii                    |
+    +----------------+-------------+------------+---------------------------------+
 
     The XNAT wrapper class implements methods to access XNAT objects in
     a hierarchical name space using a labeling convention. The method
@@ -513,16 +512,13 @@ class XNAT(object):
     def get_subject(self, project, subject):
         """
         Returns the XNAT subject object for the given XNAT lineage.
-        The subject name is qualified by the project id prefix, if necessary.
 
         :param project: the XNAT project id
         :param subject: the XNAT subject name
         :return: the corresponding XNAT subject (which may not exist)
         """
-        # The canonical subject label.
-        label = hierarchical_label(project, subject)
         # The query path.
-        qpath = XNAT.SUBJECT_QUERY_FMT % (project, label)
+        qpath = XNAT.SUBJECT_QUERY_FMT % (project, subject)
 
         return self.interface.select(qpath)
 
@@ -536,7 +532,7 @@ class XNAT(object):
         :param session: the XNAT experiment label
         :return: the corresponding XNAT session (which may not exist)
         """
-        label = hierarchical_label(project, subject, session)
+        label = hierarchical_label(subject, session)
 
         return self.get_subject(project, subject).experiment(label)
 
@@ -550,7 +546,7 @@ class XNAT(object):
         :param session: the XNAT experiment label
         :return: the session scan numbers
         """
-        label = hierarchical_label(project, subject, session)
+        label = hierarchical_label(subject, session)
         exp = self.get_subject(project, subject).experiment(label)
 
         return [int(scan) for scan in exp.scans().get()]
@@ -585,7 +581,7 @@ class XNAT(object):
         :return: the corresponding XNAT reconstruction object
             (which may not exist)
         """
-        label = hierarchical_label(project, subject, session, recon)
+        label = hierarchical_label(subject, session, recon)
         sess_obj = self.get_session(project, subject, session)
 
         return sess_obj.reconstruction(label)
@@ -626,7 +622,7 @@ class XNAT(object):
         :return: the corresponding XNAT assessor object
             (which may not exist)
         """
-        label = hierarchical_label(project, subject, session, assessor)
+        label = hierarchical_label(subject, session, assessor)
 
         return self.get_session(project, subject, session).assessor(label)
 

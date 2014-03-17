@@ -32,15 +32,19 @@ def main(argv=sys.argv):
     # Import the pyxnat and qipipe pipeline module after configuring
     # the logger.
     from pyxnat.core.resources import Reconstruction
+    import qipipe
     from qipipe.helpers import xnat_helper
 
     # Parse the XNAT hierarchy argument.
     path_items = path_str.split('/')
-    if len(path_items) < 3:
+    if len(path_items) < 2:
         raise ValueError("The search path must include at least three items,"
-                         " e.g. QIN/Breast003/Session01")
-    prj, sbj, sess = path_items[0:3]
-    child_path = xnat_helper.standardize_experiment_child_hierarchy(path_items[3:])
+                         " e.g. Breast003/Session01")
+    sbj, sess = path_items[0:2]
+    child_path = xnat_helper.standardize_experiment_child_hierarchy(path_items[2:])
+    
+    # Delete each specified XNAT object.
+    prj = opts.pop('project', qipipe.project())
     with xnat_helper.connection(config) as xnat:
         sess_obj = xnat.get_session(prj, sbj, sess)
         if not sess_obj.exists():

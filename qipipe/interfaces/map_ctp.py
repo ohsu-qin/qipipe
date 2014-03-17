@@ -24,7 +24,6 @@ class MapCTPOutputSpec(TraitedSpec):
 
 
 class MapCTP(BaseInterface):
-
     """
     The MapCTP interface wraps the
     :meth:`qipipe.interfaces.map_ctp.map_ctp` method.

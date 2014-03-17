@@ -3,19 +3,32 @@
 Prints tab-delimited DICOM tag values.
 """
 
-import sys
+
 import os
-import logging
+import sys
+import imp
 import argparse
 from collections import defaultdict
 import dicom
 
+# Import the command helper by path, since the log options must be
+# processed before importing any qipipe module.
+cmd = imp.load_source('command',
+                      (os.path.dirname(__file__) +
+                       '/../qipipe/helpers/command.py'))
+
 
 def main(argv=sys.argv):
     # Parse the command line arguments.
-    args = _parse_arguments()
+    files, opts = _parse_arguments()
+    
+    # The XNAT configuration.
+    config = opts.pop('config', None)
 
-    # Import the qipipe modules after parsing the log options.
+    # Configure the logger.
+    cmd.configure_log(opts)
+
+    # Import the qipipe modules after configuring the logger.
     from qipipe.helpers.collection_helper import to_series
     from qipipe.helpers.dicom_helper import (iter_dicom_headers,
                                              select_dicom_tags)
@@ -25,18 +38,8 @@ def main(argv=sys.argv):
     from qipipe.helpers.logging_helper import logger
     global logger
 
-    # The summary tag list is set here rather than in the argument, since the
-    # constant is imported after parsing the commmand line arguments.
-    if args.summary:
-        tags = ImageHierarchy.TAGS
-    else:
-        tags = args.tags
-        if tags:
-            tags = tags.split(',')
-
     # Print the tag value lines.
-    _print_tag_values(
-        tags, output=args.output, header=args.header, *args.files)
+    _print_tag_values(*files, **opts)
 
     return 0
 
@@ -46,7 +49,7 @@ def _parse_arguments():
     parser = argparse.ArgumentParser()
 
     # The log options.
-    _add_log_options(parser)
+    cmd.add_standard_options(parser)
 
     # The output content options.
     tag_grp = parser.add_mutually_exclusive_group()
@@ -69,90 +72,67 @@ def _parse_arguments():
         'files', help='the DICOM files or directories to list (default stdin)',
         metavar='FILE', nargs='+')
 
-    return parser.parse_args()
+    args = vars(parser.parse_args())
+    nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)
+
+    return nonempty_args.pop('files'), nonempty_args
 
 
-def _add_log_options(parser):
-    """
-    Adds the standard --log, --quiet, --verbose and --debug options to the
-    given command line arugment parser.
-    """
-    parser.add_argument('-l', '--log', help='the log file', metavar='FILE')
-    verbosity_grp = parser.add_mutually_exclusive_group()
-    verbosity_grp.add_argument(
-        '-q', '--quiet', help="only log error messages", dest='log_level',
-        action='store_const', const=logging.ERROR)
-    verbosity_grp.add_argument(
-        '-d', '--debug', help='log debug messages', dest='log_level',
-        action='store_const', const=logging.DEBUG)
-
-
-def _configure_log(**opts):
-    """
-    Configures the logger. This method should be called before importing
-    any qipipe or nipype module.
-
-    :param opts: the following keyword options:
-    :keyword log: the log file
-    :keyword log_level: the log level
-    """
-    log_cfg = {}
-    if 'log' in opts:
-        log_file = os.path.abspath(opts.pop('log'))
-        log_cfg['filename'] = log_file
-        # Set the Nipype log directory environment variable
-        # before importing qipipe. See the comments below.
-        log_dir = os.path.dirname(log_file)
-        if log_dir:
-            if not os.path.exists(log_dir):
-                os.makedirs(log_dir)
-            os.environ[NIPYPE_LOG_DIR_ENV_VAR] = log_dir
-    if 'log_level' in opts:
-        log_cfg['level'] = opts.pop('log_level')
-    # The Nipype log directory environment variable must be
-    # set before importing a nipype module which uses the
-    # nipype logger. qipipe imports the Nipype pipeline module.
-    # Therefore, import qipipe.helpers here after setting the
-    # log directory environment variable above.
-    from qipipe.helpers import logging_helper
-    # Make the qipipe logger.
-    logging_helper.configure(**log_cfg)
-
-
-def _print_tag_values(tags, *files, **opts):
+def _print_tag_values(*files, **opts):
     """
     Prints the tab-delimited tag value lines.
+    If there is only one file, then there is one line per
+    tag. Otherwise, the output is formatted as a table
+    with a header line if there is a header option and
+    one line per file.
 
-    :param tags: the tags to print (default all tags)
     :param files: the DICOM files
     :param opts: the print options
+    :keyword tags: the tags to print (default all non-empty tags)
     :keyword output: the destination (default stdout)
     :keyword header: flag indicating whether to print a header line
         (default True)
     """
-    # The default tags include any tag defined in at least one file.
-    # This preparatory step requires reading each DICOM file to collect
-    # the tags before rereading the file to print the tag values.
-    if not tags:
+    if opts.get('summary'):
+        tags = ImageHierarchy.TAGS
+    elif 'tags' in opts:
+        tags = opts['tags'].split(',')
+    else:
+        # The default tags include any tag defined in at least one file.
+        # This preparatory step requires reading each DICOM file to
+        # collect the tags before rereading the file to print the tag
+        # values.
         tags = _collect_default_tags(*files)
 
     # The print output.
     output = opts.get('output') or sys.stdout
-
-    # Print the header, if necessary.
-    if opts['header']:
-        print >> output, '\t'.join(tags)
-
+    
     # Print the tags in each DICOM file.
     logger(__name__).debug('Printing the DICOM tag values...')
+
+    if len(files) == 1:
+        # The DICOM data set.
+        ds = next(hdr for hdr in iter_dicom_headers(*files))
+        # The DICOM tag value dictionary.
+        tdict = _read_tags(ds, *tags)
+        tag_col_len = max([len(tag) for tag in tags])
+        fmt = "%%-%ds\t%%s" % tag_col_len
+        for tag in tags:
+            print >> output, fmt % (tag, tdict[tag])
+        return
+
+    # Print the header, if necessary.
+    if opts.get('header'):
+        print >> output, '\t'.join(tags)
+
     for ds in iter_dicom_headers(*files):
         # The DICOM tag value dictionary.
         tdict = _read_tags(ds, *tags)
-        # If there is at least one tag with a valid value, then print the value
-        # line.
-        if tags:
-            # Augment the tag dictionary with a default empty string value for
-            # a missing tag.
+        # If there is at least one tag with a valid value, then print
+        # the value line.
+        if tdict:
+            # Augment the tag dictionary with a default empty string
+            # value for a missing tag.
             dd = defaultdict(str)
             dd.update(tdict)
             # Collect the (possibly empty) string values for each tag.

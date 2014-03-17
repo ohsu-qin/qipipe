@@ -28,6 +28,7 @@ def main(argv=sys.argv):
     cmd.configure_log(opts)
     
     # Import the qipipe pipeline module after configuring the logger.
+    import qipipe
     from qipipe.helpers import xnat_helper
     global xnat_helper
     from qipipe.interfaces import XNATDownload
@@ -39,9 +40,10 @@ def main(argv=sys.argv):
     prj_sess_dict = _parse_session_labels(inputs)
     
     # Download the files.
+    prj = opts.pop('project', qipipe.project())
     with xnat_helper.connection(config) as xnat:
-        for prj, sessions in prj_sess_dict.iteritems():
-            for sbj, sess in sessions:
+        for labels in prj_sess_dict.iteritems():
+            for sbj, sess in labels:
                 tgt_dir = os.path.join(dest, prj, sbj, sess)
                 # Download the files.
                 download = XNATDownload(project=prj, subject=sbj, session=sess,
@@ -61,7 +63,7 @@ def _parse_session_labels(labels):
     """
     prj_sess_dict = defaultdict(list)
     for label in labels:
-        prj, sbj, sess = xnat_helper.parse_session_label(label)
+        sbj, sess = xnat_helper.parse_session_label(label)
         prj_sess_dict[prj].append(tuple([sbj, sess]))
 
     return prj_sess_dict

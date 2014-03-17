@@ -6,7 +6,7 @@ from collections import defaultdict
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
 from nipype.interfaces.dcmstack import MergeNifti
-from .. import project
+import qipipe
 from . import staging
 from .workflow_base import WorkflowBase
 from .staging import StagingWorkflow
@@ -91,11 +91,13 @@ def _run_with_dicom_input(*inputs, **opts):
 def _run_with_xnat_input(*inputs, **opts):
     """
     :param inputs: the XNAT session labels
-    :param opts: the :class:`QIPipelineWorkflow` initializer options
+    :param opts: the ``project`` and :class:`QIPipelineWorkflow`
+        initializer options
     """
+    prj = opts.pop('project', qipipe.project())
     with xnat_helper.connection() as xnat:
         for label in inputs:
-            prj, sbj, sess = xnat_helper.parse_session_label(label)
+            sbj, sess = xnat_helper.parse_session_label(label)
             # Check for an existing mask.
             if xnat.find(project=prj, subject=sbj, session=sess,
                          resource=MASK_RSC):
@@ -143,30 +145,32 @@ class QIPipelineWorkflow(WorkflowBase):
       as described in :class:`qipipe.pipeline.mask.MaskWorkflow`
 
     - registration: Mask, register and realign the staged images,
-      as described in :class:`qipipe.pipeline.registration.RegistrationWorkflow`
+      as described in
+      :class:`qipipe.pipeline.registration.RegistrationWorkflow`
 
     - modeling: Perform PK modeling as described in
       :class:`qipipe.pipeline.modeling.ModelingWorkflow`
 
-    The pipeline workflow depends on the initialization options as follows:
+    The pipeline workflow depends on the initialization options as
+    follows:
 
     - If none of the *skip_staging*, *mask* or *registration*
       options are set, then the DICOM files are staged for the subject
-      directory inputs. Otherwise, staging is not performed. In that case,
-      if registration is enabled as described below, then the previously
-      staged series scan stack images are downloaded.
+      directory inputs. Otherwise, staging is not performed. In that
+      case, if registration is enabled as described below, then the
+      previously staged series scan stack images are downloaded.
 
     - The scan images are registered if and only if the *skip_registration*
       option is not set to True. If the *registration* option is set,
       then the previously realigned images with the given reconstruction
       name are downloaded. The remaining scans are registered.
 
-    - If registration is performed and the *mask* option is set, then the
-      given mask XNAT reconstruction is downloaded. Otherwise, the mask is
-      created from the staged images prior to registration.
+    - If registration is performed and the *mask* option is set, then
+      the given mask XNAT reconstruction is downloaded. Otherwise, the
+      mask is created from the staged images prior to registration.
 
-    - PK modeling is performed if and only if the *skip_modeling* option is
-      not set to True.
+    - PK modeling is performed if and only if the *skip_modeling* option
+      is not set to True.
 
     The QIN workflow input node is *input_spec* with the following
     fields:
@@ -375,8 +379,9 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # Set the project, if necessary.
         if 'project' in opts:
-            project(opts['project'])
-            self._logger.debug("Set the XNAT project to %s." % project())
+            qipipe.project(opts['project'])
+            self._logger.debug("Set the XNAT project to %s." %
+                               qipipe.project())
         
         # Set the registration resource instance variable.
         if reg_rsc:
@@ -486,7 +491,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(stg_wf, 'output_spec.image',
                                 staged, 'out_files')
             else:
-                dl_scans_xfc = XNATDownload(project=project(),
+                dl_scans_xfc = XNATDownload(project=qipipe.project(),
                                             container_type='scan',
                                             resource='NIFTI')
                 staged = pe.Node(dl_scans_xfc, name='staged')
@@ -498,7 +503,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # If a time series resource name was specified, then download
             # the time series. Otherwise, make the time series.
             if scan_ts_rsc:
-                dl_scan_ts_xfc = XNATDownload(project=project(),
+                dl_scan_ts_xfc = XNATDownload(project=qipipe.project(),
                                               resource=scan_ts_rsc)
                 scan_ts = pe.Node(dl_scan_ts_xfc,
                                   name='download_scan_time_series')
@@ -510,7 +515,7 @@ class QIPipelineWorkflow(WorkflowBase):
                                   name='merge_scans')
                 exec_wf.connect(staged, 'out_files', scan_ts, 'in_files')
                 # Upload the time series.
-                ul_scan_ts_xfc = XNATUpload(project=project(),
+                ul_scan_ts_xfc = XNATUpload(project=qipipe.project(),
                                             resource=SCAN_TS_RSC)
                 ul_scan_ts = pe.Node(ul_scan_ts_xfc,
                                      name='upload_scan_time_series')
@@ -521,7 +526,8 @@ class QIPipelineWorkflow(WorkflowBase):
             # If a mask resource name was specified, then download the mask.
             # Otherwise, make the mask.
             if mask_rsc:
-                dl_mask_xfc = XNATDownload(project=project(), resource=mask_rsc)
+                dl_mask_xfc = XNATDownload(project=qipipe.project(),
+                                           resource=mask_rsc)
                 download_mask = pe.Node(dl_mask_xfc, name='download_mask')
                 exec_wf.connect(input_spec, 'subject', download_mask, 'subject')
                 exec_wf.connect(input_spec, 'session', download_mask, 'session')
@@ -590,7 +596,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # previously created 4D time series.
             if reg_ts_rsc:
                 # Download the XNAT time series file.
-                ts_dl_xfc = XNATDownload(project=project(),
+                ts_dl_xfc = XNATDownload(project=qipipe.project(),
                                          resource=reg_ts_rsc)
                 reg_ts = pe.Node(ts_dl_xfc, name='download_reg_time_series')
                 exec_wf.connect(input_spec, 'subject', reg_ts, 'subject')
@@ -606,7 +612,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 # If the registration reconstruction name was specified,
                 # then download the previously realigned images.
                 if reg_rsc:
-                    reg_dl_xfc = XNATDownload(project=project(),
+                    reg_dl_xfc = XNATDownload(project=qipipe.project(),
                                               resource=reg_rsc)
                     download_reg = pe.Node(reg_dl_xfc,
                                            name='download_realigned_images')
@@ -639,7 +645,7 @@ class QIPipelineWorkflow(WorkflowBase):
                         " resource was specified.")
 
                 # Upload the realigned time series to XNAT.
-                upload_reg_ts_xfc = XNATUpload(project=project(),
+                upload_reg_ts_xfc = XNATUpload(project=qipipe.project(),
                                                resource=reg_ts_rsc)
                 upload_reg_ts = pe.Node(upload_reg_ts_xfc,
                                         name='upload_reg_ts')

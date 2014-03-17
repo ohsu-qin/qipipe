@@ -27,19 +27,19 @@ def main(argv=sys.argv):
     cmd.configure_log(opts)
     
     # Import the qipipe pipeline module after configuring the logger.
+    import qipipe
     from qipipe.helpers import xnat_helper
     from qipipe.interfaces import XNATUpload
 
-    # Parse the XNAT session label arguments.
-    prj_sess_dict = _parse_session_labels(inputs)
+    sbj_sess_tuples = _parse_session_labels(inputs)
     # Register the session images.
+    prj = opts.pop('project', qipipe.project())
     with xnat_helper.connection(config) as xnat:
-        for prj, sessions in prj_sess_dict.iteritems():
-            for sbj, sess in sessions:
-                tgt_dir = os.path.join(dest, prj, sbj, sess)
-                # Upload the files.
-                upload = XNATUpload(dest=tgt_dir, **opts)
-                result = upload.run()
+        for sbj, sess in sbj_sess_tuples:
+            tgt_dir = os.path.join(dest, prj, sbj, sess)
+            # Upload the files.
+            upload = XNATUpload(dest=tgt_dir, **opts)
+            result = upload.run()
 
     return 0
 
@@ -50,14 +50,10 @@ def _parse_session_labels(labels):
     grouped by project.
     
     :param labels: the labels to parse
-    :return: the *{project: [(subject, session), ...]}* dictionary
+    :return: the *[(subject, session), ...]}* list
     """
-    prj_sess_dict = defaultdict(list)
-    for label in labels:
-        prj, sbj, sess = xnat_helper.parse_session_label(label)
-        prj_sess_dict[prj].append(tuple([sbj, sess]))
-
-    return prj_sess_dict
+    return [xnat_helper.parse_session_label(lbl)
+            for lbl in labels]
 
 
 def _parse_arguments():

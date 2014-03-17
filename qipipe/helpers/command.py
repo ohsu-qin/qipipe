@@ -8,18 +8,26 @@ NIPYPE_LOG_DIR_ENV_VAR = 'NIPYPE_LOG_DIR'
 
 
 def add_standard_options(parser):
-    # The log options
+    """
+    Adds the :meth:`add_log_options`, ``--project`` and ``--config``
+    options to the given command line arugment parser.
+    """
+    # The log options.
     add_log_options(parser)
     
-    # The XNAT configuration option.
+    # The XNAT project.
+    parser.add_argument('-p', '--project',
+                        help="the XNAT project (default is 'QIN')")
+    
+    # The XNAT configuration.
     parser.add_argument('-c', '--config', help='the XNAT configuration file',
                         metavar='FILE')
 
 
 def add_log_options(parser):
     """
-    Adds the standard --log, --quiet, --verbose and --debug options to the
-    given command line arugment parser.
+    Adds the standard ``--log``, ``--quiet``, ``--verbose`` and ``--debug``
+    options to the given command line arugment parser.
     """
     parser.add_argument('-l', '--log', help='the log file', metavar='FILE')
     verbosity_grp = parser.add_mutually_exclusive_group()
