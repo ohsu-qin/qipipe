@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The XNAT extension schema. -->
+<xs:schema targetNamespace="http://www.ohsu.edu/qin" xmlns:ext="http://nrg.wustl.edu/ext" xmlns:xdat="http://nrg.wustl.edu/xdat" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xnat="http://nrg.wustl.edu/xnat" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:import namespace="http://nrg.wustl.edu/xnat" schemaLocation="../xnat/xnat.xsd"/>
+	<xs:element name="PharmacoKineticMapping" type="ext:pharmacoKineticMappingData"/>
+	<xs:element name="ClinicalAssessor" type="ext:clinicalAssessorData"/>
+	<xs:complexType name="pharmacoKineticMappingData">
+		<xs:complexContent>
+			<xs:extension base="xnat:mrAssessorData">
+				<xs:sequence>
+					<xs:element name="model" type="xs:string"/>
+				</xs:sequence>
+				<xs:sequence>
+					<xs:element name="kTrans" type="xs:float"/>
+				</xs:sequence>
+				<xs:sequence>
+					<xs:element name="vE" type="xs:float"/>
+				</xs:sequence>
+				<xs:sequence>
+					<xs:element name="tauI" type="xs:float"/>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="clinicalAssessorData">
+		<xs:complexContent>
+			<xs:extension base="xnat:subjectAssessorData">
+				<xs:sequence>
+					<xs:element name="TNM" minOccurs="0" maxOccurs="1">
+						<xs:annotation>
+							<xs:documentation>TNM Staging</xs:documentation>
+							<xs:appinfo>
+								<xdat:field uniqueComposite="UNIQUE_NAME_VALUE">
+									<xdat:relation uniqueComposite="UNIQUE_NAME_VALUE"/>
+								</xdat:field>
+							</xs:appinfo>
+						</xs:annotation>
+						<xs:complexType>
+							<xs:simpleContent>
+								<xs:extension base="xs:string">
+									<xs:attribute name="size" use="required"/>
+									<xs:attribute name="lymphStatus" use="required"/>
+									<xs:attribute name="metastasis" use="required"/>
+									<xs:attribute name="grade" use="optional"/>
+								</xs:extension>
+							</xs:simpleContent>
+						</xs:complexType>
+					</xs:element>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+</xs:schema>
