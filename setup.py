@@ -1,10 +1,23 @@
+import re
 import glob
 from setuptools import (setup, find_packages)
 
 
 def requires():
+    """
+    @return: the ``requirements.txt`` package specifications
+    
+    :Note: ``pip`` supports GitHub package specifications,
+       but a local ``pip install -e .`` does not. Therefore,
+       the requirements must be installed as described in
+       the User Guide **Installation** section. This method
+       filters out the GitHub portion of the specification
+       and expects these dependencies to already be installed
+       before package setup.
+    """
     with open('requirements.txt') as f:
-        return f.read().splitlines()
+        return [re.search('\w+(=\d.+)?$', spec).group(0)
+                for spec in f.read().splitlines()]
 
 
 def readme():

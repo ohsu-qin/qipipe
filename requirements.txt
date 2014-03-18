@@ -6,7 +6,8 @@ numpy
 nipy
 dipy
 traits
-dcmstack
-nipype
+-e git://github.com/moloney/dcmstack.git#egg=dcmstack
+-e git://github.com/FredLoney/nipype.git#egg=nipype
 nose
+pyxnat
 pyyaml
