@@ -5,7 +5,7 @@ from nipype.interfaces import fsl
 from nipype.interfaces.dcmstack import CopyMeta
 from nipype.interfaces.utility import (IdentityInterface, Function)
 from .. import project
-from ..interfaces import (XNATUpload, Fastfit, UpdateQIProfile)
+from ..interfaces import (XNATUpload, Fastfit) #, UpdateQIProfile)
 from ..helpers import file_helper
 from .workflow_base import WorkflowBase
 from .distributable import DISTRIBUTABLE
