@@ -159,10 +159,14 @@ class RegistrationWorkflow(WorkflowBase):
         if not images:
             return []
         # Sort the images by series number.
-        reg_input = sorted(images)
+        sorted_scans = sorted(images)
 
+        # Split the images into pre- and post-arrival.
+        pre_arrival = sorted_scans[0: bolus_arrival_index + 1]
+        reg_input = sorted_scans[bolus_arrival_index + 1:]
+        
         # The initial reference image occurs at bolus arrival.
-        ref_0_image = reg_input.pop(bolus_arrival_index)
+        ref_0_image = pre_arrival[bolus_arrival_index]
 
         # The target location.
         if dest:
@@ -178,11 +182,12 @@ class RegistrationWorkflow(WorkflowBase):
         input_spec = exec_wf.get_node('input_spec')
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
+        input_spec.inputs.pre_arrival = pre_arrival
         input_spec.inputs.mask = mask
 
-        # Iterate over the images
-        iter_image = exec_wf.get_node('iter_image')
-        iter_image.iterables = ('image', reg_input)
+        # Iterate over the registration inputs.
+        iter_reg_input = exec_wf.get_node('iter_reg_input')
+        iter_reg_input.iterables = ('image', reg_input)
 
         # Execute the workflow.
         self._logger.debug("Executing the %s workflow on %s %s..." %
@@ -195,7 +200,7 @@ class RegistrationWorkflow(WorkflowBase):
         return [os.path.join(dest, filename(scan)) for scan in images]
 
     def _create_execution_workflow(self, bolus_arrival_index, ref_0_image,
-        dest):
+                                   dest):
         """
         Makes the registration execution workflow on the given session
         scan images.
@@ -207,16 +212,20 @@ class RegistrationWorkflow(WorkflowBase):
 
         - *session*: the session name
 
-        - *image*: the image file to register
-
         - *mask*: the mask to apply to the images
 
+        - *pre_arrival*: the scan images prior to bolus arrival, which will
+          not be realigned.
+
         - *reference*: the fixed reference for the given image registration
+        
+        In addition, the caller has the responsibility of setting the
+        ``iter_reg_input`` iterables to the scans to realign.
 
         The *reference* input is set by :meth:`connect_reference`.
 
-        :param ref_0_image: the initial fixed reference image
         :param bolus_arrival_index: the bolus uptake series index
+        :param ref_0_image: the initial fixed reference image
         :param dest: the target realigned image directory
         :return: the execution workflow
         """
@@ -242,21 +251,23 @@ class RegistrationWorkflow(WorkflowBase):
 
         # The input images are iterable. The reference is set by the
         # connect_reference method below.
-        iter_image = pe.Node(IdentityInterface(fields=['image', 'reference']),
-                             name='iter_image')
-        exec_wf.connect(iter_image, 'image',
+        iter_reg_input = pe.Node(IdentityInterface(fields=['image', 'reference']),
+                             name='iter_reg_input')
+        exec_wf.connect(iter_reg_input, 'image',
                         self.workflow, 'input_spec.moving_image')
-        exec_wf.connect(iter_image, 'reference',
+        exec_wf.connect(iter_reg_input, 'reference',
                         self.workflow, 'input_spec.reference')
 
         # The output destination directory.
         if not os.path.exists(dest):
             os.makedirs(dest)
 
-        # Copy the initial reference to the destination directory.
-        copy_ref_0_xfc = Copy(dest=dest)
-        copy_ref_0 = pe.Node(copy_ref_0_xfc, name='copy_ref_0')
-        exec_wf.connect(input_spec, 'ref_0', copy_ref_0, 'in_file')
+        # Copy the pre-arrival files to the destination directory.
+        copy_pre_arrival_func = Function(
+            input_names=['in_files', 'dest'],
+            output_names=['out_files'], function=copy_files)
+        copy_pre_arrival = pe.Node(copy_pre_arrival_func, name='copy_pre_arrival')
+        exec_wf.connect(input_spec, 'pre_arrival', copy_pre_arrival, 'in_files')
 
         # Copy the realigned image to the destination directory.
         copy_realigned = pe.Node(Copy(dest=dest), name='copy_realigned')
@@ -266,19 +277,19 @@ class RegistrationWorkflow(WorkflowBase):
         # Set the recursive realigned -> reference connections.
         connect_ref_args = dict(bolus_arrival_index=bolus_arrival_index,
                                 initial_reference=ref_0_image)
-        exec_wf.connect_iterables(copy_realigned, iter_image,
+        exec_wf.connect_iterables(copy_realigned, iter_reg_input,
                                   connect_reference, **connect_ref_args)
 
         # Collect the realigned images.
         join_realigned = pe.JoinNode(IdentityInterface(fields=['images']),
-                                     joinsource='iter_image',
+                                     joinsource='iter_reg_input',
                                      joinfield='images',
                                      name='join_realigned')
         exec_wf.connect(copy_realigned, 'out_file', join_realigned, 'images')
 
-        # Merge the initial reference and the realigned images.
+        # Merge the pre-arrival scans and the realigned images.
         concat_reg = pe.Node(Merge(2), name='concat_reg')
-        exec_wf.connect(copy_ref_0, 'out_file', concat_reg, 'in1')
+        exec_wf.connect(copy_pre_arrival, 'out_files', concat_reg, 'in1')
         exec_wf.connect(join_realigned, 'images', concat_reg, 'in2')
 
         # Upload the registration result into the XNAT registration resource.
@@ -435,6 +446,15 @@ def filename(in_file):
 
     return os.path.split(in_file)[1]
 
+
+def copy_files(in_files, dest):
+    """
+    :param in_files: the input files
+    :param dest: the destination directory
+    :return: the output files
+    """
+    return [Copy(in_file=in_file, dest=dest).run().outputs.out_file
+            for in_file in in_files]
 
 def connect_reference(workflow, realigned_nodes, input_nodes,
                       bolus_arrival_index, initial_reference):
