@@ -289,9 +289,9 @@ class ModelingWorkflow(WorkflowBase):
         # TODO - Get the summary parameters.
 
         # TODO - Add the session to qiprofile.
-        update_profile_db = pe.Node(UpdateQIProfile())
-        mdl_wf.connect(input_spec, 'subject', upload_node, 'subject')
-        mdl_wf.connect(input_spec, 'session', upload_node, 'session')
+        # update_profile_db = pe.Node(UpdateQIProfile())
+        # mdl_wf.connect(input_spec, 'subject', upload_node, 'subject')
+        # mdl_wf.connect(input_spec, 'session', upload_node, 'session')
 
         # The output is the modeling outputs.
         output_xfc = IdentityInterface(fields=out_fields)
