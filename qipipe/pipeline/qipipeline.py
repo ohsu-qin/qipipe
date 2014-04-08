@@ -16,7 +16,7 @@ from .modeling import ModelingWorkflow
 from ..interfaces import (XNATDownload, XNATUpload)
 from ..helpers import xnat_helper
 from ..helpers.logging_helper import logger
-from ..helpers.bolus_arrival import bolus_arrival_index
+from ..helpers.bolus_arrival import (bolus_arrival_index, BolusArrivalError)
 from ..staging.staging_helper import iter_stage
 
 SCAN_TS_RSC = 'scan_ts'
@@ -543,7 +543,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # Compute the bolus arrival from the scan time series.
             bolus_arv_xfc = Function(input_names=['time_series'],
                                      output_names=['bolus_arrival_index'],
-                                     function=bolus_arrival_index)
+                                     function=bolus_arrival_index_or_zero)
             bolus_arv = pe.Node(bolus_arv_xfc, name='bolus_arrival_index')
             exec_wf.connect(scan_ts, 'out_file', bolus_arv, 'time_series')
 
@@ -685,6 +685,15 @@ class QIPipelineWorkflow(WorkflowBase):
                 register_scans('Dummy', 'Dummy', [ref_0], 0, ref_0, opts)
             finally:
                 os.remove(ref_0)
+
+
+def bolus_arrival_index_or_zero():
+    # Determines the bolus uptake. If it could not be determined,
+    # then the first series is taken to be the uptake.
+    try:
+        bolus_arv_ndx = bolus_arrival_index(time_series)
+    except BolusArrivalError:
+        bolus_arv_ndx = 0
 
 
 def select_scan_files(scans, in_files):

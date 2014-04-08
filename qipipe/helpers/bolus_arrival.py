@@ -1,3 +1,7 @@
+class BolusArrivalError(Exception):
+    pass
+
+
 def bolus_arrival_index(time_series):
     """
     Determines the DCE bolus arrival series index. The bolus arrival is
@@ -6,7 +10,7 @@ def bolus_arrival_index(time_series):
  
     :param time_series: the 4D NiFTI scan image file path
     :return: the bolus arrival series index
-    :raise ValueError: if the bolus arrival could not be determined
+    :raise BolusArrivalError: if the bolus arrival could not be determined
     """
     import nibabel as nb
     import numpy as np
@@ -25,4 +29,4 @@ def bolus_arrival_index(time_series):
         if diff_val > 2 * base_diff:
             return idx + 1
     else:
-        raise ValueError("Unable to determine bolus arrival")
+        raise BolusArrivalError("Unable to determine bolus arrival")

@@ -7,6 +7,7 @@ from nipype.interfaces.utility import (IdentityInterface, Function)
 from .. import project
 from ..interfaces import (XNATUpload, Fastfit) #, UpdateQIProfile)
 from ..helpers import file_helper
+from ..helpers.bolus_arrival import bolus_arrival_index, BolusArrivalError
 from .workflow_base import WorkflowBase
 from .distributable import DISTRIBUTABLE
 from ..helpers.logging_helper import logger
@@ -224,8 +225,12 @@ class ModelingWorkflow(WorkflowBase):
         self._logger.debug("Modeling the %s %s %s time series..." %
             (sbj, sess, time_series))
 
-        # Determine the bolus uptake.
-        bolus_arv_ndx = bolus_arrival_index(time_series)
+        # Determine the bolus uptake. If it could not be determined,
+        # then take the first series as the uptake.
+        try:
+            bolus_arv_ndx = bolus_arrival_index(time_series)
+        except BolusArrivalError:
+            bolus_arv_ndx = 0
 
         # Set the workflow input.
         input_spec = self.workflow.get_node('input_spec')
