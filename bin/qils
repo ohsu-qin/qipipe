@@ -38,7 +38,7 @@ def main(argv=sys.argv):
     # Parse the XNAT hierarchy argument.
     path_items = path_str.split('/')
     if len(path_items) < 2:
-        raise ValueError('The search path must include at least three items,'
+        raise ValueError('The search path must include at least two items,'
                          ' e.g. Breast003/Session01')
     prj = opts.pop('project', qipipe.project())
     sbj, sess = path_items[0:2]
