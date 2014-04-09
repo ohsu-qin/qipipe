@@ -689,6 +689,7 @@ class QIPipelineWorkflow(WorkflowBase):
 def bolus_arrival_index_or_zero(time_series):
     from qipipe.helpers.bolus_arrival import (bolus_arrival_index,
                                               BolusArrivalError)
+
     # Determines the bolus uptake. If it could not be determined,
     # then the first series is taken to be the uptake.
     try:
