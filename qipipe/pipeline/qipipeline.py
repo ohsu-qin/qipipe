@@ -687,7 +687,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 os.remove(ref_0)
 
 
-def bolus_arrival_index_or_zero():
+def bolus_arrival_index_or_zero(time_series):
     # Determines the bolus uptake. If it could not be determined,
     # then the first series is taken to be the uptake.
     try:
