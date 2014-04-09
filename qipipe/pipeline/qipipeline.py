@@ -693,9 +693,9 @@ def bolus_arrival_index_or_zero(time_series):
     # Determines the bolus uptake. If it could not be determined,
     # then the first series is taken to be the uptake.
     try:
-        bolus_arv_ndx = bolus_arrival_index(time_series)
+        return bolus_arrival_index(time_series)
     except BolusArrivalError:
-        bolus_arv_ndx = 0
+        return 0
 
 
 def select_scan_files(scans, in_files):
