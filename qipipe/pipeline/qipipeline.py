@@ -16,7 +16,6 @@ from .modeling import ModelingWorkflow
 from ..interfaces import (XNATDownload, XNATUpload)
 from ..helpers import xnat_helper
 from ..helpers.logging_helper import logger
-from ..helpers.bolus_arrival import (bolus_arrival_index, BolusArrivalError)
 from ..staging.staging_helper import iter_stage
 
 SCAN_TS_RSC = 'scan_ts'
@@ -688,6 +687,8 @@ class QIPipelineWorkflow(WorkflowBase):
 
 
 def bolus_arrival_index_or_zero(time_series):
+    from qipipe.helpers.bolus_arrival import (bolus_arrival_index,
+                                              BolusArrivalError)
     # Determines the bolus uptake. If it could not be determined,
     # then the first series is taken to be the uptake.
     try:
