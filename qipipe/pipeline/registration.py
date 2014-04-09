@@ -381,7 +381,7 @@ class RegistrationWorkflow(WorkflowBase):
                                           function=filename)
             input_filename = pe.Node(input_filename_xfc, name='input_filename')
             realign_wf.connect(input_spec, 'moving_image',
-                               input_filename, 'path')
+                               input_filename, 'in_file')
             # Apply the transforms to the input image.
             apply_xfm = pe.Node(ApplyTransforms(), name='apply_xfm')
             realign_wf.connect(input_spec, 'reference',
