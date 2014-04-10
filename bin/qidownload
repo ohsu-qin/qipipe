@@ -35,39 +35,19 @@ def main(argv=sys.argv):
 
     # The download parent directory.
     dest = opts.pop('output', os.getcwd())
-
-    # Parse the XNAT session label arguments.
-    prj_sess_dict = _parse_session_labels(inputs)
     
     # Download the files.
     prj = opts.pop('project', qipipe.project())
     with xnat_helper.connection(config) as xnat:
-        for labels in prj_sess_dict.iteritems():
-            for sbj, sess in labels:
-                tgt_dir = os.path.join(dest, prj, sbj, sess)
-                # Download the files.
-                download = XNATDownload(project=prj, subject=sbj, session=sess,
-                                        dest=tgt_dir, **opts)
-                result = download.run()
+        for labels in inputs:
+            sbj, sess = xnat_helper.parse_session_label(label)
+            tgt_dir = os.path.join(dest, prj, sbj, sess)
+            # Download the files.
+            download = XNATDownload(project=prj, subject=sbj, session=sess,
+                                    dest=tgt_dir, **opts)
+            result = download.run()
 
     return 0
-
-
-def _parse_session_labels(labels):
-    """
-    Parses the given XNAT session labels into *(subject, session)* tuples grouped
-    by project.
-    
-    :param labels: the labels to parse
-    :return: the {project: [(subject, session), ...]} dictionary
-    """
-    prj_sess_dict = defaultdict(list)
-    for label in labels:
-        sbj, sess = xnat_helper.parse_session_label(label)
-        prj_sess_dict[prj].append(tuple([sbj, sess]))
-
-    return prj_sess_dict
-
 
 def _parse_arguments():
     """Parses the command line arguments."""
