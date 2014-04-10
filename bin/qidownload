@@ -39,7 +39,7 @@ def main(argv=sys.argv):
     # Download the files.
     prj = opts.pop('project', qipipe.project())
     with xnat_helper.connection(config) as xnat:
-        for labels in inputs:
+        for label in inputs:
             sbj, sess = xnat_helper.parse_session_label(label)
             tgt_dir = os.path.join(dest, prj, sbj, sess)
             # Download the files.
