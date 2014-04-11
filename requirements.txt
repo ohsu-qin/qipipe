@@ -9,5 +9,5 @@ traits
 -e git://github.com/moloney/dcmstack.git#egg=dcmstack
 -e git://github.com/FredLoney/nipype.git#egg=nipype
 nose
-pyxnat
+-e git://github.com/FredLoney/pyxnat.git#egg=pyxnat
 pyyaml
