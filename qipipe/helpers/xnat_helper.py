@@ -147,8 +147,8 @@ def expand_child_hierarchy(parent, hierarchy):
         return [parent]
 
     child_spec = hierarchy[0]
-    logger.debug("Expanding the %s XNAT child hierarchy %s..." %
-                 (parent, hierarchy))
+    logger(__name__).debug("Expanding the %s XNAT child hierarchy %s..." %
+                           (parent, hierarchy))
     children = xnat_children(parent, child_spec)
     closures = [expand_child_hierarchy(child, hierarchy[1:])
                 for child in children]
