@@ -104,7 +104,7 @@ def _run_with_xnat_input(*inputs, **opts):
                 status = 'found'
             else:
                 status = 'not found'
-            self._logger.debug("The %s %s resource %s was %s." %
+            logger(__name__).debug("The %s %s resource %s was %s." %
                                 (reg_ts_file, MASK_RSC, status))
             
             # If registration or modeling will be performed, then check
@@ -116,7 +116,7 @@ def _run_with_xnat_input(*inputs, **opts):
                     status = 'found'
                 else:
                     status = 'not found'
-                self._logger.debug("The %s %s scan time series resource %s was"
+                logger(__name__).debug("The %s %s scan time series resource %s was"
                                    " %s." % (sbj, sess, SCAN_TS_RSC, status))
             
             # If modeling will be performed on a specified registration
@@ -129,7 +129,7 @@ def _run_with_xnat_input(*inputs, **opts):
                     status = 'found'
                 else:
                     status = 'not found'
-                self._logger.debug("The %s %s realigned time series resource %s"
+                logger(__name__).debug("The %s %s realigned time series resource %s"
                                    " was %s." % (sbj, sess, reg_ts_rsc, status))
 
             # Execute the workflow.
