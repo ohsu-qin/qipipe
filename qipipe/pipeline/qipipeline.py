@@ -105,7 +105,7 @@ def _run_with_xnat_input(*inputs, **opts):
             else:
                 status = 'not found'
             logger(__name__).debug("The %s %s resource %s was %s." %
-                                (reg_ts_file, MASK_RSC, status))
+                                (sbj, sess, MASK_RSC, status))
             
             # If registration or modeling will be performed, then check
             # for an existing scan time series.
