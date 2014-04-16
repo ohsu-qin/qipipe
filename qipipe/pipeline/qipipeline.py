@@ -146,7 +146,6 @@ class NotFoundError(Exception):
 
 
 class QIPipelineWorkflow(WorkflowBase):
-
     """
     QIPipeline builds and executes the OHSU QIN workflows.
     The pipeline builds a composite workflow which stitches together
@@ -165,26 +164,24 @@ class QIPipelineWorkflow(WorkflowBase):
     - modeling: Perform PK modeling as described in
       :class:`qipipe.pipeline.modeling.ModelingWorkflow`
 
-    The pipeline workflow depends on the initialization options as
-    follows:
+    The constituent workflows are determined by the initialization
+    options ``stage``, ``register`` and ``model``. The default is
+    to perform each of these subworkflows.
+    
+    The workflow steps are determined by the input options as follows:
+    
+    - If staging is performed, then the DICOM files are staged for the
+      subject directory inputs. Otherwise, staging is not performed.
+      In that case, if registration is enabled as described below, then
+      the previously staged series scan stack images are downloaded.
 
-    - If none of the *skip_staging*, *mask* or *registration*
-      options are set, then the DICOM files are staged for the subject
-      directory inputs. Otherwise, staging is not performed. In that
-      case, if registration is enabled as described below, then the
-      previously staged series scan stack images are downloaded.
-
-    - The scan images are registered if and only if the *skip_registration*
-      option is not set to True. If the *registration* option is set,
-      then the previously realigned images with the given reconstruction
+    - If registration is performed and the ``registration`` resource option
+      is set, then the previously realigned images with the given resource
       name are downloaded. The remaining scans are registered.
 
-    - If registration is performed and the *mask* option is set, then
-      the given mask XNAT reconstruction is downloaded. Otherwise, the
-      mask is created from the staged images prior to registration.
-
-    - PK modeling is performed if and only if the *skip_modeling* option
-      is not set to True.
+    - If registration or modeling is performed and the XNAT ``mask``
+      resource is found, then that resource file is downloaded. Otherwise,
+      the mask is created from the staged images.
 
     The QIN workflow input node is *input_spec* with the following
     fields:
@@ -231,12 +228,9 @@ class QIPipelineWorkflow(WorkflowBase):
             run the pipeline
         :keyword mask: the XNAT mask reconstruction name
         :keyword registration: the XNAT registration reconstruction name
-        :keyword skip_registration: flag indicating whether to skip
-            registration
         :keyword technique: the
             class:`qipipe.pipeline.registration.RegistrationWorkflow`
             technique
-        :keyword skip_modeling: flag indicating whether to skip modeling
         """
         # Flag indicating whether to skip job submission.
         base_opts = {}
@@ -387,9 +381,6 @@ class QIPipelineWorkflow(WorkflowBase):
         reg_rsc = opts.get('registration')
         reg_ts_rsc = opts.get('realigned_time_series')
         reg_technique = opts.get('technique')
-        skip_staging = opts.get('skip_staging')
-        skip_registration = opts.get('skip_registration')
-        skip_modeling = opts.get('skip_modeling')
 
         # Set the project, if necessary.
         if 'project' in opts:
@@ -493,7 +484,7 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(iter_dicom, 'dicom_file',
                             stg_wf, 'iter_dicom.dicom_file')
 
-        # The registration workflow requires the scans. If staging is
+        # Some workflows require the scans. If staging is
         # enabled then collect the staged NiFTI scan images. Otherwise,
         # download the XNAT NiFTI scan images. In either case, the
         # staged images are collected in a node named 'staged' with
@@ -512,7 +503,8 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(input_spec, 'subject', staged, 'subject')
                 exec_wf.connect(input_spec, 'session', staged, 'session')
 
-        # Registration and modeling require a time series, mask and bolus arrival.
+        # Registration and modeling require a time series, mask and
+        # bolus arrival.
         if reg_node or mdl_wf:
             # If a time series resource name was specified, then download
             # the time series. Otherwise, make the time series.
@@ -587,7 +579,7 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(bolus_arv, 'bolus_arrival_index',
                             reg_node, 'bolus_arrival_index')
 
-        # If the modeling workflow is enabled, then model the realigned
+        # If the modeling workflow is enabled, then model the scan or realigned
         # images.
         if mdl_wf:
             exec_wf.connect(input_spec, 'subject',
@@ -617,7 +609,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(input_spec, 'session', reg_ts, 'session')
                 exec_wf.connect(reg_ts, 'out_file',
                                 mdl_wf, 'input_spec.time_series')
-            else:
+            elif self.registration_resource:
                 # Merge the realigned images to 4D.
                 reg_ts_rsc = self.registration_resource + '_ts'
                 merge_reg = pe.Node(MergeNifti(out_format=reg_ts_rsc),
@@ -654,9 +646,10 @@ class QIPipelineWorkflow(WorkflowBase):
                                     merge_reg, 'in_files')
                 else:
                     raise ArgumentError(
-                        "The QIN pipeline cannot perform modeling, since the"
-                        " registration workflow is disabled and no registration"
-                        " resource was specified.")
+                        "The QIN pipeline cannot perform modeling on the"
+                        " registration result, since the registration"
+                        " workflow is disabled and no registration resource"
+                        " was specified.")
 
                 # Upload the realigned time series to XNAT.
                 upload_reg_ts_xfc = XNATUpload(project=qipipe.project(),
@@ -672,6 +665,10 @@ class QIPipelineWorkflow(WorkflowBase):
                 
                 # Pass the realigned time series to modeling.
                 exec_wf.connect(merge_reg, 'out_file',
+                                mdl_wf, 'input_spec.time_series')
+            else:
+                # Model the scan input.
+                exec_wf.connect(scan_ts, 'out_file',
                                 mdl_wf, 'input_spec.time_series')
 
         # Set the configured workflow node inputs and plug-in options.
