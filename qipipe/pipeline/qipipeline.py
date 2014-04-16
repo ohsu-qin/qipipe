@@ -101,6 +101,7 @@ def _run_with_xnat_input(*inputs, **opts):
             if xnat.find(project=prj, subject=sbj, session=sess,
                          resource=MASK_RSC):
                 opts['mask'] = MASK_RSC
+            
             # If registration or modeling will be performed, then check
             # for an existing scan time series.
             if 'register' in opts['actions'] or 'model' in opts['actions']:

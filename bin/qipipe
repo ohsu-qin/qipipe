@@ -72,13 +72,6 @@ def _parse_arguments():
                              ' (default a new temp directory)',
                         metavar='DIR', dest='base_dir')
 
-    # The mask and time series arguments.
-    parser.add_argument('--mask', help="the mask XNAT resource name",
-                        metavar='LABEL')
-    parser.add_argument('--scan-time-series',
-                        help="the 4D scan time series XNAT resource name",
-                        metavar='LABEL')
-
     # The registration arguments.
     parser.add_argument('--registration',
                         help='the XNAT registration resource name',
