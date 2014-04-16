@@ -101,6 +101,11 @@ def _run_with_xnat_input(*inputs, **opts):
             if xnat.find(project=prj, subject=sbj, session=sess,
                          resource=MASK_RSC):
                 opts['mask'] = MASK_RSC
+                status = 'found'
+            else:
+                status = 'not found'
+            self._logger.debug("The %s %s resource %s was %s." %
+                                (reg_ts_file, MASK_RSC, status))
             
             # If registration or modeling will be performed, then check
             # for an existing scan time series.
@@ -108,15 +113,24 @@ def _run_with_xnat_input(*inputs, **opts):
                 if xnat.find(project=prj, subject=sbj, session=sess,
                           resource=SCAN_TS_RSC):
                     opts['scan_time_series'] = SCAN_TS_RSC
+                    status = 'found'
+                else:
+                    status = 'not found'
+                self._logger.debug("The %s %s scan time series resource %s was"
+                                   " %s." % (sbj, sess, SCAN_TS_RSC, status))
             
             # If modeling will be performed on a specified registration
             # resource, then check for an existing realigned time series.
             if 'model' in opts['actions'] and 'registration' in opts:
                 reg_ts_rsc = opts['registration'] + '_ts'
-                reg_ts_file = reg_ts_rsc + '.nii.gz'
                 if xnat.find(project=prj, subject=sbj, session=sess,
                              resource=reg_ts_rsc):
                     opts['realigned_time_series'] = reg_ts_rsc
+                    status = 'found'
+                else:
+                    status = 'not found'
+                self._logger.debug("The %s %s realigned time series resource %s"
+                                   " was %s." % (sbj, sess, reg_ts_rsc, status))
 
             # Execute the workflow.
             wf_gen = QIPipelineWorkflow(**opts)
