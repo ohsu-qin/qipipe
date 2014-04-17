@@ -1,8 +1,9 @@
 httplib2
 lxml
 pydicom
-nibabel
 numpy
+nibabel
+scipy
 nipy
 dipy
 traits
