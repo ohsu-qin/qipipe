@@ -289,6 +289,8 @@ class ModelingWorkflow(WorkflowBase):
         for field in out_fields:
             upload_node = self._create_upload_node(field)
             base_field = 'output_spec.' + field
+            mdl_wf.connect(input_spec, 'subject', upload_node, 'subject')
+            mdl_wf.connect(input_spec, 'session', upload_node, 'session')
             mdl_wf.connect(base_wf, base_field, upload_node, 'in_files')
 
         # TODO - Get the summary parameters.
