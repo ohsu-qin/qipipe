@@ -98,8 +98,9 @@ def _run_with_xnat_input(*inputs, **opts):
         for label in inputs:
             sbj, sess = xnat_helper.parse_session_label(label)
             # Check for an existing mask.
-            if xnat.find(project=prj, subject=sbj, session=sess,
-                         resource=MASK_RSC):
+            mask_obj = xnat.find(project=prj, subject=sbj, session=sess,
+                                 resource=MASK_RSC)
+            if mask_obj and mask_obj.files().get():
                 opts['mask'] = MASK_RSC
                 status = 'found'
             else:
@@ -110,8 +111,9 @@ def _run_with_xnat_input(*inputs, **opts):
             # If registration or modeling will be performed, then check
             # for an existing scan time series.
             if 'register' in opts['actions'] or 'model' in opts['actions']:
-                if xnat.find(project=prj, subject=sbj, session=sess,
-                          resource=SCAN_TS_RSC):
+                scan_ts_obj = xnat.find(project=prj, subject=sbj, session=sess,
+                                        resource=SCAN_TS_RSC)
+                if scan_ts_obj and scan_ts_obj.files().get():
                     opts['scan_time_series'] = SCAN_TS_RSC
                     status = 'found'
                 else:
@@ -123,8 +125,9 @@ def _run_with_xnat_input(*inputs, **opts):
             # resource, then check for an existing realigned time series.
             if 'model' in opts['actions'] and 'registration' in opts:
                 reg_ts_rsc = opts['registration'] + '_ts'
-                if xnat.find(project=prj, subject=sbj, session=sess,
-                             resource=reg_ts_rsc):
+                reg_ts_obj = xnat.find(project=prj, subject=sbj, session=sess,
+                             resource=reg_ts_rsc)
+                if reg_ts_obj and reg_ts_obj.files().get():
                     opts['realigned_time_series'] = reg_ts_rsc
                     status = 'found'
                 else:
