@@ -658,7 +658,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 upload_reg_ts_xfc = XNATUpload(project=qipipe.project(),
                                                resource=reg_ts_rsc)
                 upload_reg_ts = pe.Node(upload_reg_ts_xfc,
-                                        name='upload_reg_ts')
+                                        name='upload_reg_time_series')
                 exec_wf.connect(input_spec, 'subject',
                                 upload_reg_ts, 'subject')
                 exec_wf.connect(input_spec, 'session',
