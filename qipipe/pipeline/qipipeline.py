@@ -306,11 +306,14 @@ class QIPipelineWorkflow(WorkflowBase):
         :return: the (registered, unregistered) scan numbers
         """
         # The XNAT registration object.
-        reg_obj = xnat.get_experiment_resource(project, subject, session,
-                                self.registration_resource)
+        if self.registration_resource:
+            reg_obj = xnat.get_experiment_resource(project, subject, session,
+                                                   self.registration_resource)
+        else:
+            reg_obj = None
         # If the registration has not yet been performed, then
-        # all of the scans are downloaded.
-        if not reg_obj.exists():
+        # download all of the scans.
+        if not (reg_obj and reg_obj.exists()):
             return [], scans
 
         # The realigned scan numbers.
