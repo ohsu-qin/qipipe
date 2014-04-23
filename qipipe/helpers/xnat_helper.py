@@ -165,7 +165,7 @@ def delete_subjects(project, *subjects):
     with connection() as xnat:
         for sbj in subjects:
             sbj_obj = xnat.get_subject(project, sbj)
-            if sbj_obj.exists():
+            if exists(sbj_obj):
                 sbj_obj.delete()
                 logger(__name__).debug("Deleted the %s subject %s." %
                                        (project, sbj))
@@ -264,12 +264,28 @@ def xnat_children(xnat_obj, child_spec):
             return [child for child in children
                     if re.match(label_pat, child.label())]
         child = getattr(xnat_obj, child_type)(child_label)
-        if not child.exists():
+        if not exists(child):
             raise ChildNotFoundError("No such XNAT %s %s child: %s" %
                                      (xnat_obj, child_type, child_label))
         return [child]
     else:
         return getattr(xnat_obj, child_spec)()
+
+
+def exists(obj):
+    """
+    Returns whether the given XNAT object exists.
+
+    This method works around the following pyxnat bug:
+
+    * pyxnat 0.9.1 reports that an existing XNAT Assessor does not exist.
+      The work-around is to return whether there is at least one Assessor
+      out_resource.
+    """
+    if obj.exists():
+        return True
+    elif isinstance(obj, Assessor):
+        return not not obj.out_resources().get()
 
 
 def setup_module(module):
@@ -282,7 +298,7 @@ def setup_module(module):
     with connection() as xnat:
         for sbj in ['Breast003', 'Breast004']:
             sbj_obj = xnat.get_subject('QIN_Test', sbj)
-            if  sbj_obj.exists():
+            if exists(sbj_obj):
                 sbj_obj.delete()
             sbj_obj.create()
             
@@ -297,7 +313,7 @@ def teardown_module(module):
     with connection() as xnat:
         for sbj in ['Breast003', 'Breast004']:
             sbj_obj = xnat.get_subject('QIN_Test', sbj)
-            if  sbj_obj.exists():
+            if  exists(sbj_obj):
                 sbj_obj.delete()
     
 
@@ -675,7 +691,7 @@ class XNAT(object):
         """
         # The XNAT experiment, which must exist.
         exp = self.get_session(project, subject, session)
-        if not exp.exists():
+        if not exists(exp):
             raise XNATError("The XNAT download session was not found: %s" %
                             session)
 
@@ -844,21 +860,6 @@ class XNAT(object):
 
         return xnat_files
 
-    def exists(self, obj):
-        """
-        Returns whether the given XNAT object exists.
-
-        This method works around the following pyxnat bug:
-
-        * pyxnat 0.9.1 reports that an existing XNAT Assessor does not exist.
-          The work-around is to return whether there is at least one Assessor
-          out_resource.
-        """
-        if obj.exists():
-            return True
-        elif isinstance(obj, Assessor):
-            return not not obj.out_resources().get()
-
     def find(self, project, subject, session=None, **opts):
         """
         Finds the given XNAT object in the hierarchy:
@@ -930,7 +931,7 @@ class XNAT(object):
         # If no session is specified, then return the XNAT subject.
         if not session:
             sbj = self.get_subject(project, subject)
-            if sbj.exists():
+            if exists(sbj):
                 return sbj
             elif create:
                 self._logger.debug("Creating the XNAT %s %s subject..." %
@@ -949,7 +950,7 @@ class XNAT(object):
         # then return the experiment.
         # Otherwise, if create is specified, then create the experiment.
         # Otherwise, bail.
-        if not exp.exists():
+        if not exists(exp):
             if create:
                 # If the experiment must be created, then we need the
                 # modality.
@@ -978,7 +979,7 @@ class XNAT(object):
                 raise ValueError("XNAT %s %s %s %s container id is missing" %
                                 (project, subject, session, ctr_type))
             ctr = self._resource_parent(exp, ctr_type, ctr_id)
-            if not self.exists(ctr):
+            if not exists(ctr):
                 if create:
                     self._logger.debug("Creating the XNAT %s %s %s %s %s resource"
                                        " parent container..." %
@@ -1005,7 +1006,7 @@ class XNAT(object):
                 return ctr
 
         rsc_obj = self._child_resource(ctr, resource, opts.get('inout'))
-        if not rsc_obj.exists():
+        if not exists(rsc_obj):
             if create:
                 if ctr_spec:
                     self._logger.debug("Creating the XNAT %s %s %s %s %s %s"
@@ -1034,7 +1035,7 @@ class XNAT(object):
             path = opts['file']
             _, fname = os.path.split(path)
             file_obj = rsc_obj.file(fname)
-            if file_obj.exists():
+            if exists(file_obj):
                 return file_obj
             elif create:
                 file_obj.insert(path, **opts)
@@ -1283,7 +1284,7 @@ class XNAT(object):
         # The resource parent container.
         rsc_ctr = resource.parent()
         # Check for an existing file.
-        if file_obj.exists() and not opts.get('overwrite'):
+        if exists(file_obj) and not opts.get('overwrite'):
             raise XNATError("The XNAT file object %s already exists in the %s"
                             " resource" % (fname, resource.label()))
 
