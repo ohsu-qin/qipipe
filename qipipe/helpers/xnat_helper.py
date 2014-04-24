@@ -149,7 +149,7 @@ def expand_child_hierarchy(parent, hierarchy):
     child_spec = hierarchy[0]
     logger(__name__).debug("Expanding the %s XNAT child hierarchy %s..." %
                            (parent, hierarchy))
-    children = xnat_children(parent, child_spec)
+    children = _xnat_children(parent, child_spec)
     closures = [expand_child_hierarchy(child, hierarchy[1:])
                 for child in children]
     return reduce(lambda x, y: x + y, closures, [])
@@ -244,54 +244,79 @@ def standardize_child_attribute(name):
                          " XNAT object type" % name)
 
 
-def xnat_children(xnat_obj, child_spec):
+HIERARCHICAL_LABEL_TYPES = ['experiment', 'assessor', 'reconstruction']
+"""The XNAT types whose label is prefixed by the parent label."""
+
+def _xnat_children(xnat_obj, child_spec):
     """
     Returns the XNAT object children for the given child specification.
     The specification is either a pluralized XNAT child type, e.g.
     ``scans``, or a (type, value) pair, e.g. ``('scan', '1')``. If the
     value includes a wildcard, e.g. ``('resource', 'reg_*')``, then
-    all matching XNAT objects are returned.
+    all matching XNAT objects are returned. Otherwise, the value is
+    a label or id search target.
 
     :param xnat_obj: the parent XNAT object
     :param child_spec: the XNAT child specification
     :return: the XNAT child objects
+    :raise: ChildNotFoundError if there is no such child
     """
     if isinstance(child_spec, tuple):
+        # The child specification contains the type and label.
         child_type, child_label = child_spec
+        # Prepend the parent label, if necessary.
+        if (child_type in HIERARCHICAL_LABEL_TYPES and
+                not child_label.startswith(xnat_obj.label())):
+            child_label = '_'.join([xnat_obj.label(), child_label])
+        
+        # A wild card label => search on the children.
         if '*' in child_label:
             label_pat = re.escape(child_label).replace('\*', '.*') + '$'
-            children = xnat_children(xnat_obj, child_type + 's')
+            children = _xnat_children(xnat_obj, child_type + 's')
             return [child for child in children
                     if re.match(label_pat, child.label())]
-        child = getattr(xnat_obj, child_type)(child_label)
+        
+        # Not a wild card; get the child with the specified label.
+        if child_type == 'assessor':
+            # Work around XNAT assessor URI/label inconsistency.
+            child = None
+            if xnat_obj.exists():
+                for assr in xnat_obj.assessors():
+                    if assr.label() == child_label:
+                        child = assr
+        elif isinstance(xnat_obj, Assessor) and child_type == 'resource':
+            try:
+                return _xnat_children(
+                xnat_obj, ('in_resource', child_label))
+            except ChildNotFoundError:
+                return _xnat_children(xnat_obj, ('out_resource', child_label))
+        else:
+            child = getattr(xnat_obj, child_type)(child_label)
         if not exists(child):
             raise ChildNotFoundError("No such XNAT %s %s child: %s" %
                                      (xnat_obj, child_type, child_label))
         return [child]
+    elif isinstance(xnat_obj, Assessor) and child_spec == 'resources':
+        # Work around a pyxnat bug that fetches abstract resource objects
+        # rather than the concrete objects.
+        in_rscs = _xnat_children(xnat_obj, 'in_resources')
+        out_rscs = _xnat_children(xnat_obj, 'out_resources')
+        return [r for r in in_rscs] + [r for r in out_rscs]
     else:
         return getattr(xnat_obj, child_spec)()
 
 
 def exists(obj):
     """
-    Returns whether the given XNAT object exists.
-
-    This method works around the following pyxnat bug:
-
-    * pyxnat 0.9.1 reports that an existing XNAT Assessor does not exist.
-      The work-around is to return whether there is at least one Assessor
-      out_resource.
+    @return whether the given object is an existing XNAT object
     """
-    if obj.exists():
-        return True
-    elif isinstance(obj, Assessor):
-        return not not obj.out_resources().get()
+    return obj and obj.exists()
 
 
 def setup_module(module):
     """Changes the doctest current directory to a test results directory."""
     import os, tempfile
-    
+
     setup_module.cwd = os.getcwd()
     setup_module.test_dir = tempfile.mkdtemp()
     os.chdir(setup_module.test_dir)
@@ -301,13 +326,13 @@ def setup_module(module):
             if exists(sbj_obj):
                 sbj_obj.delete()
             sbj_obj.create()
-            
+
 
 
 def teardown_module(module):
     """Restores the current directory."""
     import os, shutil
-    
+
     shutil.rmtree(setup_module.test_dir)
     os.chdir(setup_module.cwd)
     with connection() as xnat:
@@ -315,7 +340,7 @@ def teardown_module(module):
             sbj_obj = xnat.get_subject('QIN_Test', sbj)
             if  exists(sbj_obj):
                 sbj_obj.delete()
-    
+
 
 class XNATError(Exception):
     pass
@@ -343,53 +368,25 @@ class XNAT(object):
     out the parent label. The name parameters are used to build the
     XNAT label, as shown in the following example:
 
-    +----------------+-------------+------------+---------------------------------+
-    | Class          | Name        | Id         | Label                           |
-    +================+=============+============+=================================+
-    | Project        | QIN         | QIN        | QIN                             |
-    +----------------+-------------+------------+---------------------------------+
-    | Subject        | Breast003   | QIN_S00580 | Breast003                       |
-    +----------------+-------------+------------+---------------------------------+
-    | Experiment     | Session01   | QIN_E00604 | Breast003_Session01             |
-    +----------------+-------------+------------+---------------------------------+
-    | Scan           | 1           | 1          | 1                               |
-    +----------------+-------------+------------+---------------------------------+
-    | Reconstruction | reco_fTkr4Y | -          | Breast003_Session01_reco_fTkr4Y |
-    +----------------+-------------+------------+---------------------------------+
-    | Assessor       | pk_4kbEv3r  | QIN_E00868 | Breast003_Session01_pk_4kbEv3r  |
-    +----------------+-------------+------------+---------------------------------+
-    | Resource       | reg_zaK1Bd  | 3187       | reg_zaK1Bd                      |
-    +----------------+-------------+------------+---------------------------------+
-    | File           |series37.nii |series37.nii| series37.nii                    |
-    +----------------+-------------+------------+---------------------------------+
-
-    The XNAT wrapper class implements methods to access XNAT objects in
-    a hierarchical name space using a labeling convention. The method
-    parameters take the XNAT hierarchy object name values which are used
-    to build a XNAT label, as shown in the following example:
-
-
-    The following table shows example XNAT ids and label.
-    
-    +----------------+------------+-------------------------------------+
-    | Class          | Id         | Label                               |
-    +================+============+=====================================+
-    | Project        | QIN        | QIN                                 |
-    +----------------+------------+-------------------------------------+
-    | Subject        | QIN_S00580 | Breast003                           |
-    +----------------+------------+-------------------------------------+
-    | Experiment     | QIN_E00604 | Breast003_Session01                 |
-    +----------------+------------+-------------------------------------+
-    | Scan           | 1          | 1                                   |
-    +----------------+------------+-------------------------------------+
-    | Reconstruction | --         | Breast003_Session01_reco_fTkr4Y     |
-    +----------------+------------+-------------------------------------+
-    | Assessor       | QIN_E00868 | Breast003_Session01_pk_4kbEv3r      |
-    +----------------+------------+-------------------------------------+
-    | Resource       | 3187       | reg_zaK1Bd                          |
-    +----------------+------------+-------------------------------------+
-    | File           |series37.nii| series37.nii                        |
-    +----------------+------------+-------------------------------------+
+    +----------------+-------------+---------------------------------+
+    | Class          | Name        | Label                           |
+    +================+=============+=================================+
+    | Project        | QIN         | QIN                             |
+    +----------------+-------------+---------------------------------+
+    | Subject        | Breast003   | Breast003                       |
+    +----------------+-------------+---------------------------------+
+    | Experiment     | Session01   | Breast003_Session01             |
+    +----------------+-------------+---------------------------------+
+    | Scan           | 1           | 1                               |
+    +----------------+-------------+---------------------------------+
+    | Reconstruction | reco_fTkr4Y | Breast003_Session01_reco_fTkr4Y |
+    +----------------+-------------+---------------------------------+
+    | Assessor       | pk_4kbEv3r  | Breast003_Session01_pk_4kbEv3r  |
+    +----------------+-------------+---------------------------------+
+    | Resource       | reg_zaK1Bd  | reg_zaK1Bd                      |
+    +----------------+-------------+---------------------------------+
+    | File           |series37.nii | series37.nii                    |
+    +----------------+-------------+---------------------------------+
 
     :Note: The XNAT Reconstruction data type is deprecated. An experiment
       Resource should be used instead.
@@ -445,23 +442,45 @@ class XNAT(object):
     >>> exp2 = sbj1.experiment(exp1.id())
     >>> exp1.label() == exp2.label()
     True
-    
-    The XNAT id is generated as follows:
-    
+
+    XNAT generates the id as follows:
+
     * The Project, Scan and File id and label are identical
-    
+
     * A Reconstruction does not have an XNAT id
-    
+
     * The Subject id is an opaque XNAT-generated value starting with
       *project*\ ``_S_``.
-    
+
     * The Experiment and Assessor id is an opaque XNAT-generated value
       starting with *project*\ ``_E_``.
-    
+
     * The Resource is an opaque XNAT-generated string value consisting
       of digits.
-    
+
     Each opaque XNAT-generated identifier is unique within the database.
+
+    The following table shows example XNAT ids and labels.
+
+    +----------------+------------+-------------------------------------+
+    | Class          | Id         | Label                               |
+    +================+============+=====================================+
+    | Project        | QIN        | QIN                                 |
+    +----------------+------------+-------------------------------------+
+    | Subject        | QIN_S00580 | Breast003                           |
+    +----------------+------------+-------------------------------------+
+    | Experiment     | QIN_E00604 | Breast003_Session01                 |
+    +----------------+------------+-------------------------------------+
+    | Scan           | 1          | 1                                   |
+    +----------------+------------+-------------------------------------+
+    | Reconstruction | --         | Breast003_Session01_reco_fTkr4Y     |
+    +----------------+------------+-------------------------------------+
+    | Assessor       | QIN_E00868 | Breast003_Session01_pk_4kbEv3r      |
+    +----------------+------------+-------------------------------------+
+    | Resource       | 3187       | reg_zaK1Bd                          |
+    +----------------+------------+-------------------------------------+
+    | File           |series37.nii| series37.nii                        |
+    +----------------+------------+-------------------------------------+
 
     In the example above, the XNAT assessor object is obtained as
     follows:
@@ -489,7 +508,10 @@ class XNAT(object):
     CONTAINER_TYPES = ['scan', 'reconstruction', 'assessor']
     """The XNAT resource container types."""
 
-    XNAT_CHILD_TYPES = set(CONTAINER_TYPES + ['resource', 'file'])
+    XNAT_RESOURCE_TYPES = ['resource', 'in_resource', 'out_resource']
+    """The XNAT resource types."""
+    
+    XNAT_CHILD_TYPES = set(CONTAINER_TYPES + XNAT_RESOURCE_TYPES + ['file'])
     """The XNAT experiment or resource container child types."""
 
     ASSESSOR_SYNONYMS = ['analysis', 'assessment']
@@ -540,10 +562,10 @@ class XNAT(object):
 
         return self.interface.select(qpath)
 
-    def get_session(self, project, subject, session):
+    def get_experiment(self, project, subject, session):
         """
-        Returns the XNAT session object for the given XNAT lineage.
-        The session name is qualified by the subject name prefix, if necessary.
+        Returns the XNAT experiment object for the given XNAT lineage.
+        The experiment name is qualified by the subject name prefix, if necessary.
 
         :param project: the XNAT project id
         :param subject: the XNAT subject label
@@ -553,6 +575,8 @@ class XNAT(object):
         label = hierarchical_label(subject, session)
 
         return self.get_subject(project, subject).experiment(label)
+
+    get_session = get_experiment
 
     def get_scan_numbers(self, project, subject, session):
         """
@@ -564,8 +588,7 @@ class XNAT(object):
         :param session: the XNAT experiment label
         :return: the session scan numbers
         """
-        label = hierarchical_label(subject, session)
-        exp = self.get_subject(project, subject).experiment(label)
+        exp = self.get_experiment(project, subject, session)
 
         return [int(scan) for scan in exp.scans().get()]
 
@@ -573,7 +596,7 @@ class XNAT(object):
         """
         Returns the XNAT scan object for the given XNAT lineage.
         The lineage names are qualified by a prefix, if necessary,
-        as described in :meth:`get_session`.
+        as described in :meth:`get_experiment`.
 
         :param project: the XNAT project id
         :param subject: the XNAT subject label
@@ -581,13 +604,15 @@ class XNAT(object):
         :param scan: the XNAT scan name or number
         :return: the corresponding XNAT scan object (which may not exist)
         """
-        return self.get_session(project, subject, session).scan(str(scan))
+        exp = self.get_experiment(project, subject, session)
+        
+        return exp.scan(str(scan))
 
     def get_reconstruction(self, project, subject, session, recon):
         """
         Returns the XNAT reconstruction object for the given XNAT lineage.
         The lineage names are qualified by a prefix, if necessary,
-        as described in :meth:`get_session`.
+        as described in :meth:`get_experiment`.
 
         :Note: The XNAT reconstruction data type is deprecated. Use an
             experiment resource instead.
@@ -600,16 +625,16 @@ class XNAT(object):
             (which may not exist)
         """
         label = hierarchical_label(subject, session, recon)
-        sess_obj = self.get_session(project, subject, session)
+        exp = self.get_experiment(project, subject, session)
 
-        return sess_obj.reconstruction(label)
+        return exp.reconstruction(label)
 
     def get_experiment_resource(self, project, subject, session, resource):
         """
         Returns the XNAT resource object for the given XNAT lineage.
         The resource parent is the XNAT session experiment.
         The lineage names are qualified by a prefix, if necessary,
-        as described in :meth:`get_session`.
+        as described in :meth:`get_experiment`.
 
         :param project: the XNAT project id
         :param subject: the subject name
@@ -618,15 +643,16 @@ class XNAT(object):
         :return: the corresponding XNAT resource object
             (which may not exist)
         """
-        sess_obj = self.get_session(project, subject, session)
-        return sess_obj.resource(resource)
+        exp = self.get_experiment(project, subject, session)
+        
+        return exp.resource(resource)
 
     def get_assessor(self, project, subject, session, assessor):
         """
         Returns the XNAT assessor object for the given XNAT lineage.
         The lineage names are qualified by a prefix, if necessary,
-        as described in :meth:`get_session`.
-        
+        as described in :meth:`get_experiment`.
+
         :Note: an XNAT bug results in missing assessors if the accessing
           XNAT user has administrative priveleges, but is not a member
           or owner of the project. See the XNAT users forum
@@ -641,8 +667,9 @@ class XNAT(object):
             (which may not exist)
         """
         label = hierarchical_label(subject, session, assessor)
-
-        return self.get_session(project, subject, session).assessor(label)
+        exp = self.get_experiment(project, subject, session)
+        
+        return exp.assessor(label)
 
     # Define the get_assessor function aliases.
     get_assessment = get_assessor
@@ -690,15 +717,10 @@ class XNAT(object):
         :return: the downloaded file names
         """
         # The XNAT experiment, which must exist.
-        exp = self.get_session(project, subject, session)
+        exp = self.get_experiment(project, subject, session)
         if not exists(exp):
             raise XNATError("The XNAT download session was not found: %s" %
                             session)
-
-        # The download location.
-        dest = opts.pop('dest', None) or os.getcwd()
-        if not os.path.exists(dest):
-            os.makedirs(dest)
 
         # The XNAT file name.
         fname = opts.pop('file', None)
@@ -726,7 +748,15 @@ class XNAT(object):
                 rsc_files = [file_obj]
         else:
             rsc_files = list(rsc.files())
-        if not rsc_files:
+
+        # The download location.
+        dest = opts.pop('dest', None) or os.getcwd()
+        # If there are files to download, then prepare the download directory.
+        # Otherwise, issue a debug log message.
+        if rsc_files:
+            if not os.path.exists(dest):
+                os.makedirs(dest)
+        else:
             self._logger.debug("The %s %s %s %s resource does not contain any"
                                " files." % (project, subject, session, opts))
 
@@ -944,7 +974,7 @@ class XNAT(object):
                 return
 
         # The XNAT experiment.
-        exp = self.get_session(project, subject, session)
+        exp = self.get_experiment(project, subject, session)
 
         # If there is an experiment and we are not asked for a container,
         # then return the experiment.
@@ -1144,7 +1174,7 @@ class XNAT(object):
 
     def _resource_parent(self, experiment, container_type, name=None):
         """
-        Returns the resource parent for the given experiment, container
+        Returns the resource parent for the given experiment and container
         type. The resource parent is the experiment child with the given
         container type, e.g a MR session scan. The ``resource`` container
         type parent is the experiment.
