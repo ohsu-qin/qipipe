@@ -725,13 +725,6 @@ class XNAT(object):
         # The XNAT file name.
         fname = opts.pop('file', None)
 
-        if fname:
-            file_clause = "%s file" % fname
-        else:
-            file_clause = "files"
-        self._logger.debug("Downloading the %s %s %s %s to %s..." %
-                           (subject, session, opts, file_clause, dest))
-
         # The resource.
         rsc = self._infer_resource(exp, opts)
 
@@ -754,6 +747,12 @@ class XNAT(object):
         # If there are files to download, then prepare the download directory.
         # Otherwise, issue a debug log message.
         if rsc_files:
+            if fname:
+                file_clause = "%s file" % fname
+            else:
+                file_clause = "%d files" % len(rsc_files)
+            self._logger.debug("Downloading %s %s %s %s %s to %s..." %
+                               (project, subject, session, opts, file_clause, dest))
             if not os.path.exists(dest):
                 os.makedirs(dest)
         else:
