@@ -157,7 +157,7 @@ class ModelingWorkflow(WorkflowBase):
 
         assessor = opts.pop('modeling', None)
         if not assessor:
-            assessor = _generate_assessor_name()
+            assessor = self._generate_assessor_name()
         self.assessor = assessor
         """
         The XNAT assessor name for all executions of this
