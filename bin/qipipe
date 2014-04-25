@@ -88,6 +88,11 @@ def _parse_arguments():
                                dest='technique', action='store_const',
                                const='mock')
 
+    # The modeling arguments.
+    parser.add_argument('--modeling',
+                        help='the XNAT modeling assessor name',
+                        metavar='ASSESSOR')
+
     # The input subject directories or XNAT labels to process.
     parser.add_argument('inputs', help='the input AIRC DICOM subject directory'
                         ' or XNAT session label if staging is not performed',

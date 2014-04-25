@@ -155,7 +155,10 @@ class ModelingWorkflow(WorkflowBase):
         cfg_file = opts.pop('cfg_file', None)
         super(ModelingWorkflow, self).__init__(logger(__name__), cfg_file)
 
-        self.assessor = "%s_%s" % (PK_PREFIX, file_helper.generate_file_name())
+        assessor = opts.pop('modeling', None)
+        if not assessor:
+            assessor = _generate_assessor_name()
+        self.assessor = assessor
         """
         The XNAT assessor name for all executions of this
         :class:`qipipe.pipeline.modeling.ModelingWorkflow` instance. The
@@ -212,6 +215,15 @@ class ModelingWorkflow(WorkflowBase):
 
         # Return the analysis name.
         return self.assessor
+
+    def _generate_assessor_name(self):
+        """
+        Makes a unique modeling assessor name. Uniqueness permits more than
+        one assessor to be stored for a given session without a name conflict.
+
+        :return: a unique XNAT modeling assessor name
+        """
+        return "%s_%s" % (PK_PREFIX, file_helper.generate_file_name())
 
     def _model(self, subject, session, time_series, mask):
         """
