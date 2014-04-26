@@ -420,8 +420,8 @@ class QIPipelineWorkflow(WorkflowBase):
             if not reg_rsc:
                 new_reg_rsc = registration.generate_resource_name()
                 self.registration_resource = new_reg_rsc
+            # Add the resource name to the registration options.
             reg_opts['resource'] = self.registration_resource
-            self.registration_resource = reg_opts['resource']
             
             # The registration function.
             reg_xfc = Function(input_names=reg_inputs,
