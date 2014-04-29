@@ -696,6 +696,20 @@ class XNAT(object):
         downloads the NiFTI files for the XNAT session with label
         ``Breast001_Session03`` and resource label
         ``Breast001_Session03_reg_jA4K``.
+        
+        The files are downloaded to the following directory:
+        
+            <dest>/<project>/<subject>/<series>/<container_type>/<container>
+        
+        where:
+        
+        * <dest> is the destination directory (given by the *dest*
+          argument or the cwd)
+        * <project> is the XNAT project
+        * <subject> is the relative XNAT subject label, e.g. ``Breast001``
+        * <session> is the relative XNAT session label, e.g. ``Session03``
+        * <container_type> is the XNAT container type, e.g. ``assessor``
+        * <container> is the relative XNAT container label, e.g. ``pk_A4r3aw`` 
 
         :param project: the XNAT project id
         :param subject: the XNAT subject label
