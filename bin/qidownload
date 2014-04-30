@@ -42,7 +42,6 @@ def main(argv=sys.argv):
         for label in inputs:
             sbj, sess = xnat_helper.parse_session_label(label)
             tgt_dir = os.path.join(dest, prj, sbj, sess)
-            # Download the files.
             download = XNATDownload(project=prj, subject=sbj, session=sess,
                                     dest=tgt_dir, **opts)
             result = download.run()
@@ -69,13 +68,12 @@ def _parse_arguments():
     parser.add_argument('-f', '--file', help='the XNAT file name')
 
     # The download location option.
-    parser.add_argument('-o', '--output',
-                        help='the destination directory (default current directory)',
-                        metavar='DIR')
+    parser.add_argument('-o', '--output', metavar='DIR',
+                        help='the destination directory (default current directory)')
 
     # The input XNAT sessions to process.
-    parser.add_argument('sessions', help='the input XNAT sessions to register',
-                        nargs='+')
+    parser.add_argument('sessions', help='the input XNAT session(s) to register',
+                        metavar='LABEL', nargs='+')
 
     args = vars(parser.parse_args())
     nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)
