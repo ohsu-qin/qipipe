@@ -266,7 +266,8 @@ class RegistrationWorkflow(WorkflowBase):
         copy_pre_arrival_func = Function(
             input_names=['in_files', 'dest'],
             output_names=['out_files'], function=copy_files)
-        copy_pre_arrival = pe.Node(copy_pre_arrival_func, name='copy_pre_arrival')
+        copy_pre_arrival = pe.Node(copy_pre_arrival_func, dest=dest,
+                                   name='copy_pre_arrival')
         exec_wf.connect(input_spec, 'pre_arrival', copy_pre_arrival, 'in_files')
 
         # Copy the realigned image to the destination directory.
