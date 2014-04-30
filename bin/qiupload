@@ -35,11 +35,10 @@ def main(argv=sys.argv):
     prj = opts.pop('project', qipipe.project())
     label = opts.pop('session')
     sbj, sess = xnat_helper.parse_session_label(label)
-    files = opts.pop('files')
     # Upload the files.
     with xnat_helper.connection(config) as xnat:
         upload = XNATUpload(project=prj, subject=sbj, session=sess,
-                            in_files=files, **opts)
+                            in_files=inputs, **opts)
         result = upload.run()
 
     return 0
@@ -72,9 +71,6 @@ def _parse_arguments():
                         help='the XNAT resource name')
     target_grp.add_argument('--reconstruction', metavar='LABEL',
                             help='the XNAT reconstruction name')
-    parser.add_argument('-o', '--output', metavar='DIR',
-                        help='the destination directory'
-                             ' (default current directory)')
 
     # The input sessions to process.
     parser.add_argument('session', metavar='LABEL',
