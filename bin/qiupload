@@ -32,15 +32,14 @@ def main(argv=sys.argv):
     from qipipe.helpers import xnat_helper
     from qipipe.interfaces import XNATUpload
 
-    sbj_sess_tuples = _parse_session_labels(inputs)
-    # Register the session images.
     prj = opts.pop('project', qipipe.project())
+    sbj, sess = xnat_helper.parse_session_label(label)
+    files = opts.pop('files')
+    # Upload the files.
     with xnat_helper.connection(config) as xnat:
-        for sbj, sess in sbj_sess_tuples:
-            tgt_dir = os.path.join(dest, prj, sbj, sess)
-            # Upload the files.
-            upload = XNATUpload(dest=tgt_dir, **opts)
-            result = upload.run()
+        upload = XNATUpload(project=prj, subject=sbj, session=sess,
+                            in_files=files, **opts)
+        result = upload.run()
 
     return 0
 
@@ -72,14 +71,17 @@ def _parse_arguments():
                         help='the XNAT resource name')
     target_grp.add_argument('--reconstruction', metavar='LABEL',
                             help='the XNAT reconstruction name')
-    parser.add_argument('-o', '--output',
+    parser.add_argument('-o', '--output', metavar='DIR',
                         help='the destination directory'
-                             ' (default current directory)',
-                        metavar='DIR')
+                             ' (default current directory)')
 
     # The input sessions to process.
-    parser.add_argument('sessions', nargs='+',
-                        help='the input XNAT sessions to register')
+    parser.add_argument('session', metavar='LABEL',
+                        help='the target XNAT session')
+
+    # The input sessions to process.
+    parser.add_argument('files', nargs='+', metavar='FILE',
+                        help='the input file(s) to upload')
 
     args = vars(parser.parse_args())
     nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)
