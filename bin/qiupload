@@ -33,6 +33,7 @@ def main(argv=sys.argv):
     from qipipe.interfaces import XNATUpload
 
     prj = opts.pop('project', qipipe.project())
+    label = opts.pop('session')
     sbj, sess = xnat_helper.parse_session_label(label)
     files = opts.pop('files')
     # Upload the files.
@@ -86,7 +87,7 @@ def _parse_arguments():
     args = vars(parser.parse_args())
     nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)
 
-    return nonempty_args.pop('sessions'), nonempty_args
+    return nonempty_args.pop('files'), nonempty_args
 
 
 if __name__ == '__main__':
