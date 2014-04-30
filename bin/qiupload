@@ -6,6 +6,7 @@ Uploads files to XNAT.
 import sys
 import os
 import re
+import imp
 import argparse
 from collections import defaultdict
 
