@@ -17,14 +17,14 @@ SESS_REGEX = re.compile('^Session(\d+)$')
 
 class QIProfile(object):
     
-    """QIProfile is a facade class to access the Image Profile database."""
+    """QIProfile is a facade class to access the QuIP database."""
     
     def sync(self):
         """
-        Updates the Imaging Profile database from the XNAT database.
+        Updates the QuIP database from the XNAT database.
         The subjects, sessions and modeling results in the
         :meth:`qipipe.helpers.project.project` are added, if necessary,
-        to the Imaging Profile database.
+        to the QuIP database.
         """
         prj = project()
         with xnat_helper.connection as xnat:
@@ -39,7 +39,7 @@ class QIProfile(object):
     
     def find_subject(self, project, subject, create=False):
         """
-        Finds the given Imaging Profile subject. If it doesn't exists
+        Finds the given QuIP subject. If it doesn't exists
         and the *create* flag is set, then the subject is created.
     
         :param project: the project name
@@ -69,7 +69,7 @@ class QIProfile(object):
     
     def find_session(self, project, subject, session, create=False):
         """
-        Finds the given Imaging Profile subject. If it doesn't exists
+        Finds the given QuIP subject. If it doesn't exists
         and the *create* flag is set, then the session is created.
     
         :param project: the project name
@@ -99,7 +99,7 @@ class QIProfile(object):
     
     def save_subject(self, project, subject, **opts):
         """
-        Creates the Imaging Profile subject, if necessary, and updates
+        Creates the QuIP subject, if necessary, and updates
         the given subject fields.
     
         :param project: the project name
