@@ -457,8 +457,12 @@ def copy_files(in_files, dest):
     :param dest: the destination directory
     :return: the output files
     """
-    return [Copy(in_file=in_file, dest=dest).run().outputs.out_file
-            for in_file in in_files]
+    from qipipe.interfaces import Copy
+    
+    copier = Copy(in_file=in_file, dest=dest)
+    
+    return [copier.run().outputs.out_file for in_file in in_files]
+
 
 def connect_reference(workflow, realigned_nodes, input_nodes,
                       bolus_arrival_index, initial_reference):
