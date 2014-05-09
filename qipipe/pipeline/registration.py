@@ -408,7 +408,6 @@ class RegistrationWorkflow(WorkflowBase):
             realign_wf.connect(fnirt_copy_moving, 'out_file', fnirt, 'in_file')
             realign_wf.connect(input_spec, 'mask', fnirt, 'inmask_file')
             realign_wf.connect(input_spec, 'mask', fnirt, 'refmask_file')
-            # realign_wf.connect(realign_name, 'out_file', fnirt, 'warped_file')
             # Copy the meta-data.
             realign_wf.connect(fnirt, 'warped_file', copy_meta, 'dest_file')
         elif technique.lower() == 'mock':
