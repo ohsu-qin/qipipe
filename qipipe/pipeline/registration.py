@@ -459,9 +459,8 @@ def copy_files(in_files, dest):
     """
     from qipipe.interfaces import Copy
     
-    copier = Copy(in_file=in_file, dest=dest)
-    
-    return [copier.run().outputs.out_file for in_file in in_files]
+    return [Copy(in_file=in_file, dest=dest).run().outputs.out_file
+            for in_file in in_files]
 
 
 def connect_reference(workflow, realigned_nodes, input_nodes,
