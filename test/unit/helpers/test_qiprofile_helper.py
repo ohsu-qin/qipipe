@@ -3,7 +3,7 @@ import pytz
 from nose.tools import (assert_is_none)
 
 from qipipe.helpers.qiprofile_helper import QIProfile
-from qiprofile.models import Project
+from qiprofile_rest.models import Project
 from test import project
 from test.helpers.logging_helper import logger
 
