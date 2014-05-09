@@ -268,6 +268,10 @@ class RegistrationWorkflow(WorkflowBase):
             output_names=['out_files'], function=copy_files)
         copy_pre_arrival = pe.Node(copy_pre_arrival_func, dest=dest,
                                    name='copy_pre_arrival')
+        # Work around the following Nipype bug:
+        # * the Function Node input is not set by the Node constructor
+        if not copy_pre_arrival.inputs.dest:
+            copy_pre_arrival.inputs.dest = dest
         exec_wf.connect(input_spec, 'pre_arrival', copy_pre_arrival, 'in_files')
 
         # Copy the realigned image to the destination directory.
