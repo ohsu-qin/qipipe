@@ -3,7 +3,7 @@ from pkg_resources import get_distribution
 from .helpers.project import project
 from . import (helpers, interfaces, pipeline, staging)
 
-__version__ = get_distribution('qipipe').version
+__version__ = '4.1.2'
 """
 The one-based major.minor.patch version.
 The version numbering scheme loosely follows http://semver.org/.

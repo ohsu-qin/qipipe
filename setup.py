@@ -3,6 +3,15 @@ import glob
 from setuptools import (setup, find_packages)
 
 
+def version(package):
+    """
+    Return package version as listed in the `__init.py__` `__version__`
+    variable.
+    """
+    init_py = open(os.path.join(package, '__init__.py')).read()
+    return re.search("__version__ = ['\"]([^'\"]+)['\"]", init_py).group(1)
+
+
 def requires():
     """
     @return: the ``requirements.txt`` package specifications
@@ -27,7 +36,7 @@ def readme():
 
 setup(
     name = 'qipipe',
-    version = '4.1.2',
+    version = version('qipipe'),
     author = 'OHSU Knight Cancer Institute',
     author_email = 'loneyf@ohsu.edu',
     packages = find_packages(),
