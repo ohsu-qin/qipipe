@@ -12,63 +12,48 @@ from collections import defaultdict
 
 # Import the command helper by path, since the log options must be
 # processed before importing any qipipe module.
-cmd = imp.load_source('command', 
-                      os.path.dirname(__file__) + '/../qipipe/helpers/command.py')
+cmd = imp.load_source('command',
+                      (os.path.dirname(__file__) +
+                       '/../qipipe/helpers/command.py'))
 
 
 def main(argv=sys.argv):
     # Parse the command line arguments.
     inputs, opts = _parse_arguments()
+    
+    # The XNAT configuration.
+    config = opts.pop('config', None)
 
     # Configure the logger.
     cmd.configure_log(opts)
     
     # Import the qipipe pipeline module after configuring the logger.
+    import qipipe
     from qipipe.helpers import xnat_helper
     global xnat_helper
     from qipipe.interfaces import XNATDownload
 
     # The download parent directory.
     dest = opts.pop('output', os.getcwd())
-
-    # Parse the XNAT session label arguments.
-    prj_sess_dict = _parse_session_labels(inputs)
     
     # Download the files.
-    with xnat_helper.connection() as xnat:
-        for prj, sessions in prj_sess_dict.iteritems():
-            for sbj, sess in sessions:
-                tgt_dir = os.path.join(dest, prj, sbj, sess)
-                # Download the files.
-                download = XNATDownload(project=prj, subject=sbj, session=sess,
-                                        dest=tgt_dir, **opts)
-                result = download.run()
+    prj = opts.pop('project', qipipe.project())
+    with xnat_helper.connection(config) as xnat:
+        for label in inputs:
+            sbj, sess = xnat_helper.parse_session_label(label)
+            tgt_dir = os.path.join(dest, prj, sbj, sess)
+            download = XNATDownload(project=prj, subject=sbj, session=sess,
+                                    dest=tgt_dir, **opts)
+            result = download.run()
 
     return 0
-
-
-def _parse_session_labels(labels):
-    """
-    Parses the given XNAT session labels into *(subject, session)* tuples grouped
-    by project.
-    
-    :param labels: the labels to parse
-    :return: the {project: [(subject, session), ...]} dictionary
-    """
-    prj_sess_dict = defaultdict(list)
-    for label in labels:
-        prj, sbj, sess = xnat_helper.parse_session_label(label)
-        prj_sess_dict[prj].append(tuple([sbj, sess]))
-
-    return prj_sess_dict
-
 
 def _parse_arguments():
     """Parses the command line arguments."""
     parser = argparse.ArgumentParser()
     
     # The log options.
-    cmd.add_log_options(parser)
+    cmd.add_standard_options(parser)
 
     # The XNAT name options.
     target_grp = parser.add_mutually_exclusive_group()
@@ -76,20 +61,19 @@ def _parse_arguments():
                         help='the XNAT resource name')
     target_grp.add_argument('-a', '--assessor', metavar='LABEL',
                             help='the XNAT assessor name')
-    target_grp.add_argument('--reconstruction',, metavar='LABEL'
+    target_grp.add_argument('--reconstruction', metavar='LABEL',
                             help='the XNAT reconstruction name')
     parser.add_argument('--inout',
                         help='the XNAT resource direction (in or out)')
     parser.add_argument('-f', '--file', help='the XNAT file name')
 
     # The download location option.
-    parser.add_argument('-o', '--output',
-                        help='the destination directory (default current directory)',
-                        metavar='DIR')
+    parser.add_argument('-o', '--output', metavar='DIR',
+                        help='the destination directory (default current directory)')
 
     # The input XNAT sessions to process.
-    parser.add_argument('sessions', help='the input XNAT sessions to register',
-                        nargs='+')
+    parser.add_argument('sessions', help='the input XNAT session(s) to register',
+                        metavar='LABEL', nargs='+')
 
     args = vars(parser.parse_args())
     nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)

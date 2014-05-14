@@ -1,6 +1,7 @@
 import os
 import re
 import tempfile
+import networkx as nx
 from .. import project
 from ..helpers import xnat_helper
 from ..helpers.collection_helper import EMPTY_DICT
@@ -11,10 +12,14 @@ from .distributable import DISTRIBUTABLE
 class WorkflowBase(object):
 
     """
-    The WorkflowBase class is the base class for the QIN workflow wrapper
-    classes.
+    The WorkflowBase class is the base class for the QIN workflow
+    wrapper classes.
 
-    The workflow plug-in arguments and node inputs can be specfied in an
+    If the :mod:`qipipe.pipeline.distributable' ``DISTRIBUTABLE`` flag
+    is set, then the execution is distributed using the
+    `AIRC Grid Engine`_.
+
+    The workflow plug-in arguments and node inputs can be specified in a
     :class:`qipipe.helpers.ast_config.ASTConfig` file. The standard
     configuration file name is the lower-case name of the ``WorkflowBase``
     subclass with ``.cfg`` extension, e.g. ``registration.cfg``. The
@@ -30,6 +35,8 @@ class WorkflowBase(object):
        variable directory
 
     4. the *cfg_file* initialization parameter
+
+    .. _AIRC Grid Engine: https://everett.ohsu.edu/wiki/GridEngine
     """
 
     CLASS_NAME_PAT = re.compile("^(\w+)Workflow$")
@@ -44,9 +51,9 @@ class WorkflowBase(object):
     INTERFACE_PREFIX_PAT = re.compile('(\w+\.)+interfaces?\.?')
     """
     Regexp matcher for an interface module.
-    
+
     Example:
-    
+
     >>> from qipipe.pipeline.workflow_base import WorkflowBase
     >>> WorkflowBase.INTERFACE_PREFIX_PAT.match('nipype.interfaces.ants.util.AverageImages').groups()
     ('nipype.',)
@@ -65,7 +72,7 @@ class WorkflowBase(object):
     None
     """
 
-    def __init__(self, logger, cfg_file=None):
+    def __init__(self, logger, cfg_file=None, dry_run=False):
         """
         Initializes this workflow wrapper object.
         If the optional configuration file is specified, then the workflow
@@ -75,8 +82,28 @@ class WorkflowBase(object):
         :param cfg_file: the optional workflow inputs configuration file
         """
         self._logger = logger
+
         self.configuration = self._load_configuration(cfg_file)
         """The workflow configuration."""
+
+        self.dry_run = dry_run
+        """Flag indicating whether to skip workflow job submission."""
+
+    def depict_workflow(self, workflow):
+        """
+        Diagrams the given workflow graph. The diagram is written to the
+        *name*\ ``.dot.png`` in the workflow base directory.
+
+        :param workflow the workflow to diagram
+        """
+        fname = workflow.name + '.dot'
+        if workflow.base_dir:
+            grf = os.path.join(workflow.base_dir, fname)
+        else:
+            grf = fname
+        workflow.write_graph(dotfilename=grf)
+        self._logger.debug("The %s workflow graph is depicted at %s.png." %
+                         (workflow.name, grf))
 
     def _load_configuration(self, cfg_file=None):
         """
@@ -140,17 +167,6 @@ class WorkflowBase(object):
         """
         return xnat.download(project(), subject, session, dest=dest)
 
-    def _depict_workflow(self, workflow):
-        """Diagrams the given workflow graph."""
-        fname = workflow.name + '.dot'
-        if workflow.base_dir:
-            grf = os.path.join(workflow.base_dir, fname)
-        else:
-            grf = fname
-        workflow.write_graph(dotfilename=grf)
-        self._logger.debug("The %s workflow graph is depicted at %s.png." %
-                         (workflow.name, grf))
-
     def _run_workflow(self, workflow):
         """
         Executes the given workflow.
@@ -170,10 +186,15 @@ class WorkflowBase(object):
             workflow.base_dir = tempfile.mkdtemp()
 
         # Run the workflow.
-        self._logger.debug("Executing the workflow %s in %s..." %
-                         (workflow.name, workflow.base_dir))
-        with xnat_helper.connection():
-            workflow.run(**args)
+        self._logger.debug("Executing the %s workflow in %s..." %
+                           (workflow.name, workflow.base_dir))
+        if self.dry_run:
+            self._logger.debug("Skipped workflow %s job submission,"
+                               " since the dry run flag is set." %
+                               workflow.name)
+        else:
+            with xnat_helper.connection():
+                workflow.run(**args)
 
     def _inspect_workflow_inputs(self, workflow):
         """
@@ -229,14 +250,14 @@ class WorkflowBase(object):
     def _configure_nodes(self, workflow):
         """
         Sets the input parameters defined for the given workflow in
-        this WorkflowBase's configuration.
+        this WorkflowBase's configuration. This method is called by
+        each WorkflowBase subclass after the workflow is built and
+        prior to execution.
 
         :Note: nested workflow nodes are not configured, e.g. if the
         ``registration`` workflow connects a `realign`` workflow
         node ``fnirt``, then the nested ``realign.fnirt`` node in
         ``registration`` is not configured.
-
-        See :meth:`qipipe.pipeline.WorkflowBase._node_input_configuration`
 
         :param workflow: the workflow containing the nodes
         """
@@ -260,8 +281,8 @@ class WorkflowBase(object):
         for node in nodes:
             # An input {field: value} dictionary to format a debug log message.
             input_dict = {}
-            # The node interface class configuration entry.
-            cfg = self._interface_configuration(node.interface.__class__)
+            # The node configuration.
+            cfg = self._node_configuration(workflow, node)
 
             # Set the node inputs or plug-in argument.
             for attr, value in cfg.iteritems():
@@ -287,11 +308,9 @@ class WorkflowBase(object):
                                           (workflow.name, node, value))
                 elif value != getattr(node.inputs, attr):
                     # The config value differs from the default value.
-                    # Set the field to the config value and collect it
-                    # for the debug log message.
-                    setattr(node.inputs, attr, value)
+                    # Capture the config entry for update.
                     input_dict[attr] = value
-
+            
             # If:
             # 1) the configuration specifies a default,
             # 2) the node itself is not configured with plug-in arguments, and
@@ -305,9 +324,59 @@ class WorkflowBase(object):
             # If a field was set to a config value, then print the config
             # setting to the log.
             if input_dict:
+                self._set_inputs(node, input_dict)
                 self._logger.debug("The following %s workflow node %s inputs"
-                                  " were set from the configuration: %s" %
-                                 (workflow.name, node, input_dict))
+                                   " were set from the configuration: %s" %
+                                   (workflow.name, node, input_dict))
+
+    def _set_inputs(self, node, input_dict):
+        # Sort the input config fields by the requires dependency.
+        traits = node.inputs.traits()
+        attrs = set(input_dict)
+        req_dict = {attr: set(traits[attr].requires).intersection(attrs)
+                    for attr in input_dict
+                    if traits[attr].requires}
+        req_grf = nx.DiGraph()
+        req_grf.add_nodes_from(input_dict)
+        for attr, reqs in req_dict.iteritems():
+            for req in reqs:
+                req_grf.add_edge(req, attr)
+        sorted_attrs = nx.topological_sort(req_grf)
+        # Set the input config fields.
+        for attr in sorted_attrs:
+            setattr(node.inputs, attr, input_dict[attr])
+
+    def _node_configuration(self, workflow, node):
+        """
+        Returns the {parameter: value} dictionary defined for the given
+        node in this WorkflowBase's configuration. The configuration topic
+        is determined as follows:
+
+        * the node class, as described in :meth:`_interface_configuration`
+
+        * the node name, qualified by the node hierarchy if the node is
+          defined in a child workflow
+
+        :param node: the interface class to check
+        :return: the corresponding {field: value} dictionary
+        """
+        return (self._interface_configuration(node.interface.__class__) or
+         self._node_name_configuration(workflow, node) or EMPTY_DICT)
+
+    def _node_name_configuration(self, workflow, node):
+        """
+        Returns the {parameter: value} dictionary defined for the given
+        node name, qualified by the node hierarchy if the node is
+        defined in a child workflow.
+
+        :param workflow: the active workflow
+        :param node: the interface class to check
+        :return: the corresponding {field: value} dictionary
+        """
+        if node._hierarchy == workflow.name:
+            return self.configuration.get(node.name)
+        else:
+            return self.configuration.get(node.fullname)
 
     def _interface_configuration(self, klass):
         """
@@ -342,7 +411,3 @@ class WorkflowBase(object):
                     abbr = prefix + name
                 else:
                     abbr = None
-
-        # Use a constant for the default return value, since most
-        # interfaces do not have a configuration entry.
-        return EMPTY_DICT

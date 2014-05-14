@@ -2,7 +2,6 @@ import os
 import shutil
 import distutils
 from nose.tools import (assert_equal, assert_is_not_none, assert_true)
-from test.helpers.logging_helper import logger
 from qipipe.pipeline import qipipeline as qip
 from qipipe.helpers.dicom_helper import iter_dicom
 from qipipe.helpers import xnat_helper
@@ -10,6 +9,7 @@ from qipipe.staging import airc_collection as airc
 from qipipe.staging.staging_helper import get_subjects
 from qipipe.helpers.ast_config import read_config
 from test import (project, ROOT)
+from test.helpers.logging_helper import logger
 from test.unit.pipeline.test_mask import MASK_CONF
 from test.unit.pipeline.test_registration import REG_CONF
 from test.unit.pipeline.test_modeling import MODELING_CONF
@@ -37,7 +37,7 @@ class TestQIPipeline(object):
     Note:: the modeling workflow is only executed if the ``fastfit``
         executable is found.
     
-    Note:: this test takes app. four days to run.
+    Note:: this test takes app. four days to run serially without modeling.
     """
 
     def setUp(self):
@@ -46,7 +46,7 @@ class TestQIPipeline(object):
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
 
-    def test_breast(self):
+    def test_breast_scans(self):
         data = os.getenv('QIN_DATA')
         if data:
             fixture = os.path.join(RESULTS, 'data', 'breast')
@@ -64,7 +64,7 @@ class TestQIPipeline(object):
                                   " test, since the QIN_DATA environment"
                                   " variable is not set.")
 
-    def test_sarcoma(self):
+    def test_sarcoma_scans(self):
         data = os.getenv('QIN_DATA')
         if data:
             fixture = os.path.join(RESULTS, 'data', 'sarcoma')
@@ -81,7 +81,7 @@ class TestQIPipeline(object):
                                   " test, since the QIN_DATA environment"
                                   " variable is not set.")
 
-    def _test_collection(self, collection, fixture):
+    def _test_collection_scans(self, collection, fixture):
         """
         Run the pipeline on the given collection and verify that scans are
         created in XNAT.
@@ -98,11 +98,10 @@ class TestQIPipeline(object):
         # The pipeline options.
         opts = dict(base_dir=base_dir, dest=dest, mask=MASK_CONF,
                     registration=REG_CONF)
-        # Check whether the modeling workflow is executable.
+        # If fastfit is not available, then only execute the staging and
+        # registration workflows. Otherwise, execute all workflows.
         if not distutils.spawn.find_executable('fastfit'):
-            opts['modeling'] = False
-        else:
-            opts['modeling'] = MODELING_CONF
+            opts['actions'] = ['stage', 'register']
 
         # The test subject => directory dictionary.
         sbj_dir_dict = get_subjects(collection, fixture)
@@ -125,24 +124,25 @@ class TestQIPipeline(object):
                 for sess, results in sess_dict.iteritems():
                     if opts['mask'] == False:
                         continue
-                    # Verify the registration
+                    # Verify the registration resource.
                     if opts['registration'] == False:
                         continue
-                    recon = results['registration']
-                    assert_is_not_none(recon, 
+                    # The XNAT registration resource name.
+                    rsc = results['registration']
+                    assert_is_not_none(rsc, 
                                        "The %s %s result does not have a"
-                                       " registration reconstruction" %
+                                       " registration resource" %
                                        (sbj, sess))
-                    reg_obj = xnat.get_reconstruction(
-                        project(), sbj, sess, recon)
+                    reg_obj = xnat.get_resource(
+                        project(), sbj, sess, resource=rsc)
                     assert_true(reg_obj.exists(),
-                                "The %s %s registration reconstruction %s"
-                                " was not created in XNAT" % (sbj, sess, recon))
-                    # Verify the modeling assessor
+                                "The %s %s registration resource %s was not"
+                                " created in XNAT" % (sbj, sess, rsc))
+                    # Verify the modeling assessor.
                     if opts['modeling'] != False:
                         assessor = results['modeling']
-                        mdl_obj = xnat.get_assessor(
-                            project(), sbj, sess, assessor)
+                        mdl_obj = xnat.get_assessor(project(), sbj, sess,
+                                                    assessor)
                         assert_true(mdl_obj.exists(),
                                     "The %s %s modeling assessor %s was not"
                                     " created in XNAT" % (sbj, sess, assessor))

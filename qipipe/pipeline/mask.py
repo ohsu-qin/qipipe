@@ -3,17 +3,16 @@ import logging
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Function)
 from nipype.interfaces import fsl
-from nipype.interfaces.dcmstack import MergeNifti
 from .. import project
 from ..interfaces import (XNATUpload, MriVolCluster)
 from .workflow_base import WorkflowBase
 from ..helpers.logging_helper import logger
 
 
-MASKreg_obj = 'mask'
+MASK = 'mask'
 """The XNAT mask reconstruction name."""
 
-TSreg_obj = 'scan_ts'
+TIME_SERIES = 'scan_ts'
 """The XNAT scan time series reconstruction name."""
 
 
@@ -22,10 +21,8 @@ def run(input_dict, **opts):
     Creates a :class:`qipipe.pipeline.mask.MaskWorkflow` and runs it
     on the given inputs.
     
-    :param input_dict: the :meth:`qipipe.pipeline.mask.MaskWorkflow.run`
-        inputs
-    :param opts: the :meth:`qipipe.pipeline.mask.MaskWorkflow.__init__`
-        options
+    :param input_dict: the :meth:`MaskWorkflow.run` inputs
+    :param opts: the :class:`MaskWorkflow` initialization parameters
     :return: the XNAT mask reconstruction name
     """
     return MaskWorkflow(**opts).run(input_dict)
@@ -35,9 +32,9 @@ class MaskWorkflow(WorkflowBase):
     """
     The MaskWorkflow class builds and executes the mask workflow.
     
-    The workflow creates a mask to subtract extraneous tissue for a given set
-    of input session images. The new mask is uploaded to XNAT as a resource of
-    the `subject`, `session` and the reconstruction named ``mask``.
+    The workflow creates a mask to subtract extraneous tissue for a given
+    input session 4D NiFTI time series. The new mask is uploaded to XNAT
+    as a session resource named ``mask``.
     
     The mask workflow input is the `input_spec` node consisting of
     the following input fields:
@@ -46,10 +43,10 @@ class MaskWorkflow(WorkflowBase):
      
      - session: the XNAT session name
      
-     - images: the image files to mask
+     - time_series: the 4D NiFTI series image file
     
     The mask workflow output is the `output_spec` node consisting of the
-    following output fields:
+    following output field:
     
     - `mask`: the mask file
     
@@ -59,11 +56,6 @@ class MaskWorkflow(WorkflowBase):
     - ``fsl.MriVolCluster``: the
         :class:`qipipe.interfaces.mri_volcluster.MriVolCluster`
         interface options
-    
-    The execution mask workflow fronts the reusable workflow with an iterable
-    input node named ``input_spec`` consisting of the following input fields:
-    
-    - `session_spec`: the (subject, session, images) tuple to mask
     """
     
     def __init__(self, cfg_file=None, base_dir=None):
@@ -85,7 +77,7 @@ class MaskWorkflow(WorkflowBase):
         Runs the mask workflow on the scan NiFTI files for the given
         (subject, session) inputs.
         
-        :param input_dict: the input *{subject: {session: [images]}}* dictionary
+        :param input_dict: the input *{subject: {session: time series}}* dictionary
         :return: the mask XNAT reconstruction name
         """
         sbj_cnt = len(input_dict)
@@ -94,12 +86,12 @@ class MaskWorkflow(WorkflowBase):
             (sess_cnt, sbj_cnt))
         for sbj, sess_dict in input_dict.iteritems():
             self._logger.debug("Masking subject %s..." % sbj)
-            for sess, images in sess_dict.iteritems():
-                self._logger.debug("Masking %d %s %s images..." %
-                    (len(images), sbj, sess))
-                self._mask_session(sbj, sess, images)
-                self._logger.debug("Masked the %s %s images." % (sbj, sess))
-            self._logger.debug("Masked the subject %s images." % sbj)
+            for sess, time_series in sess_dict.iteritems():
+                self._logger.debug("Masking the %d %s %s time series..." %
+                    (len(time_series), sbj, sess))
+                self._mask_session(sbj, sess, time_series)
+                self._logger.debug("Masked the %s %s time series." % (sbj, sess))
+            self._logger.debug("Masked the subject %s time series." % sbj)
         self._logger.debug("Masked %d sessions from %d subjects." %
             (sess_cnt, sbj_cnt))
         
@@ -107,14 +99,14 @@ class MaskWorkflow(WorkflowBase):
         self._run_workflow(self.workflow)
         
         # Return the mask XNAT reconstruction name.
-        return MASKreg_obj
+        return MASK
     
-    def _mask_session(self, subject, session, images):
+    def _mask_session(self, subject, session, time_series):
         # Set the inputs.
         input_spec = self.workflow.get_node('input_spec')
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
-        input_spec.inputs.images = images
+        input_spec.inputs.time_series = time_series
         
         # Execute the workflow.
         self._run_workflow(self.workflow)
@@ -133,24 +125,13 @@ class MaskWorkflow(WorkflowBase):
         workflow = pe.Workflow(name='mask', base_dir=base_dir)
         
         # The workflow input.
-        in_fields = ['subject', 'session', 'images']
+        in_fields = ['subject', 'session', 'time_series']
         input_spec = pe.Node(IdentityInterface(fields=in_fields),
                              name='input_spec')
         
-        # Merge the DCE data to 4D.
-        dce_merge = pe.Node(MergeNifti(), name='dce_merge')
-        workflow.connect(input_spec, 'images', dce_merge, 'in_files')
-        
-        # Upload the time series to XNAT.
-        upload_ts = pe.Node(XNATUpload(project=project(), resource=TSreg_obj),
-                            name='upload_ts')
-        workflow.connect(input_spec, 'subject', upload_ts, 'subject')
-        workflow.connect(input_spec, 'session', upload_ts, 'session')
-        workflow.connect(dce_merge, 'out_file', upload_ts, 'in_files')
-        
         # Get a mean image from the DCE data.
         dce_mean = pe.Node(fsl.MeanImage(), name='dce_mean')
-        workflow.connect(dce_merge, 'out_file', dce_mean, 'in_file')
+        workflow.connect(input_spec, 'time_series', dce_mean, 'in_file')
         
         # Find the center of gravity from the mean image.
         find_cog = pe.Node(fsl.ImageStats(), name='find_cog')
@@ -189,16 +170,15 @@ class MaskWorkflow(WorkflowBase):
         workflow.connect(mask_name, 'out_file', inv_mask, 'out_file')
         
         # Upload the mask to XNAT.
-        upload_mask = pe.Node(XNATUpload(project=project(), resource=MASKreg_obj),
+        upload_mask = pe.Node(XNATUpload(project=project(), resource=MASK),
                               name='upload_mask')
         workflow.connect(input_spec, 'subject', upload_mask, 'subject')
         workflow.connect(input_spec, 'session', upload_mask, 'session')
         workflow.connect(inv_mask, 'out_file', upload_mask, 'in_files')
         
-        # The output is the time series and mask files.
-        output_spec = pe.Node(IdentityInterface(fields=['time_series', 'mask']),
+        # The output is the mask file.
+        output_spec = pe.Node(IdentityInterface(fields=['mask']),
                                                 name='output_spec')
-        workflow.connect(dce_merge, 'out_file', output_spec, 'time_series')
         workflow.connect(inv_mask, 'out_file', output_spec, 'mask')
         
         self._configure_nodes(workflow)
@@ -206,7 +186,7 @@ class MaskWorkflow(WorkflowBase):
         self._logger.debug("Created the %s workflow." % workflow.name)
         # If debug is set, then diagram the workflow graph.
         if self._logger.level <= logging.DEBUG:
-            self._depict_workflow(workflow)
+            self.depict_workflow(workflow)
         
         return workflow
 

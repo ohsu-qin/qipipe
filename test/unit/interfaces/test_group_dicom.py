@@ -3,6 +3,7 @@ from nose.tools import (assert_equal, assert_in, assert_true)
 from test.helpers.logging_helper import logger
 from qipipe.interfaces import GroupDicom
 from test import ROOT
+from test.helpers.logging_helper import logger
 
 # The test fixture.
 FIXTURE = os.path.join(

@@ -5,4 +5,4 @@ qipipe processes the OHSU QIN study images. See the `documentation`_ for more in
 
 .. Targets:
 
-.. _documentation: http://quip1.ohsu.edu:6060/qipipe
+.. _documentation: http://quip1.ohsu.edu:8080/qipipe

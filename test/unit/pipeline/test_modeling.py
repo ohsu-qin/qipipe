@@ -5,9 +5,9 @@ import shutil
 from nose.tools import (assert_equal, assert_true)
 import nipype.pipeline.engine as pe
 from qipipe.pipeline import modeling
-from test import project
+from test import (project, ROOT)
 from test.helpers.logging_helper import logger
-from test.unit.pipeline.staged_test_base import (StagedTestBase, ROOT)
+from test.unit.pipeline.staged_test_base import StagedTestBase
 
 MODELING_CONF = os.path.join(ROOT, 'conf', 'modeling.cfg')
 """The test registration configuration."""
@@ -63,8 +63,10 @@ class TestModelingWorkflow(StagedTestBase):
         Executes :meth:`qipipe.pipeline.modeling.run` on the input session scans.
         
         :param fixture: the test fixture directory
-        :param inputs: the *(subject, session)* tuples
-        :param opts: the :meth:`qipipe.pipeline.modeling.run` options
+        :param subject: the input subject
+        :param session: the input session
+        :param images: the input image files
+        :param opts: the target workflow options
         :return: the :meth:`qipipe.pipeline.modeling.run` result
         """
         logger(__name__).debug(
@@ -72,11 +74,11 @@ class TestModelingWorkflow(StagedTestBase):
         # Run the workflow.
         return modeling.run(*inputs, **opts)
 
-    def _verify_result(self, xnat, inputs, result):
-        for sbj, sess in inputs:
-            anl_obj = xnat.get_analysis(project(), sbj, sess, result)
-            assert_true(anl_obj.exists(),
-                        "The %s %s %s XNAT analysis object was not created" % (sbj, sess, result))
+    def _verify_result(self, xnat, subject, session, result):
+        anl_obj = xnat.get_analysis(project(), sbj, sess, result)
+        assert_true(anl_obj.exists(),
+                    "The %s %s %s XNAT analysis object was not created" %
+                    (sbj, sess, result))
 
 
 if __name__ == "__main__":

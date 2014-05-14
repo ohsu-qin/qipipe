@@ -21,7 +21,7 @@ class XNATDownloadInputSpec(BaseInterfaceInputSpec):
 
     assessor = traits.Str(desc='The XNAT assessor name')
 
-    resource = traits.Str(desc='The XNAT resource name (scan default is NIFTI)')
+    resource = traits.Str(desc='The XNAT resource name')
 
     container_type = traits.Enum('scan', 'reconstruction', 'assessor',
                                  desc='The XNAT resource container type')

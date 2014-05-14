@@ -4,11 +4,11 @@ from nipype.interfaces.base import (BaseInterfaceInputSpec, TraitedSpec,
 
 
 class TouchInputSpec(BaseInterfaceInputSpec):
-    fname = File(mandatory=True, desc='The file to create')
+    in_file = File(mandatory=True, desc='The file to touch')
 
 
 class TouchOutputSpec(TraitedSpec):
-    fname = File(exists=True, desc='The created file')
+    out_file = File(exists=True, desc='The touched file')
 
 
 class Touch(BaseInterface):
@@ -23,18 +23,22 @@ class Touch(BaseInterface):
     output_spec = TouchOutputSpec
 
     def _run_interface(self, runtime):
-        if os.path.exists(self.inputs.fname):
-            os.utime(self.inputs.fname, None)
-        else:
-            parent, _ = os.path.split(self.inputs.fname)
-            if parent and not os.path.exists(parent):
+        self._file = os.path.abspath(self.inputs.in_file)
+        parent, _ = os.path.split(self._file)
+        if parent:
+            if not os.path.exists(parent):
                 os.makedirs(parent)
-            open(self.inputs.fname, 'w').close()
+            else:
+                parent = os.getcwd()
+        if os.path.exists(self._file):
+            os.utime(self._file, None)
+        else:
+            open(self._file, 'w').close()
 
         return runtime
 
     def _list_outputs(self):
         outputs = self._outputs().get()
-        outputs['fname'] = self.inputs.fname
+        outputs['out_file'] = self._file
 
         return outputs

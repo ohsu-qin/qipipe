@@ -2,6 +2,7 @@ import os
 import glob
 from nose.tools import (assert_equal, assert_true)
 from qipipe.helpers import dicom_helper as dcm
+from test.helpers.logging_helper import logger
 
 FIXTURE = os.path.join(os.path.dirname(__file__),
                        '..', '..', 'fixtures', 'helpers', 'edit_dicom')

@@ -4,14 +4,15 @@ Maps the OHSU DICOM Patient IDs to the CTP Patient IDs.
 
 import os
 from nipype.interfaces.base import (traits, BaseInterfaceInputSpec,
-                                    TraitedSpec, BaseInterface, File, Directory)
-from ..staging.map_ctp import (property_filename, CTPPatientIdMap)
+                                    TraitedSpec, BaseInterface, File,
+                                    Directory)
+from ..staging.map_ctp import map_ctp
 
 
 class MapCTPInputSpec(BaseInterfaceInputSpec):
     collection = traits.Str(mandatory=True, desc='The collection name')
 
-    patient_ids = traits.CList(traits.Str(), mandatory=True,
+    subjects = traits.CList(traits.Str(), mandatory=True,
                                desc='The DICOM Patient IDs to map')
 
     dest = Directory(desc='The optional directory to write the map file '
@@ -23,33 +24,21 @@ class MapCTPOutputSpec(TraitedSpec):
 
 
 class MapCTP(BaseInterface):
-
-    """The MapCTP interface wraps the
-    :class:`qipipe.interfaces.map_ctp.CTPPatientIdMap` class."""
+    """
+    The MapCTP interface wraps the
+    :meth:`qipipe.interfaces.map_ctp.map_ctp` method.
+    """
 
     input_spec = MapCTPInputSpec
 
     output_spec = MapCTPOutputSpec
 
     def _run_interface(self, runtime):
-        # Make the CTP id map.
-        ctp_map = CTPPatientIdMap()
-        ctp_map.add_subjects(self.inputs.collection, *self.inputs.patient_ids)
-        # Write the id map property file.
-        if self.inputs.dest:
-            dest = self.inputs.dest
-            if not os.path.exists(dest):
-                os.makedirs(dest)
-        else:
-            dest = os.getcwd()
-        self.out_file = os.path.join(
-            dest, property_filename(self.inputs.collection))
-        output = open(self.out_file, 'w')
-        ctp_map.write(output)
-        output.close()
+        self._out_file = map_ctp(self.inputs.collection, *self.inputs.subjects,
+                                 dest=self.inputs.dest)
         return runtime
 
     def _list_outputs(self):
         outputs = self._outputs().get()
-        outputs['out_file'] = os.path.abspath(self.out_file)
+        outputs['out_file'] = self._out_file
         return outputs

@@ -2,9 +2,9 @@ import os
 import re
 import shutil
 from nose.tools import (assert_equal, assert_true)
-from test.helpers.logging_helper import logger
 from qipipe.interfaces import MapCTP
 from test import ROOT
+from test.helpers.logging_helper import logger
 from test.unit.staging.test_map_ctp import (COLLECTION, SUBJECTS, PAT)
 
 RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'map_ctp')
@@ -20,8 +20,8 @@ class TestMapCTP(object):
 
     def test_map_ctp(self):
         logger(__name__).debug("Testing Map CTP on %s..." % SUBJECTS)
-        map_ctp = MapCTP(
-            collection=COLLECTION, patient_ids=SUBJECTS, dest=RESULTS)
+        map_ctp = MapCTP(collection=COLLECTION, subjects=SUBJECTS,
+                         dest=RESULTS)
         result = map_ctp.run()
         prop_file = result.outputs.out_file
         assert_true(os.path.exists(prop_file), "Property file was not created:"

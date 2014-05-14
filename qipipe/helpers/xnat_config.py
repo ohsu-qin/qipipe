@@ -7,18 +7,29 @@ def default_configuration():
     """
     Returns the XNAT configuration file location determined as the first file
     found in the following precedence order:
-    
-    1. ``xnat.cfg`` in the home ``.xnat`` subdirectory
-    
-    2. ``xnat.cfg`` in the home directory
-    
-    3. ``xnat.cfg`` in the ``/etc`` directory
+
+    1. The ``XNAT_CFG`` environment variable, if it is set.
+
+    2. ``xnat.cfg`` in the current working directory
+
+    3. ``xnat.cfg`` in the home ``.xnat`` subdirectory
+
+    4. ``xnat.cfg`` in the home directory
+
+    5. ``xnat.cfg`` in the ``/etc`` directory
 
     :return: the configuration location, if any
     """
-    for f in [DOT_CFG, HOME_CFG, ETC_CFG]:
+    cfgs = [CWD_CFG, DOT_CFG, HOME_CFG, ETC_CFG]
+    env_cfg = os.getenv('XNAT_CFG')
+    if env_cfg:
+        cfgs.insert(0, env_cfg)
+    for f in cfgs:
         if os.path.exists(f):
             return f
+
+CWD_CFG = os.path.join(os.getcwd(), 'xnat.cfg')
+"""The XNAT current directory configuration location."""
 
 DOT_CFG = os.path.join(os.path.expanduser('~'), '.xnat', 'xnat.cfg')
 """The XNAT home ``.xnat`` subdirectory configuration location."""

@@ -6,36 +6,40 @@ Uploads files to XNAT.
 import sys
 import os
 import re
+import imp
 import argparse
 from collections import defaultdict
 
 # Import the command helper by path, since the log options must be
 # processed before importing any qipipe module.
-cmd = imp.load_source('command', 
-                      os.path.dirname(__file__) + '/../qipipe/helpers/command.py')
+cmd = imp.load_source('command',
+                      (os.path.dirname(__file__) +
+                       '/../qipipe/helpers/command.py'))
 
 
 def main(argv=sys.argv):
     # Parse the command line arguments.
     inputs, opts = _parse_arguments()
+    
+    # The XNAT configuration.
+    config = opts.pop('config', None)
 
     # Configure the logger.
     cmd.configure_log(opts)
     
     # Import the qipipe pipeline module after configuring the logger.
+    import qipipe
     from qipipe.helpers import xnat_helper
     from qipipe.interfaces import XNATUpload
 
-    # Parse the XNAT session label arguments.
-    prj_sess_dict = _parse_session_labels(inputs)
-    # Register the session images.
-    with xnat_helper.connection() as xnat:
-        for prj, sessions in prj_sess_dict.iteritems():
-            for sbj, sess in sessions:
-                tgt_dir = os.path.join(dest, prj, sbj, sess)
-                # Upload the files.
-                upload = XNATUpload(dest=tgt_dir, **opts)
-                result = upload.run()
+    prj = opts.pop('project', qipipe.project())
+    label = opts.pop('session')
+    sbj, sess = xnat_helper.parse_session_label(label)
+    # Upload the files.
+    with xnat_helper.connection(config) as xnat:
+        upload = XNATUpload(project=prj, subject=sbj, session=sess,
+                            in_files=inputs, **opts)
+        result = upload.run()
 
     return 0
 
@@ -46,14 +50,10 @@ def _parse_session_labels(labels):
     grouped by project.
     
     :param labels: the labels to parse
-    :return: the *{project: [(subject, session), ...]}* dictionary
+    :return: the *[(subject, session), ...]}* list
     """
-    prj_sess_dict = defaultdict(list)
-    for label in labels:
-        prj, sbj, sess = xnat_helper.parse_session_label(label)
-        prj_sess_dict[prj].append(tuple([sbj, sess]))
-
-    return prj_sess_dict
+    return [xnat_helper.parse_session_label(lbl)
+            for lbl in labels]
 
 
 def _parse_arguments():
@@ -61,7 +61,7 @@ def _parse_arguments():
     parser = argparse.ArgumentParser()
 
     # The log options.
-    cmd.add_log_options(parser)
+    cmd.add_standard_options(parser)
 
     # The remaining options.
     target_grp = parser.add_mutually_exclusive_group()
@@ -71,19 +71,19 @@ def _parse_arguments():
                         help='the XNAT resource name')
     target_grp.add_argument('--reconstruction', metavar='LABEL',
                             help='the XNAT reconstruction name')
-    parser.add_argument('-o', '--output',
-                        help='the destination directory'
-                             ' (default current directory)',
-                        metavar='DIR')
 
     # The input sessions to process.
-    parser.add_argument('sessions', nargs='+',
-                        help='the input XNAT sessions to register')
+    parser.add_argument('session', metavar='LABEL',
+                        help='the target XNAT session')
+
+    # The input sessions to process.
+    parser.add_argument('files', nargs='+', metavar='FILE',
+                        help='the input file(s) to upload')
 
     args = vars(parser.parse_args())
     nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)
 
-    return nonempty_args.pop('sessions'), nonempty_args
+    return nonempty_args.pop('files'), nonempty_args
 
 
 if __name__ == '__main__':

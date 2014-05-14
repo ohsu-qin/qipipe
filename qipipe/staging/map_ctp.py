@@ -3,16 +3,46 @@ TCIA CTP preparation utilities.
 """
 
 import sys
+import os
 import re
 from .ctp_config import ctp_collection_for_name
-
 from ..helpers.logging_helper import logger
-
-
-__all__ = ['property_filename', 'CTPPatientIdMap']
 
 PROP_FMT = 'QIN-%s-OHSU.ID-LOOKUP.properties'
 """The format for the Patient ID map file name specified by CTP."""
+
+
+def map_ctp(collection, *subjects, **opts):
+    """
+    Creates the AIRC-NCIA patient id map. The map is written to a
+    property file in the destination directory. The property file
+    name is given by :meth:`property_filename`.
+    
+    :param collection: the AIRC collection
+    :param subjects: the AIRC subject names
+    :param opts: the following keyword option:
+    :keyword dest: the destination directory
+    :return: the subject map file path
+    """
+    # Make the CTP id map.
+    ctp_map = CTPPatientIdMap()
+    ctp_map.add_subjects(collection, *subjects)
+    # Write the id map property file.
+    dest = opts.get('dest')
+    if dest:
+        dest = os.path.abspath(dest)
+        if not os.path.exists(dest):
+            os.makedirs(dest)
+    else:
+        dest = os.getcwd()
+    logger(__name__).debug("Creating the TCIA subject map in %s..." % dest)
+    out_file = os.path.join(dest, property_filename(collection))
+    output = open(out_file, 'w')
+    ctp_map.write(output)
+    output.close()
+    logger(__name__).debug("Created the TCIA subject map %s." % out_file)
+    
+    return out_file
 
 
 def property_filename(collection):

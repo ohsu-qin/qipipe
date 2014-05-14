@@ -42,63 +42,61 @@ def _parse_arguments():
     # The log options.
     cmd.add_log_options(parser)
 
-    # The AIRC collection to process.
+    # The actions.
+    parser.add_argument('--stage', dest='actions', action='append_const',
+                        const='stage', help='stage the input DICOM files')
+    parser.add_argument('--register', dest='actions', action='append_const',
+                        const='register', help='register the scans')
+    parser.add_argument('--model', dest='actions', action='append_const',
+                        const='model', help='model the realigned images')
+    parser.add_argument('--dry-run', action='store_true',
+                        help='Prepare but do not run the pipeline')
+
+    # The AIRC collection to stage.
     coll_grp = parser.add_mutually_exclusive_group()
     coll_grp.add_argument('-b', '--breast', help='the breast TCIA collection',
                           dest='collection', action='store_const',
                           const='Breast')
-    coll_grp.add_argument(
-        '-s', '--sarcoma', help='the sarcoma TCIA collection',
-        dest='collection', action='store_const', const='Sarcoma')
-
-    # The XNAT project id.
-    parser.add_argument(
-        '-p', '--project', help='the XNAT project (default is QIN)')
+    coll_grp.add_argument('-s', '--sarcoma',
+                          help='the sarcoma TCIA collection',
+                          dest='collection', action='store_const',
+                          const='Sarcoma')
 
     # The output and work options.
     parser.add_argument('-o', '--output',
-                        help='the destination directory (default current directory)',
+                        help='the destination directory'
+                             ' (default current directory)',
                         metavar='DIR', dest='dest')
     parser.add_argument('-w', '--work',
-                        help='the work directory (default a new temp directory)',
+                        help='the work directory'
+                             ' (default a new temp directory)',
                         metavar='DIR', dest='base_dir')
-
-    # The skip staging argument.
-    parser.add_argument('--no-staging', help='disable the staging workflow',
-                        dest='skip_staging', action='store_true', default=None)
-
-    # The mask and reference arguments.
-    parser.add_argument('--mask', help="the mask XNAT resource name",
-                        metavar='LABEL')
-    parser.add_argument('--reference',
-                        help="the reference XNAT resource name",
-                        metavar='LABEL')
 
     # The registration arguments.
     parser.add_argument('--registration',
                         help='the XNAT registration resource name',
                         metavar='RESOURCE')
-    parser.add_argument('--no-registration', help='skip registration',
-                         dest='skip_registration', action='store_true',
-                         default=None)
     technique_grp = parser.add_mutually_exclusive_group()
     technique_grp.add_argument('--ants',
                                help="ANTS registration (the default)",
                                dest='technique', action='store_const',
-                               const='ANTS')
+                               const='ants')
     technique_grp.add_argument('--fnirt', help="FNIRT registration",
                                dest='technique', action='store_const',
-                               const='FNIRT')
+                               const='fnirt')
+    technique_grp.add_argument('--mock', help="Mock registration",
+                               dest='technique', action='store_const',
+                               const='mock')
 
-    # The skip modeling argument.
-    parser.add_argument('--no-modeling', help='disable the modeling workflow',
-                        dest='skip_modeling', action='store_true',
-                        default=None)
+    # The modeling arguments.
+    parser.add_argument('--modeling',
+                        help='the XNAT modeling assessor name',
+                        metavar='ASSESSOR')
 
     # The input subject directories or XNAT labels to process.
     parser.add_argument('inputs', help='the input AIRC DICOM subject directory'
                         ' or XNAT session label if staging is not performed',
-                        metavar='INPUT', nargs='+')
+                        metavar='INPUT', nargs='*')
 
     args = vars(parser.parse_args())
     nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)

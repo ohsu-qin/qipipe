@@ -4,10 +4,10 @@ from qipipe.interfaces import XNATUpload
 from qipipe.helpers import xnat_helper
 from test import project
 from test.helpers.logging_helper import logger
-from test.helpers.xnat_test_helper import generate_subject_name
+from test.helpers.xnat_test_helper import generate_unique_name
 from test.unit.helpers.test_xnat_helper import (FIXTURES, RESULTS)
 
-SUBJECT = generate_subject_name(__name__)
+SUBJECT = generate_unique_name(__name__)
 """The test subject name."""
 
 SESSION = 'MR1'
@@ -83,16 +83,19 @@ class TestXNATUpload(object):
         
         # Verify the result.
         with xnat_helper.connection() as xnat:
-            reg_obj = xnat.get_reconstruction(project(), SUBJECT, SESSION,
-                                              REGISTRATION)
-            assert_true(reg_obj.exists(),
-                "Upload did not create the %s %s registration: %s" %
-                    (SUBJECT, SESSION, REGISTRATION))
+            exp_obj = xnat.get_experiment(project(), SUBJECT, SESSION)
+            assert_true(exp_obj.exists(),
+                "Upload did not create the %s %s experiment" %
+                (SUBJECT, SESSION))
+            rsc_obj = exp_obj.resource(REGISTRATION)
+            assert_true(rsc_obj.exists(),
+                        "XNATUpload did not create the %s %s resource: %s" %
+                        (SUBJECT, SESSION, REGISTRATION))
             _, fname = os.path.split(REG_FIXTURE)
-            file_obj = reg_obj.out_resource('NIFTI').file(fname)
+            file_obj = rsc_obj.file(fname)
             assert_true(file_obj.exists(),
-                        "XNATUpload did not create the %s %s file: %s" %
-                        (SUBJECT, SESSION, fname))
+                        "XNATUpload did not create the %s %s %s file: %s" %
+                        (SUBJECT, SESSION, REGISTRATION, fname))
      
     def test_upload_reconstruction(self):
         logger(__name__).debug("Testing the XNATUpload interface on %s %s"
@@ -100,7 +103,8 @@ class TestXNATUpload(object):
                                (SUBJECT, SESSION, RECON))
         # Upload the file.
         upload = XNATUpload(project=project(), subject=SUBJECT, session=SESSION,
-                            reconstruction=RECON, in_files=RECON_FIXTURE)
+                            reconstruction=RECON, resource='NIFTI',
+                            in_files=RECON_FIXTURE)
         result = upload.run()
         
         # Verify the result.

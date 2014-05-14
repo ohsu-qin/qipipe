@@ -23,9 +23,9 @@ class TestASTConfig(object):
                         description="String with [ ( 3 , a\" ' 4.5 'b' ) ] characters",
                         iterations=[1, [2, [3, 4], 5]],
                         parameters=[(1,), (2, 3)],
-                        sampling=[0.3, [None, [None] * 2, 1.0]],
+                        sampling=[0.3, [None, [None] * 2, 1.0], -0.1],
                         two_tailed=[True, False],
-                        threshold=4.0,
+                        threshold=1.2e-8,
                         plugin_args=dict(
                             qsub_args='-pe mpi 48-120 -l h_rt=4:00:00,mf=2G'' -b n',
                             overwrite=True))

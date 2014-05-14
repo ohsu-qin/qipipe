@@ -1,7 +1,7 @@
 import os
 import shutil
-from nipype.interfaces.base import (traits,
-                                    BaseInterfaceInputSpec, TraitedSpec, BaseInterface,
+from nipype.interfaces.base import (traits, BaseInterfaceInputSpec,
+                                    TraitedSpec, BaseInterface,
                                     File, Directory)
 
 
@@ -9,8 +9,7 @@ class MoveInputSpec(BaseInterfaceInputSpec):
     in_file = traits.Either(File, Directory, exists=True,
                             mandatory=True, desc='The file or directory to move')
 
-    dest = traits.Either(
-        File, Directory, mandatory=True, desc='The destination path')
+    dest = Directory(mandatory=True, desc='The destination path')
 
 
 class MoveOutputSpec(TraitedSpec):
@@ -19,8 +18,8 @@ class MoveOutputSpec(TraitedSpec):
 
 
 class Move(BaseInterface):
-
     """The Move interface moves a file to a destination directory."""
+    
     input_spec = MoveInputSpec
 
     output_spec = MoveOutputSpec

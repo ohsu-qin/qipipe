@@ -1,18 +1,33 @@
+import re
 import glob
 from setuptools import (setup, find_packages)
 
-from qipipe import __version__
 
-requires = ['httplib2', 'lxml', 'nipy', 'dipy', 'traits', 'nibabel',
-            'pydicom', 'dcmstack', 'nipype', 'nose', 'pyyaml']
+def requires():
+    """
+    @return: the ``requirements.txt`` package specifications
+    
+    :Note: ``pip`` supports GitHub package specifications,
+       but a local ``pip install -e .`` does not. Therefore,
+       the requirements must be installed as described in
+       the User Guide **Installation** section. This method
+       filters out the GitHub portion of the specification
+       and expects these dependencies to already be installed
+       before package setup.
+    """
+    with open('requirements.txt') as f:
+        return [re.search('\w+(=\d.+)?$', spec).group(0)
+                for spec in f.read().splitlines()]
+
 
 def readme():
     with open("README.rst") as f:
         return f.read()
 
+
 setup(
     name = 'qipipe',
-    version = __version__,
+    version = '4.1.2',
     author = 'OHSU Knight Cancer Institute',
     author_email = 'loneyf@ohsu.edu',
     packages = find_packages(),
@@ -32,5 +47,5 @@ setup(
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
     ],
-    install_requires = requires
+    install_requires = requires()
 )

@@ -5,10 +5,10 @@ from qipipe.interfaces import XNATFind
 from qipipe.helpers import xnat_helper
 from test import project
 from test.helpers.logging_helper import logger
-from test.helpers.xnat_test_helper import generate_subject_name
+from test.helpers.xnat_test_helper import generate_unique_name
 from test.unit.helpers.test_xnat_helper import (FIXTURES, RESULTS)
 
-SUBJECT = generate_subject_name(__name__)
+SUBJECT = generate_unique_name(__name__)
 """The test subject name."""
 
 SESSION = 'MR1'
@@ -16,6 +16,8 @@ SESSION = 'MR1'
 
 SCAN = 1
 """The test scan number."""
+
+SCAN_FILE = os.path.join(FIXTURES, 'dummy_scan.nii.gz')
 
 RECONSTRUCTION = 'reco'
 """The test reconstruction name."""
@@ -31,7 +33,7 @@ class TestXNATFind(object):
         xnat_helper.delete_subjects(project(), SUBJECT)
         
     def tearDown(self):
-        xnat_helper.delete_subjects(project(), SUBJECT)
+        #xnat_helper.delete_subjects(project(), SUBJECT)
         shutil.rmtree(RESULTS, True)
     
     def test_find_subject(self):
@@ -48,6 +50,10 @@ class TestXNATFind(object):
     
     def test_find_scan_resource(self):
         self._test_find(SUBJECT, SESSION, scan=SCAN, resource='NIFTI')
+    
+    def test_find_scan_file(self):
+        self._test_find(SUBJECT, SESSION, scan=SCAN, resource='NIFTI',
+                        file=SCAN_FILE)
     
     def test_find_reconstruction(self):
         self._test_find(SUBJECT, SESSION, reconstruction=RECONSTRUCTION)

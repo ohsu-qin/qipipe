@@ -23,8 +23,10 @@ from nipype.interfaces.base import (DynamicTraitedSpec,
                                     MpiCommandLineInputSpec,
                                     isdefined)
 from nipype.interfaces.traits_extension import Undefined
-from fastfit.fastfit_cli import get_available_models
-
+try:
+    from fastfit.fastfit_cli import get_available_models
+except ImportError:
+    pass
 
 class FastfitInputSpec(MpiCommandLineInputSpec):
     model_name = traits.String(desc='The name of the model to optimize',
@@ -46,9 +48,9 @@ class Fastfit(MpiCommandLine):
     Interface to the ``fastfit`` software package.
 
     Input parameters:
-    * min_outs : list
-      The minimum outputs expected. Required if the *model_name*
-      input is being set dynamically.
+    
+    * *min_outs*: The minimum outputs expected. Required if the *model_name*
+      input is set dynamically.
     """
 
     _cmd = 'fastfit'

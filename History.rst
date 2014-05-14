@@ -1,6 +1,18 @@
 This history lists major release themes. See the GitHub commits
 (http://quip1:6060/qipipe) for change details.
 
+4.2.1 / 2014-01-30
+------------------
+* XNAT data model extensions.
+
+4.1.2 / 2014-01-22
+------------------
+* The realigned file names are the same as the scan file names.
+
+4.1.1 / 2014-01-21
+------------------
+* Recursive realignment.
+
 3.2.3 / 2013-11-11
 ------------------
 * Reflect qin_dce changes.

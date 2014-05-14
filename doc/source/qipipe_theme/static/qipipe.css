@@ -1,0 +1,31 @@
+@import url("haiku.css");
+
+div.copyright {
+  font-size: 0.8em;
+}
+
+tt {
+  background-color: transparent;
+  color: DarkCyan;
+}
+
+a:link tt {
+  border-bottom: 1px dashed;
+}
+
+a:visited tt {
+  color: Teal;
+}
+
+a:hover tt, a:active tt {
+  border-bottom: none;
+  text-decoration: underline;
+  color: #ff4500;
+}
+
+table.docutils td, table.docutils th {
+    border-top: 1px solid #aaa;
+    border-left: 1px solid #aaa;
+    border-right: 1px solid #aaa;
+    border-bottom: 1px solid #aaa;
+}

@@ -11,14 +11,17 @@ qipipe processes the OHSU QIN study images.
 
 :API: http://quip1.ohsu.edu:8080/qipipe/api
 
-:Git: git\@quip1.ohsu.edu:qipipe (`Browse <http://quip1.ohsu.edu:6060/qipipe>`__)
+:Git: git\@quip1.ohsu.edu:qipipe
+      (`Browse <http://quip1.ohsu.edu:6060/qipipe>`__)
+
 
 ************
 Feature List
 ************
 1. Recognizes new AIRC QIN study images.
 
-2. Stages images for submission to `The Cancer Imaging Archive`_ (TCIA) `QIN collection`_.
+2. Stages images for submission to 
+   `The Cancer Imaging Archive`_ (TCIA) `QIN collection`_.
 
 3. Masks images to subtract extraneous image content.
 
@@ -26,48 +29,88 @@ Feature List
 
 5. Performs pharmokinetic modeling.
 
-6. Imports the input scans and processing results into the OSHU `QIN XNAT`_ instance.
+6. Imports the input scans and processing results into the OSHU `QIN XNAT`_
+   instance.
 
-**********
-Installing
-**********
-1. Install Git_ on your workstation.
 
-2. Contact the qipipe `OHSU QIN Git administrator`_ to get permission to access the qipipe Git
-   repository.
+************
+Installation
+************
+1. Install Git_ on your workstation, if necessary.
+
+2. Contact the qipipe `OHSU QIN Git administrator`_ to get permission to
+   access the qipipe Git repository.
 
 3. Clone the `qipipe repository`_::
 
        cd ~/workspace
        git clone git@quip1:qipipe
    
-4. Install the Python_ pip_ package on
-   your workstation.
+5. Install Anaconda_ on your workstation, if necessary.
 
-5. Install the qipipe package::
+6. Make an Anaconda virtual environment::
 
        cd ~/workspace/qipipe
+       conda create --name qipipe scipy
+   
+   The Anaconda ``conda`` command is a pip-like utility that installs packages
+   managed by Anaconda. The ``conda create`` step makes a virtual environment
+   with one package. ``conda create`` requires at least one package, but fails if
+   the package is not managed by Anaconda. Therefore, creating the environment
+   with one known package makes the environment.
+
+6. Activate the ``qipipe`` environment::
+
+       source activate qipipe
+   
+   Sourcing ``activate`` prepends the ``qipipe`` environment bin path to the
+   ``PATH`` environment variable.
+
+6. Install packages mmanaged by Anaconda::
+
+       for p in requirements.txt; do conda install $p; done
+   
+   The ``for`` loop attempts to install packages managed by Anaconda one at a
+   time. A package installation will fail for some packages.
+
+6. Install the remaining packages with ``pip``::
+
+       pip install -r requirements.txt
+   
+   ``pip install`` installs the remaining packages. The ``requirements.txt``
+   file specifies the packages to install, including packages hosted by GitHub.
+   This step is necessary because pip supports GitHub package specifications,
+   but a local ``pip install -e .`` does not.
+
+6. Install the ``qipipe`` package::
+
        pip install -e .
+
 
 *****
 Usage
 *****
 Run the following command for the pipeline options::
 
-     qipipeline --help
+     qipipe --help
 
-The `OHSU QIN Sharepoint`_ `TCIA Upload Procedure`_ document describes how to import the staged QIN
-images into TCIA.
+The `OHSU QIN Sharepoint`_ `TCIA Upload Procedure`_ document describes how
+to import the staged QIN images into TCIA.
 
 ---------
 
-Copyright (C) 2013, Oregon Health & Science University `Knight Cancer Institute`_. All rights reserved.
-qipipe is confidential and may not be distributed in any form without authorization.
+.. container:: copyright
+
+  Copyright (C) 2014 Oregon Health & Science University
+  `Knight Cancer Institute`_. All rights reserved. ``qipipe`` is confidential
+  and may not be distributed in any form without authorization.
 
 
 .. Targets:
 
 .. _Advanced Imaging Research Center: http://www.ohsu.edu/xd/research/centers-institutes/airc/
+
+.. _Anaconda: http://docs.continuum.io/anaconda/
 
 .. _Git: http://git-scm.com
 
