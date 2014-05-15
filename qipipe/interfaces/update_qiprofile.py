@@ -15,7 +15,7 @@ class UpdateQIProfileInputSpec(BaseInterfaceInputSpec):
                                  desc='The imaging acquistion parameters'
                                       ' name-value dictionary')
 
-    assessor = traits.Str(desc='The XNAT modeling assessor name')
+    resource = traits.Str(desc='The XNAT modeling resource name')
 
     modeling_params = traits.Dict({}, usedefault=True,
                                   desc='The PK modeling parameters'
@@ -34,8 +34,8 @@ class UpdateQIProfile(BaseInterface):
         db = QIProfile()
         sess = db.save_session(self.inputs.project, self.inputs.subject,
                                self.inputs.session, **self.inputs.session_params)
-        if self.inputs.assessor:
-            mdl = Modeling(session=sess, name=self.inputs.assessor,
+        if self.inputs.resource:
+            mdl = Modeling(session=sess, name=self.inputs.resource,
                            **self.inputs.modeling_params)
             mdl.save()
 

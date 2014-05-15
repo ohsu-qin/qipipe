@@ -245,8 +245,8 @@ class QIPipelineWorkflow(WorkflowBase):
         self.registration_resource = None
         """The registration XNAT reconstruction name."""
 
-        self.modeling_assessor = None
-        """The modeling XNAT assessor name."""
+        self.modeling_resource = None
+        """The modeling XNAT resource name."""
 
         self.workflow = self._create_workflow(**opts)
         """
@@ -402,7 +402,7 @@ class QIPipelineWorkflow(WorkflowBase):
         if 'model' in actions:
             mdl_wf_gen = ModelingWorkflow(base_dir=base_dir)
             mdl_wf = mdl_wf_gen.workflow
-            self.modeling_assessor = mdl_wf_gen.assessor
+            self.modeling_resource = mdl_wf_gen.resource
         else:
             mdl_wf = None
 

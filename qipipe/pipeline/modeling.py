@@ -3,7 +3,7 @@ import logging
 from nipype.pipeline import engine as pe
 from nipype.interfaces import fsl
 from nipype.interfaces.dcmstack import CopyMeta
-from nipype.interfaces.utility import (IdentityInterface, Function)
+from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
 from .. import project
 from ..interfaces import (XNATUpload, Fastfit) #, UpdateQIProfile)
 from ..helpers import file_helper
@@ -14,7 +14,7 @@ from ..helpers.logging_helper import logger
 
 
 PK_PREFIX = 'pk'
-"""The XNAT modeling assessor object label prefix."""
+"""The XNAT modeling resource object label prefix."""
 
 
 def run(input_dict, **opts):
@@ -155,12 +155,12 @@ class ModelingWorkflow(WorkflowBase):
         cfg_file = opts.pop('cfg_file', None)
         super(ModelingWorkflow, self).__init__(logger(__name__), cfg_file)
 
-        assessor = opts.pop('modeling', None)
-        if not assessor:
-            assessor = self._generate_assessor_name()
-        self.assessor = assessor
+        resource = opts.pop('modeling', None)
+        if not resource:
+            resource = self._generate_resource_name()
+        self.resource = resource
         """
-        The XNAT assessor name for all executions of this
+        The XNAT resource name for all executions of this
         :class:`qipipe.pipeline.modeling.ModelingWorkflow` instance. The
         name is unique, which permits more than one model to be stored for
         each input series without a name conflict.
@@ -193,7 +193,7 @@ class ModelingWorkflow(WorkflowBase):
             to model
         :param opts: the following workflow options:
         :keyword resource: the XNAT resource to model
-        :return: the modeling result XNAT assessor name
+        :return: the modeling result XNAT resource name
         """
         # The image dictionaries lists.
         img_dict_lists = [img_dict.values()
@@ -214,14 +214,14 @@ class ModelingWorkflow(WorkflowBase):
                            (img_cnt, sess_cnt))
 
         # Return the analysis name.
-        return self.assessor
+        return self.resource
 
-    def _generate_assessor_name(self):
+    def _generate_resource_name(self):
         """
-        Makes a unique modeling assessor name. Uniqueness permits more than
-        one assessor to be stored for a given session without a name conflict.
+        Makes a unique modeling resource name. Uniqueness permits more than
+        one resource to be stored for a given session without a name conflict.
 
-        :return: a unique XNAT modeling assessor name
+        :return: a unique XNAT modeling resource name
         """
         return "%s_%s" % (PK_PREFIX, file_helper.generate_file_name())
 
@@ -295,17 +295,20 @@ class ModelingWorkflow(WorkflowBase):
 
         # Upload the modeling results to XNAT.
         # Each output field contains a modeling result file.
-        # Upload each file to a separate analysis resource.
+        # Upload these files to the modeling resource.
         base_output = base_wf.get_node('output_spec')
         out_fields = base_output.outputs.copyable_trait_names()
-        for field in out_fields:
-            upload_node = self._create_upload_node(field)
+        merge_outputs = pe.Node(Merge(len(out_fields)), name='merge_outputs')
+        for i, field in enumerate(out_fields):
             base_field = 'output_spec.' + field
-            mdl_wf.connect(input_spec, 'subject', upload_node, 'subject')
-            mdl_wf.connect(input_spec, 'session', upload_node, 'session')
-            mdl_wf.connect(base_wf, base_field, upload_node, 'in_files')
+            mdl_wf.connect(base_wf, base_field, merge_outputs, "in%d" % i)
+        upload_xfc = XNATUpload(project=project(), resource=self.resource)
+        upload_node = pe.Node(upload_xfc, name='upload_outputs')
+        mdl_wf.connect(input_spec, 'subject', upload_node, 'subject')
+        mdl_wf.connect(input_spec, 'session', upload_node, 'session')
+        mdl_wf.connect(merge_outputs, 'out', upload_node, 'in_files')
 
-        # TODO - Get the summary parameters.
+        # TODO - Get the FSL mean parameters.
 
         # TODO - Add the session to qiprofile.
         # update_profile_db = pe.Node(UpdateQIProfile())
@@ -335,8 +338,7 @@ class ModelingWorkflow(WorkflowBase):
         :param resource: the modeling parameter resource name
         :return: the modeling parameter XNAT upload node
         """
-        upload_xfc = XNATUpload(project=project(), assessor=self.assessor,
-                                resource=resource)
+        upload_xfc = XNATUpload(project=project(), resource=resource)
         name = 'upload_' + resource
 
         return pe.Node(upload_xfc, name=name)

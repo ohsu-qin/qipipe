@@ -125,13 +125,12 @@ class TestXNATUpload(object):
                                " analysis %s..." % (SUBJECT, SESSION, ANALYSIS))
         # Upload the file.
         upload = XNATUpload(project=project(), subject=SUBJECT, session=SESSION,
-                            assessor=ANALYSIS, resource='params',
-                            in_files=ANALYSIS_FIXTURE)
+                            resource=ANALYSIS, in_files=ANALYSIS_FIXTURE)
         result = upload.run()
         
         # Verify the result.
         with xnat_helper.connection() as xnat:
-            anl_obj = xnat.get_assessor(project(), SUBJECT, SESSION, ANALYSIS)
+            anl_obj = xnat.get_resource(project(), SUBJECT, SESSION, ANALYSIS)
             assert_true(anl_obj.exists(),
                         "Upload did not create the %s %s analysis: %s" % 
                         (SUBJECT, SESSION, ANALYSIS))

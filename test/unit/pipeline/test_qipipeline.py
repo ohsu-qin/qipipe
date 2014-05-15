@@ -138,14 +138,13 @@ class TestQIPipeline(object):
                     assert_true(reg_obj.exists(),
                                 "The %s %s registration resource %s was not"
                                 " created in XNAT" % (sbj, sess, rsc))
-                    # Verify the modeling assessor.
+                    # Verify the modeling resource.
                     if opts['modeling'] != False:
-                        assessor = results['modeling']
-                        mdl_obj = xnat.get_assessor(project(), sbj, sess,
-                                                    assessor)
+                        rsc = results['modeling']
+                        mdl_obj = xnat.get_resource(project(), sbj, sess, rsc)
                         assert_true(mdl_obj.exists(),
-                                    "The %s %s modeling assessor %s was not"
-                                    " created in XNAT" % (sbj, sess, assessor))
+                                    "The %s %s modeling resource %s was not"
+                                    " created in XNAT" % (sbj, sess, rsc))
 
             # Delete the test subjects.
             xnat_helper.delete_subjects(project(), *subjects)

@@ -90,8 +90,8 @@ def _parse_arguments():
 
     # The modeling arguments.
     parser.add_argument('--modeling',
-                        help='the XNAT modeling assessor name',
-                        metavar='ASSESSOR')
+                        help='the XNAT modeling resource name',
+                        metavar='RESOURCE')
 
     # The input subject directories or XNAT labels to process.
     parser.add_argument('inputs', help='the input AIRC DICOM subject directory'
