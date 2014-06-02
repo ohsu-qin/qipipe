@@ -7,8 +7,8 @@ scipy
 nipy
 dipy
 traits
--e git://github.com/moloney/dcmstack.git#egg=dcmstack
--e git://github.com/FredLoney/nipype.git#egg=nipype
+-e git+http://github.com/moloney/dcmstack.git#egg=dcmstack
+-e git+http://github.com/FredLoney/nipype.git#egg=nipype
 nose
--e git://github.com/FredLoney/pyxnat.git#egg=pyxnat
+-e git+http://github.com/FredLoney/pyxnat.git#egg=pyxnat
 pyyaml
