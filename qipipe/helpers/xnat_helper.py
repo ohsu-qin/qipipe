@@ -152,6 +152,7 @@ def expand_child_hierarchy(parent, hierarchy):
     children = _xnat_children(parent, child_spec)
     closures = [expand_child_hierarchy(child, hierarchy[1:])
                 for child in children]
+    
     return reduce(lambda x, y: x + y, closures, [])
 
 
@@ -694,8 +695,7 @@ class XNAT(object):
             download('QIN', 'Breast001', 'Session03', resource='reg_jA4K')
 
         downloads the NiFTI files for the XNAT session with label
-        ``Breast001_Session03`` and resource label
-        ``Breast001_Session03_reg_jA4K``.
+        ``Breast001_Session03`` and resource label ``reg_jA4K``.
         
         The files are downloaded to the following directory:
         
@@ -773,9 +773,9 @@ class XNAT(object):
             self._logger.debug("The %s %s %s %s resource does not contain any"
                                " files." % (project, subject, session, opts))
 
-        return [self._download_file(file_obj, dest) for file_obj in rsc_files]
+        return [self.download_file(file_obj, dest) for file_obj in rsc_files]
 
-    def _download_file(self, file_obj, dest):
+    def download_file(self, file_obj, dest):
         """
         :param file_obj: the XNAT File object
         :param dest: the target directory
