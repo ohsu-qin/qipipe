@@ -1,7 +1,7 @@
 This history lists major release themes. See the GitHub commits
 (http://quip1:6060/qipipe) for change details.
 
-4.3.1 / 2014-05-??
+4.3.1 / 2014-06-18
 ------------------
 * Make PK modeling a resource.
 
