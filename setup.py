@@ -25,8 +25,7 @@ def requires():
        before package setup.
     """
     with open('requirements.txt') as f:
-        return [re.search('\w+(=\d.+)?$', spec).group(0)
-                for spec in f.read().splitlines()]
+        return f.read().splitlines()
 
 
 def readme():
