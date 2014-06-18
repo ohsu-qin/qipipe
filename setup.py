@@ -1,3 +1,4 @@
+import os
 import re
 import glob
 from setuptools import (setup, find_packages)
@@ -55,5 +56,10 @@ setup(
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
     ],
-    install_requires = requires()
+    install_requires = requires(),
+    dependency_links = [
+        "git+http://github.com/moloney/dcmstack.git@0.7.dev#egg=dcmstack"
+        "git+http://github.com/FredLoney/nipype.git#egg=nipype-master"
+        "git+http://github.com/FredLoney/pyxnat.git#egg=pyxnat"
+    ]
 )
