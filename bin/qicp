@@ -27,7 +27,7 @@ class SessionNotFoundError(Exception):
 
 def main(argv=sys.argv):
     # Parse the command line arguments.
-    src, dest, opts = _parse_arguments()
+    sources, dest, opts = _parse_arguments()
 
     # The XNAT configuration.
     config = opts.pop('config', None)
@@ -43,23 +43,32 @@ def main(argv=sys.argv):
 
     # Determine whether the copy is an upload or download.
     xnat_prefix = 'xnat:'
-    if src.startswith(xnat_prefix):
-        xnat_path = src[len(xnat_prefix):]
-        if not xnat_path.endswith('/files'):
-            raise ArgumentError("The xnat source argument must end in 'files':"
-                                " %s" % src)
-        direction = 'down'
-    elif dest.startswith(xnat_prefix):
+    download_suffix_pat = '/file(s|/[.\w]+)$'
+    if dest.startswith(xnat_prefix):
         xnat_path = dest[len(xnat_prefix):]
         direction = 'up'
+    elif not sources:
+        raise ArgumentError("There must be at least one source and exactly"
+                            " one destination argument")
     else:
-        raise ArgumentError("Neither the source nor the destination begin with 'xnat:'")
+        src = sources[0]
+        if not src.startswith(xnat_prefix):
+            raise ArgumentError("Neither the source nor the destination"
+                                " begin with 'xnat:'")
+        xnat_path = src[len(xnat_prefix):]
+        if not re.search(download_suffix_pat, xnat_path):
+            raise ArgumentError("The xnat source argument must end in 'files'"
+                                " or a 'file/<name>' specification: %s" % src)
+        if len(sources) > 1:
+            raise ArgumentError("Download arguments must include exactly"
+                                " one source and one destination argument")
+        direction = 'down'
 
     # Parse the XNAT hierarchy argument.
     path_items = xnat_path.split('/')
     if len(path_items) < 2:
-        raise ValueError('The search path must include at least two items,'
-                         ' e.g. Breast003/Session01')
+        raise ValueError("The search path must include at least two items,"
+                         " e.g. Breast003/Session01")
     prj = opts.pop('project', qipipe.project())
     sbj, sess = path_items[0:2]
     child_path = xnat_helper.standardize_experiment_child_hierarchy(path_items[2:])
@@ -68,11 +77,13 @@ def main(argv=sys.argv):
         if not sess_obj.exists():
             raise SessionNotFoundError("No such XNAT session: %s %s %s" %
                                        (prj, sbj, sess))
-        xnat_objs = xnat_helper.expand_child_hierarchy(sess_obj, child_path)
         if direction is 'up':
-            # TODO - implement
-            raise ArgumentError("Upload is not yet implemented")
+            opts = dict(child_path)
+            xnat.upload(prj, sbj, sess, *sources, **opts)
         else:
+            xnat_objs = xnat_helper.expand_child_hierarchy(sess_obj, child_path)
+            if not xnat_objs:
+                raise ArgumentError("Download source XNAT object not found")
             if not os.path.exists(dest):
                 os.makedirs(dest)
             for file_obj in xnat_objs:
@@ -88,16 +99,22 @@ def _parse_arguments():
     # The log options.
     cmd.add_standard_options(parser)
 
-    # The source directory or XNAT hierarchy path.
-    parser.add_argument('source', help='the source directory or XNAT object path')
-
-    # The destination directory or XNAT hierarchy path.
-    parser.add_argument('dest', help='the destination directory or XNAT object path')
-
+    # The source file(s) or XNAT hierarchy path.
+    parser.add_argument('sources', nargs='+', metavar='SOURCE',
+                        help="the source file(s) or XNAT object path")
+    parser.add_argument('dest', metavar='DEST',
+                        help="the destination directory or XNAT object"
+                             " path")
+    
+    # Parse all arguments.
     args = vars(parser.parse_args())
+    # Filter out the empty arguments.
     nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)
+    # The source(s) and destination.
+    sources = nonempty_args.pop('sources')
+    dest = nonempty_args.pop('dest')
 
-    return nonempty_args.pop('source'), nonempty_args.pop('dest'), nonempty_args
+    return sources, dest, nonempty_args
 
 
 if __name__ == '__main__':
