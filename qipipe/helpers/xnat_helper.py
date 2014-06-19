@@ -878,7 +878,7 @@ class XNAT(object):
             ctr_type = None
 
         # Infer the scan resource, if necessary.
-        rsc = opts.get('resource')
+        rsc = opts.pop('resource', None)
         if not rsc:
             if ctr_type == 'scan':
                 rsc = self._infer_format(*in_files)
@@ -891,13 +891,14 @@ class XNAT(object):
                                  " name" % (project, subject, session))
 
         # The XNAT resource parent container.
-        rsc_obj = self.find(project, subject, session, create=True, **opts)
+        rsc_obj = self.find(project, subject, session, create=True,
+                            resource=rsc, **opts)
 
         # Upload each file.
         self._logger.debug("Uploading %d %s %s %s %s files to XNAT..." %
                            (len(in_files), project, subject, session,
                             rsc_obj.label()))
-        xnat_files = [self._upload_file(rsc_obj, f, opts) for f in in_files]
+        xnat_files = [self._upload_file(rsc_obj, f, **opts) for f in in_files]
         self._logger.debug("%d %s %s %s files uploaded to XNAT." %
                            (len(in_files), project, subject, session))
 
@@ -1307,11 +1308,12 @@ class XNAT(object):
         elif ext == '.dcm':
             return 'DICOM'
 
-    def _upload_file(self, resource, in_file, opts):
+    def _upload_file(self, resource, in_file, **opts):
         """
         Uploads the given file to XNAT.
 
-        :param resource: the existing XNAT resource that contains the file
+        :param resource: the existing XNAT resource object that will contain
+          the file
         :param in_file: the input file path
         :param opts: the XNAT file options
         :return: the XNAT file name
