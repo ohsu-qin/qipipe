@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub commits
 (http://quip1:6060/qipipe) for change details.
 
+4.3.2 / 2014-06-26
+------------------
+* Pre-process FNIRT with FLIRT.
+
 4.3.1 / 2014-06-18
 ------------------
 * Make PK modeling a resource.
