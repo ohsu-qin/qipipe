@@ -406,9 +406,14 @@ class RegistrationWorkflow(WorkflowBase):
             fnirt_copy_moving = pe.Node(Copy(), name='fnirt_copy_moving')
             realign_wf.connect(input_spec, 'moving_image',
                                fnirt_copy_moving, 'in_file')
+            # Get the affine transformation.
+            flirt = pe.Node(fsl.FLIRT(), name='flirt')
+            realign_wf.connect(input_spec, 'reference', flirt, 'reference')
+            realign_wf.connect(fnirt_copy_moving, 'out_file', flirt, 'in_file')
             # Register the image.
             fnirt = pe.Node(fsl.FNIRT(), name='fnirt')
             realign_wf.connect(input_spec, 'reference', fnirt, 'ref_file')
+            realign_wf.connect(flirt, 'out_matrix_file', fnirt, 'affine_file')
             realign_wf.connect(fnirt_copy_moving, 'out_file', fnirt, 'in_file')
             realign_wf.connect(input_spec, 'mask', fnirt, 'inmask_file')
             realign_wf.connect(input_spec, 'mask', fnirt, 'refmask_file')
