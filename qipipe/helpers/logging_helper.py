@@ -128,11 +128,11 @@ def configure(cfg_file=None, **opts):
         cfg['loggers']['qipipe']['handlers'] = ['console']
     
     
-      # The log level is set in both the logger and the handler,
-      # and the more restrictive level applies. Therefore, set
-      # the log level in both places.
-      level = opts.pop('level', None)
-      if level:
+    # The log level is set in both the logger and the handler,
+    # and the more restrictive level applies. Therefore, set
+    # the log level in both places.
+    level = opts.pop('level', None)
+    if level:
         cfg['loggers']['qipipe']['level'] = level
         if 'file_handler' in cfg['loggers']['qipipe']['handlers']:
             cfg['handlers']['file_handler']['level'] = level
