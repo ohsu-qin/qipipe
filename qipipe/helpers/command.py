@@ -1,6 +1,7 @@
 """Command helper functions."""
 
 import os
+import tempfile
 import logging
 
 NIPYPE_LOG_DIR_ENV_VAR = 'NIPYPE_LOG_DIR'
@@ -54,6 +55,10 @@ def configure_log(opts):
         log_cfg['filename'] = log_file
         # Set the Nipype log directory environment variable
         # before importing qipipe. See the comments below.
+        if log_file == '/dev/null':
+          # Nipype requires a log directory. Work around this
+          # limitation by setting it to a new temp dir.
+          log_dir = tempfile.mkdtemp(prefix='qi_')
         log_dir = os.path.dirname(log_file)
         if log_dir:
             if not os.path.exists(log_dir):

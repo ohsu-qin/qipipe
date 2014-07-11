@@ -120,19 +120,19 @@ def configure(cfg_file=None, **opts):
     cfg = _load_config(cfg_file)
 
     # The options override the configuration files.
-    if 'filename' in opts:
-        fname = opts.pop('filename')
-        if fname:
-            cfg['handlers']['file_handler']['filename'] = fname
-        else:
-            cfg['handlers']['file_handler']['filename'] = '/dev/null'
-            cfg['loggers']['qipipe']['handlers'] = ['console']
+    fname = opts.pop('filename', None)
+    if fname:
+        cfg['handlers']['file_handler']['filename'] = fname
+    else:
+        cfg['handlers']['file_handler']['filename'] = '/dev/null'
+        cfg['loggers']['qipipe']['handlers'] = ['console']
     
-    if 'level' in opts:
-        # The log level is set in both the logger and the handler,
-        # and the more restrictive level applies. Therefore, set
-        # the log level in both places.
-        level = opts.pop('level')
+    
+      # The log level is set in both the logger and the handler,
+      # and the more restrictive level applies. Therefore, set
+      # the log level in both places.
+      level = opts.pop('level', None)
+      if level:
         cfg['loggers']['qipipe']['level'] = level
         if 'file_handler' in cfg['loggers']['qipipe']['handlers']:
             cfg['handlers']['file_handler']['level'] = level
