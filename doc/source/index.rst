@@ -68,24 +68,19 @@ Installation
 
 6. Install packages mmanaged by Anaconda::
 
-       for p in requirements.txt; do conda install $p; done
+       for p in `cat requirements.txt`; do conda install $p; done
    
    The ``for`` loop attempts to install packages managed by Anaconda one at a
-   time. A package installation will fail for some packages.
-
-6. Install the remaining packages with ``pip``::
-
-       pip install -r requirements.txt
-   
-   ``pip install`` installs the remaining packages. The ``requirements.txt``
-   file specifies the packages to install, including packages hosted by GitHub.
-   This step is necessary because pip supports GitHub package specifications,
-   but a local ``pip install -e .`` does not.
+   time. Package installation will fail for packages not managed by Anaconda.
 
 6. Install the ``qipipe`` package::
 
        pip install -e .
 
+   This step installs any remaining dependencies in ``requirements.txt``
+   that were not installed by Anaconda. Anaconda installations are preferred
+   because Anaconda attempts to impose additional constraints to ensure
+   the consistency of the Python scientific platform.
 
 *****
 Usage
