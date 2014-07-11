@@ -329,6 +329,7 @@ class RegistrationWorkflow(WorkflowBase):
         - Run these workflows
 
         - Upload the realign outputs to XNAT
+        
         :param opts: the following workflow options:
         :keyword base_dir: the workflow execution directory
             (default is a new temp directory)
