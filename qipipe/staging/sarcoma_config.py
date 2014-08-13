@@ -23,8 +23,7 @@ def sarcoma_location(subject):
     :param subject: the XNAT Subject ID
     :return: the subject tumor location
     """
-
-    try
+    try:
       return sarcoma_config().get('Tumor Location', subject)
     except NoOptionError:
       raise ConfigError("Tumor location for subject %s was not found in the"
