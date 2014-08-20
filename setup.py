@@ -3,6 +3,11 @@ import re
 import glob
 from setuptools import (setup, find_packages)
 
+VCS_RQMT_PAT = re.compile('^\w+\+\w+:')
+"""
+The pattern for detecting a VCS requirement spec, e.g.
+``git+git://...``.
+"""
 
 def version(package):
     """
@@ -17,17 +22,16 @@ def requires():
     """
     @return: the ``requirements.txt`` package specifications
     
-    :Note: ``pip`` supports GitHub package specifications,
-       but a local ``pip install -e .`` does not. Therefore,
-       the requirements must be installed as described in
-       the User Guide **Installation** section. This method
-       filters out the GitHub portion of the specification
-       and expects these dependencies to already be installed
-       before package setup.
+    :Note: ``pip`` supports VCS package specifications, but
+       setup.py does not. Therefore, this method filters out
+       the VCS requirements in ``requirements.txt``. The VCS
+       dependencies must be installed separately as described
+       in the User Guide **Installation** section.
     """
     with open('requirements.txt') as f:
-        return f.read().splitlines()
-
+        rqmts = f.read().splitlines()
+        return [rqmt for rqmt in rqmts if not VCS_RQMT_PAT.match(rqmt)]
+        
 
 def readme():
     with open("README.rst") as f:
@@ -56,10 +60,5 @@ setup(
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
     ],
-    install_requires = requires(),
-    dependency_links = [
-        "git+http://github.com/moloney/dcmstack.git@0.7.dev#egg=dcmstack"
-        "git+http://github.com/FredLoney/nipype.git#egg=nipype-master"
-        "git+http://github.com/FredLoney/pyxnat.git#egg=pyxnat"
-    ]
+    install_requires = requires()
 )

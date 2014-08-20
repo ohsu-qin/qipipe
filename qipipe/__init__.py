@@ -1,9 +1,9 @@
-"""The top-level Qunatitative Imaging Pipeline module."""
+"""The top-level Quantitative Imaging Pipeline module."""
 from pkg_resources import get_distribution
 from .helpers.project import project
 from . import (helpers, interfaces, pipeline, staging)
 
-__version__ = '4.3.2'
+__version__ = '4.4.1'
 """
 The one-based major.minor.patch version.
 The version numbering scheme loosely follows http://semver.org/.

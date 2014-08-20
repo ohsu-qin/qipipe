@@ -1,4 +1,4 @@
-from ..helpers.which import which
+from qiutil.which import which
 
 DISTRIBUTABLE = not not which('qsub')
 """

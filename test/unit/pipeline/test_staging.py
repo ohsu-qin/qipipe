@@ -3,7 +3,7 @@ import shutil
 from nose.tools import assert_true
 
 from qipipe.pipeline import staging
-from qipipe.helpers import xnat_helper
+from qiutil import xnat_helper
 from qipipe.staging.staging_helper import (get_subjects, iter_stage)
 from test import (project, ROOT)
 from test.helpers.logging_helper import logger

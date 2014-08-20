@@ -4,7 +4,7 @@ import re
 import shutil
 from nose.tools import (assert_equal, assert_true)
 from qipipe.interfaces import XNATDownload
-from qipipe.helpers import xnat_helper
+from qiutil import xnat_helper
 from test import (project, ROOT)
 from test.helpers.logging_helper import logger
 from test.helpers.xnat_test_helper import generate_unique_name

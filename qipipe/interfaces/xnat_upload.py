@@ -1,7 +1,7 @@
 from nipype.interfaces.base import (
     traits, BaseInterfaceInputSpec, TraitedSpec,
     BaseInterface, InputMultiPath, File)
-from ..helpers import xnat_helper
+from qiutil import xnat_helper
 
 
 class XNATUploadInputSpec(BaseInterfaceInputSpec):
@@ -34,7 +34,7 @@ class XNATUpload(BaseInterface):
 
     """
     The ``XNATUpload`` Nipype interface wraps the
-    :meth:`qipipe.helpers.xnat_helper.upload` method.
+    :meth:`qiutil.xnat_helper.upload` method.
     
     :Note: only one XNAT operation can run at a time.
     """

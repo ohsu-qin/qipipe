@@ -1,9 +1,9 @@
 import os
 import re
-from ..helpers.dicom_helper import edit_dicom_headers
+from qiutil.dicom_helper import edit_dicom_headers
 from .sarcoma_config import sarcoma_location
 
-from ..helpers.logging_helper import logger
+from qiutil.logging_helper import logger
 
 
 def fix_dicom_headers(collection, subject, *dicom_files, **opts):

@@ -14,8 +14,8 @@ from .mask import MaskWorkflow
 import registration
 from .modeling import ModelingWorkflow
 from ..interfaces import (XNATDownload, XNATUpload)
-from ..helpers import xnat_helper
-from ..helpers.logging_helper import logger
+from qiutil import xnat_helper
+from qiutil.logging_helper import logger
 from ..staging.staging_helper import iter_stage
 
 SCAN_TS_RSC = 'scan_ts'

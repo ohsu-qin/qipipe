@@ -6,7 +6,7 @@ from nipype.interfaces import fsl
 from .. import project
 from ..interfaces import (XNATUpload, MriVolCluster)
 from .workflow_base import WorkflowBase
-from ..helpers.logging_helper import logger
+from qiutil.logging_helper import logger
 
 
 MASK = 'mask'

@@ -6,11 +6,11 @@ from nipype.interfaces.dcmstack import CopyMeta
 from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
 from .. import project
 from ..interfaces import (XNATUpload, Fastfit) #, UpdateQIProfile)
-from ..helpers import file_helper
+from qiutil import file_helper
 from ..helpers.bolus_arrival import bolus_arrival_index, BolusArrivalError
 from .workflow_base import WorkflowBase
 from .distributable import DISTRIBUTABLE
-from ..helpers.logging_helper import logger
+from qiutil.logging_helper import logger
 
 
 PK_PREFIX = 'pk'

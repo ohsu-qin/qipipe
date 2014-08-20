@@ -1,7 +1,7 @@
 from nipype.interfaces.base import (traits, BaseInterfaceInputSpec,
                                     TraitedSpec, BaseInterface)
 from nipype.interfaces.traits_extension import isdefined
-from ..helpers import xnat_helper
+from qiutil import xnat_helper
 
 
 class XNATFindInputSpec(BaseInterfaceInputSpec):
@@ -35,7 +35,7 @@ class XNATFind(BaseInterface):
 
     """
     The ``XNATFind`` Nipype interface wraps the
-    :meth:`qipipe.helpers.xnat_helper.find` method.
+    :meth:`qiutil.xnat_helper.find` method.
     
     :Note: only one XNAT operation can run at a time.
     """

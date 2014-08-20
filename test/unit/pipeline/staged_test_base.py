@@ -2,7 +2,7 @@ import os
 import glob
 import shutil
 from collections import defaultdict
-from qipipe.helpers import xnat_helper
+from qiutil import xnat_helper
 from test import project
 
 
@@ -132,7 +132,7 @@ class StagedTestBase(object):
         where *files* is a list consisting of the session image files found
         in the test fixture directory.
         
-        :param xnat: the :class:`qipipe.helpers.xnat_helpers.XNAT` connection
+        :param xnat: the :class:`qiutil.xnat_helpers.XNAT` connection
         :param subject: the input subject
         :param session: the input session
         :param result: the :meth`_run_workflow` result

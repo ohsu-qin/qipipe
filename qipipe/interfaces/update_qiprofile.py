@@ -1,7 +1,7 @@
 import re
 from nipype.interfaces.base import (traits, BaseInterfaceInputSpec,
                                     BaseInterface)
-from ..helpers.qiprofile_helper import QIProfile
+from qiutil.qiprofile_helper import QIProfile
 
 
 class UpdateQIProfileInputSpec(BaseInterfaceInputSpec):

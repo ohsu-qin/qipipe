@@ -8,11 +8,12 @@ from nipype.interfaces.ants import (AverageImages, Registration,
                                     ApplyTransforms)
 from nipype.interfaces import fsl
 from nipype.interfaces.dcmstack import CopyMeta
+from qiutil import file_helper
+from qiutil.logging_helper import logger
 from .. import project
 from ..interfaces import (Copy, XNATUpload)
-from ..helpers import (bolus_arrival, file_helper)
+from ..helpers import bolus_arrival
 from .workflow_base import WorkflowBase
-from ..helpers.logging_helper import logger
 
 
 REG_PREFIX = 'reg'

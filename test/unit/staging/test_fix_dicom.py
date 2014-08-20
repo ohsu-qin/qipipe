@@ -4,7 +4,7 @@ import shutil
 from nose.tools import assert_equal
 
 from qipipe.staging.fix_dicom import fix_dicom_headers
-from qipipe.helpers.dicom_helper import iter_dicom
+from qiutil.dicom_helper import iter_dicom
 from test import ROOT
 
 # The test fixture.

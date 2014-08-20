@@ -5,9 +5,9 @@ import re
 import glob
 from collections import defaultdict
 from .. import project
-from ..helpers import xnat_helper
-from ..helpers.dicom_helper import iter_dicom_headers
-from ..helpers.logging_helper import logger
+from qiutil import xnat_helper
+from qiutil.dicom_helper import iter_dicom_headers
+from qiutil.logging_helper import logger
 from . import airc_collection as airc
 from .map_ctp import map_ctp
 
