@@ -301,7 +301,7 @@ class ModelingWorkflow(WorkflowBase):
         merge_outputs = pe.Node(Merge(len(out_fields)), name='merge_outputs')
         for i, field in enumerate(out_fields):
             base_field = 'output_spec.' + field
-            mdl_wf.connect(base_wf, base_field, merge_outputs, "in%d" % i)
+            mdl_wf.connect(base_wf, base_field, merge_outputs, "in%d" % (i + 1))
         upload_xfc = XNATUpload(project=project(), resource=self.resource)
         upload_node = pe.Node(upload_xfc, name='upload_outputs')
         mdl_wf.connect(input_spec, 'subject', upload_node, 'subject')

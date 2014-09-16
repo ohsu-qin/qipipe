@@ -41,16 +41,20 @@ Installation
 2. Contact the qipipe `OHSU QIN Git administrator`_ to get permission to
    access the qipipe Git repository.
 
-3. Install qiutil_.
+3. Install the Python_ pip_ package manager on your workstation, if
+   necessary. It is recommended that a virtualenv_ is activated, which
+   includes a localized pip location.
 
-4. Clone the `qipipe repository`_::
+4. Install qiutil_.
+
+5. Clone the `qipipe repository`_::
 
        cd ~/workspace
        git clone git@quip1:qipipe
    
-5. Install Anaconda_ on your workstation, if necessary.
+6. Install Anaconda_ on your workstation, if necessary.
 
-6. Make an Anaconda virtual environment::
+7. Make an Anaconda virtual environment::
 
        cd ~/workspace/qipipe
        conda create --name qipipe scipy
@@ -61,14 +65,14 @@ Installation
    the package is not managed by Anaconda. Therefore, creating the environment
    with one known package makes the environment.
 
-7. Activate the ``qipipe`` environment::
+8. Activate the ``qipipe`` environment::
 
        source activate qipipe
    
    Sourcing ``activate`` prepends the ``qipipe`` environment bin path to the
    ``PATH`` environment variable.
 
-8. Install packages mmanaged by Anaconda::
+9. Install packages mmanaged by Anaconda::
 
        for p in `cat requirements.txt`; do conda install $p; done
    
@@ -78,7 +82,7 @@ Installation
    additional constraints to ensure the consistency of the Python scientific
    platform.
 
-9. Install the ``qipipe`` package::
+10. Install the ``qipipe`` package::
 
        pip install -e .
        pip install -r requirements

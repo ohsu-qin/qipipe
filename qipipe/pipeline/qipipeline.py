@@ -227,7 +227,10 @@ class QIPipelineWorkflow(WorkflowBase):
         :param opts: the following initialization options:
         :keyword base_dir: the workflow execution directory
             (default a new temp directory)
-        :keyword dry_run: flag indicating whether to prepare but do not
+        :keyword cfg_file: the configuration file path containing
+            class:`qipipe.pipeline.registration.WorkflowBase'
+            configuration overrides
+        :keyword dry_run: flag indicating whether to prepare but not
             run the pipeline
         :keyword mask: the XNAT mask reconstruction name
         :keyword registration: the XNAT registration reconstruction name
@@ -235,7 +238,9 @@ class QIPipelineWorkflow(WorkflowBase):
             class:`qipipe.pipeline.registration.RegistrationWorkflow`
             technique
         """
-        # Flag indicating whether to skip job submission.
+        # The dry run and configuration file options are processed by methods
+        # defined in QIPipelineWorkflow. The remaining options are processed
+        # by methods defined in the superclass WorkflowBase.
         base_opts = {}
         for opt in ['cfg_file', 'dry_run']:
             if opt in opts:
@@ -689,19 +694,19 @@ class QIPipelineWorkflow(WorkflowBase):
 
     def _run_workflow(self, workflow):
         """
-        Overrides the superclass method to build the registration
-        workflow if the *dry_run* instance variable flag is set.
+        Overrides the superclass method to build the workflow if the
+        *dry_run* instance variable flag is set.
 
         :param workflow: the workflow to run
         """
         super(QIPipelineWorkflow, self)._run_workflow(workflow)
         if self.dry_run:
-            _, ref_0 = tempfile.mkstemp()
+            _, path = tempfile.mkstemp()
             try:
                 opts = dict(base_dir=self.workflow.base_dir, dry_run=True)
-                register_scans('Dummy', 'Dummy', [ref_0], 0, ref_0, opts)
+                register_scans('Dummy', 'Dummy', [path], 0, path, opts)
             finally:
-                os.remove(ref_0)
+                os.remove(path)
 
 
 def bolus_arrival_index_or_zero(time_series):
