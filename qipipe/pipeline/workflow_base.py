@@ -3,9 +3,9 @@ import re
 import tempfile
 import networkx as nx
 from .. import project
-from ..helpers import xnat_helper
-from ..helpers.collection_helper import EMPTY_DICT
-from ..helpers.ast_config import read_config
+from qiutil import xnat_helper
+from qiutil.collection_helper import EMPTY_DICT
+from qiutil.ast_config import read_config
 from .distributable import DISTRIBUTABLE
 
 
@@ -20,7 +20,7 @@ class WorkflowBase(object):
     `AIRC Grid Engine`_.
 
     The workflow plug-in arguments and node inputs can be specified in a
-    :class:`qipipe.helpers.ast_config.ASTConfig` file. The standard
+    :class:`qiutil.ast_config.ASTConfig` file. The standard
     configuration file name is the lower-case name of the ``WorkflowBase``
     subclass with ``.cfg`` extension, e.g. ``registration.cfg``. The
     configuration file paths to load in low-to-high precedence order
@@ -159,7 +159,7 @@ class WorkflowBase(object):
         """
         Download the NIFTI scan files for the given session.
 
-        :param xnat: the :class:`qipipe.helpers.xnat_helper.XNAT` connection
+        :param xnat: the :class:`qiutil.xnat_helper.XNAT` connection
         :param subject: the XNAT subject label
         :param session: the XNAT session label
         :param dest: the destination directory path

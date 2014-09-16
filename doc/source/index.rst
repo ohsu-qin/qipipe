@@ -41,7 +41,9 @@ Installation
 2. Contact the qipipe `OHSU QIN Git administrator`_ to get permission to
    access the qipipe Git repository.
 
-3. Clone the `qipipe repository`_::
+3. Install qiutil_.
+
+4. Clone the `qipipe repository`_::
 
        cd ~/workspace
        git clone git@quip1:qipipe
@@ -59,28 +61,32 @@ Installation
    the package is not managed by Anaconda. Therefore, creating the environment
    with one known package makes the environment.
 
-6. Activate the ``qipipe`` environment::
+7. Activate the ``qipipe`` environment::
 
        source activate qipipe
    
    Sourcing ``activate`` prepends the ``qipipe`` environment bin path to the
    ``PATH`` environment variable.
 
-6. Install packages mmanaged by Anaconda::
+8. Install packages mmanaged by Anaconda::
 
        for p in `cat requirements.txt`; do conda install $p; done
    
    The ``for`` loop attempts to install packages managed by Anaconda one at a
    time. Package installation will fail for packages not managed by Anaconda.
+   Anaconda installations are preferred because Anaconda attempts to impose
+   additional constraints to ensure the consistency of the Python scientific
+   platform.
 
-6. Install the ``qipipe`` package::
+9. Install the ``qipipe`` package::
 
        pip install -e .
+       pip install -r requirements
 
-   This step installs any remaining dependencies in ``requirements.txt``
-   that were not installed by Anaconda. Anaconda installations are preferred
-   because Anaconda attempts to impose additional constraints to ensure
-   the consistency of the Python scientific platform.
+   The first command installs the non-Git dependencies in ``requirements.txt``
+   that were not installed by Anaconda. The second command installs the
+   remaining Git dependencies in ``requirements.txt``.
+
 
 *****
 Usage
@@ -124,6 +130,8 @@ to import the staged QIN images into TCIA.
 .. _QIN collection: https://wiki.cancerimagingarchive.net/display/Public/Quantitative+Imaging+Network+Collections
 
 .. _qipipe repository: http://quip1.ohsu.edu:6060/qipipe
+
+.. _qiutil: http://quip1.ohsu.edu:6060/qiutil
 
 .. _TCIA Upload Procedure: https://bridge.ohsu.edu/research/knight/projects/qin/_layouts/WordViewer.aspx?id=/research/knight/projects/qin/Shared%20Documents/TCIA%20upload%20procedure.docx&Source=https%3A%2F%2Fbridge%2Eohsu%2Eedu%2Fresearch%2Fknight%2Fprojects%2Fqin%2FSitePages%2FHome%2Easpx&DefaultItemOpen=1&DefaultItemOpen=1
 

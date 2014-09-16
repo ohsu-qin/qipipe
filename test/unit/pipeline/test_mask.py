@@ -38,19 +38,17 @@ class TestMaskWorkflow(StagedTestBase):
     def test_sarcoma(self):
         self._test_sarcoma()
 
-    def _run_workflow(self, fixture, subject, session, images, **opts):
+    def _run_workflow(self, fixture, *inputs, **opts):
         """
         Executes :meth:`qipipe.pipeline.mask.run` on the given input.
         
         :param fixture: the test fixture directory
-        :param subject: the input subject
-        :param session: the input session
-        :param images: the input image files
+        :param inputs: the input scans
         :param opts: the target workflow options
         :return: the :meth:`qipipe.pipeline.mask.run` result
         """
         logger(__name__).debug("Testing the mask workflow on %s..." % fixture)
-        return mask.run(input_dict, cfg_file=MASK_CONF, **opts)
+        return mask.run(*inputs, cfg_file=MASK_CONF, **opts)
 
     def _verify_result(self, xnat, subject, session, result):
         rsc_obj = xnat.find(project(), subject, session, resource=result)

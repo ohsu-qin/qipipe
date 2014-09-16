@@ -7,9 +7,9 @@ from nipype.interfaces.dcmstack import DcmStack
 from .. import project
 from ..interfaces import (Gate, FixDicom, Compress, XNATUpload)
 from ..staging.staging_error import StagingError
-from ..helpers import xnat_helper
+from qiutil import xnat_helper
 from .workflow_base import WorkflowBase
-from ..helpers.logging_helper import logger
+from qiutil.logging_helper import logger
 from ..staging import staging_helper
 
 

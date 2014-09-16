@@ -6,7 +6,7 @@ import sys
 import os
 import re
 from .ctp_config import ctp_collection_for_name
-from ..helpers.logging_helper import logger
+from qiutil.logging_helper import logger
 
 PROP_FMT = 'QIN-%s-OHSU.ID-LOOKUP.properties'
 """The format for the Patient ID map file name specified by CTP."""

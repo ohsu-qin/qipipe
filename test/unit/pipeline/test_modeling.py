@@ -63,9 +63,7 @@ class TestModelingWorkflow(StagedTestBase):
         Executes :meth:`qipipe.pipeline.modeling.run` on the input session scans.
         
         :param fixture: the test fixture directory
-        :param subject: the input subject
-        :param session: the input session
-        :param images: the input image files
+        :param inputs: the input scans
         :param opts: the target workflow options
         :return: the :meth:`qipipe.pipeline.modeling.run` result
         """
