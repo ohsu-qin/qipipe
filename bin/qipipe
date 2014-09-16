@@ -9,6 +9,9 @@ import imp
 import argparse
 from qiutil import command
 
+NIPYPE_LOG_DIR_ENV_VAR = 'NIPYPE_LOG_DIR'
+"""The environment variable used by Nipype to set the log directory."""
+
 def main(argv=sys.argv):
     # Parse the command line arguments.
     inputs, opts = _parse_arguments()
@@ -16,14 +19,18 @@ def main(argv=sys.argv):
     # Break out the logging options.
     log_opts = {k: opts.pop(k) for k in ['log', 'log_level'] if k in opts}
     # Configure the logger.
-    cmd.configure_log(log_opts)
-    # Set the Nipype log directory environment variable before
-    # importing any nipype module. See the comment below.
+    command.configure_log('qipipe', log_opts)
+    # Set the Nipype log directory environment variable before importing
+    # any nipype module. The code below works around the following Nipype
+    # bug:
+    # * Nipype requires a log directory. If the Nipype log directory is
+    #   set to /dev/null, then Nipype raises an error. The work-around
+    #   is to set the NIPYPE_LOG_DIR environment variable to a new temp
+    #   directory.
     if 'log' in log_opts:
         log_file = os.path.abspath(log_opts.get('log'))
         if log_file == '/dev/null':
-            # Nipype requires a log directory. Work around this
-            # limitation by setting it to a new temp dir.
+            # Work around the Nipype bug described above.
             log_dir = tempfile.mkdtemp(prefix='qi_')
         else:
             log_dir = os.path.dirname(log_file)
@@ -31,7 +38,8 @@ def main(argv=sys.argv):
             os.makedirs(log_dir)
         os.environ[NIPYPE_LOG_DIR_ENV_VAR] = log_dir
 
-    # Import the qipipe pipeline module after configuring the logger.
+    # Import the qipipe pipeline module after configuring the logger
+    # above.
     from qipipe.pipeline import qipipeline as qip
 
     # Run the QIN workflow.
@@ -50,7 +58,7 @@ def _parse_arguments():
     parser = argparse.ArgumentParser()
     
     # The log options.
-    cmd.add_log_options(parser)
+    command.add_log_options(parser)
 
     # The actions.
     parser.add_argument('--stage', dest='actions', action='append_const',
@@ -104,14 +112,14 @@ def _parse_arguments():
                         metavar='RESOURCE')
 
     # The input subject directories or XNAT labels to process.
-    parser.add_argument('inputs', help='the input AIRC DICOM subject directory'
-                        ' or XNAT session label if staging is not performed',
-                        metavar='INPUT', nargs='*')
+    parser.add_argument('input', nargs='+',
+                        help='the AIRC DICOM subject directory to stage'
+                             ' or XNAT session label to process')
 
     args = vars(parser.parse_args())
     nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)
 
-    return nonempty_args.pop('inputs'), nonempty_args
+    return nonempty_args.pop('input'), nonempty_args
 
 
 if __name__ == '__main__':

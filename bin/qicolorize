@@ -1,0 +1,67 @@
+#!/usr/bin/env python
+"""
+Transforms each voxel value to a discrete member of an integral
+range.
+"""
+
+import sys
+import os
+import imp
+import argparse
+from qiutil import command
+# TODO - load this file directly to avoid nipype garbage injection.
+from qipipe.helpers import colors
+
+def main(argv=sys.argv):
+    # Parse the command line arguments.
+    lut_file, opts = _parse_arguments()
+
+    # Break out the logging options.
+    log_opts = {k: opts.pop(k) for k in ['log', 'log_level'] if k in opts}
+    # Configure the logger.
+    command.configure_log('qicolorize', log_opts)
+    
+    # Colorize the input files.
+    inputs = opts.pop('inputs')
+    colors.colorize(lut_file, *inputs, **opts)
+
+    return 0
+
+
+def _parse_arguments():
+    """
+    Parses the command line arguments.
+
+    :return: the (inputs, options) tuple, where inputs is the non-option
+        arguments and options is an {option: value} dictionary
+    """
+    parser = argparse.ArgumentParser()
+    
+    # The log options.
+    command.add_log_options(parser)
+
+    # The output option.
+    parser.add_argument('-o', '--output', metavar='DIR', dest='dest',
+                        help='the output directory (default is the current'
+                             ' working directory)')
+
+    # The threshold.
+    parser.add_argument('--threshold', type=int, metavar='INT',
+                        help='the colorization threshold, e.g. 40 =>'
+                             ' color reference < 40 is blank (default none)')
+
+    # The colormap LUT file.
+    parser.add_argument('lookup', help='the colormap lookup table file')
+
+    # The input files.
+    parser.add_argument('inputs', metavar='input', nargs='+',
+                        help='the input voxel -> value file')
+
+    args = vars(parser.parse_args())
+    nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)
+
+    return nonempty_args.pop('lookup'), nonempty_args
+
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -1,0 +1,60 @@
+#!/usr/bin/env python
+"""
+Creates a colormap lookup table.
+"""
+
+import sys
+import os
+import imp
+import argparse
+from qiutil import command
+from qipipe.helpers import colors
+
+def main(argv=sys.argv):
+    # Parse the command line arguments.
+    opts = _parse_arguments()
+
+    # Break out the logging options.
+    log_opts = {k: opts.pop(k) for k in ['log', 'log_level'] if k in opts}
+    # Configure the logger.
+    command.configure_log('qicolorlut', log_opts)
+
+    # Make the color map.
+    colors.create_lookup_table(**opts)
+
+    return 0
+
+
+def _parse_arguments():
+    """
+    Parses the command line arguments.
+
+    :return: the (inputs, options) tuple, where inputs is the non-option
+        arguments and options is an {option: value} dictionary
+    """
+    parser = argparse.ArgumentParser()
+
+    # The log options.
+    command.add_log_options(parser)
+
+    # The output option.
+    parser.add_argument('-o', '--output',
+                        help='the output file (default is the colormap name'
+                             ' followed by _colors.txt in the current directory)',
+                        metavar='FILE', dest='out_file')
+
+    # The colormap name option.
+    parser.add_argument('colormap', help='the colormap name, e.g. jet')
+
+    # The number of colors argument.
+    parser.add_argument('ncolors',type=int,
+                        help='the number of colors to generate in the colormap LUT')
+
+    args = vars(parser.parse_args())
+    nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)
+
+    return nonempty_args
+
+
+if __name__ == '__main__':
+    sys.exit(main())
