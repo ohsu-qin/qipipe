@@ -7,4 +7,4 @@ traits==4.4.0
 nose==1.3.0
 git+git://github.com/moloney/dcmstack.git@0.7.dev#egg=dcmstack
 git+git://github.com/FredLoney/nipype.git#egg=nipype-master
-qirest==1.1.1
+qiutil==1.1.2
