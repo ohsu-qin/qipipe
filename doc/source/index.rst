@@ -36,43 +36,65 @@ Feature List
 ************
 Installation
 ************
+The following instructions assume that you start in your home directory.
+
 1. Install Git_ on your workstation, if necessary.
 
 2. Contact the qipipe `OHSU QIN Git administrator`_ to get permission to
    access the qipipe Git repository.
 
-3. Install the Python_ pip_ package manager on your workstation, if
-   necessary. It is recommended that a virtualenv_ is activated, which
-   includes a localized pip location.
+3. Build ANTS_ from source using the `ANTS Compile Instructions`_::
 
-4. Install qiutil_.
-
-5. Clone the `qipipe repository`_::
-
-       cd ~/workspace
-       git clone git@quip1:qipipe
+       pushd ~/workspace
+       git clone git://github.com/stnava/ANTs.git
+       mkdir ~/ants
+       cd ~/ants
+       ccmake ..workspace/ANTs
+       cmake
+       #=> Enter “c"
+       #=> Enter “g”
+       #=> Exit back to the terminal
+       make -j 4
+       popd
    
-6. Install Anaconda_ on your workstation, if necessary.
+4. Install Anaconda_ in ``~/anaconda`` on your workstation according to
+   the `Anaconda Installation Instructions`_.
 
-7. Make an Anaconda virtual environment::
+5. Make an Anaconda virtual environment::
 
-       cd ~/workspace/qipipe
        conda create --name qipipe scipy
    
    The Anaconda ``conda`` command is a pip-like utility that installs packages
    managed by Anaconda. The ``conda create`` step makes a virtual environment
-   with one package. ``conda create`` requires at least one package, but fails if
-   the package is not managed by Anaconda. Therefore, creating the environment
+   with one package. ``conda create`` requires at least one package, but fails
+   if the package is not managed by Anaconda. Therefore, creating the environment
    with one known package makes the environment.
 
-8. Activate the ``qipipe`` environment::
+6. Prepend Git, ANTS, Anaconda and your virtual environment to ``PATH`` in your shell
+   login script. Open an editor on ~/.bashrc or ~/.bash_profile and add the
+   following lines::
 
-       source activate qipipe
+      # Prepend the locally installed applications.
+      export PATH=/path/to/git/bin:$ANTS_HOME/bin:$ANACONDA_HOME:$PATH
+      # Prepend the qipipe virtual environment.
+      . $HOME/anaconda/bin/activate qipipe      
+
+7. Refresh your environment, e.g. quit your ssh session and reopen a new one.
+
+8. Install the Python_ pip_ package manager using the
+   `pip Installation Instructions`_. After downloading ``get_pip.py``, run::
    
-   Sourcing ``activate`` prepends the ``qipipe`` environment bin path to the
-   ``PATH`` environment variable.
+       python get-pip.py
 
-9. Install packages mmanaged by Anaconda::
+9. Install qiutil_.
+
+10. Clone the `qipipe repository`_::
+
+       cd ~/workspace
+       git clone git@quip1:qipipe
+       cd qipipe
+
+11. Install packages mmanaged by Anaconda::
 
        for p in `cat requirements.txt`; do conda install $p; done
    
@@ -82,14 +104,17 @@ Installation
    additional constraints to ensure the consistency of the Python scientific
    platform.
 
-10. Install the ``qipipe`` package::
+12. Install the ``qipipe`` package::
 
+       pip install nibabel
        pip install -e .
        pip install -r requirements
 
-   The first command installs the non-Git dependencies in ``requirements.txt``
-   that were not installed by Anaconda. The second command installs the
-   remaining Git dependencies in ``requirements.txt``.
+   The first command installs ``nibabel`` separately. Even though ``nibabel`` is
+   listed as a qipipe dependency, installing it in that context results in an
+   error. The second command installs the non-Git dependencies in
+   ``requirements.txt`` that were not installed by Anaconda. The third command
+   installs the remaining Git dependencies in ``requirements.txt``.
 
 
 *****
@@ -117,6 +142,12 @@ to import the staged QIN images into TCIA.
 
 .. _Anaconda: http://docs.continuum.io/anaconda/
 
+.. _Anaconda Installation Instructions: http://docs.continuum.io/anaconda/install.html
+
+.. _ANTS: http://stnava.github.io/ANTs/
+
+.. _ANTS Compile Instructions: http://brianavants.wordpress.com/2012/04/13/updated-ants-compile-instructions-april-12-2012/
+
 .. _Git: http://git-scm.com
 
 .. _Knight Cancer Institute: http://www.ohsu.edu/xd/health/services/cancer
@@ -126,6 +157,8 @@ to import the staged QIN images into TCIA.
 .. _OHSU QIN Sharepoint: https://bridge.ohsu.edu/research/knight/projects/qin/SitePages/Home.aspx
 
 .. _pip: https://pypi.python.org/pypi/pip
+
+.. _pip Installation Instructions: http://pip.readthedocs.org/en/latest/installing.html
 
 .. _Python: http://www.python.org
 
