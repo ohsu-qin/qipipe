@@ -1,7 +1,4 @@
 """The top-level Quantitative Imaging Pipeline module."""
-from pkg_resources import get_distribution
-from .helpers.project import project
-from . import (helpers, interfaces, pipeline, staging)
 
 __version__ = '4.4.1'
 """
@@ -14,3 +11,19 @@ is incremented when there is a backward-compatible refactoring
 or bug fix. All major, minor and patch version numbers begin at
 1.
 """
+
+def project(name=None):
+    """
+    Gets or sets the current XNAT project name.
+    The default project name is ``QIN``.
+    
+    :param name: the XNAT project name to set, or None to get the
+        current project name
+    :return: the current XNAT project name
+    """
+    if name:
+        project.name = name
+    elif not hasattr(project, 'name'):
+        project.name = None
+
+    return project.name or 'QIN'
