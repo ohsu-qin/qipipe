@@ -4,7 +4,20 @@ import numpy as np
 import nibabel as nib
 from qiutil.logging_helper import logger
 
-def discretize(in_file, out_file, nvalues, start=0, threshold=None):
+def normalize(value, vmin, vspan):
+    """
+    Maps the given input value to [0, 1].
+    
+    @param value: the input value
+    @param vmin: the minimum input range value
+    @param vspan: the value range span (maxium - minimum)
+    @return (*in_val* - *vmin*) / *vspan*
+    """
+    return (value - vmin) / vspan
+
+
+def discretize(in_file, out_file, nvalues, start=0, threshold=None,
+               normalizer=normalize):
     """
     Transforms the given input image file to an integer range with
     the given number of values. The range starts at the given start
@@ -35,6 +48,8 @@ def discretize(in_file, out_file, nvalues, start=0, threshold=None):
     @param start: the starting output value (default 0)
     @param threshold: the threshold in the range start to nvalues
       (default start)
+    @param normalize: an optional function to normalize the input
+      value (default :meth:`normalize`)
     """
     # If there is an output file argument, then ensure that there is an
     # output parent directory. Otherwise, use the default output file.
@@ -75,7 +90,7 @@ def discretize(in_file, out_file, nvalues, start=0, threshold=None):
     # The maximum offset is one less than the number of values.
     max_offset = nvalues - 1
     # The length of the value range.
-    span = vmax - vmin
+    vspan = vmax - vmin
     # Track the value count by decile.
     decile_cnts = [0] * 10
     
@@ -91,11 +106,12 @@ def discretize(in_file, out_file, nvalues, start=0, threshold=None):
                 # The input voxel value.
                 in_val = in_data[i][j][k]
                 # The proportional offset into the range.
-                proportion = (in_val - vmin) / span
-                # The offset in the range 0 to nvalues - 1.
+                proportion = normalizer(in_val, vmin, vspan)
+                # The offset in the [0..nvalues - 1] range.
                 offset = int(round(proportion * max_offset))
                 # The output value.
                 out_val = start + offset
+                # Check against the threshold.
                 if out_val < threshold:
                     offset = 0
                     out_val = start

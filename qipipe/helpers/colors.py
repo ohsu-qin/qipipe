@@ -3,7 +3,7 @@ import re
 from matplotlib import (pyplot, colors, cm)
 import nibabel as nib
 from qiutil.file_helper import splitexts
-from .discretize import discretize
+from . import image
 
 def create_lookup_table(ncolors, colormap='jet', out_file=None):
     """
@@ -72,14 +72,21 @@ def colorize(lut_file, *inputs, **opts):
     """
     dest = opts.pop('dest', None)
     if dest:
-        os.makedirs(dest)
+        if not os.path.exists(dest):
+            os.makedirs(dest)
     else:
         dest = os.getcwd()
     opts.update(_infer_range_parameters(lut_file))
-    
+    opts['normalizer'] = _normalize
     for in_file in inputs:
         _colorize(in_file, dest, **opts)
 
+def _normalize(value, vmin, vspan):
+    # Zero always maps to the translucence in the first colormap LUT entry.
+    if value == 0:
+        return 0
+    else:
+        return image.normalize(value, vmin, vspan)
 
 def _colorize(in_file, dest, **opts):
     # Split up the input file path.
@@ -88,7 +95,7 @@ def _colorize(in_file, dest, **opts):
     # The output file.
     out_fname = base + '_color' + exts
     out_file = os.path.join(dest, out_fname)
-    discretize(in_file, out_file, **opts)
+    image.discretize(in_file, out_file, **opts)
 
 
 def _infer_range_parameters(lut_file):
