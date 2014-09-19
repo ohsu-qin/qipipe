@@ -1,10 +1,18 @@
 """
 The ``interfaces`` module includes the custom QIN Nipype interface classes.
+As a convenience, this  ``interfaces`` module imports all of the
+non-proprietary interface classes. The proprietary interface class
+:class:`qipipe.interfaces.fastfit.Fastfit` must be imported
+separately from the :mod:`qipipe.interfaces.fastfit` module, e.g.::
+
+    from qipipe.interfaces.fastfit import Fastfit
+
+Importing ``fastfit`` in an environment that does not provide the
+fastfit application will raise an ImportError.
 """
 
 from .compress import Compress
 from .copy import Copy
-from .fastfit import Fastfit
 from .fix_dicom import FixDicom
 from .gate import Gate
 from .group_dicom import GroupDicom

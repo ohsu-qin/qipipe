@@ -23,10 +23,8 @@ from nipype.interfaces.base import (DynamicTraitedSpec,
                                     MpiCommandLineInputSpec,
                                     isdefined)
 from nipype.interfaces.traits_extension import Undefined
-try:
-    from fastfit.fastfit_cli import get_available_models
-except ImportError:
-    pass
+from fastfit import fastfit_cli
+
 
 class FastfitInputSpec(MpiCommandLineInputSpec):
     model_name = traits.String(desc='The name of the model to optimize',
@@ -86,7 +84,7 @@ class Fastfit(MpiCommandLine):
 
         #If the model name is static, we can find the outputs
         if isdefined(self.inputs.model_name):
-            model_mods, builtin_models, user_models = get_available_models()
+            model_mods, builtin_models, user_models = fastfit_cli.get_available_models()
             model = model_mods[self.inputs.model_name]
             self._opt_params = model.optimization_params
             if (not self._min_outs is None and

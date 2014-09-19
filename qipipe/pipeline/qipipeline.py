@@ -12,7 +12,6 @@ from .workflow_base import WorkflowBase
 from .staging import StagingWorkflow
 from .mask import MaskWorkflow
 import registration
-from .modeling import ModelingWorkflow
 from ..interfaces import (XNATDownload, XNATUpload)
 from qiutil import xnat_helper
 from qiutil.logging_helper import logger
@@ -89,13 +88,20 @@ def _run_with_dicom_input(*inputs, **opts):
 
 def _run_with_xnat_input(*inputs, **opts):
     """
-    :param inputs: the XNAT session labels
+    Run the pipeline with a XNAT download.
+    Each input is either a session label or path, e.g.
+    ``Breast012_Session03`` or  ``Breast012/Session03``.
+    
+    :param inputs: the XNAT session labels or paths
     :param opts: the ``project`` and :class:`QIPipelineWorkflow`
         initializer options
     """
     prj = opts.pop('project', qipipe.project())
     with xnat_helper.connection() as xnat:
         for label in inputs:
+            # Convert a path to a label.
+            if '/' in label:
+                label = label.sub('/', '_')
             sbj, sess = xnat_helper.parse_session_label(label)
             # Check for an existing mask.
             mask_obj = xnat.find(project=prj, subject=sbj, session=sess,
@@ -403,8 +409,11 @@ class QIPipelineWorkflow(WorkflowBase):
         if reg_rsc:
             self.registration_resource = reg_rsc
 
-        # The modeling workflow.
+        # The modeling workflow. Since the proprietary fastfit module might
+        # not be available, only import the ModelingWorkflow on demand if
+        # modeling is required.
         if 'model' in actions:
+            from .modeling import ModelingWorkflow
             mdl_wf_gen = ModelingWorkflow(base_dir=base_dir)
             mdl_wf = mdl_wf_gen.workflow
             self.modeling_resource = mdl_wf_gen.resource

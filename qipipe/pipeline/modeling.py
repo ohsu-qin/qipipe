@@ -5,7 +5,8 @@ from nipype.interfaces import fsl
 from nipype.interfaces.dcmstack import CopyMeta
 from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
 from .. import project
-from ..interfaces import (XNATUpload, Fastfit) #, UpdateQIProfile)
+from ..interfaces import XNATUpload #, UpdateQIProfile)
+from ..interfaces.fastfit import Fastfit
 from qiutil import file_helper
 from ..helpers.bolus_arrival import bolus_arrival_index, BolusArrivalError
 from .workflow_base import WorkflowBase
