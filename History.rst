@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub commits
 (http://quip1:6060/qipipe) for change details.
 
+4.5.1 / 2014-09-19
+------------------
+* Add colorize.
+
 4.4.1 / 2014-08-20
 ------------------
 * Split out qiutil.
