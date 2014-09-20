@@ -116,6 +116,10 @@ The following instructions assume that you start in your home directory.
    ``requirements.txt`` that were not installed by Anaconda. The third command
    installs the remaining Git dependencies in ``requirements.txt``.
 
+13. If you will be running the PK modeling workflow, then install the proprietary
+    ``fastfit`` module from the Mercurial repository::
+    
+       pip install hg+https://everett.ohsu.edu/hg/fastfit#egg=fastfit
 
 *****
 Usage
