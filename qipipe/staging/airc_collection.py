@@ -20,23 +20,27 @@ def collection_with_name(name):
 def _create_collections():
     """Creates the pre-defined AIRC collections."""
 
+    # The AIRC DCE scan DICOM file are in the concat directory.
+    # The AIRC T2 scan DICOM files are in the sorted subdirectories. 
+    dcm_pat_dict = dict(dce='*concat*/*', t2='*sorted*/*/*')
+
     return dict(
         Breast=AIRCCollection(
-            'Breast', 'BreastChemo(\d+)', 'Visit(\d+)', '*concat*/*'),
+            'Breast', 'BreastChemo(\d+)', 'Visit(\d+)', dcm_pat_dict),
         Sarcoma=AIRCCollection(
-            'Sarcoma', 'Subj_(\d+)', '(?:Visit_|S\d+V)(\d+)', '*concat*/*'))
+            'Sarcoma', 'Subj_(\d+)', '(?:Visit_|S\d+V)(\d+)', dcm_pat_dict))
 
 
 class AIRCCollection(object):
 
     """The AIRC Study characteristics."""
 
-    def __init__(self, name, subject_pattern, session_pattern, dicom_pattern):
+    def __init__(self, name, subject_pattern, session_pattern, dcm_pat_dict):
         """
         :param name: `self.name`
         :param subject_pattern: `self.subject_pattern`
         :param session_pattern: `self.session_pattern`
-        :param dicom_pattern: `self.dicom_pattern`
+        :param dicom_pat_dict: `self.dicom_pat_dict`
         """
         self.name = name
         """The collection name."""
@@ -47,8 +51,8 @@ class AIRCCollection(object):
         self.session_pattern = session_pattern
         """The session directory name match regular expression pattern."""
 
-        self.dicom_pattern = dicom_pattern
-        """The DICOM directory name match glob pattern."""
+        self.dcm_pat_dict = dcm_pat_dict
+        """The {type: DICOM directory name match glob pattern} dictionary."""
 
     def path2subject_number(self, path):
         """

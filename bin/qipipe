@@ -70,6 +70,15 @@ def _parse_arguments():
     parser.add_argument('--dry-run', action='store_true',
                         help='Prepare but do not run the pipeline')
 
+    # The scan type.
+    scan_type_grp = parser.add_mutually_exclusive_group()
+    scan_type_grp.add_argument('--dce', dest='scan_type', action='store_const',
+                               const='dce', help='The DCE scan type (default)')
+    scan_type_grp.add_argument('--t2', dest='scan_type', action='store_const',
+                               const='t2', 
+                               help='The T2 scan type')
+   
+    
     # The AIRC collection to stage.
     coll_grp = parser.add_mutually_exclusive_group()
     coll_grp.add_argument('-b', '--breast', help='the breast TCIA collection',

@@ -14,7 +14,7 @@ from ..staging import staging_helper
 
 
 def set_workflow_inputs(exec_wf, collection, subject, session, ser_dicom_dict,
-                        dest=None):
+                        scan_type=None, dest=None):
     """
     Sets the given execution workflow inputs.
     The execution workflow must have the same input and iterable
@@ -24,6 +24,8 @@ def set_workflow_inputs(exec_wf, collection, subject, session, ser_dicom_dict,
     :param subject: the subject name
     :param session: the session name
     :param ser_dicom_dict: the input {series: directory} dictionary
+    :param scan_type: the ``dce`` or ``t2`` scan_type type
+        (default ``dce``)
     :param dest: the TCIA staging destination directory (default is
         the current working directory)
     """
@@ -37,9 +39,10 @@ def set_workflow_inputs(exec_wf, collection, subject, session, ser_dicom_dict,
 
     # Set the inputs.
     input_spec = exec_wf.get_node('input_spec')
+    input_spec.inputs.collection = collection
     input_spec.inputs.subject = subject
     input_spec.inputs.session = session
-    input_spec.inputs.collection = collection
+    input_spec.inputs.scan_type = scan_type
 
     iter_series = exec_wf.get_node('iter_series')
     iter_series.iterables = ser_iterables
@@ -200,17 +203,19 @@ class StagingWorkflow(WorkflowBase):
         """
 
     def set_inputs(self, collection, subject, session, ser_dicom_dict,
-                   dest):
+                   scan_type, dest):
         """
         Sets the staging workflow inputs.
 
+        :param collection: the collection name
         :param subject: the subject name
         :param session: the session name
         :param ser_dicom_dict: the input {series: directory} dictionary
+        :param scan_type: the scan type (default ``dce``)
         :param dest: the TCIA staging destination directory
         """
         set_workflow_inputs(self.workflow, collection, subject, session,
-                            ser_dicom_dict, dest)
+                            ser_dicom_dict, scan_type=scan_type, dest=dest)
 
     def run(self):
         """Executes the staging workflow."""

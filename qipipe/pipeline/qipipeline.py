@@ -37,8 +37,12 @@ def run(*inputs, **opts):
 
     :param inputs: the DICOM directories or XNAT session labels to
         process
-    :param opts: the :class:`QIPipelineWorkflow` initializer and
-        execution options
+    :param opts: the :class:`QIPipelineWorkflow` initializer options,
+        as well as the following keyword options:
+    :keyword collection: the AIRC collection name
+    :keyword scan_type: the ``dce`` or ``t2`` scan type
+        (default ``dce``)
+    :keyword dest: the target staging parent directory
     """
     # Tailor the actions.
     actions = opts.get('actions', _default_actions(**opts))
@@ -71,17 +75,13 @@ def _run_with_dicom_input(*inputs, **opts):
     """
     :param inputs: the :meth:`QIPipelineWorkflow.run_with_dicom_input`
         inputs
-    :param opts: the :class:`QIPipelineWorkflow` initializer options,
-        as well as the following keyword options:
-    :keyword collection: the AIRC collection name
-    :keyword dest: the target staging parent directory
+    :param opts: the :meth:`run` options
     """
     collection = opts.pop('collection', None)
-    dest = opts.pop('dest', None)
+    dest = opts.get('dest', None)
     wf_gen = QIPipelineWorkflow(**opts)
-    # Run the workflow on each session fixture.
-    for sbj, sess, ser_dicom_dict in iter_stage(collection, *inputs,
-                                                dest=dest):
+    # Run the workflow on each session.
+    for sbj, sess, ser_dicom_dict in iter_stage(collection, *inputs, **opts):
         wf_gen.run_with_dicom_input(collection, sbj, sess, ser_dicom_dict,
                                     dest)
 
@@ -267,12 +267,14 @@ class QIPipelineWorkflow(WorkflowBase):
         """
 
     def run_with_dicom_input(self, collection, subject, session,
-                             ser_dicom_dict, dest=None):
+                             ser_dicom_dict, scan_type=None, dest=None):
         """
         :param collection: the AIRC collection name
         :param subject: the subject name
         :param session: the session name
         :param inputs: the input AIRC visit directories
+        :param scan_type: the ``dce`` or ``t2`` scan_type type
+            (default ``dce``)
         :param dest: the TCIA staging destination directory (default is
             the current working directory)
         """

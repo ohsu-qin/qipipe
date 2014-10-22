@@ -30,6 +30,8 @@ def iter_stage(collection, *inputs, **opts):
     :param opts: the following keyword option:
     :keyword dest: the TCIA staging destination directory (default is
         the current working directory)
+    :keyword scan_type: the ``dce`` or ``t2`` scan type
+        (default ``dce``)
     :yield: stage the DICOM files
     :yieldparam subject: the subject name
     :yieldparam session: the session name
@@ -38,19 +40,19 @@ def iter_stage(collection, *inputs, **opts):
     # Validate that there is a collection
     if not collection:
         raise ValueError('Staging is missing the AIRC collection name')
-    
-    # Group the new DICOM files into a
-    # {subject: {session: [(series, dicom_files), ...]}} dictionary.
-    stg_dict = detect_new_visits(collection, *inputs)
-    if not stg_dict:
-        return
 
     # The staging location.
-    dest = opts.get('dest')
+    dest = opts.pop('dest', None)
     if dest:
         dest = os.path.abspath(dest)
     else:
         dest = os.getcwd()
+    
+    # Group the new DICOM files into a
+    # {subject: {session: [(series, dicom_files), ...]}} dictionary.
+    stg_dict = detect_new_visits(collection, *inputs, **opts)
+    if not stg_dict:
+        return
 
     # The workflow subjects.
     subjects = stg_dict.keys()
@@ -142,7 +144,7 @@ def group_dicom_files_by_series(*dicom_files):
     return ser_files_dict
 
 
-def detect_new_visits(collection, *inputs):
+def detect_new_visits(collection, *inputs, **opts):
     """
     Detects the new AIRC visits in the given input directories. The visit
     DICOM files are grouped by series.
@@ -188,21 +190,27 @@ def iter_visits(collection, *inputs, **opts):
     :param inputs: the subject directories over which to iterate
     :param opts: the following keyword arguments:
     :keyword filter: a *(subject, session)* selection filter
+    :keyword scan_type: the ``dce`` or ``t2`` scan type
+        (default ``dce``)
     :yield: iterate over the visit *(subject, session, files)* tuples
     """
     return VisitIterator(collection, *inputs, **opts)
 
 
-def iter_new_visits(collection, *inputs):
+def iter_new_visits(collection, *inputs, **opts):
     """
     Filters :meth:`qipipe.staging.staging_helper.iter_visits` to iterate
     over the new visits in the given subject directories which are not in XNAT.
 
     :param collection: the AIRC image collection name
     :param inputs: the subject directories over which to iterate
+    :param opts: the following file matching option:
+    :keyword scan_type: the ``dce`` or ``t2`` scan type
+        (default ``dce``)
     :yield: iterate over the new visit *(subject, session, files)* tuples
     """
-    return iter_visits(collection, *inputs, filter=_is_new_session)
+    opts['filter'] = _is_new_session
+    return iter_visits(collection, *inputs, **opts)
 
 
 def _is_new_session(subject, session):
@@ -256,6 +264,8 @@ class VisitIterator(object):
         :param subject_dirs: the subject directories over which to iterate
         :param opts: the following initialization options:
         :keyword filter: a *(subject, session)* selection filter
+        :keyword scan_type: the ``dce`` or ``t2`` scan type
+            (default ``dce``)
         """
         self.collection = airc.collection_with_name(collection)
         """The AIRC collection with the given name."""
@@ -265,6 +275,9 @@ class VisitIterator(object):
 
         self.filter = opts.get('filter', lambda subject, session: True)
         """The (subject, session) selection filter."""
+
+        self.scan_type = opts.get('scan_type', 'dce')
+        """The ``dce`` or ``t2`` scan type."""
 
     def __iter__(self):
         return self.next()
@@ -276,7 +289,10 @@ class VisitIterator(object):
         """
         # The visit subdirectory match pattern.
         vpat = self.collection.session_pattern
-
+        
+        # The DICOM file search pattern depends on the scan type.
+        dcm_pat = self.collection.dcm_pat_dict[self.scan_type]
+        
         # Iterate over the visits.
         with xnat_helper.connection():
             for sbj_dir in self.subject_dirs:
@@ -301,13 +317,18 @@ class VisitIterator(object):
                             sess_subdir)
                         # The XNAT session name.
                         sess = SESSION_FMT % sess_nbr
-                        # Apply the selection filter.
+                        # If the scan type is not dce, then qualify the
+                        # session name with the scan type suffix.
+                        if self.scan_type != 'dce':
+                            sess += "_%s" % self.scan_type
+                        # Apply the selection filter, e.g. an XNAT existence
+                        # check. If the session passes the filter, then
+                        # the files qualify for iteration.
                         if self.filter(sbj, sess):
                             # The DICOM file match pattern.
-                            dcm_pat = os.path.join(
-                                sess_dir, self.collection.dicom_pattern)
+                            file_pat = os.path.join(sess_dir, dcm_pat)
                             # The visit directory DICOM file iterator.
-                            dcm_file_iter = glob.iglob(dcm_pat)
+                            dcm_file_iter = glob.iglob(file_pat)
                             logger(__name__).debug("Discovered session %s in"
                                                    " %s" % (sess, sess_dir))
                             yield (sbj, sess, dcm_file_iter)
