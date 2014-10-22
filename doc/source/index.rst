@@ -37,6 +37,8 @@ Feature List
 Installation
 ************
 The following instructions assume that you start in your home directory.
+Note that Python installation environments are usually fragile and these
+instructions can break in unanticipated ways. Caveat emptor.
 
 1. Install Git_ on your workstation, if necessary.
 
@@ -63,7 +65,7 @@ The following instructions assume that you start in your home directory.
 5. Make an Anaconda virtual environment::
 
        conda create --name qipipe scipy
-   
+
    The Anaconda ``conda`` command is a pip-like utility that installs packages
    managed by Anaconda. The ``conda create`` step makes a virtual environment
    with one package. ``conda create`` requires at least one package, but fails
@@ -81,20 +83,15 @@ The following instructions assume that you start in your home directory.
 
 7. Refresh your environment, e.g. quit your ssh session and reopen a new one.
 
-8. Install the Python_ pip_ package manager using the
-   `pip Installation Instructions`_. After downloading ``get_pip.py``, run::
-   
-       python get-pip.py
+8. Install qiutil_.
 
-9. Install qiutil_.
-
-10. Clone the `qipipe repository`_::
+9. Clone the `qipipe repository`_::
 
        cd ~/workspace
        git clone git@quip1:qipipe
        cd qipipe
 
-11. Install packages mmanaged by Anaconda::
+10. Install packages managed by Anaconda::
 
        for p in `cat requirements.txt`; do conda install $p; done
    
@@ -104,22 +101,26 @@ The following instructions assume that you start in your home directory.
    additional constraints to ensure the consistency of the Python scientific
    platform.
 
-12. Install the ``qipipe`` package::
+11. Install the remaining dependency packages using pip_::
 
-       pip install nibabel
+       for p in `cat requirements.txt`; do pip install $p; done
+
+    Use this command in preference to ``pip install -r requirements.txt``
+    in order to install Git repository packages.
+
+12. On Linux only, install mpi4py::
+       
+       pip install mpi4py=1.3.1
+
+13. Install the ``qipipe`` package::
+
        pip install -e .
-       pip install -r requirements
 
-   The first command installs ``nibabel`` separately. Even though ``nibabel`` is
-   listed as a qipipe dependency, installing it in that context results in an
-   error. The second command installs the non-Git dependencies in
-   ``requirements.txt`` that were not installed by Anaconda. The third command
-   installs the remaining Git dependencies in ``requirements.txt``.
-
-13. If you will be running the PK modeling workflow, then install the proprietary
+14. If you will be running the PK modeling workflow, then install the proprietary
     ``fastfit`` module from the Mercurial repository::
     
        pip install hg+https://everett.ohsu.edu/hg/fastfit#egg=fastfit
+
 
 *****
 Usage
