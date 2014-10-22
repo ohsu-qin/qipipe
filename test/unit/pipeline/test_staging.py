@@ -1,12 +1,18 @@
 import os
 import shutil
 from nose.tools import assert_true
-
 from qipipe.pipeline import staging
 from qiutil import xnat_helper
 from qipipe.staging.staging_helper import (get_subjects, iter_stage)
 from test import (project, ROOT)
 from test.helpers.logging_helper import logger
+
+
+# FIXME - test module resolves to qiutil/test!?!
+# This, and presumably other, tests are consequently broken.
+# Relative import fails.
+# TODO - WHY DOES THIS HAPPEN? HOW TO FIX IT?
+
 
 FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
 """The test fixture directory."""
@@ -26,6 +32,9 @@ class TestStagingWorkflow(object):
         shutil.rmtree(RESULTS, True)
 
     def test_breast(self):
+        self._test_collection('Breast')
+
+    def test_t2(self):
         self._test_collection('Breast')
 
     def test_sarcoma(self):
@@ -64,7 +73,8 @@ class TestStagingWorkflow(object):
             # Run the workflow on each session fixture.
             for sbj, sess, ser_dicom_dict in iter_stage(collection, *inputs,
                                                         dest=dest):
-                stg_wf.set_inputs(collection, sbj, sess, ser_dicom_dict, dest)
+                stg_wf.set_inputs(collection, sbj, sess, ser_dicom_dict,
+                                  dest=dest)
                 stg_wf.run()
                 # Verify the result.
                 sess_obj = xnat.get_session(project(), sbj, sess)
