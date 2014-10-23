@@ -40,9 +40,9 @@ def run(*inputs, **opts):
     :param opts: the :class:`QIPipelineWorkflow` initializer options,
         as well as the following keyword options:
     :keyword collection: the AIRC collection name
+    :keyword dest: the target staging parent directory
     :keyword scan_type: the ``dce`` or ``t2`` scan type
         (default ``dce``)
-    :keyword dest: the target staging parent directory
     """
     # Tailor the actions.
     actions = opts.get('actions', _default_actions(**opts))
