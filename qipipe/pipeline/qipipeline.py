@@ -16,6 +16,7 @@ from ..interfaces import (XNATDownload, XNATUpload)
 from qiutil import xnat_helper
 from qiutil.logging_helper import logger
 from ..staging.staging_helper import iter_stage
+from ..staging.map_ctp import map_ctp
 
 SCAN_TS_RSC = 'scan_ts'
 """The XNAT scan time series resouce name."""
@@ -37,12 +38,10 @@ def run(*inputs, **opts):
 
     :param inputs: the DICOM directories or XNAT session labels to
         process
-    :param opts: the :class:`QIPipelineWorkflow` initializer options,
+    :param opts: the :meth:`qipipe.staging.staging_helper.iter_stage`
+        and :class:`QIPipelineWorkflow` initializer options,
         as well as the following keyword options:
     :keyword collection: the AIRC collection name
-    :keyword dest: the target staging parent directory
-    :keyword scan_type: the ``dce`` or ``t2`` scan type
-        (default ``dce``)
     """
     # Tailor the actions.
     actions = opts.get('actions', _default_actions(**opts))
@@ -75,15 +74,21 @@ def _run_with_dicom_input(*inputs, **opts):
     """
     :param inputs: the :meth:`QIPipelineWorkflow.run_with_dicom_input`
         inputs
-    :param opts: the :meth:`run` options
+    :param opts: the :meth:`run` options as well as the following keyword
+        options:
+    :keyword collection: the AIRC collection name
     """
     collection = opts.pop('collection', None)
-    dest = opts.get('dest', None)
     wf_gen = QIPipelineWorkflow(**opts)
+    dest = opts.get('dest', None)
     # Run the workflow on each session.
     for sbj, sess, ser_dicom_dict in iter_stage(collection, *inputs, **opts):
-        wf_gen.run_with_dicom_input(collection, sbj, sess, ser_dicom_dict,
-                                    dest)
+        wf_gen.run_with_dicom_input(collection, sbj, sess, ser_dicom_dict, dest)
+    # If the scan type is dce, then make the TCIA subject map.
+    scan_type = opts.get('scan_type', 'dce')
+    if scan_type == 'dce':
+        map_ctp(collection, *subjects, dest=dest)
+
 
 
 def _run_with_xnat_input(*inputs, **opts):
@@ -266,18 +271,18 @@ class QIPipelineWorkflow(WorkflowBase):
         :meth:`run_with_scan_download` method.
         """
 
-    def run_with_dicom_input(self, collection, subject, session,
-                             ser_dicom_dict, **opts):
+    def run_with_dicom_input(self, collection, subject, session, ser_dicom_dict,
+                             dest=None):
         """
         :param collection: the AIRC collection name
         :param subject: the subject name
         :param session: the session name
         :param inputs: the input AIRC visit directories
-        :param opts: the :meth:`qipipeline.staging.staging.set_workflow_inputs`
-            options
+        :param dest: the TCIA staging destination directory (default is
+            the current working directory)
         """
         staging.set_workflow_inputs(self.workflow, collection, subject,
-                                    session, ser_dicom_dict, **opts)
+                                    session, ser_dicom_dict, dest)
         self._run_workflow(self.workflow)
 
     def run_with_scan_download(self, xnat, project, subject, session):
