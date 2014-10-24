@@ -306,6 +306,8 @@ class VisitIterator(object):
         
         # The DICOM file search pattern depends on the scan type.
         dcm_pat = self.collection.dcm_pat_dict[self.scan_type]
+        logger(__name__).debug("The DICOM file search pattern is %s..." %
+                               dcm_pat)
         
         # Iterate over the visits.
         with xnat_helper.connection():
