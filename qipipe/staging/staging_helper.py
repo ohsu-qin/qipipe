@@ -49,8 +49,6 @@ def iter_stage(collection, *inputs, **opts):
     
     # Group the new DICOM files into a
     # {subject: {session: [(series, dicom_files), ...]}} dictionary.
-    if opts.get('resume', False):
-        iterator = 
     stg_dict = collect_visits(collection, *inputs, **opts)
     if not stg_dict:
         return
