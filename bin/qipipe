@@ -68,16 +68,18 @@ def _parse_arguments():
     parser.add_argument('--model', dest='actions', action='append_const',
                         const='model', help='model the realigned images')
     parser.add_argument('--dry-run', action='store_true',
-                        help='Prepare but do not run the pipeline')
+                        help='prepare but do not run the pipeline')
 
     # The scan type.
     scan_type_grp = parser.add_mutually_exclusive_group()
     scan_type_grp.add_argument('--dce', dest='scan_type', action='store_const',
-                               const='dce', help='The DCE scan type (default)')
+                               const='dce', help='the DCE T1 scan type (default)')
     scan_type_grp.add_argument('--t2', dest='scan_type', action='store_const',
-                               const='t2', 
-                               help='The T2 scan type')
-   
+                               const='t2', help='the T2 scan type')
+    
+    # The scan filter option.
+    parser.add_argument('--resume', action='store_true',
+                        help='resume staging on existing sessions (default false)')
     
     # The AIRC collection to stage.
     coll_grp = parser.add_mutually_exclusive_group()

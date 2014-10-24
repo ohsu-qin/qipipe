@@ -27,7 +27,7 @@ def iter_stage(collection, *inputs, **opts):
 
     :param collection: the AIRC image collection name
     :param inputs: the AIRC source subject directories to stage
-    :param opts: the the :meth:`iter_visits` options and the following
+    :param opts: the the :meth:`collect_visits` options and the following
         keyword option:
     :keyword dest: the TCIA staging destination directory (default is
         the current working directory)
@@ -49,7 +49,9 @@ def iter_stage(collection, *inputs, **opts):
     
     # Group the new DICOM files into a
     # {subject: {session: [(series, dicom_files), ...]}} dictionary.
-    stg_dict = detect_new_visits(collection, *inputs, **opts)
+    if opts.get('resume', False):
+        iterator = 
+    stg_dict = collect_visits(collection, *inputs, **opts)
     if not stg_dict:
         return
 
@@ -143,7 +145,31 @@ def group_dicom_files_by_series(*dicom_files):
     return ser_files_dict
 
 
-def detect_new_visits(collection, *inputs, **opts):
+def collect_visits(collection, *inputs, **opts):
+    """
+    Collects the AIRC visits in the given input directories.
+    The visit DICOM files are grouped by series.
+
+    :param collection: the AIRC image collection name
+    :param inputs: the AIRC source subject directories
+    :param opts: the following keyword option:
+    :keyword scan_type: the ``dce`` or ``t2`` scan type
+        (default ``dce``)
+    :keyword resume: flag indicating whether to
+        forego checking for existing sessions (default False)
+    :return: the *{subject: {session: {series: [dicom files]}}}*
+        dictionary
+    """
+    if opts.pop('resume', False):
+        visits = list(_iter_visits(collection, *inputs, **opts))
+    else
+        visits = _detect_new_visits(collection, *inputs, **opts)
+
+    # Group the DICOM files by series.
+    return _group_sessions_by_series(*visits)
+
+
+def _detect_new_visits(collection, *inputs, **opts):
     """
     Detects the new AIRC visits in the given input directories. The visit
     DICOM files are grouped by series.
@@ -167,10 +193,10 @@ def detect_new_visits(collection, *inputs, **opts):
     logger(__name__).debug("%d new visits were detected" % len(visits))
 
     # Group the DICOM files by series.
-    return _group_sessions_by_series(*visits)
+    return visits
 
 
-def iter_visits(collection, *inputs, **opts):
+def _iter_visits(collection, *inputs, **opts):
     """
     Iterates over the visits in the given subject directories.
     Each iteration item is a *(subject, session, files)* tuple, formed
@@ -201,16 +227,16 @@ def iter_visits(collection, *inputs, **opts):
 
 def iter_new_visits(collection, *inputs, **opts):
     """
-    Filters :meth:`qipipe.staging.staging_helper.iter_visits` to iterate
+    Filters :meth:`qipipe.staging.staging_helper._iter_visits` to iterate
     over the new visits in the given subject directories which are not in XNAT.
 
     :param collection: the AIRC image collection name
     :param inputs: the subject directories over which to iterate
-    :param opts: the :meth:`iter_visits` options
+    :param opts: the :meth:`_iter_visits` options
     :yield: iterate over the new visit *(subject, session, files)* tuples
     """
     opts['filter'] = _is_new_session
-    return iter_visits(collection, *inputs, **opts)
+    return _iter_visits(collection, *inputs, **opts)
 
 
 def _is_new_session(subject, session):

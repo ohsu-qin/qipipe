@@ -267,19 +267,17 @@ class QIPipelineWorkflow(WorkflowBase):
         """
 
     def run_with_dicom_input(self, collection, subject, session,
-                             ser_dicom_dict, scan_type=None, dest=None):
+                             ser_dicom_dict, **opts):
         """
         :param collection: the AIRC collection name
         :param subject: the subject name
         :param session: the session name
         :param inputs: the input AIRC visit directories
-        :param scan_type: the ``dce`` or ``t2`` scan_type type
-            (default ``dce``)
-        :param dest: the TCIA staging destination directory (default is
-            the current working directory)
+        :param opts: the :meth:`qipipeline.staging.staging.set_workflow_inputs`
+            options
         """
         staging.set_workflow_inputs(self.workflow, collection, subject,
-                                    session, ser_dicom_dict, dest=dest)
+                                    session, ser_dicom_dict, **opts)
         self._run_workflow(self.workflow)
 
     def run_with_scan_download(self, xnat, project, subject, session):
