@@ -160,7 +160,7 @@ def collect_visits(collection, *inputs, **opts):
     """
     if opts.pop('resume', False):
         visits = list(_iter_visits(collection, *inputs, **opts))
-    else
+    else:
         visits = _detect_new_visits(collection, *inputs, **opts)
 
     # Group the DICOM files by series.
