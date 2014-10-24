@@ -14,7 +14,7 @@ from ..staging import staging_helper
 
 
 def set_workflow_inputs(exec_wf, collection, subject, session, ser_dicom_dict,
-                        scan_type=None, dest=None, resume=False):
+                        dest=None):
     """
     Sets the given execution workflow inputs.
     The execution workflow must have the same input and iterable
@@ -24,14 +24,11 @@ def set_workflow_inputs(exec_wf, collection, subject, session, ser_dicom_dict,
     :param subject: the subject name
     :param session: the session name
     :param ser_dicom_dict: the input {series: directory} dictionary
-    :param scan_type: the ``dce`` or ``t2`` scan_type type
-        (default ``dce``)
     :param dest: the TCIA staging destination directory (default is
         the current working directory)
-    :keyword resume: flag indicating whether to resume workflow exectuion
-        on existing sessions (default False)
     """
     # Make the staging area.
+
     ser_list = ser_dicom_dict.keys()
     ser_dests = _create_staging_area(subject, session,
                                      ser_dicom_dict.iterkeys(), dest)
@@ -44,7 +41,6 @@ def set_workflow_inputs(exec_wf, collection, subject, session, ser_dicom_dict,
     input_spec.inputs.collection = collection
     input_spec.inputs.subject = subject
     input_spec.inputs.session = session
-    input_spec.inputs.scan_type = scan_type
 
     iter_series = exec_wf.get_node('iter_series')
     iter_series.iterables = ser_iterables
@@ -205,7 +201,7 @@ class StagingWorkflow(WorkflowBase):
         """
 
     def set_inputs(self, collection, subject, session, ser_dicom_dict,
-                   **opts):
+                   dest=None):
         """
         Sets the staging workflow inputs.
 
@@ -213,10 +209,11 @@ class StagingWorkflow(WorkflowBase):
         :param subject: the subject name
         :param session: the session name
         :param ser_dicom_dict: the input {series: directory} dictionary
-        :param opts: the :meth:`set_workflow_inputs` options
+        :param dest: the TCIA staging destination directory (default is
+            the current working directory)
         """
         set_workflow_inputs(self.workflow, collection, subject, session,
-                            ser_dicom_dict, **opts)
+                            ser_dicom_dict, dest)
 
     def run(self):
         """Executes the staging workflow."""

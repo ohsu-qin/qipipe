@@ -35,7 +35,7 @@ def run(subject, session, images, bolus_arrival_index, mask, **opts):
     """
     run_opts = {}
     if 'dest' in opts:
-        run_opts['dest'] = opts.pop('dest')
+        run_opts['dest'] = opts.pop('dest', None)
     reg_wf = RegistrationWorkflow(**opts)
     return reg_wf.run(subject, session, images, bolus_arrival_index, mask,
                       **run_opts)

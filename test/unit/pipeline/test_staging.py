@@ -76,6 +76,7 @@ class TestStagingWorkflow(object):
                 stg_wf.set_inputs(collection, sbj, sess, ser_dicom_dict,
                                   dest=dest)
                 stg_wf.run()
+                
                 # Verify the result.
                 sess_obj = xnat.get_session(project(), sbj, sess)
                 assert_true(sess_obj.exists(),

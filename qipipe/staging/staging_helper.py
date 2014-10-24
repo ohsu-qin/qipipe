@@ -9,7 +9,6 @@ from qiutil import xnat_helper
 from qiutil.dicom_helper import iter_dicom_headers
 from qiutil.logging_helper import logger
 from . import airc_collection as airc
-from .map_ctp import map_ctp
 
 SUBJECT_FMT = '%s%03d'
 """The QIN subject name format with arguments (collection, subject number)."""
@@ -73,9 +72,6 @@ def iter_stage(collection, *inputs, **opts):
         logger(__name__).debug("Staged subject %s." % sbj)
     logger(__name__).debug("Staged %d new %s series from %d subjects in %s." %
                      (series_cnt, collection, len(subjects), dest))
-    
-    # Make the TCIA subject map.
-    map_ctp(collection, *subjects, dest=dest)
 
 
 def subject_for_directory(collection, path):
@@ -150,9 +146,8 @@ def collect_visits(collection, *inputs, **opts):
 
     :param collection: the AIRC image collection name
     :param inputs: the AIRC source subject directories
-    :param opts: the following keyword option:
-    :keyword scan_type: the ``dce`` or ``t2`` scan type
-        (default ``dce``)
+    :param opts: the :class:`VisitIterator` initializer options,
+        as well as the following keyword option:
     :keyword resume: flag indicating whether to
         forego checking for existing sessions (default False)
     :return: the *{subject: {session: {series: [dicom files]}}}*
@@ -174,9 +169,7 @@ def _detect_new_visits(collection, *inputs, **opts):
 
     :param collection: the AIRC image collection name
     :param inputs: the AIRC source subject directories
-    :param opts: the following keyword option:
-    :keyword scan_type: the ``dce`` or ``t2`` scan type
-        (default ``dce``)
+    :param opts: the :meth:`iter_new_visits` options
     :return: the *{subject: {session: {series: [dicom files]}}}* dictionary
     """
     # Collect the AIRC visits into (subject, session, dicom_files)
@@ -214,10 +207,7 @@ def _iter_visits(collection, *inputs, **opts):
 
     :param collection: the AIRC image collection name
     :param inputs: the subject directories over which to iterate
-    :param opts: the following keyword arguments:
-    :keyword filter: a *(subject, session)* selection filter
-    :keyword scan_type: the ``dce`` or ``t2`` scan type
-        (default ``dce``)
+    :param opts: the :class:`VisitIterator` initializer options
     :yield: iterate over the visit *(subject, session, files)* tuples
     """
     return VisitIterator(collection, *inputs, **opts)
