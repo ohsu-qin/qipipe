@@ -8,9 +8,9 @@ def normalize(value, vmin, vspan):
     """
     Maps the given input value to [0, 1].
     
-    @param value: the input value
-    @param vmin: the minimum input range value
-    @param vspan: the value range span (maxium - minimum)
+    :param value: the input value
+    :param vmin: the minimum input range value
+    :param vspan: the value range span (maxium - minimum)
     @return (*in_val* - *vmin*) / *vspan*
     """
     return (value - vmin) / vspan
@@ -42,13 +42,13 @@ def discretize(in_file, out_file, nvalues, start=0, threshold=None,
     * Otherwise, the input value *v* maps to the output value
       (*v* * 1000) / 3.
     
-    @param in_file: the input file path
-    @param out_file: the output file path
-    @param nvalues: the number of output entries
-    @param start: the starting output value (default 0)
-    @param threshold: the threshold in the range start to nvalues
+    :param in_file: the input file path
+    :param out_file: the output file path
+    :param nvalues: the number of output entries
+    :param start: the starting output value (default 0)
+    :param threshold: the threshold in the range start to nvalues
       (default start)
-    @param normalize: an optional function to normalize the input
+    :param normalize: an optional function to normalize the input
       value (default :meth:`normalize`)
     """
     # If there is an output file argument, then ensure that there is an

@@ -9,9 +9,9 @@ def create_lookup_table(ncolors, colormap='jet', out_file=None):
     """
     Generates a colormap lookup table with the given number of colors.
     
-    @param ncolors the number of colors to generate
-    @param colormap the matplotlib colormap name
-    @param out_file the output file path (default is the colormap
+    :param ncolors: the number of colors to generate
+    :param colormap: the matplotlib colormap name
+    :param out_file: the output file path (default is the colormap
       name followed by ``_colors.txt``in the current directory)
     """
     # If there is an output file argument, then ensure that there is an
@@ -64,9 +64,9 @@ def colorize(lut_file, *inputs, **opts):
     the input file ``k_trans_map.nii.gz`` is transformed to
     ``k_trans_map_color.nii.gz`` in the output directory.
     
-    @param lut_file: the color lookup table file path
-    @param inputs: the image files to transform
-    @param opts: the following options:
+    :param lut_file: the color lookup table file path
+    :param inputs: the image files to transform
+    :param opts: the following options:
     @option dest: the destination directory (default current working directory)
     @option threshold: the threshold in the range 0 to nvalues (default 0)
     """
