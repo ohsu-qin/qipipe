@@ -120,7 +120,6 @@ def _run_with_dicom_input(*inputs, **opts):
     map_ctp(collection, *subjects, dest=dest)
 
 
-
 def _run_with_xnat_input(*inputs, **opts):
     """
     Run the pipeline with a XNAT download.
