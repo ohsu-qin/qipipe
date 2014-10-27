@@ -66,14 +66,14 @@ class TestStagingWorkflow(object):
         # The test source directories.
         inputs = sbj_dir_dict.values()
 
-        stg_wf = staging.StagingWorkflow(base_dir=work)
+        stg_wf = staging.StagingWorkflow('t1', base_dir=work)
         with xnat_helper.connection() as xnat:
             # Delete any existing test subjects.
             xnat_helper.delete_subjects(project(), *subjects)
             # Run the workflow on each session fixture.
-            for sbj, sess, ser_dicom_dict in iter_stage(collection, *inputs,
+            for sbj, sess, ser_dcm_dict in iter_stage(collection, *inputs,
                                                         dest=dest):
-                stg_wf.set_inputs(collection, sbj, sess, ser_dicom_dict,
+                stg_wf.set_inputs(collection, sbj, sess, ser_dcm_dict,
                                   dest=dest)
                 stg_wf.run()
                 
@@ -85,7 +85,7 @@ class TestStagingWorkflow(object):
                 sess_dest = os.path.join(dest, sbj, sess)
                 assert_true(os.path.exists(sess_dest), "The staging area"
                             " was not created: %s" % sess_dest)
-                for scan in ser_dicom_dict.iterkeys():
+                for scan in ser_dcm_dict.iterkeys():
                     scan_obj = xnat.get_scan(project(), sbj, sess, scan)
                     assert_true(scan_obj.exists(), "The %s %s scan %s was"
                                 " not created in XNAT" % (sbj, sess, scan))

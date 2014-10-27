@@ -13,8 +13,8 @@ from qiutil.logging_helper import logger
 from ..staging import staging_helper
 
 
-def set_workflow_inputs(exec_wf, collection, subject, session, ser_dicom_dict,
-                        dest=None):
+def set_workflow_inputs(exec_wf, collection, subject, session,
+                        ser_dcm_dict, dest=None):
     """
     Sets the given execution workflow inputs.
     The execution workflow must have the same input and iterable
@@ -23,15 +23,14 @@ def set_workflow_inputs(exec_wf, collection, subject, session, ser_dicom_dict,
     :param exec_wf: the workflow to execute
     :param subject: the subject name
     :param session: the session name
-    :param ser_dicom_dict: the input {series: directory} dictionary
+    :param ser_dcm_dict:  the :meth:`StagingWorkflow.set_inputs` input
     :param dest: the TCIA staging destination directory (default is
         the current working directory)
     """
     # Make the staging area.
-
-    ser_list = ser_dicom_dict.keys()
+    ser_list = ser_dcm_dict.keys()
     ser_dests = _create_staging_area(subject, session,
-                                     ser_dicom_dict.iterkeys(), dest)
+                                     ser_dcm_dict.iterkeys(), dest)
     # Transpose the [(series, directory), ...] tuples into iterable lists.
     sers, dests = map(list, zip(*ser_dests))
     ser_iterables = dict(series=sers, dest=dests).items()
@@ -49,7 +48,7 @@ def set_workflow_inputs(exec_wf, collection, subject, session, ser_dicom_dict,
 
     iter_dicom = exec_wf.get_node('iter_dicom')
     iter_dicom.itersource = ('iter_series', 'series')
-    iter_dicom.iterables = ('dicom_file', ser_dicom_dict)
+    iter_dicom.iterables = ('dicom_file', ser_dcm_dict)
 
 
 def _create_staging_area(subject, session, series_list, dest=None):
@@ -173,34 +172,35 @@ class StagingWorkflow(WorkflowBase):
     .. _DcmStack: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.dcmstack.html
     """
 
-    def __init__(self, **opts):
+    def __init__(self, scan_type, **opts):
         """
         If the optional configuration file is specified, then the workflow
         settings in that file override the default settings.
 
+        :param scan_type: the scan type, e.g. ``t1``
         :parameter opts: the following keword options:
         :keyword project: the XNAT project (default ``QIN``)
         :keyword base_dir: the workflow execution directory
             (default a new temp directory)
         :keyword cfg_file: the optional workflow inputs configuration file
         """
-        cfg_file = opts.get('cfg_file')
+        cfg_file = opts.pop('cfg_file', None)
         super(StagingWorkflow, self).__init__(logger(__name__), cfg_file)
 
         # Set the XNAT project.
-        if 'project' in opts:
-            project(opts['project'])
-            self._logger.debug("Set the XNAT project to %s." % project())
+        prj = opts.pop('project', None)
+        if prj:
+            project(prj)
+            self._logger.debug("Set the XNAT project to %s." % prj)
 
         # Make the workflow.
-        base_dir = opts.get('base_dir')
-        self.workflow = self._create_workflow(base_dir=base_dir)
+        self.workflow = self._create_workflow(scan_type, **opts)
         """
         The staging workflow sequence described in
         :class:`qipipe.pipeline.staging.StagingWorkflow`.
         """
 
-    def set_inputs(self, collection, subject, session, ser_dicom_dict,
+    def set_inputs(self, collection, subject, session, ser_dcm_dict,
                    dest=None):
         """
         Sets the staging workflow inputs.
@@ -208,27 +208,30 @@ class StagingWorkflow(WorkflowBase):
         :param collection: the collection name
         :param subject: the subject name
         :param session: the session name
-        :param ser_dicom_dict: the input {series: directory} dictionary
+        :param ser_dcm_dict: the *{series: [dicom files]}*
+            dictionary
         :param dest: the TCIA staging destination directory (default is
             the current working directory)
         """
         set_workflow_inputs(self.workflow, collection, subject, session,
-                            ser_dicom_dict, dest)
+                            ser_dcm_dict, dest)
 
     def run(self):
         """Executes the staging workflow."""
         self._run_workflow(self.workflow)
 
-    def _create_workflow(self, base_dir=None):
+    def _create_workflow(self, scan_type, base_dir=None):
         """
         Makes the staging workflow described in
         :class:`qipipe.pipeline.staging.StagingWorkflow`.
 
+        :param scan_type: the scan type, e.g. ``t1``
         :param base_dir: the workflow execution directory
             (default is a new temp directory)
         :return: the new workflow
         """
-        self._logger.debug("Creating the DICOM processing workflow...")
+        self._logger.debug("Creating the %s DICOM processing workflow..." %
+                           scan_type)
 
         # The Nipype workflow object.
         workflow = pe.Workflow(name='staging', base_dir=base_dir)
@@ -259,7 +262,7 @@ class StagingWorkflow(WorkflowBase):
         workflow.connect(iter_series, 'series', iter_dicom, 'series')
 
         # Fix the AIRC DICOM tags.
-        fix_dicom = pe.Node(FixDicom(), name='fix_dicom')
+        fix_dicom = pe.Node(FixDicom(scan_type=scan_type), name='fix_dicom')
         workflow.connect(input_spec, 'collection', fix_dicom, 'collection')
         workflow.connect(input_spec, 'subject', fix_dicom, 'subject')
         workflow.connect(iter_dicom, 'dicom_file', fix_dicom, 'in_file')
@@ -281,8 +284,9 @@ class StagingWorkflow(WorkflowBase):
         workflow.connect(compress_dicom, 'out_file', upload_dicom, 'in_files')
 
         # Stack the scan into a 3D NiFTI file.
+        suffix = "_%s" % scan_type
         stack_xfc = DcmStack(embed_meta=True,
-                             out_format="series%(SeriesNumber)03d")
+                             out_format="series%(SeriesNumber)03d" + suffix)
         stack = pe.JoinNode(stack_xfc, joinsource='iter_dicom',
                             joinfield='dicom_files', name='stack')
         workflow.connect(fix_dicom, 'out_file', stack, 'dicom_files')
@@ -297,7 +301,11 @@ class StagingWorkflow(WorkflowBase):
         # * since nipype swallows non-nipype Python log messages, the upload
         #   and pyxnat log messages disappear
         # This gate task serializes upload to prevent potential XNAT access
-        # conflicts. 
+        # conflicts.
+        #
+        # Update: The staging pipeline still fails. Work-around is to patch
+        # XNAT by hand.
+        # TODO - isolate and fix.
         upload_gate = pe.Node(Gate(fields=['out_file', 'xnat_files']),
                               name='upload_gate')
         workflow.connect(upload_dicom, 'xnat_files', upload_gate, 'xnat_files')

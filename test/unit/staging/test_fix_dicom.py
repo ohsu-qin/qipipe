@@ -19,6 +19,8 @@ COLLECTION = 'Sarcoma'
 # The new subject.
 SUBJECT = 'Sarcoma003'
 
+# The scan type.
+SCAN_TYPE = 't1'
 
 class TestFixDicom(object):
 
@@ -27,7 +29,8 @@ class TestFixDicom(object):
     def test_fix_dicom_headers(self):
         shutil.rmtree(RESULTS, True)
         dest = os.path.dirname(RESULTS)
-        fixed = fix_dicom_headers(COLLECTION, SUBJECT, FIXTURE, dest=dest)
+        fixed = fix_dicom_headers(COLLECTION, SUBJECT, SCAN_TYPE, FIXTURE,
+                                  dest=dest)
         # Verify the result.
         for ds in iter_dicom(*fixed):
             assert_equal(ds.BodyPartExamined, 'CHEST',

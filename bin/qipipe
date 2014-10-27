@@ -69,13 +69,6 @@ def _parse_arguments():
                         const='model', help='model the realigned images')
     parser.add_argument('--dry-run', action='store_true',
                         help='prepare but do not run the pipeline')
-
-    # The scan type.
-    scan_type_grp = parser.add_mutually_exclusive_group()
-    scan_type_grp.add_argument('--dce', dest='scan_type', action='store_const',
-                               const='dce', help='the DCE T1 scan type (default)')
-    scan_type_grp.add_argument('--t2', dest='scan_type', action='store_const',
-                               const='t2', help='the T2 scan type')
     
     # The scan filter option.
     parser.add_argument('--resume', action='store_true',

@@ -9,6 +9,8 @@ class FixDicomInputSpec(BaseInterfaceInputSpec):
     collection = traits.Str(desc='The image collection', mandatory=True)
 
     subject = traits.Str(desc='The subject name', mandatory=True)
+    
+    scan_type = traits.Str(desc="The scan type, e.g. 't1'")
 
     in_file = File(exists=True, desc='The input DICOM file', mandatory=True)
 
@@ -28,7 +30,8 @@ class FixDicom(BaseInterface):
 
     def _run_interface(self, runtime):
         fixed = fix_dicom_headers(
-            self.inputs.collection, self.inputs.subject, self.inputs.in_file)
+            self.inputs.collection, self.inputs.subject, self.inputs.scan_type,
+            self.inputs.in_file)
         if len(fixed) != 1:
             raise StagingError("Fixed DICOM file count is not one: %s" % fixed)
         self._out_file = fixed[0]

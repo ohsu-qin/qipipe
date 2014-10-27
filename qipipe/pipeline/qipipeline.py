@@ -79,15 +79,45 @@ def _run_with_dicom_input(*inputs, **opts):
     :keyword collection: the AIRC collection name
     """
     collection = opts.pop('collection', None)
-    wf_gen = QIPipelineWorkflow(**opts)
     dest = opts.get('dest', None)
-    # Run the workflow on each session.
-    for sbj, sess, ser_dicom_dict in iter_stage(collection, *inputs, **opts):
-        wf_gen.run_with_dicom_input(collection, sbj, sess, ser_dicom_dict, dest)
-    # If the scan type is dce, then make the TCIA subject map.
-    scan_type = opts.get('scan_type', 'dce')
-    if scan_type == 'dce':
-        map_ctp(collection, *subjects, dest=dest)
+    # Run the workflow on each session and scan type.
+    subjects = set()
+    for sbj, sess, ser_scan_type_dcm_dict in iter_stage(collection, *inputs,
+                                                        **opts):
+        subjects.add(sbj)
+        
+        # Transform the {series: {scan type: [DICOM files]}} dictionary
+        # into a {scan type: {series: [DICOM files]}} dictionary.
+        scan_type_ser_dcm_dicts = {}
+        for series, scan_type_dcm_dict in ser_scan_type_dcm_dict:
+            for scan_type, dcm_iter in scan_type_dcm_dict.iteritems():
+                # The scan type {series: [DICOM files]} dictionary.
+                ser_dcm_dict = scan_type_ser_dcm_dicts.get(scan_type, None)
+                if not ser_dcm_dict:
+                    ser_dcm_dict = {}
+                    scan_ser_dcm_dicts[scan_type] = ser_dcm_dict
+                # Add the DICOM file iterator to the {series: [DICOM files]}
+                # dictionary in the {scan type: {series: [DICOM files]}}
+                # dictionary.
+                ser_dcm_dict[series] = dcm_iter
+
+        # Pull out the actions, since they apply only to the T1 scan type.
+        actions = opts.pop('actions')
+        # Run the workflow on each scan type.
+        for scan_type, ser_dcm_dicts in scan_type_ser_dcm_dicts.iteritems():
+            # Only T1 can do more than staging.
+            if scan_type == 't1':
+                opts['actions'] = actions
+            else:
+                opts['actions'] = ['stage']
+            # Create a new workflow for the current scan type.
+            wf_gen = QIPipelineWorkflow(actions=actions, **opts)
+            # Run the workflow on each {series: [DICOM files]} item.
+            wf_gen.run_with_dicom_input(collection, sbj, sess, ser_dcm_dicts,
+                                        dest)
+    
+    # Make the TCIA subject map.
+    map_ctp(collection, *subjects, dest=dest)
 
 
 
@@ -271,18 +301,19 @@ class QIPipelineWorkflow(WorkflowBase):
         :meth:`run_with_scan_download` method.
         """
 
-    def run_with_dicom_input(self, collection, subject, session, ser_dicom_dict,
+    def run_with_dicom_input(self, collection, subject, session, ser_dcm_dict,
                              dest=None):
         """
         :param collection: the AIRC collection name
         :param subject: the subject name
         :param session: the session name
-        :param inputs: the input AIRC visit directories
+        :param ser_dcm_dict: the :meth:`qipipe.staging.staging_helper.iter_stage`
+            result
         :param dest: the TCIA staging destination directory (default is
             the current working directory)
         """
         staging.set_workflow_inputs(self.workflow, collection, subject,
-                                    session, ser_dicom_dict, dest)
+                                    session, ser_dcm_dict, dest)
         self._run_workflow(self.workflow)
 
     def run_with_scan_download(self, xnat, project, subject, session):
@@ -405,10 +436,10 @@ class QIPipelineWorkflow(WorkflowBase):
         reg_technique = opts.get('technique')
 
         # Set the project, if necessary.
-        if 'project' in opts:
-            qipipe.project(opts['project'])
-            self._logger.debug("Set the XNAT project to %s." %
-                               qipipe.project())
+        prj = opts.pop('project', None)
+        if prj:
+            qipipe.project(prj)
+            self._logger.debug("Set the XNAT project to %s." % prj)
         
         # Set the registration resource instance variable.
         if reg_rsc:
@@ -461,7 +492,10 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # The staging workflow.
         if 'stage' in actions:
-            stg_wf = StagingWorkflow(base_dir=base_dir).workflow
+            scan_type = opts.pop('scan_type', None)
+            if not scan_type:
+                raise ArgumentError("The required staging argument scan_type is missing")
+            stg_wf = StagingWorkflow(scan_type, base_dir=base_dir).workflow
         else:
             self._logger.info("Skipping staging.")
             stg_wf = None

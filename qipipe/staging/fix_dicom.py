@@ -6,7 +6,7 @@ from .sarcoma_config import sarcoma_location
 from qiutil.logging_helper import logger
 
 
-def fix_dicom_headers(collection, subject, *dicom_files, **opts):
+def fix_dicom_headers(collection, subject, scan_type, *dicom_files, **opts):
     """
     Fix the given input OHSU QIN AIRC DICOM files as follows:
 
@@ -30,12 +30,15 @@ def fix_dicom_headers(collection, subject, *dicom_files, **opts):
     - The file name is lower-case
 
     - The file extension is ``.dcm``
+    
+    - The scan type is appended to the fie name, e.g. ``_t1``
 
     - Each non-word character is replaced by an underscore
     
     :param collection: the collection name
     :param subject: the input subject name
-    :param opts: the keyword arguments
+    :param scan_type: the scan type, e.g. ``t1``
+    :param opts: the following keyword arguments:
     :keyword dest: the location in which to write the modified files
         (default is the current directory)
     :return: the files which were created
@@ -59,7 +62,7 @@ def fix_dicom_headers(collection, subject, *dicom_files, **opts):
     # Rename the edited files as necessary.
     out_files = []
     for f in edited:
-        std_name = _standardize_dicom_file_name(f)
+        std_name = _standardize_dicom_file_name(f, scan_type)
         if f != std_name:
             os.rename(f, std_name)
             out_files.append(std_name)
@@ -69,13 +72,14 @@ def fix_dicom_headers(collection, subject, *dicom_files, **opts):
     return out_files
 
 
-def _standardize_dicom_file_name(path):
+def _standardize_dicom_file_name(path, scan_type):
     """
     Standardizes the given input file name as follows:
     """
     fdir, fname = os.path.split(path)
-    # Replace non-word characters.
-    fname = re.sub('\W', '_', fname.lower())
+    # Add the scan type suffix and replace non-word characters.
+    suffix = "_%s" % scan_type
+    fname = re.sub('\W', '_', fname.lower()) + suffix
     # Add a .dcm extension, if necessary.
     _, ext = os.path.splitext(fname)
     if not ext:
