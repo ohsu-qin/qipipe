@@ -89,13 +89,13 @@ def _run_with_dicom_input(*inputs, **opts):
         # Transform the {series: {scan type: [DICOM files]}} dictionary
         # into a {scan type: {series: [DICOM files]}} dictionary.
         scan_type_ser_dcm_dicts = {}
-        for series, scan_type_dcm_dict in ser_scan_type_dcm_dict:
+        for series, scan_type_dcm_dict in ser_scan_type_dcm_dict.iteritems():
             for scan_type, dcm_iter in scan_type_dcm_dict.iteritems():
                 # The scan type {series: [DICOM files]} dictionary.
                 ser_dcm_dict = scan_type_ser_dcm_dicts.get(scan_type, None)
                 if not ser_dcm_dict:
                     ser_dcm_dict = {}
-                    scan_ser_dcm_dicts[scan_type] = ser_dcm_dict
+                    scan_type_ser_dcm_dicts[scan_type] = ser_dcm_dict
                 # Add the DICOM file iterator to the {series: [DICOM files]}
                 # dictionary in the {scan type: {series: [DICOM files]}}
                 # dictionary.
@@ -105,16 +105,17 @@ def _run_with_dicom_input(*inputs, **opts):
         actions = opts.pop('actions')
         # Run the workflow on each scan type.
         for scan_type, ser_dcm_dicts in scan_type_ser_dcm_dicts.iteritems():
+            opts['scan_type'] = scan_type
             # Only T1 can do more than staging.
             if scan_type == 't1':
                 opts['actions'] = actions
             else:
                 opts['actions'] = ['stage']
             # Create a new workflow for the current scan type.
-            wf_gen = QIPipelineWorkflow(actions=actions, **opts)
+            wf_gen = QIPipelineWorkflow(**opts)
             # Run the workflow on each {series: [DICOM files]} item.
-            wf_gen.run_with_dicom_input(collection, sbj, sess, ser_dcm_dicts,
-                                        dest)
+            wf_gen.run_with_dicom_input(collection, sbj, sess,
+                                        ser_dcm_dicts, dest)
     
     # Make the TCIA subject map.
     map_ctp(collection, *subjects, dest=dest)
