@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub commits
 (http://quip1:6060/qipipe) for change details.
 
+4.5.2 / 2014-12-02
+------------------
+* Add --resume option.
+
 4.5.1 / 2014-09-19
 ------------------
 * Add colorize.

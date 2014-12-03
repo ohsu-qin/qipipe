@@ -275,9 +275,10 @@ class StagingWorkflow(WorkflowBase):
         # Upload the compressed DICOM files to XNAT.
         # Since only one upload task can run at a time, this upload node is
         # a JoinNode that collects the iterated series DICOM files.
-        upload_dicom = pe.JoinNode(
-            XNATUpload(project=project(), resource='DICOM'),
-            joinsource='iter_dicom', joinfield='in_files', name='upload_dicom')
+        upload_dicom_xfc = XNATUpload(project=project(), resource='DICOM',
+                                      skip_existing=True)
+        upload_dicom = pe.JoinNode(upload_dicom_xfc, joinsource='iter_dicom',
+                                   joinfield='in_files', name='upload_dicom')
         workflow.connect(input_spec, 'subject', upload_dicom, 'subject')
         workflow.connect(input_spec, 'session', upload_dicom, 'session')
         workflow.connect(iter_series, 'series', upload_dicom, 'scan')
@@ -303,16 +304,19 @@ class StagingWorkflow(WorkflowBase):
         # This gate task serializes upload to prevent potential XNAT access
         # conflicts.
         #
-        # Update: The staging pipeline still fails. Work-around is to patch
-        # XNAT by hand.
+        # Update: The staging pipeline still fails unpredictably. The
+        # work-around is to patch XNAT by hand.
+        #
         # TODO - isolate and fix.
+        #
         upload_gate = pe.Node(Gate(fields=['out_file', 'xnat_files']),
                               name='upload_gate')
         workflow.connect(upload_dicom, 'xnat_files', upload_gate, 'xnat_files')
         workflow.connect(stack, 'out_file', upload_gate, 'out_file')
 
         # Upload the 3D NiFTI stack files to XNAT.
-        upload_3d = pe.Node(XNATUpload(project=project()), name='upload_3d')
+        upload_3d_xfc = XNATUpload(project=project(), skip_existing=True)
+        upload_3d = pe.Node(upload_3d_xfc, name='upload_3d')
         workflow.connect(input_spec, 'subject', upload_3d, 'subject')
         workflow.connect(input_spec, 'session', upload_3d, 'session')
         workflow.connect(iter_series, 'series', upload_3d, 'scan')

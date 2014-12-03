@@ -19,11 +19,14 @@ class XNATUploadInputSpec(BaseInterfaceInputSpec):
 
     assessor = traits.Str(desc='The XNAT assessor name')
 
-    overwrite = traits.Bool(
-        desc='Flag indicating whether to replace an existing file')
+    force = traits.Bool(desc='Flag indicating whether to replace an existing'
+                             ' XNAT file')
 
-    in_files = InputMultiPath(
-        File(exists=True), mandatory=True, desc='The files to upload')
+    skip_existing = traits.Bool(desc='Flag indicating whether to skip upload'
+                                     ' to an existing target XNAT file')
+
+    in_files = InputMultiPath(File(exists=True), mandatory=True,
+                              desc='The files to upload')
 
 
 class XNATUploadOutputSpec(TraitedSpec):
@@ -48,8 +51,10 @@ class XNATUpload(BaseInterface):
         opts = {}
         if self.inputs.resource:
             opts['resource'] = self.inputs.resource
-        if self.inputs.overwrite:
-            opts['overwrite'] = True
+        if self.inputs.force:
+            opts['force'] = True
+        if self.inputs.skip_existing:
+            opts['skip_existing'] = True
 
         # The resource parent.
         if self.inputs.scan:

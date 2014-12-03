@@ -70,7 +70,7 @@ def _parse_arguments():
     parser.add_argument('--dry-run', action='store_true',
                         help='prepare but do not run the pipeline')
     
-    # The scan filter option.
+    # The resume option.
     parser.add_argument('--resume', action='store_true',
                         help='resume staging on existing sessions (default false)')
     

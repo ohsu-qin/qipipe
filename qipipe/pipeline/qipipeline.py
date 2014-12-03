@@ -42,6 +42,8 @@ def run(*inputs, **opts):
         and :class:`QIPipelineWorkflow` initializer options,
         as well as the following keyword options:
     :keyword collection: the AIRC collection name
+    :keyword resume: flag indicating whether to resume processing on
+        existing sessions (default False)
     """
     # Tailor the actions.
     actions = opts.get('actions', _default_actions(**opts))
@@ -80,6 +82,8 @@ def _run_with_dicom_input(*inputs, **opts):
     """
     collection = opts.pop('collection', None)
     dest = opts.get('dest', None)
+    if opts.pop('resume', None):
+        opts['skip_existing'] = False
     # Run the workflow on each session and scan type.
     subjects = set()
     for sbj, sess, ser_scan_type_dcm_dict in iter_stage(collection, *inputs,

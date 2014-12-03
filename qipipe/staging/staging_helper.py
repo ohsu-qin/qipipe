@@ -29,8 +29,8 @@ def iter_stage(collection, *inputs, **opts):
     :param opts: the following keyword option:
     :keyword dest: the TCIA staging destination directory (default is
         the current working directory)
-    :keyword resume: flag indicating whether to
-        forego checking for existing sessions (default False)
+    :keyword skip_existing: flag indicating whether to ignore existing
+        sessions (default True)
     :yield: stage the DICOM files
     :yieldparam subject: the subject name
     :yieldparam session: the session name
@@ -150,15 +150,15 @@ def _collect_visits(collection, *inputs, **opts):
     :param inputs: the AIRC source subject directories
     :param opts: the :class:`VisitIterator` initializer options,
         as well as the following keyword option:
-    :keyword resume: flag indicating whether to
-        forego checking for existing sessions (default False)
+    :keyword skip_existing: flag indicating whether to ignore existing
+        sessions (default True)
     :return: the *{subject: {session: {series: [dicom files]}}}*
         dictionary
     """
-    if opts.pop('resume', False):
-        visits = list(_iter_visits(collection, *inputs, **opts))
-    else:
+    if opts.pop('skip_existing', True):
         visits = _detect_new_visits(collection, *inputs, **opts)
+    else:
+        visits = list(_iter_visits(collection, *inputs, **opts))
 
     # Group the DICOM files by series.
     return _group_sessions_by_series(*visits)
