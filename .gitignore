@@ -15,5 +15,6 @@ ext
 *.pyc
 *.tar*
 **log
+provenance.*
 /test/fixtures/modeling
 /test/results
