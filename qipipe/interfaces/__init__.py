@@ -22,6 +22,7 @@ from .move import Move
 from .mri_volcluster import MriVolCluster
 from .unpack import Unpack
 from .uncompress import Uncompress
+from .xnat_copy import XNATCopy
 from .xnat_download import XNATDownload
 from .xnat_upload import XNATUpload
 from .xnat_find import XNATFind
