@@ -20,9 +20,9 @@ def collection_with_name(name):
 def _create_collections():
     """Creates the pre-defined AIRC collections."""
 
-    # The AIRC DCE scan DICOM file are in the concat directory.
+    # The AIRC T1 scan DICOM files are in the concat directory.
     # The AIRC T2 scan DICOM files are in the sorted subdirectories. 
-    dcm_pat_dict = dict(dce='*concat*/*', t2='*sorted*/*/*')
+    dcm_pat_dict = dict(t1='*concat*/*', t2='*sorted*/*/*')
 
     return dict(
         Breast=AIRCCollection(
