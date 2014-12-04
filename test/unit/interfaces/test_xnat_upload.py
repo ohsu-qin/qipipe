@@ -1,20 +1,27 @@
-import os, glob, re, shutil
+import os
+import shutil
 from nose.tools import (assert_equal, assert_in, assert_true)
 from qipipe.interfaces import XNATUpload
 from qiutil import xnat_helper
-from test import project
+from test import (project, ROOT)
 from test.helpers.logging_helper import logger
 from test.helpers.xnat_test_helper import generate_unique_name
-from test.unit.helpers.test_xnat_helper import (FIXTURES, RESULTS)
 
 SUBJECT = generate_unique_name(__name__)
 """The test subject name."""
 
-SESSION = 'MR1'
+SESSION = 'Session01'
 """The test session name."""
 
-SCAN = 1
+SCAN = 9
 """The test scan number."""
+
+FIXTURES = os.path.join(ROOT, 'fixtures', 'interfaces', 'Sarcoma001',
+                        'Session01', 'scan', '9', 'resource', 'NIFTI')
+"""The test fixtures directory."""
+
+RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'xnat')
+"""The test results directory."""
 
 SCAN_FIXTURE = os.path.join(FIXTURES, 'dummy_scan.nii.gz')
 """The scan test fixture."""
@@ -85,8 +92,8 @@ class TestXNATUpload(object):
         with xnat_helper.connection() as xnat:
             exp_obj = xnat.get_experiment(project(), SUBJECT, SESSION)
             assert_true(exp_obj.exists(),
-                "Upload did not create the %s %s experiment" %
-                (SUBJECT, SESSION))
+                        "Upload did not create the %s %s experiment" %
+                        (SUBJECT, SESSION))
             rsc_obj = exp_obj.resource(REGISTRATION)
             assert_true(rsc_obj.exists(),
                         "XNATUpload did not create the %s %s resource: %s" %
