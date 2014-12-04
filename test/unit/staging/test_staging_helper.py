@@ -3,7 +3,7 @@ import glob
 from nose.tools import assert_equal
 from qipipe.staging.staging_helper import *
 from qiutil.logging_helper import logger
-from test import ROOT
+from ... import ROOT
 
 # The test fixture.
 FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'sarcoma', 'Subj_1')

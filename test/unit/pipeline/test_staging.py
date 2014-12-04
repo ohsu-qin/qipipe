@@ -4,8 +4,8 @@ from nose.tools import assert_true
 from qipipe.pipeline import staging
 from qiutil import xnat_helper
 from qipipe.staging.staging_helper import (get_subjects, iter_stage)
-from test import (project, ROOT)
-from test.helpers.logging_helper import logger
+from ... import (project, ROOT)
+from ...helpers.logging_helper import logger
 
 
 # FIXME - test module resolves to qiutil/test!?!

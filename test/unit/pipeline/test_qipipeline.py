@@ -8,11 +8,11 @@ from qiutil import xnat_helper
 from qipipe.staging import airc_collection as airc
 from qipipe.staging.staging_helper import get_subjects
 from qiutil.ast_config import read_config
-from test import (project, ROOT)
-from test.helpers.logging_helper import logger
-from test.unit.pipeline.test_mask import MASK_CONF
-from test.unit.pipeline.test_registration import REG_CONF
-from test.unit.pipeline.test_modeling import MODELING_CONF
+from ... import (project, ROOT)
+from ...helpers.logging_helper import logger
+from ...unit.pipeline.test_mask import MASK_CONF
+from ...unit.pipeline.test_registration import REG_CONF
+from ...unit.pipeline.test_modeling import MODELING_CONF
 
 REG_CONF = os.path.join(ROOT, 'conf', 'registration.cfg')
 """The test registration configuration."""

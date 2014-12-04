@@ -3,9 +3,9 @@ import re
 import shutil
 from nose.tools import (assert_equal, assert_true)
 from qipipe.interfaces import MapCTP
-from test import ROOT
-from test.helpers.logging_helper import logger
-from test.unit.staging.test_map_ctp import (COLLECTION, SUBJECTS, PAT)
+from ... import ROOT
+from ...helpers.logging_helper import logger
+from ...unit.staging.test_map_ctp import (COLLECTION, SUBJECTS, PAT)
 
 RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'map_ctp')
 """The test results directory."""

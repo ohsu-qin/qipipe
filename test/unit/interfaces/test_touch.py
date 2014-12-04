@@ -2,8 +2,8 @@ import os
 import shutil
 from nose.tools import (assert_equal, assert_true)
 from qipipe.interfaces.touch import Touch
-from test import ROOT
-from test.helpers.logging_helper import logger
+from ... import ROOT
+from ...helpers.logging_helper import logger
 
 RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'touch')
 """The test results directory."""

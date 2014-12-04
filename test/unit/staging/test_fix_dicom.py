@@ -5,7 +5,7 @@ from nose.tools import assert_equal
 
 from qipipe.staging.fix_dicom import fix_dicom_headers
 from qiutil.dicom_helper import iter_dicom
-from test import ROOT
+from ... import ROOT
 
 # The test fixture.
 FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'sarcoma', 'Subj_1')

@@ -2,10 +2,10 @@ import os
 import re
 from nose.tools import assert_equal
 from nipype.interfaces.base import Undefined
-from test.helpers.logging_helper import logger
+from ...helpers.logging_helper import logger
 from qipipe.interfaces.lookup import Lookup
-from test import ROOT
-from test.helpers.logging_helper import logger
+from ... import ROOT
+from ...helpers.logging_helper import logger
 
 RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'lookup')
 """The test results directory."""

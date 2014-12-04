@@ -3,8 +3,8 @@ import re
 from nose.tools import assert_equal
 from nipype.interfaces.base import Undefined
 from qipipe.interfaces.unpack import Unpack
-from test import ROOT
-from test.helpers.logging_helper import logger
+from ... import ROOT
+from ...helpers.logging_helper import logger
 
 RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'unpack')
 """The test results directory."""

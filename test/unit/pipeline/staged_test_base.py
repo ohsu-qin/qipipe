@@ -3,7 +3,7 @@ import glob
 import shutil
 from collections import defaultdict
 from qiutil import xnat_helper
-from test import project
+from ... import project
 
 
 class StagedTestBase(object):

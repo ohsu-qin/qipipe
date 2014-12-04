@@ -2,8 +2,8 @@ import os
 import shutil
 from nose.tools import (assert_equal, assert_false, assert_true)
 from qipipe.interfaces.move import Move
-from test import ROOT
-from test.helpers.logging_helper import logger
+from ... import ROOT
+from ...helpers.logging_helper import logger
 
 FIXTURE = os.path.join(ROOT, 'fixtures', 'interfaces', 'move', 'small.txt')
 """The test fixture file."""

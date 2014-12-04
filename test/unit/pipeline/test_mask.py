@@ -5,9 +5,9 @@ import shutil
 from nose.tools import (assert_equal, assert_is_not_none)
 import nipype.pipeline.engine as pe
 from qipipe.pipeline import mask
-from test import (project, ROOT)
-from test.helpers.logging_helper import logger
-from test.unit.pipeline.staged_test_base import StagedTestBase
+from ... import (project, ROOT)
+from ...helpers.logging_helper import logger
+from ...unit.pipeline.staged_test_base import StagedTestBase
 
 FIXTURES = os.path.join(ROOT, 'fixtures', 'registration')
 """The test fixtures directory."""
