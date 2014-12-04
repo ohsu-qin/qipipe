@@ -5,7 +5,7 @@ from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import IdentityInterface
 from nipype.interfaces.dcmstack import DcmStack
 from .. import project
-from ..interfaces import (Gate, FixDicom, Compress, XNATUpload)
+from ..interfaces import (Gate, FixDicom, Compress, XNATCopy)
 from ..staging.staging_error import StagingError
 from qiutil import xnat_helper
 from .workflow_base import WorkflowBase
@@ -243,13 +243,19 @@ class StagingWorkflow(WorkflowBase):
         self._logger.debug("The %s workflow input node is %s with fields %s" %
                          (workflow.name, input_spec.name, in_fields))
 
+        # Create the session, if necessary.
+        find_session = pe.Node(XNATFind(create=True))
+        workflow.connect(input_spec, 'subject', find_session, 'subject')
+        workflow.connect(input_spec, 'session', find_session, 'session')
+
+        # The series iterator.
         iter_series_fields = ['series', 'dest']
         iter_series = pe.Node(IdentityInterface(fields=iter_series_fields),
                               name='iter_series')
         self._logger.debug("The %s workflow series iterable node is %s with"
                            " fields %s" % (workflow.name, iter_series.name,
                                            iter_series_fields))
-
+        
         # The DICOM file iterator.
         iter_dicom_fields = ['series', 'dicom_file']
         iter_dicom = pe.Node(IdentityInterface(fields=iter_dicom_fields),
@@ -262,27 +268,38 @@ class StagingWorkflow(WorkflowBase):
         workflow.connect(iter_series, 'series', iter_dicom, 'series')
 
         # Fix the AIRC DICOM tags.
-        fix_dicom = pe.Node(FixDicom(scan_type=scan_type), name='fix_dicom')
+        fix_dicom = pe.Node(FixDicom(), name='fix_dicom')
         workflow.connect(input_spec, 'collection', fix_dicom, 'collection')
         workflow.connect(input_spec, 'subject', fix_dicom, 'subject')
         workflow.connect(iter_dicom, 'dicom_file', fix_dicom, 'in_file')
+        
+        # If the scan type is T1, then compress the corrected DICOM files.
+        # T2 scan DICOM files omit DICOM compress and upload.
+        if scan_type == 't1':
+            compress_dicom = pe.Node(Compress(), name='compress_dicom')
+            workflow.connect(fix_dicom, 'out_file', compress_dicom, 'in_file')
+            workflow.connect(iter_series, 'dest', compress_dicom, 'dest')
 
-        # Compress the corrected DICOM file.
-        compress_dicom = pe.Node(Compress(), name='compress_dicom')
-        workflow.connect(fix_dicom, 'out_file', compress_dicom, 'in_file')
-        workflow.connect(iter_series, 'dest', compress_dicom, 'dest')
+            # Force the DICOM upload to follow session create.
+            # Since only one upload task can run at a time for a given series,
+            # this upload gate node is a JoinNode that collects the iterated
+            # scan DICOM files.
+            upload_dicom_gate_xfc = Gate(fields=['xnat_id', 'scan', 'files'])
+            upload_dicom_gate = pe.JoinNode(upload_dicom_gate_xfc,
+                                            joinsource='iter_dicom',
+                                            joinfield='files',
+                                            name='upload_dicom_gate')
+            workflow.connect(find_session, 'xnat_id', upload_dicom_gate, 'xnat_id')
+            workflow.connect(iter_series, 'series', upload_dicom_gate, 'scan')
+            workflow.connect(compress_dicom, 'out_file', upload_dicom_gate, 'files')
 
-        # Upload the compressed DICOM files to XNAT.
-        # Since only one upload task can run at a time, this upload node is
-        # a JoinNode that collects the iterated series DICOM files.
-        upload_dicom_xfc = XNATUpload(project=project(), resource='DICOM',
-                                      skip_existing=True)
-        upload_dicom = pe.JoinNode(upload_dicom_xfc, joinsource='iter_dicom',
-                                   joinfield='in_files', name='upload_dicom')
-        workflow.connect(input_spec, 'subject', upload_dicom, 'subject')
-        workflow.connect(input_spec, 'session', upload_dicom, 'session')
-        workflow.connect(iter_series, 'series', upload_dicom, 'scan')
-        workflow.connect(compress_dicom, 'out_file', upload_dicom, 'in_files')
+            upload_dicom_xfc = XNATCopy(project=project(), resource='DICOM',
+                                          skip_existing=True)
+            upload_dicom = pe.Node(upload_dicom_xfc, name='upload_dicom')
+            workflow.connect(input_spec, 'subject', upload_dicom, 'subject')
+            workflow.connect(input_spec, 'session', upload_dicom, 'session')
+            workflow.connect(upload_dicom_gate, 'scan', upload_dicom, 'scan')
+            workflow.connect(upload_dicom_gate, 'files', upload_dicom, 'in_files')
 
         # Stack the scan into a 3D NiFTI file.
         suffix = "_%s" % scan_type
@@ -290,37 +307,43 @@ class StagingWorkflow(WorkflowBase):
                              out_format="series%(SeriesNumber)03d" + suffix)
         stack = pe.JoinNode(stack_xfc, joinsource='iter_dicom',
                             joinfield='dicom_files', name='stack')
+        
         workflow.connect(fix_dicom, 'out_file', stack, 'dicom_files')
 
-        # Force the 3D upload to follow DICOM upload.
-        # Note: XNAT fails app. 80% into the upload. It appears to be a
+        # Force the T1 3D upload to follow DICOM upload.
+        # Note: XNAT fails app. 80% into the T1 upload. It appears to be a
         # concurrency conflict, possibly arising from the following causes:
         # * the non-reentrant pyxnat's custom non-http2lib cache is corrupted
         # * an XNAT archive directory access race condition
+        #
         # However, the error cannot be isolated for the following reasons:
         # * the error is sporadic and unreproducible
         # * since nipype swallows non-nipype Python log messages, the upload
         #   and pyxnat log messages disappear
+        #
         # This gate task serializes upload to prevent potential XNAT access
         # conflicts.
         #
-        # Update: The staging pipeline still fails unpredictably. The
-        # work-around is to patch XNAT by hand.
-        #
         # TODO - isolate and fix.
         #
-        upload_gate = pe.Node(Gate(fields=['out_file', 'xnat_files']),
-                              name='upload_gate')
-        workflow.connect(upload_dicom, 'xnat_files', upload_gate, 'xnat_files')
-        workflow.connect(stack, 'out_file', upload_gate, 'out_file')
+        if scan_type == 't1':
+            workflow.connect(upload_dicom, 'xnat_files', upload_3d_gate, 'xnat_files')
+            upload_3d_gate_xfc = Gate(fields=['out_file', 'xnat_files'])
+            upload_3d_gate = pe.Node(upload_3d_gate_xfc, name='upload_3d_gate')
+            workflow.connect(stack, 'out_file', upload_3d_gate, 'out_file')
 
         # Upload the 3D NiFTI stack files to XNAT.
-        upload_3d_xfc = XNATUpload(project=project(), skip_existing=True)
+        upload_3d_xfc = XNATCopy(project=project(), resource='NIFTI',
+                                 skip_existing=True)
         upload_3d = pe.Node(upload_3d_xfc, name='upload_3d')
         workflow.connect(input_spec, 'subject', upload_3d, 'subject')
         workflow.connect(input_spec, 'session', upload_3d, 'session')
         workflow.connect(iter_series, 'series', upload_3d, 'scan')
-        workflow.connect(upload_gate, 'out_file', upload_3d, 'in_files')
+        # T1 upload is gated by DICOM upload.
+        if scan_type == 't1':
+            workflow.connect(upload_3d_gate, 'out_file', upload_3d, 'in_files')
+        else:
+            workflow.connect(stack, 'out_file', upload_3d, 'in_files')
 
         # The output is the 3D NiFTI stack file.
         output_spec = pe.Node(Gate(fields=['image', 'xnat_files']), name='output_spec')

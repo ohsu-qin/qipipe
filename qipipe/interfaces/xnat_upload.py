@@ -1,3 +1,5 @@
+## Deprecated - see XNATUpload comment. ##
+
 from nipype.interfaces.base import (
     traits, BaseInterfaceInputSpec, TraitedSpec,
     BaseInterface, InputMultiPath, File)
@@ -34,12 +36,22 @@ class XNATUploadOutputSpec(TraitedSpec):
 
 
 class XNATUpload(BaseInterface):
-
     """
     The ``XNATUpload`` Nipype interface wraps the
     :meth:`qiutil.xnat_helper.upload` method.
     
-    :Note: only one XNAT operation can run at a time.
+    :Note: This XNATUpload interface is deprecated due to the following
+    XNAT bug:
+
+    * XNAT or pyxnat concurrent file inserts sporadically fails
+      with error that the experiment already exists. Some files
+      are inserted, but insert fails unpredictably. The work-around
+      is to spawn a qicp executable, which seems to work.
+
+    The work-around is to use the XNATCopy interface instead.
+
+    TODO - retry this XNATUpload interface in late 2015 when pyxnat
+    hopefully matures.
     """
 
     input_spec = XNATUploadInputSpec
