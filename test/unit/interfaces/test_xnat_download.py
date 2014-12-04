@@ -9,8 +9,7 @@ from test import (project, ROOT)
 from test.helpers.logging_helper import logger
 from test.helpers.xnat_test_helper import generate_unique_name
 
-FIXTURE = os.path.join(
-    ROOT, 'fixtures', 'interfaces', 'xnat', 'Sarcoma001', 'Session01')
+FIXTURE = os.path.join(ROOT, 'fixtures', 'interfaces', 'xnat', 'Sarcoma001', 'Session01')
 """The test fixture directory."""
 
 RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'xnat')
@@ -39,12 +38,12 @@ class TestXNATDownload(object):
             sbj = xnat.interface.select('/project/QIN').subject(SUBJECT)
             # The test file objects.
             self._file_names = set()
-            for scan_dir in glob.glob(FIXTURE + '/Series*'):
+            for scan_dir in glob.glob(FIXTURE + '/scan/%d' % SCAN):
                     _, scan = os.path.split(scan_dir)
                     scan_obj = xnat.get_scan(project(), SUBJECT, SESSION,
                                              SCAN)
                     rsc_obj = scan_obj.resource('DICOM')
-                    for f in glob.glob(scan_dir + '/*.dcm.gz'):
+                    for f in glob.glob(scan_dir + '/resource/DICOM/*.dcm.gz'):
                         _, fname = os.path.split(f)
                         self._file_names.add(fname)
                         file_obj = rsc_obj.file(fname)
@@ -52,7 +51,7 @@ class TestXNATDownload(object):
                         file_obj.insert(f, experiments='xnat:MRSessionData',
                                         resource='DICOM')
                     rsc_obj = scan_obj.resource('NIFTI')
-                    for f in glob.glob(scan_dir + '/*.nii.gz'):
+                    for f in glob.glob(scan_dir + '/resource/NIFTI/*.nii.gz'):
                         _, fname = os.path.split(f)
                         self._file_names.add(fname)
                         file_obj = rsc_obj.file(fname)
