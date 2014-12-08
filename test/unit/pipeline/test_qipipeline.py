@@ -3,7 +3,6 @@ import shutil
 import distutils
 from nose.tools import (assert_equal, assert_is_not_none, assert_true)
 from qipipe.pipeline import qipipeline as qip
-from qiutil.dicom_helper import iter_dicom
 from qiutil import xnat_helper
 from qipipe.staging import airc_collection as airc
 from qipipe.staging.staging_helper import get_subjects
