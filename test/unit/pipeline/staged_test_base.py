@@ -70,7 +70,7 @@ class StagedTestBase(object):
             xnat_helper.delete_subjects(project(), *subjects)
             # Run the workflow.
             for sbj, sess_dict in input_dict.iteritems():
-                for sess, sess_opts in sess_dict.iteritems():
+                for sess, img_spec in sess_dict.iteritems():
                     sess_opts.update(opts)
                     result = self._run_workflow(fixture, sbj, sess, **sess_opts)
                     # Verify the result.
