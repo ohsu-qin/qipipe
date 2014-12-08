@@ -1,6 +1,6 @@
 import os
 import re
-from qiutil.dicom_helper import edit_dicom_headers
+from qiutil.dicom import meta
 from .sarcoma_config import sarcoma_location
 
 from qiutil.logging_helper import logger
@@ -56,7 +56,7 @@ def fix_dicom_headers(collection, subject, *dicom_files, **opts):
         dest = opts['dest']
     else:
         dest = os.getcwd()
-    edited = edit_dicom_headers(dest, *dicom_files, **tnv)
+    edited = meta.edit(dest, *dicom_files, **tnv)
 
     # Rename the edited files as necessary.
     out_files = []
