@@ -5,8 +5,7 @@ from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import IdentityInterface
 from nipype.interfaces.dcmstack import DcmStack
 from .. import project
-from ..interfaces import (Gate, FixDicom, Compress, XNATCopy)
-from ..staging.staging_error import StagingError
+from ..interfaces import (Gate, FixDicom, Compress, XNATFind, XNATCopy)
 from qiutil import xnat_helper
 from .workflow_base import WorkflowBase
 from qiutil.logging_helper import logger
@@ -14,7 +13,7 @@ from ..staging import staging_helper
 
 
 def set_workflow_inputs(exec_wf, collection, subject, session,
-                        ser_dcm_dict, dest=None):
+                        scan_dict, dest=None):
     """
     Sets the given execution workflow inputs.
     The execution workflow must have the same input and iterable
@@ -23,14 +22,14 @@ def set_workflow_inputs(exec_wf, collection, subject, session,
     :param exec_wf: the workflow to execute
     :param subject: the subject name
     :param session: the session name
-    :param ser_dcm_dict:  the :meth:`StagingWorkflow.set_inputs` input
+    :param scan_dict:  the :meth:`StagingWorkflow.set_inputs` input
     :param dest: the TCIA staging destination directory (default is
         the current working directory)
     """
     # Make the staging area.
-    ser_list = ser_dcm_dict.keys()
+    ser_list = scan_dict.keys()
     ser_dests = _create_staging_area(subject, session,
-                                     ser_dcm_dict.iterkeys(), dest)
+                                     scan_dict.iterkeys(), dest)
     # Transpose the [(series, directory), ...] tuples into iterable lists.
     sers, dests = map(list, zip(*ser_dests))
     ser_iterables = dict(series=sers, dest=dests).items()
@@ -48,7 +47,7 @@ def set_workflow_inputs(exec_wf, collection, subject, session,
 
     iter_dicom = exec_wf.get_node('iter_dicom')
     iter_dicom.itersource = ('iter_series', 'series')
-    iter_dicom.iterables = ('dicom_file', ser_dcm_dict)
+    iter_dicom.iterables = ('dicom_file', scan_dict)
 
 
 def _create_staging_area(subject, session, series_list, dest=None):
@@ -200,7 +199,7 @@ class StagingWorkflow(WorkflowBase):
         :class:`qipipe.pipeline.staging.StagingWorkflow`.
         """
 
-    def set_inputs(self, collection, subject, session, ser_dcm_dict,
+    def set_inputs(self, collection, subject, session, scan_dict,
                    dest=None):
         """
         Sets the staging workflow inputs.
@@ -208,13 +207,13 @@ class StagingWorkflow(WorkflowBase):
         :param collection: the collection name
         :param subject: the subject name
         :param session: the session name
-        :param ser_dcm_dict: the *{series: [dicom files]}*
+        :param scan_dict: the *{series: [dicom files]}*
             dictionary
         :param dest: the TCIA staging destination directory (default is
             the current working directory)
         """
         set_workflow_inputs(self.workflow, collection, subject, session,
-                            ser_dcm_dict, dest)
+                            scan_dict, dest)
 
     def run(self):
         """Executes the staging workflow."""
@@ -244,7 +243,8 @@ class StagingWorkflow(WorkflowBase):
                          (workflow.name, input_spec.name, in_fields))
 
         # Create the session, if necessary.
-        find_session = pe.Node(XNATFind(create=True))
+        find_session_xfc = XNATFind(project=project(), create=True)
+        find_session = pe.Node(find_session_xfc, name='find_session')
         workflow.connect(input_spec, 'subject', find_session, 'subject')
         workflow.connect(input_spec, 'session', find_session, 'session')
 
@@ -327,9 +327,9 @@ class StagingWorkflow(WorkflowBase):
         # TODO - isolate and fix.
         #
         if scan_type == 't1':
-            workflow.connect(upload_dicom, 'xnat_files', upload_3d_gate, 'xnat_files')
             upload_3d_gate_xfc = Gate(fields=['out_file', 'xnat_files'])
             upload_3d_gate = pe.Node(upload_3d_gate_xfc, name='upload_3d_gate')
+            workflow.connect(upload_dicom, 'xnat_files', upload_3d_gate, 'xnat_files')
             workflow.connect(stack, 'out_file', upload_3d_gate, 'out_file')
 
         # Upload the 3D NiFTI stack files to XNAT.
