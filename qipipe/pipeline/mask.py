@@ -8,12 +8,11 @@ from ..interfaces import (XNATUpload, MriVolCluster)
 from .workflow_base import WorkflowBase
 from qiutil.logging_helper import logger
 
-
 MASK = 'mask'
-"""The XNAT mask reconstruction name."""
+"""The XNAT mask resource name."""
 
 TIME_SERIES = 'scan_ts'
-"""The XNAT scan time series reconstruction name."""
+"""The XNAT scan time series resource name."""
 
 
 def run(input_dict, **opts):
@@ -23,7 +22,7 @@ def run(input_dict, **opts):
     
     :param input_dict: the :meth:`MaskWorkflow.run` inputs
     :param opts: the :class:`MaskWorkflow` initialization parameters
-    :return: the XNAT mask reconstruction name
+    :return: the XNAT mask resource name
     """
     return MaskWorkflow(**opts).run(input_dict)
 
@@ -78,7 +77,7 @@ class MaskWorkflow(WorkflowBase):
         (subject, session) inputs.
         
         :param input_dict: the input *{subject: {session: time series}}* dictionary
-        :return: the mask XNAT reconstruction name
+        :return: the mask XNAT resource name
         """
         sbj_cnt = len(input_dict)
         sess_cnt = sum(map(len, input_dict.values()))
@@ -98,7 +97,7 @@ class MaskWorkflow(WorkflowBase):
         # Execute the workflow.
         self._run_workflow(self.workflow)
         
-        # Return the mask XNAT reconstruction name.
+        # Return the mask XNAT resource name.
         return MASK
     
     def _mask_session(self, subject, session, time_series):
