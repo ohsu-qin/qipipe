@@ -24,7 +24,6 @@ RESOURCE = generate_unique_name(__name__)
 
 
 class TestRegistrationWorkflow(StagedTestBase):
-
     """
     Registration workflow unit tests.
 
@@ -79,7 +78,7 @@ class TestRegistrationWorkflow(StagedTestBase):
         assert_is_not_none(rsc_obj,
                            "The %s %s %s XNAT registration resource object was"
                            " not created" % (subject, session, RESOURCE))
-        
+
         # Verify that the registration result is accurate.
         dest = os.path.join(RESULTS, subject, session)
         split = (os.path.split(f) for f in result)
