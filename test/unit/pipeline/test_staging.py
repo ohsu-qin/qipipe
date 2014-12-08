@@ -22,7 +22,6 @@ RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'staging')
 
 
 class TestStagingWorkflow(object):
-
     """Staging workflow unit tests."""
 
     def setUp(self):
@@ -66,29 +65,31 @@ class TestStagingWorkflow(object):
         # The test source directories.
         inputs = sbj_dir_dict.values()
 
-        stg_wf = staging.StagingWorkflow('t1', base_dir=work)
         with xnat_helper.connection() as xnat:
             # Delete any existing test subjects.
             xnat_helper.delete_subjects(project(), *subjects)
             # Run the workflow on each session fixture.
-            for sbj, sess, ser_dcm_dict in iter_stage(collection, *inputs,
+            for sbj, sess, scan_type_dict in iter_stage(collection, *inputs,
                                                         dest=dest):
-                stg_wf.set_inputs(collection, sbj, sess, ser_dcm_dict,
-                                  dest=dest)
-                stg_wf.run()
-                
-                # Verify the result.
-                sess_obj = xnat.get_session(project(), sbj, sess)
-                assert_true(sess_obj.exists(),
-                            "The %s %s session was not created in XNAT" %
-                            (sbj, sess))
-                sess_dest = os.path.join(dest, sbj, sess)
-                assert_true(os.path.exists(sess_dest), "The staging area"
-                            " was not created: %s" % sess_dest)
-                for scan in ser_dcm_dict.iterkeys():
-                    scan_obj = xnat.get_scan(project(), sbj, sess, scan)
-                    assert_true(scan_obj.exists(), "The %s %s scan %s was"
-                                " not created in XNAT" % (sbj, sess, scan))
+                for scan_type, scan_dict in scan_type_dict.iteritems():
+                    work_dir = os.path.join(work, scan_type)
+                    stg_wf = staging.StagingWorkflow(scan_type,
+                                                     base_dir=work_dir)
+                    stg_wf.set_inputs(collection, sbj, sess, scan_dict,
+                                      dest=dest)
+                    stg_wf.run()
+                    # Verify the result.
+                    sess_obj = xnat.get_session(project(), sbj, sess)
+                    assert_true(sess_obj.exists(),
+                                "The %s %s session was not created in XNAT" %
+                                (sbj, sess))
+                    sess_dest = os.path.join(dest, sbj, sess)
+                    assert_true(os.path.exists(sess_dest), "The staging area"
+                                " was not created: %s" % sess_dest)
+                    for scan, dcm_files in scan_dict.iteritems():
+                        scan_obj = xnat.get_scan(project(), sbj, sess, scan)
+                        assert_true(scan_obj.exists(), "The %s %s scan %s was"
+                                    " not created in XNAT" % (sbj, sess, scan))
 
             # Delete the test subjects.
             xnat_helper.delete_subjects(project(), *subjects)
