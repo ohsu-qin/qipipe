@@ -19,7 +19,7 @@ SCAN = 9
 FIXTURE = os.path.join(ROOT, 'fixtures', 'interfaces', 'xnat', 'Sarcoma001',
                       'Session01', 'scans', '9', 'resource', 'NIFTI',
                       'series09_t1.nii.gz')
-"""The test fixtures directory."""
+"""The test fixture file."""
 
 
 RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'xnat')
@@ -127,21 +127,21 @@ class TestXNATCopy(object):
                                " analysis %s..." % (SUBJECT, SESSION, ANALYSIS))
         # Upload the file.
         upload = XNATCopy(project=project(), subject=SUBJECT, session=SESSION,
-                          resource=ANALYSIS, in_files=FIXTURE)
+                          assessor=ANALYSIS, resource='params', in_files=FIXTURE)
         result = upload.run()
         
         # Verify the result.
         with xnat_helper.connection() as xnat:
             exp_obj = xnat.get_experiment(project(), SUBJECT, SESSION)
             assert_true(exp_obj.exists(),
-                        "Upload did not create the %s %s experiment" %
+                        "XNATCopy did not create the %s %s experiment" %
                         (SUBJECT, SESSION))
-            anl_obj = exp_obj.resource(ANALYSIS)
+            anl_obj = xnat.get_assessor(project(), SUBJECT, SESSION, ANALYSIS)
             assert_true(anl_obj.exists(),
-                        "Upload did not create the %s %s analysis: %s" % 
+                        "XNATCopy did not create the %s %s analysis: %s" %
                         (SUBJECT, SESSION, ANALYSIS))
             _, fname = os.path.split(FIXTURE)
-            file_obj = anl_obj.file(fname)
+            file_obj = anl_obj.out_resource('params').file(fname)
             assert_true(file_obj.exists(),
                         "XNATCopy did not create the %s %s %s file: %s" %
                         (SUBJECT, SESSION, ANALYSIS, fname))
