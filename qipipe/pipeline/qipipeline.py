@@ -86,15 +86,15 @@ def _run_with_dicom_input(*inputs, **opts):
         opts['skip_existing'] = False
     # Run the workflow on each session and scan type.
     subjects = set()
-    for sbj, sess, ser_scan_type_dcm_dict in iter_stage(collection, *inputs,
+    for sbj, sess, scan_type_dict in iter_stage(collection, *inputs,
                                                         **opts):
         subjects.add(sbj)
         
         # Transform the {series: {scan type: [DICOM files]}} dictionary
         # into a {scan type: {series: [DICOM files]}} dictionary.
         scan_type_ser_dcm_dicts = {}
-        for series, scan_type_dcm_dict in ser_scan_type_dcm_dict.iteritems():
-            for scan_type, dcm_iter in scan_type_dcm_dict.iteritems():
+        for scan_type, series_dict in scan_type_dict.iteritems():
+            for scan_type, dcm_iter in scan_type_dict.iteritems():
                 # The scan type {series: [DICOM files]} dictionary.
                 ser_dcm_dict = scan_type_ser_dcm_dicts.get(scan_type, None)
                 if not ser_dcm_dict:
