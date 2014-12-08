@@ -14,24 +14,29 @@ class XNATCopyInputSpec(CommandLineInputSpec):
     * the destination directory, for a download
     """
 
-    project = traits.Str(argstr='--project %s', desc='The XNAT project id')
+    project = traits.Str(argstr='--project %s',
+                         desc='The XNAT project id')
 
     force = traits.Bool(argstr='--force',
                         desc='Flag indicating whether to replace an existing'
                              ' XNAT file')
 
-    skip_existing = traits.Bool(argstr='--skip_existing',
+    skip_existing = traits.Bool(argstr='--skip-existing',
                                 desc='Flag indicating whether to skip upload'
                                      ' to an existing target XNAT file')
 
     # The input files to upload precede the XNAT path.
-    in_files = InputMultiPath(File(exists=True), argstr='%s',
+    # The input file arguments follow the options and precede the target
+    # XNAT path.
+    in_files = InputMultiPath(File(exists=True), argstr='%s', position=-3,
                               desc='The files to upload')
 
     subject = traits.Str(mandatory=True, desc='The XNAT subject name')
 
     # The XNAT path masquerades as the session.
-    session = traits.Str(mandatory=True, argstr='%s',
+    # The XNAT path argument follows the input files for an upload and precedes
+    # the destination for a download.
+    session = traits.Str(mandatory=True, argstr='%s', position=-2,
                          desc='The XNAT session name')
 
     resource = traits.Str(desc='The XNAT resource name (scan default is NIFTI)')
@@ -43,7 +48,8 @@ class XNATCopyInputSpec(CommandLineInputSpec):
     assessor = traits.Str(desc='The XNAT assessor name')
 
     # The download destination follows the XNAT path.
-    dest = traits.Str(argstr='%s', desc='The download directory')
+    # The destination goes at the end of the command line.
+    dest = traits.Str(argstr='%s', position=-1, desc='The download directory')
 
 
 class XNATCopyOutputSpec(TraitedSpec):
@@ -54,19 +60,19 @@ class XNATCopy(CommandLine):
     """
     The ``XNATCopy`` Nipype interface wraps the ``qicp`` command.
     """
-    
+
     input_spec = XNATCopyInputSpec
 
     output_spec = XNATCopyOutputSpec
 
     cmd = 'qicp'
-    
+
     def _format_path(self):
         """:return: the XNAT path prefixed by ``xnat:``"""
-        
+
         # The XNAT object hierarchy starts with the subject and session.
         path = [self.inputs.subject, self.inputs.session]
-        
+
         # The resource parent container.
         if isdefined(self.inputs.scan):
             path.append('scan')
@@ -77,18 +83,18 @@ class XNATCopy(CommandLine):
         elif isdefined(self.inputs.assessor):
             path.append('assessor')
             path.append(self.inputs.assessor)
-        
+
         # The resource.
         if isdefined(self.inputs.resource):
             path.append('resource')
             path.append(self.inputs.resource)
-        
+
         # The path is terminated with 'files'.
         path.append('files')
-        
+
         # Make the path string prefixed by xnat:.
         return 'xnat:' + '/'.join(path)
-    
+
     def _format_arg(self, opt, spec, val):
         if opt == 'session':
             return self._format_path()
