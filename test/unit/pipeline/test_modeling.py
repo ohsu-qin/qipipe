@@ -25,12 +25,13 @@ class TestModelingWorkflow(StagedTestBase):
 
     """
     Modeling workflow unit tests.
-    This test exercises the modeling workflow on the QIN Breast and Sarcoma study
-    visits in the ``test/fixtures/pipeline/modeling`` test fixture directory.
+    This test exercises the modeling workflow on the QIN Breast and Sarcoma
+    study visits in the ``test/fixtures/pipeline/modeling`` test fixture
+    directory.
     
     Note:: a precondition for running this test is that the
-        ``test/fixtures/pipeline/modeling`` directory contains the series stack
-        test data in collection/subject/session format, e.g.::
+        ``test/fixtures/pipeline/modeling`` directory contains the series
+        stack test data in collection/subject/session format, e.g.::
     
             breast
                 Breast003
@@ -59,24 +60,25 @@ class TestModelingWorkflow(StagedTestBase):
         if modeling:
             self._test_breast()
         else:
-            logger(__name__).debug("Skipping modeling test since fastfit is unavailable."
+            logger(__name__).debug('Skipping modeling test since fastfit'
+                                   ' is unavailable.')
 
     def test_sarcoma(self):
         if modeling:
             self._test_sarcoma()
 
-    def _run_workflow(self, fixture, *inputs, **opts):
+    def _run_workflow(self, subject, session, *images, **opts):
         """
         Executes :meth:`qipipe.pipeline.modeling.run` on the input session scans.
         
-        :param fixture: the test fixture directory
-        :param inputs: the input scans
-        :param opts: the target workflow options
+        :param subject: the input subject
+        :param session: the input session
+        :param images: the input 3D NiFTI images to model
+        :param opts: the  workflow options
         :return: the :meth:`qipipe.pipeline.modeling.run` result
         """
-        logger(__name__).debug("Testing the modeling workflow on %s..." % fixture)
         # Run the workflow.
-        return modeling.run(*inputs, **opts)
+        return modeling.run(subject, session, *images, **opts)
 
     def _verify_result(self, xnat, subject, session, result):
         anl_obj = xnat.get_analysis(project(), sbj, sess, result)

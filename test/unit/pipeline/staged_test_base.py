@@ -3,6 +3,7 @@ import glob
 import shutil
 from collections import defaultdict
 from qiutil import xnat_helper
+from qiutil.collection_helper import nested_defaultdict
 from ... import project
 
 
@@ -61,18 +62,30 @@ class StagedTestBase(object):
         if 'base_dir' not in opts:
             opts['base_dir'] = os.path.join(self._results, 'work')
 
-        # The inputs.
+        # The {subject: session: {images: [files], mask: file}} inputs.
         input_dict = self._group_files(fixture)
         # The test subjects.
         subjects = input_dict.keys()
         with xnat_helper.connection() as xnat:
             # Delete the existing subjects.
             xnat_helper.delete_subjects(project(), *subjects)
-            # Run the workflow.
+            # Iterate over the sessions within subjects.
             for sbj, sess_dict in input_dict.iteritems():
-                for sess, img_spec in sess_dict.iteritems():
+                for sess, sess_opts in sess_dict.iteritems():
+                    # The input images.
+                    images = sess_opts.pop('images')
+                    # The session options now only includes at most the mask.
+                    # Add the general workflow options to the session options.
                     sess_opts.update(opts)
-                    result = self._run_workflow(fixture, sbj, sess, **sess_opts)
+                    # Run the workflow in the results work subdirectory.
+                    cwd = os.getcwd()
+                    work_dir = os.path.join(self._results, 'work')
+                    os.makedirs(work_dir)
+                    os.chdir(work_dir)
+                    try:
+                        result = self._run_workflow(sbj, sess, *images, **sess_opts)
+                    finally:
+                        os.chdir(cwd)
                     # Verify the result.
                     self._verify_result(xnat, sbj, sess, result)
             # Clean up.
@@ -88,32 +101,39 @@ class StagedTestBase(object):
             input *{subject: {session: ([images], mask)}}* dictionary
         """
         # The {subject: {session: [files]}} dictionary return value.
-        input_dict = defaultdict(dict)
+        input_dict = nested_defaultdict(dict, 1)
         # Group the files in each subject subdirectory.
         for sbj_dir in glob.glob(fixture + '/*'):
             _, sbj = os.path.split(sbj_dir)
+            self._logger.debug("Discovered test input subject %s in %s" %
+                               (sbj, sbj_dir))
             for sess_dir in glob.glob(sbj_dir + '/Session*'):
                 _, sess = os.path.split(sess_dir)
                 images = glob.glob(sess_dir + '/scans/*')
-                opts = dict(images=images)
+                if not images:
+                    raise ValueError("No images found for %s %s test input in %s"
+                                     (sbj, sess, sess_dir))
+                self._logger.debug("Discovered %d %s %s test input images in %s" %
+                                   (len(images), sbj, sess, sess_dir))
+                input_dict[sbj][sess]['images'] = images
                 if self._use_mask:
                     masks = glob.glob(sess_dir + '/*mask.*')
                     if not masks:
                         raise ValueError("Mask not found in %s" % sess_dir)
                     if len(masks) > 1:
-                        raise ValueError("Too many masks found in %s" %
-                                         sess_dir)
-                    opts['mask'] = masks[0]
-                input_dict[sbj][sess] = opts
+                        raise ValueError("Too many masks found in %s" % sess_dir)
+                    mask = masks[0]
+                    self._logger.debug("Discovered %d %s %s test input mask %s" %
+                                       (len(images), sbj, sess, mask))
+                    input_dict[sbj][sess]['mask'] = mask
 
         return input_dict
 
-    def _run_workflow(self, fixture, subject, session, images, **opts):
+    def _run_workflow(self, subject, session, *images, **opts):
         """
         This method is implemented by subclasses to execute the subclass
         target workflow on the given inputs.
         
-        :param fixture: the test fixture directory
         :param subject: the input subject
         :param session: the input session
         :param images: the input image files

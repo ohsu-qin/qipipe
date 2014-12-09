@@ -80,6 +80,8 @@ class WorkflowBase(object):
 
         :param logger: the logger to use
         :param cfg_file: the optional workflow inputs configuration file
+        :keyword dry_run: flag indicating whether to prepare but not
+            run the pipeline
         """
         self._logger = logger
 

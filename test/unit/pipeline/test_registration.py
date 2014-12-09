@@ -29,11 +29,15 @@ class TestRegistrationWorkflow(StagedTestBase):
 
     This test exercises the registration workflow on three series of one visit
     in each of the Breast and Sarcoma studies.
+    
+    The :class:`qiprofile.pipeline.registration.RegistrationWorkflow` technique
+    is set to ``mock``, which mocks the registration process by simply copying
+    the input scan file to the output "realigned" file. 
     """
 
     def __init__(self):
-        super(TestRegistrationWorkflow, self).__init__(
-            logger(__name__), FIXTURES, RESULTS, use_mask=True)
+        super(TestRegistrationWorkflow, self).__init__(logger(__name__), FIXTURES,
+                                                       RESULTS, use_mask=True)
 
     def test_breast(self):
         super(TestRegistrationWorkflow, self)._test_breast(technique='mock')
@@ -41,29 +45,25 @@ class TestRegistrationWorkflow(StagedTestBase):
     def test_sarcoma(self):
         super(TestRegistrationWorkflow, self)._test_sarcoma(technique='mock')
 
-    def _run_workflow(self, fixture, subject, session, images, mask, **opts):
+    def _run_workflow(self, subject, session, *images, **opts):
         """
         Executes :meth:`qipipe.pipeline.registration.run` on the given input.
 
-        :param fixture: the test fixture directory
         :param subject: the input subject
         :param session: the input session
         :param images: the input image files
-        :param mask: the input mask file
-        :param opts: additional workflow options
+        :param opts: the :meth:`qipipe.pipeline.registration.run`
+            options
         :return: the :meth:`qipipe.pipeline.registration.run` result
         """
-        self._logger.debug("Testing the registration workflow on %s..." %
-                           fixture)
         # A reasonable bolus uptake index.
-        bolus_arv_ndx = min(3, len(images) / 3)
+        bolus_arrival_index = min(3, len(images) / 3)
         # The target location.
         dest = os.path.join(RESULTS, subject, session)
         # Execute the workflow.
-        return registration.run(subject, session, images,
-                                bolus_arrival_index=bolus_arv_ndx, mask=mask,
-                                cfg_file=REG_CONF, resource=RESOURCE, dest=dest,
-                                **opts)
+        return registration.run(subject, session, bolus_arrival_index,
+                                cfg_file=REG_CONF, resource=RESOURCE,
+                                dest=dest, *images, **opts)
 
     def _verify_result(self, xnat, subject, session, result):
         """

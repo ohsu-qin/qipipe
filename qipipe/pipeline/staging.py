@@ -20,62 +20,54 @@ def set_workflow_inputs(exec_wf, collection, subject, session,
     node names and fields as the :class:`StagingWorkflow` workflow.
 
     :param exec_wf: the workflow to execute
+    :param collection: the AIRC collection name
     :param subject: the subject name
     :param session: the session name
-    :param scan_dict:  the :meth:`StagingWorkflow.set_inputs` input
+    :param scan_dict: the *{scan number: [dicom files]}* dictionary
     :param dest: the TCIA staging destination directory (default is
         the current working directory)
     """
-    # Make the staging area.
-    ser_list = scan_dict.keys()
-    ser_dests = _create_staging_area(subject, session,
-                                     scan_dict.iterkeys(), dest)
-    # Transpose the [(series, directory), ...] tuples into iterable lists.
-    sers, dests = map(list, zip(*ser_dests))
-    ser_iterables = dict(series=sers, dest=dests).items()
+    # The input scans to stage.
+    scans = scan_dict.keys()
+    # Make a staging area subdirectory for each scan.
+    stg_dict = _create_staging_area(subject, session, scans, dest)
+    # The staging destination directories are pair-wise synchronized
+    # with the input scans.
+    dests = [stg_dict[scan] for scan in scans]
+    iterables = dict(series=scans, dest=dests).items()
 
-    # Set the inputs.
+    # Set the top-level inputs.
     input_spec = exec_wf.get_node('input_spec')
     input_spec.inputs.collection = collection
     input_spec.inputs.subject = subject
     input_spec.inputs.session = session
 
+    # Set the series iterator inputs.
     iter_series = exec_wf.get_node('iter_series')
-    iter_series.iterables = ser_iterables
+    iter_series.iterables = iterables
     # Iterate over the series and dest input fields in lock-step.
     iter_series.synchronize = True
 
+    # Set the DICOM file iterator inputs.
     iter_dicom = exec_wf.get_node('iter_dicom')
     iter_dicom.itersource = ('iter_series', 'series')
     iter_dicom.iterables = ('dicom_file', scan_dict)
 
 
-def _create_staging_area(subject, session, series_list, dest=None):
+def _create_staging_area(subject, session, scans, dest=None):
     """
     :param subject: the subject name
     :param session: the session name
-    :param ser_list: the input series list
+    :param scans: the input scans
     :param dest: the TCIA staging destination directory (default is
         the current working directory)
-    :return: the [*(series, directory)*, ...] list
+    :return: the {scan number: directory} dictionary
     """
     # The staging location.
-    if dest:
-        dest = os.path.abspath(dest)
-    else:
-        dest = os.getcwd()
-    # Collect the (series, destination) tuples.
-    ser_dest_tuples = []
-    for series in series_list:
-        # Make the staging directories. Do this before running the
-        # workflow in order to avoid a directory creation race
-        # condition for distributed nodes that write to the series
-        # staging directory.
-        ser_dest = _make_series_staging_directory(dest, subject, session,
-                                                  series)
-        ser_dest_tuples.append((series, ser_dest))
-
-    return ser_dest_tuples
+    dest = os.path.abspath(dest) if dest else os.getcwd()
+    # Collect the {scan: destination} dictionary.
+    return {scan: _make_series_staging_directory(dest, subject, session, scan)
+            for scan in scans}
 
 
 def _make_series_staging_directory(dest, subject, session, series):
@@ -207,8 +199,7 @@ class StagingWorkflow(WorkflowBase):
         :param collection: the collection name
         :param subject: the subject name
         :param session: the session name
-        :param scan_dict: the *{series: [dicom files]}*
-            dictionary
+        :param scan_dict: the *{series: [dicom files]}* dictionary
         :param dest: the TCIA staging destination directory (default is
             the current working directory)
         """

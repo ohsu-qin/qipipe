@@ -18,19 +18,20 @@ PK_PREFIX = 'pk'
 """The XNAT modeling resource object label prefix."""
 
 
-def run(input_dict, **opts):
+def run(subject, session, *images, **opts):
     """
     Creates a :class:`qipipe.pipeline.modeling.ModelingWorkflow` and
     runs it on the given inputs.
 
-    :param input_dict: the
-        :meth:`qipipe.pipeline.modeling.ModelingWorkflow.run` inputs
+    :param subject: the input subject
+    :param session: the input session
+    :param images: the input 3D NiFTI images
     :param opts: the :class:`qipipe.pipeline.modeling.ModelingWorkflow`
         initializer options
     :return: the :meth:`qipipe.pipeline.modeling.ModelingWorkflow.run`
         result
     """
-    return ModelingWorkflow(**opts).run(input_dict)
+    return ModelingWorkflow(**opts).run(subject, session, *images)
 
 
 class ModelingWorkflow(WorkflowBase):

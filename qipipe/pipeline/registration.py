@@ -20,7 +20,7 @@ REG_PREFIX = 'reg'
 """The XNAT registration resource name prefix."""
 
 
-def run(subject, session, images, bolus_arrival_index, mask, **opts):
+def run(subject, session, bolus_arrival_index, *images, **opts):
     """
     Runs the registration workflow on the given session scan images.
 
@@ -28,16 +28,17 @@ def run(subject, session, images, bolus_arrival_index, mask, **opts):
     :param session: the session name
     :param images: the input session scan images
     :param mask: the image mask
-    :param bolus_arrival_index: the bolus uptake series index
-    :param opts: the :class:`RegistrationWorkflow` initializer options
-        and :meth:`RegistrationWorkflow.run` *dest* option
+    :param bolus_arrival_index: the required bolus uptake series index
+    :param opts: the :class:`RegistrationWorkflow` initializer
+        and :meth:`RegistrationWorkflow.run` options
     :return: the realigned image file path array
     """
-    run_opts = {}
-    if 'dest' in opts:
-        run_opts['dest'] = opts.pop('dest', None)
+    # Extract the run options.
+    run_opts = {k: opts.pop(k) for k in ['dest', 'mask'] if k in opts}
+    # Make the workflow.
     reg_wf = RegistrationWorkflow(**opts)
-    return reg_wf.run(subject, session, images, bolus_arrival_index, mask,
+    # Run the workflow.
+    return reg_wf.run(subject, session, bolus_arrival_index, *images,
                       **run_opts)
 
 
@@ -91,7 +92,6 @@ class RegistrationWorkflow(WorkflowBase):
     
     - ``mock``: Test technique which copies each input scan image to
       the output image file
-      
 
     The optional workflow configuration file can contain overrides for the
     Nipype interface inputs in the following sections:
@@ -143,18 +143,18 @@ class RegistrationWorkflow(WorkflowBase):
         self.workflow = self._create_realignment_workflow(**opts)
         """The registration realignment workflow."""
 
-    def run(self, subject, session, images, bolus_arrival_index, mask,
-            dest=None):
+    def run(self, subject, session, bolus_arrival_index, *images, **opts):
         """
         Runs the registration workflow on the given session scan images.
 
         :param subject: the subject name
         :param session: the session name
+        :param bolus_arrival_index: the required bolus uptake series index
         :param images: the input session scan images
-        :param bolus_arrival_index: the bolus uptake series index
-        :param mask: the image mask file path
-        :param dest: the realigned image target directory
-            (default is the current directory)
+        :param opts: the following options:
+        :option mask: the image mask file path
+        :option dest: the realigned image target directory (default is the
+            current directory)
         :return: the realigned output file paths
         """
         if not images:
@@ -170,6 +170,7 @@ class RegistrationWorkflow(WorkflowBase):
         ref_0_image = pre_arrival[bolus_arrival_index]
 
         # The target location.
+        dest = opts.get('dest', None)
         if dest:
             dest = os.path.abspath(dest)
         else:
@@ -184,7 +185,9 @@ class RegistrationWorkflow(WorkflowBase):
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
         input_spec.inputs.pre_arrival = pre_arrival
-        input_spec.inputs.mask = mask
+        mask = opts.get('mask', None)
+        if mask:
+            input_spec.inputs.mask = mask
 
         # Iterate over the registration inputs.
         iter_reg_input = exec_wf.get_node('iter_reg_input')
@@ -225,11 +228,20 @@ class RegistrationWorkflow(WorkflowBase):
 
         The *reference* input is set by :meth:`connect_reference`.
 
-        :param bolus_arrival_index: the bolus uptake series index
-        :param ref_0_image: the initial fixed reference image
-        :param dest: the target realigned image directory
+        :param bolus_arrival_index: the required bolus uptake series index
+        :param ref_0_image: the required initial fixed reference image
+        :param dest: the required target realigned image directory
         :return: the execution workflow
         """
+        if bolus_arrival_index == None:
+            raise ValueError('Registration workflow is missing the bolus' +
+                             ' arrival index')
+        if not ref_0_image:
+            raise ValueError('Registration workflow is missing the initial' +
+                             ' fixed reference image')
+        if not dest:
+            raise ValueError('Registration workflow is missing the destination' +
+                             ' directory')
         self._logger.debug("Creating the registration execution workflow"
                            " with bolus arrival index %d and initial reference"
                            " %s..." % (bolus_arrival_index, ref_0_image))
@@ -426,7 +438,6 @@ class RegistrationWorkflow(WorkflowBase):
             mock_copy = pe.Node(Copy(), name='mock_copy')
             realign_wf.connect(input_spec, 'moving_image',
                                mock_copy, 'in_file')
-            # realign_wf.connect(realign_name, 'out_file', mock_copy, 'out_fname')
             realign_wf.connect(mock_copy, 'out_file', copy_meta, 'dest_file')
         else:
             raise ValueError("Registration technique not recognized: %s" %

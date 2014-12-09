@@ -79,36 +79,31 @@ def _run_with_dicom_input(*inputs, **opts):
     :param opts: the :meth:`run` options as well as the following keyword
         options:
     :keyword collection: the AIRC collection name
+    :keyword resume: flag indicating whether to resume workflow execution
     """
+    # The required AIRC collection.
     collection = opts.pop('collection', None)
+    if not collection:
+        raise ValueError('The staging pipeline collection is missing.')
+    # The target directory.
     dest = opts.get('dest', None)
+    # The resume option corresponds to the staging helper iter_stage
+    # function skip_existing option.
     if opts.pop('resume', None):
         opts['skip_existing'] = False
-    # Run the workflow on each session and scan type.
-    subjects = set()
-    for sbj, sess, scan_type_dict in iter_stage(collection, *inputs,
-                                                        **opts):
-        subjects.add(sbj)
         
-        # Transform the {series: {scan type: [DICOM files]}} dictionary
-        # into a {scan type: {series: [DICOM files]}} dictionary.
-        scan_type_ser_dcm_dicts = {}
-        for scan_type, series_dict in scan_type_dict.iteritems():
-            for scan_type, dcm_iter in scan_type_dict.iteritems():
-                # The scan type {series: [DICOM files]} dictionary.
-                ser_dcm_dict = scan_type_ser_dcm_dicts.get(scan_type, None)
-                if not ser_dcm_dict:
-                    ser_dcm_dict = {}
-                    scan_type_ser_dcm_dicts[scan_type] = ser_dcm_dict
-                # Add the DICOM file iterator to the {series: [DICOM files]}
-                # dictionary in the {scan type: {series: [DICOM files]}}
-                # dictionary.
-                ser_dcm_dict[series] = dcm_iter
-
-        # Pull out the actions, since they apply only to the T1 scan type.
+    # The set of input subjects is used to build the CTP mapping file
+    # after the workflow is completed.
+    subjects = set()
+    # Run the workflow on each session and scan type.
+    for sbj, sess, scan_type_dict in iter_stage(collection, *inputs, **opts):
+        # Capture the subject.
+        subjects.add(sbj)
+        # Pull out the actions, since the non-stage actions only apply
+        # to the T1 scan type.
         actions = opts.pop('actions')
         # Run the workflow on each scan type.
-        for scan_type, ser_dcm_dicts in scan_type_ser_dcm_dicts.iteritems():
+        for scan_type, scan_dict in scan_type_dict.iteritems():
             opts['scan_type'] = scan_type
             # Only T1 can do more than staging.
             if scan_type == 't1':
@@ -116,10 +111,10 @@ def _run_with_dicom_input(*inputs, **opts):
             else:
                 opts['actions'] = ['stage']
             # Create a new workflow for the current scan type.
-            wf_gen = QIPipelineWorkflow(**opts)
+            wf_gen = QIPipelineWorkflow(scan_type)
             # Run the workflow on each {series: [DICOM files]} item.
             wf_gen.run_with_dicom_input(collection, sbj, sess,
-                                        ser_dcm_dicts, dest)
+                                        scan_dict, dest)
     
     # Make the TCIA subject map.
     map_ctp(collection, *subjects, dest=dest)
@@ -269,14 +264,10 @@ class QIPipelineWorkflow(WorkflowBase):
 
     def __init__(self, **opts):
         """
-        :param opts: the following initialization options:
+        :param opts: the :class:`qipipe.staging.WorkflowBase`
+        initialization options as well as the following options:
         :keyword base_dir: the workflow execution directory
             (default a new temp directory)
-        :keyword cfg_file: the configuration file path containing
-            class:`qipipe.pipeline.registration.WorkflowBase'
-            configuration overrides
-        :keyword dry_run: flag indicating whether to prepare but not
-            run the pipeline
         :keyword mask: the XNAT mask reconstruction name
         :keyword registration: the XNAT registration reconstruction name
         :keyword technique: the
@@ -284,12 +275,9 @@ class QIPipelineWorkflow(WorkflowBase):
             technique
         """
         # The dry run and configuration file options are processed by methods
-        # defined in QIPipelineWorkflow. The remaining options are processed
-        # by methods defined in the superclass WorkflowBase.
-        base_opts = {}
-        for opt in ['cfg_file', 'dry_run']:
-            if opt in opts:
-                base_opts[opt] = opts.pop(opt)
+        # defined in the superclass WorkflowBase. The remaining options are
+        # processed by methods defined in this QIPipelineWorkflow class.
+        base_opts = {k: opts.pop(k) for k in ['cfg_file', 'dry_run'] if k in opts}
         super(QIPipelineWorkflow, self).__init__(logger(__name__), **base_opts)
 
         self.registration_resource = None
@@ -305,19 +293,18 @@ class QIPipelineWorkflow(WorkflowBase):
         :meth:`run_with_scan_download` method.
         """
 
-    def run_with_dicom_input(self, collection, subject, session, ser_dcm_dict,
+    def run_with_dicom_input(self, collection, subject, session, scan_dict,
                              dest=None):
         """
         :param collection: the AIRC collection name
         :param subject: the subject name
         :param session: the session name
-        :param ser_dcm_dict: the :meth:`qipipe.staging.staging_helper.iter_stage`
-            result
+        :param scan_dict: the *{scan number: [DICOM files]}* dictionary
         :param dest: the TCIA staging destination directory (default is
             the current working directory)
         """
         staging.set_workflow_inputs(self.workflow, collection, subject,
-                                    session, ser_dcm_dict, dest)
+                                    session, scan_dict, dest)
         self._run_workflow(self.workflow)
 
     def run_with_scan_download(self, xnat, project, subject, session):
@@ -580,8 +567,8 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(input_spec, 'session', scan_ts, 'session')
             else:
                 # Merge the staged files.
-                scan_ts = pe.Node(MergeNifti(out_format=SCAN_TS_RSC),
-                                  name='merge_scans')
+                scan_ts_xfc = MergeNifti(out_format=SCAN_TS_RSC)
+                scan_ts = pe.Node(scan_ts_xfc, name='merge_scans')
                 exec_wf.connect(staged, 'out_files', scan_ts, 'in_files')
                 # Upload the time series.
                 ul_scan_ts_xfc = XNATUpload(project=qipipe.project(),
