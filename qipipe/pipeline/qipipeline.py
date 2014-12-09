@@ -111,7 +111,7 @@ def _run_with_dicom_input(*inputs, **opts):
             else:
                 opts['actions'] = ['stage']
             # Create a new workflow for the current scan type.
-            wf_gen = QIPipelineWorkflow(scan_type)
+            wf_gen = QIPipelineWorkflow(scan_type=scan_type)
             # Run the workflow on each {series: [DICOM files]} item.
             wf_gen.run_with_dicom_input(collection, sbj, sess,
                                         scan_dict, dest)
