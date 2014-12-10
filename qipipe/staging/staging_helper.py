@@ -8,7 +8,7 @@ from .. import project
 from qiutil import xnat_helper
 from qiutil.dicom import reader
 from qiutil.collections import nested_defaultdict
-from qiutil.logging_helper import logger
+from qiutil.logging import logger
 from . import airc_collection as airc
 from .staging_error import StagingError
 

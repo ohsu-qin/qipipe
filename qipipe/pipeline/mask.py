@@ -6,7 +6,7 @@ from nipype.interfaces import fsl
 from .. import project
 from ..interfaces import (XNATUpload, MriVolCluster)
 from .workflow_base import WorkflowBase
-from qiutil.logging_helper import logger
+from qiutil.logging import logger
 
 RESOURCE = 'mask'
 """The XNAT mask resource name."""

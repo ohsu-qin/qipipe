@@ -4,7 +4,7 @@ from nipype.interfaces.traits_extension import isdefined
 from qipipe.interfaces import XNATFind
 from qiutil import xnat_helper
 from ... import (project, ROOT)
-from ...helpers.logging_helper import logger
+from ...helpers.logging import logger
 from ...helpers.xnat_test_helper import generate_unique_name
 
 FIXTURE = os.path.join(ROOT, 'fixtures', 'interfaces', 'xnat', 'Sarcoma001',

@@ -2,7 +2,7 @@ import os
 from matplotlib import (pyplot, colors, cm)
 import numpy as np
 import nibabel as nib
-from qiutil.logging_helper import logger
+from qiutil.logging import logger
 
 def normalize(value, vmin, vspan):
     """

@@ -3,7 +3,7 @@ import re
 from qiutil.dicom import meta
 from .sarcoma_config import sarcoma_location
 
-from qiutil.logging_helper import logger
+from qiutil.logging import logger
 
 
 def fix_dicom_headers(collection, subject, *dicom_files, **opts):

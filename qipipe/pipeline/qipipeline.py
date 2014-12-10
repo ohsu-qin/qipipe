@@ -14,7 +14,7 @@ from .mask import MaskWorkflow
 import registration
 from ..interfaces import (XNATDownload, XNATUpload)
 from qiutil import xnat_helper
-from qiutil.logging_helper import logger
+from qiutil.logging import logger
 from ..staging.staging_helper import iter_stage
 from ..staging.map_ctp import map_ctp
 

@@ -8,7 +8,7 @@ from qipipe.staging import airc_collection as airc
 from qipipe.staging.staging_helper import get_subjects
 from qiutil.ast_config import read_config
 from ... import (project, ROOT)
-from ...helpers.logging_helper import logger
+from ...helpers.logging import logger
 from ...unit.pipeline.test_mask import MASK_CONF
 from ...unit.pipeline.test_registration import REG_CONF
 from ...unit.pipeline.test_modeling import MODELING_CONF

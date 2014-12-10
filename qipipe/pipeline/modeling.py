@@ -11,7 +11,7 @@ from qiutil import file_helper
 from ..helpers.bolus_arrival import bolus_arrival_index, BolusArrivalError
 from .workflow_base import WorkflowBase
 from .distributable import DISTRIBUTABLE
-from qiutil.logging_helper import logger
+from qiutil.logging import logger
 
 
 PK_PREFIX = 'pk'

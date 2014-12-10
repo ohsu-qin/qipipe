@@ -6,7 +6,7 @@ from nose.tools import (assert_equal, assert_is_not_none, assert_true)
 from qipipe.interfaces import XNATDownload
 from qiutil import xnat_helper
 from ... import (project, ROOT)
-from test.helpers.logging_helper import logger
+from test.helpers.logging import logger
 from test.helpers.xnat_test_helper import generate_unique_name
 
 FIXTURE = os.path.join(ROOT, 'fixtures', 'interfaces', 'xnat', 'Sarcoma001',

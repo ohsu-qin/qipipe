@@ -8,7 +8,7 @@ from .. import project
 from ..interfaces import (Gate, FixDicom, Compress, XNATFind, XNATCopy)
 from qiutil import xnat_helper
 from .workflow_base import WorkflowBase
-from qiutil.logging_helper import logger
+from qiutil.logging import logger
 from ..staging import staging_helper
 
 

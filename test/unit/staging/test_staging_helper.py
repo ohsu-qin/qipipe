@@ -2,7 +2,7 @@ import os
 import glob
 from nose.tools import assert_equal
 from qipipe.staging.staging_helper import *
-from qiutil.logging_helper import logger
+from qiutil.logging import logger
 from ... import ROOT
 
 # The test fixture.

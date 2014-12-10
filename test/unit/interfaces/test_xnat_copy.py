@@ -4,7 +4,7 @@ from nose.tools import (assert_equal, assert_in, assert_true)
 from qiutil import xnat_helper
 from qipipe.interfaces import XNATCopy
 from ... import (project, ROOT)
-from ...helpers.logging_helper import logger
+from ...helpers.logging import logger
 from ...helpers.xnat_test_helper import generate_unique_name
 
 SUBJECT = generate_unique_name(__name__)

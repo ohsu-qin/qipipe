@@ -2,7 +2,7 @@ import os
 import glob
 import shutil
 from nose.tools import (assert_equal, assert_is_not_none)
-from ...helpers.logging_helper import logger
+from ...helpers.logging import logger
 from qipipe.staging.map_ctp import CTPPatientIdMap
 
 COLLECTION = 'Sarcoma'

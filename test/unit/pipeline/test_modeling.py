@@ -9,7 +9,7 @@ try:
 except ImportError:
     modeling = None
 from ... import (project, ROOT)
-from ...helpers.logging_helper import logger
+from ...helpers.logging import logger
 from ...unit.pipeline.staged_test_base import StagedTestBase
 
 MODELING_CONF = os.path.join(ROOT, 'conf', 'modeling.cfg')

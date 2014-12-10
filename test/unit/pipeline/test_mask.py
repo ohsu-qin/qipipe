@@ -7,7 +7,7 @@ import nipype.pipeline.engine as pe
 from nipype.interfaces.dcmstack import MergeNifti
 from qipipe.pipeline import (mask, qipipeline)
 from ... import (project, ROOT)
-from ...helpers.logging_helper import logger
+from ...helpers.logging import logger
 from ...unit.pipeline.staged_test_base import StagedTestBase
 
 FIXTURES = os.path.join(ROOT, 'fixtures', 'registration')

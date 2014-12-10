@@ -5,7 +5,7 @@ from qipipe.pipeline import staging
 from qiutil import xnat_helper
 from qipipe.staging.staging_helper import (get_subjects, iter_stage)
 from ... import (project, ROOT)
-from ...helpers.logging_helper import logger
+from ...helpers.logging import logger
 
 
 # FIXME - test module resolves to qiutil/test!?!

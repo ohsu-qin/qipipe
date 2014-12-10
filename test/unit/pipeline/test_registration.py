@@ -6,7 +6,7 @@ from nose.tools import (assert_equal, assert_is_not_none)
 import nipype.pipeline.engine as pe
 from qipipe.pipeline import registration
 from ... import (project, ROOT)
-from ...helpers.logging_helper import logger
+from ...helpers.logging import logger
 from ...helpers.xnat_test_helper import generate_unique_name
 from ...unit.pipeline.staged_test_base import StagedTestBase
 
