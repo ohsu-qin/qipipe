@@ -4,7 +4,7 @@ import tempfile
 import networkx as nx
 from .. import project
 from qiutil import xnat_helper
-from qiutil.collection_helper import EMPTY_DICT
+from qiutil.collections import EMPTY_DICT
 from qiutil.ast_config import read_config
 from .distributable import DISTRIBUTABLE
 
@@ -26,15 +26,18 @@ class WorkflowBase(object):
     configuration file paths to load in low-to-high precedence order
     consist of the following:
 
-    1. the standard config file name in the subclass project ``conf``
+    1. the default config file ``default.cfg`` in the qipipe project
+       ``conf`` directory
+
+    2. the standard config file name in the qipipe project ``conf``
        directory
 
-    2. the standard config file name in the current working directory
+    3. the standard config file name in the current working directory
 
-    3. the standard config file name in the ``QIN_CONF`` environment
+    4. the standard config file name in the ``QIN_CONF`` environment
        variable directory
 
-    4. the *cfg_file* initialization parameter
+    5. the *cfg_file* initialization parameter
 
     .. _AIRC Grid Engine: https://everett.ohsu.edu/wiki/GridEngine
     """
@@ -118,7 +121,12 @@ class WorkflowBase(object):
         # The configuration files to load.
         cfg_files = []
 
-        # The default configuration file is in the conf directory.
+        # The default configuration file.
+        def_cfg_file = os.path.join(WorkflowBase.DEF_CONF_DIR, 'default.cfg')
+        if os.path.exists(def_cfg_file):
+            cfg_files.append(os.path.abspath(def_cfg_file))
+
+        # Validate that the workflow name ends in Workflow.
         match = WorkflowBase.CLASS_NAME_PAT.match(self.__class__.__name__)
         if not match:
             raise NameError("The workflow wrapper class does not match the"
@@ -126,9 +134,11 @@ class WorkflowBase(object):
                             self.__class__.__name__)
         name = match.group(1)
         fname = "%s.cfg" % name.lower()
-        def_cfg_file = os.path.join(WorkflowBase.DEF_CONF_DIR, fname)
-        if os.path.exists(def_cfg_file):
-            cfg_files.append(os.path.abspath(def_cfg_file))
+        
+        # The workflow-specific configuration file is in the conf directory.
+        base_cfg_file = os.path.join(WorkflowBase.DEF_CONF_DIR, fname)
+        if os.path.exists(base_cfg_file):
+            cfg_files.append(os.path.abspath(base_cfg_file))
 
         # The working directory config file.
         cwd_cfg_file = os.path.abspath(fname)
@@ -175,11 +185,12 @@ class WorkflowBase(object):
 
         :param workflow: the workflow to run
         """
-        # Check whether the workflow can be distributed.
+        # If the workflow can be distributed, then get the plugin
+        # arguments.
         if DISTRIBUTABLE:
-            args = self._configure_plugin(workflow)
+            opts = self._configure_plugin(workflow)
         else:
-            args = {}
+            opts = {}
 
         # Set the base directory to an absolute path.
         if workflow.base_dir:
@@ -196,7 +207,7 @@ class WorkflowBase(object):
                                workflow.name)
         else:
             with xnat_helper.connection():
-                workflow.run(**args)
+                workflow.run(**opts)
 
     def _inspect_workflow_inputs(self, workflow):
         """
@@ -241,13 +252,13 @@ class WorkflowBase(object):
 
         # The Grid Engine setting.
         if 'SGE' in self.configuration:
-            args = dict(plugin='SGE', **self.configuration['SGE'])
+            opts = dict(plugin='SGE', **self.configuration['SGE'])
             self._logger.debug("Workflow %s plug-in parameters: %s." %
-                             (workflow.name, args))
+                             (workflow.name, opts))
         else:
-            args = {}
+            opts = {}
 
-        return args
+        return opts
 
     def _configure_nodes(self, workflow):
         """

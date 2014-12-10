@@ -3,7 +3,7 @@ import glob
 import shutil
 from collections import defaultdict
 from qiutil import xnat_helper
-from qiutil.collection_helper import nested_defaultdict
+from qiutil.collections import nested_defaultdict
 from ... import project
 
 
