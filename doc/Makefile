@@ -7,7 +7,7 @@ SPHINXBUILD   = sphinx-build
 BUILDDIR      = build
 
 # Internal variables.
-ALLSPHINXOPTS   = -d $(BUILDDIR)/doctrees $(SPHINXOPTS) source
+ALLSPHINXOPTS   = -d $(BUILDDIR)/doctrees $(SPHINXOPTS) .
 
 .PHONY: clean html
 
