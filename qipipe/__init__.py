@@ -1,6 +1,6 @@
 """The top-level Quantitative Imaging Pipeline module."""
 
-__version__ = '4.5.2'
+__version__ = '4.5.3'
 """
 The one-based major.minor.patch version.
 The version numbering scheme loosely follows http://semver.org/.

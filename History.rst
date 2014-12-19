@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub commits
 (http://quip1:6060/qipipe) for change details.
 
+4.5.3 / 2014-12-17
+------------------
+* Adapt for PyPI.
+
 4.5.2 / 2014-12-02
 ------------------
 * Add --resume option.
