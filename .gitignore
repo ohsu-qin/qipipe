@@ -4,11 +4,13 @@ build
 lib
 dist
 ext
+wheelhouse
 **.egg-info/
 .DS_Store
 .idea
 .loadpath
 .project
+.pypirc
 .yardoc
 .*/
 *.pdf
