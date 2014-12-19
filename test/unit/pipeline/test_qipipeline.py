@@ -3,7 +3,7 @@ import shutil
 import distutils
 from nose.tools import (assert_equal, assert_is_not_none, assert_true)
 from qipipe.pipeline import qipipeline as qip
-from qiutil import xnat_helper
+import qixnat
 from qipipe.staging import airc_collection as airc
 from qipipe.staging.staging_helper import get_subjects
 from qiutil.ast_config import read_config
@@ -109,9 +109,9 @@ class TestQIPipeline(object):
         # The test source directories.
         sources = sbj_dir_dict.values()
 
-        with xnat_helper.connection() as xnat:
+        with qixnat.connect() as xnat:
             # Delete any existing test subjects.
-            xnat_helper.delete_subjects(project(), *subjects)
+            qixnat.delete_subjects(project(), *subjects)
 
             # Run the staging, mask and registration workflows, but not
             # the modeling.
@@ -146,7 +146,7 @@ class TestQIPipeline(object):
                                     " created in XNAT" % (sbj, sess, rsc))
 
             # Delete the test subjects.
-            xnat_helper.delete_subjects(project(), *subjects)
+            qixnat.delete_subjects(project(), *subjects)
 
 
 if __name__ == "__main__":

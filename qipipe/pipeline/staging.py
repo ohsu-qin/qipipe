@@ -6,7 +6,7 @@ from nipype.interfaces.utility import IdentityInterface
 from nipype.interfaces.dcmstack import DcmStack
 from .. import project
 from ..interfaces import (Gate, FixDicom, Compress, XNATFind, XNATCopy)
-from qiutil import xnat_helper
+import qixnat
 from .workflow_base import WorkflowBase
 from qiutil.logging import logger
 from ..staging import staging_helper

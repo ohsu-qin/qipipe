@@ -3,7 +3,7 @@ import re
 import tempfile
 import networkx as nx
 from .. import project
-from qiutil import xnat_helper
+import qixnat
 from qiutil.collections import EMPTY_DICT
 from qiutil.ast_config import read_config
 from .distributable import DISTRIBUTABLE
@@ -171,7 +171,7 @@ class WorkflowBase(object):
         """
         Download the NIFTI scan files for the given session.
 
-        :param xnat: the :class:`qiutil.xnat_helper.XNAT` connection
+        :param xnat: the :class:`qiutil.qixnat.XNAT` connection
         :param subject: the XNAT subject label
         :param session: the XNAT session label
         :param dest: the destination directory path
@@ -206,7 +206,7 @@ class WorkflowBase(object):
                                " since the dry run flag is set." %
                                workflow.name)
         else:
-            with xnat_helper.connection():
+            with qixnat.connect():
                 workflow.run(**opts)
 
     def _inspect_workflow_inputs(self, workflow):

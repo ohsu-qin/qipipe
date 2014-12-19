@@ -2,7 +2,7 @@ import os
 import shutil
 from nose.tools import assert_true
 from qipipe.pipeline import staging
-from qiutil import xnat_helper
+import qixnat
 from qipipe.staging.staging_helper import (get_subjects, iter_stage)
 from ... import (project, ROOT)
 from ...helpers.logging import logger
@@ -65,9 +65,9 @@ class TestStagingWorkflow(object):
         # The test source directories.
         inputs = sbj_dir_dict.values()
 
-        with xnat_helper.connection() as xnat:
+        with qixnat.connect() as xnat:
             # Delete any existing test subjects.
-            xnat_helper.delete_subjects(project(), *subjects)
+            qixnat.delete_subjects(project(), *subjects)
             # Run the workflow on each session fixture.
             for sbj, sess, scan_type_dict in iter_stage(collection, *inputs,
                                                         dest=dest):
@@ -92,7 +92,7 @@ class TestStagingWorkflow(object):
                                     " not created in XNAT" % (sbj, sess, scan))
 
             # Delete the test subjects.
-            xnat_helper.delete_subjects(project(), *subjects)
+            qixnat.delete_subjects(project(), *subjects)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 from nipype.interfaces.base import (
     traits, BaseInterfaceInputSpec, TraitedSpec,
     BaseInterface, File, Directory)
-from qiutil import xnat_helper
+import qixnat
 
 CONTAINER_OPTS = ['container_type', 'scan', 'reconstruction', 'assessor']
 """The download input container options."""
@@ -43,7 +43,7 @@ class XNATDownload(BaseInterface):
 
     """
     The ``XNATDownload`` Nipype interface wraps the
-    :meth:`qiutil.xnat_helper.download` method.
+    :meth:`qiutil.qixnat.download` method.
     
     :Note: only one XNAT operation can run at a time.
     
@@ -96,7 +96,7 @@ class XNATDownload(BaseInterface):
             opts['resource'] = self.inputs.resource
         if self.inputs.file:
             opts['file'] = self.inputs.file
-        with xnat_helper.connection() as xnat:
+        with qixnat.connect() as xnat:
             self._out_files = xnat.download(self.inputs.project,
                                             self.inputs.subject,
                                             self.inputs.session, **opts)

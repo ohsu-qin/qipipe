@@ -5,7 +5,7 @@ import re
 import glob
 from collections import defaultdict
 from .. import project
-from qiutil import xnat_helper
+import qixnat
 from qiutil.dicom import reader
 from qiutil.collections import nested_defaultdict
 from qiutil.logging import logger
@@ -246,7 +246,7 @@ def _iter_new_visits(collection, *inputs, **opts):
 
 def _is_new_session(subject, session):
     # If the session is not yet in XNAT, then yield the tuple.
-    with xnat_helper.connection() as xnat:
+    with qixnat.connect() as xnat:
         exists = xnat.get_session(project(), subject, session).exists()
     if exists:
         logger(__name__).debug("Skipping the %s %s %s session since it has"
@@ -318,7 +318,7 @@ class VisitIterator(object):
                                dcm_pat_dict)
         
         # Iterate over the visits.
-        with xnat_helper.connection():
+        with qixnat.connect():
             for sbj_dir in self.subject_dirs:
                 sbj_dir = os.path.abspath(sbj_dir)
                 logger(__name__).debug("Discovering sessions in %s..." %

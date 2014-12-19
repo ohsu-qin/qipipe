@@ -2,7 +2,7 @@ import os
 import glob
 import shutil
 from collections import defaultdict
-from qiutil import xnat_helper
+import qixnat
 from qiutil.collections import nested_defaultdict
 from ... import project
 
@@ -66,9 +66,9 @@ class StagedTestBase(object):
         input_dict = self._group_files(fixture)
         # The test subjects.
         subjects = input_dict.keys()
-        with xnat_helper.connection() as xnat:
+        with qixnat.connect() as xnat:
             # Delete the existing subjects.
-            xnat_helper.delete_subjects(project(), *subjects)
+            qixnat.delete_subjects(project(), *subjects)
             # Iterate over the sessions within subjects.
             for sbj, sess_dict in input_dict.iteritems():
                 for sess, sess_opts in sess_dict.iteritems():
@@ -89,7 +89,7 @@ class StagedTestBase(object):
                     # Verify the result.
                     self._verify_result(xnat, sbj, sess, result)
             # Clean up.
-            xnat_helper.delete_subjects(project(), *subjects)
+            qixnat.delete_subjects(project(), *subjects)
 
     def _group_files(self, fixture):
         """
@@ -152,7 +152,7 @@ class StagedTestBase(object):
         where *files* is a list consisting of the session image files found
         in the test fixture directory.
         
-        :param xnat: the :class:`qiutil.xnat_helpers.XNAT` connection
+        :param xnat: the :class:`qiutil.qixnats.XNAT` connection
         :param subject: the input subject
         :param session: the input session
         :param result: the :meth`_run_workflow` result

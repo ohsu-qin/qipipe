@@ -2,7 +2,7 @@ import os, glob, re, shutil
 from nose.tools import (assert_equal, assert_false, assert_true)
 from nipype.interfaces.traits_extension import isdefined
 from qipipe.interfaces import XNATFind
-from qiutil import xnat_helper
+import qixnat
 from ... import (project, ROOT)
 from ...helpers.logging import logger
 from ...helpers.xnat_test_helper import generate_unique_name
@@ -35,10 +35,10 @@ class TestXNATFind(object):
     """The XNAT find interface unit tests."""
 
     def setUp(self):
-        xnat_helper.delete_subjects(project(), SUBJECT)
+        qixnat.delete_subjects(project(), SUBJECT)
         
     def tearDown(self):
-        xnat_helper.delete_subjects(project(), SUBJECT)
+        qixnat.delete_subjects(project(), SUBJECT)
         shutil.rmtree(RESULTS, True)
     
     def test_find_subject(self):

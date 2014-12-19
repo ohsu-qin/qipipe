@@ -13,7 +13,7 @@ from .staging import StagingWorkflow
 from .mask import MaskWorkflow
 import registration
 from ..interfaces import (XNATDownload, XNATUpload)
-from qiutil import xnat_helper
+import qixnat
 from qiutil.logging import logger
 from ..staging.staging_helper import iter_stage
 from ..staging.map_ctp import map_ctp
@@ -131,12 +131,12 @@ def _run_with_xnat_input(*inputs, **opts):
         initializer options
     """
     prj = opts.pop('project', qipipe.project())
-    with xnat_helper.connection() as xnat:
+    with qixnat.connect() as xnat:
         for label in inputs:
             # Convert a path to a label.
             if '/' in label:
                 label = label.sub('/', '_')
-            sbj, sess = xnat_helper.parse_session_label(label)
+            sbj, sess = qixnat.parse_session_label(label)
             # Check for an existing mask.
             mask_obj = xnat.find(project=prj, subject=sbj, session=sess,
                                  resource=MASK_RSC)

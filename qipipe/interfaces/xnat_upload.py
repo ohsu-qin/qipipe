@@ -3,7 +3,7 @@
 from nipype.interfaces.base import (
     traits, BaseInterfaceInputSpec, TraitedSpec,
     BaseInterface, InputMultiPath, File)
-from qiutil import xnat_helper
+import qixnat
 
 
 class XNATUploadInputSpec(BaseInterfaceInputSpec):
@@ -38,7 +38,7 @@ class XNATUploadOutputSpec(TraitedSpec):
 class XNATUpload(BaseInterface):
     """
     The ``XNATUpload`` Nipype interface wraps the
-    :meth:`qiutil.xnat_helper.upload` method.
+    :meth:`qiutil.qixnat.upload` method.
     
     :Note: This XNATUpload interface is deprecated due to the following
     XNAT bug:
@@ -78,7 +78,7 @@ class XNATUpload(BaseInterface):
             opts['assessor'] = self.inputs.assessor
 
         # Upload the files.
-        with xnat_helper.connection() as xnat:
+        with qixnat.connect() as xnat:
             self._xnat_files = xnat.upload(
                 self.inputs.project, self.inputs.subject, self.inputs.session,
                 *self.inputs.in_files, **opts)
