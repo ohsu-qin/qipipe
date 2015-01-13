@@ -9,10 +9,9 @@ Synopsis
 ********
 qipipe processes the OHSU QIN study images.
 
-:API: http://quip1.ohsu.edu:8080/qipipe/api
+:API: http://qipipe.readthedocs.org/en/latest/
 
-:Git: git\@quip1.ohsu.edu:qipipe
-      (`Browse <http://quip1.ohsu.edu:6060/qipipe>`__)
+:Git: https://github.com/ohsu-qin/qipipe
 
 
 ************
@@ -42,84 +41,47 @@ instructions can break in unanticipated ways. Caveat emptor.
 
 1. Install Git_ on your workstation, if necessary.
 
-2. Contact the qipipe `OHSU QIN Git administrator`_ to get permission to
-   access the qipipe Git repository.
-
-3. Build ANTS_ from source using the `ANTS Compile Instructions`_::
+2. Build ANTS_ from source using the `ANTS Compile Instructions`_::
 
        pushd ~/workspace
        git clone git://github.com/stnava/ANTs.git
-       mkdir ~/ants
-       cd ~/ants
-       ccmake ..workspace/ANTs
+       mkdir $HOME/ants
+       cd $HOME/ants
+       ccmake ../workspace/ANTs
        cmake
        #=> Enter “c"
        #=> Enter “g”
        #=> Exit back to the terminal
        make -j 4
        popd
+
+3. Prepend ANTS to your shell login script. Open an editor on
+   ``$HOME/.bashrc`` or ``$HOME/.bash_profile`` and add the following
+   lines::
+
+      # Prepend ANTS to the path.
+      ANTS_HOME=$HOME/ants
+      export PATH=$ANTS_HOME/bin
+
+4. Refresh your environment, e.g. quit your console and reopen a new one.
    
-4. Install Anaconda_ in ``~/anaconda`` on your workstation according to
-   the `Anaconda Installation Instructions`_.
+5. Install ``qixnat`` using Anaconda_ as described in the
+   `qixnat installation instructions`_.
 
-5. Make an Anaconda virtual environment::
+6. Install the ``qipipe`` dependencies hosted by Anaconda::
 
-       conda create --name qipipe scipy
+      wget -O - https://raw.githubusercontent.com/ohsu-qin/qipipe/master/requirements.txt | xargs -n 1 conda install -y
 
-   The Anaconda ``conda`` command is a pip-like utility that installs packages
-   managed by Anaconda. The ``conda create`` step makes a virtual environment
-   with one package. ``conda create`` requires at least one package, but fails
-   if the package is not managed by Anaconda. Therefore, creating the environment
-   with one known package makes the environment.
+  Ignore ``No packages found`` messages for non-Anaconda packages. These
+  packages will be installed in the next step.
 
-6. Prepend Git, ANTS, Anaconda and your virtual environment to ``PATH`` in your shell
-   login script. Open an editor on ~/.bashrc or ~/.bash_profile and add the
-   following lines::
+8. Install the ``qipipe`` package::
 
-      # Prepend the locally installed applications.
-      export PATH=/path/to/git/bin:$ANTS_HOME/bin:$ANACONDA_HOME:$PATH
-      # Prepend the qipipe virtual environment.
-      . $HOME/anaconda/bin/activate qipipe      
+       pip install qipipe
 
-7. Refresh your environment, e.g. quit your ssh session and reopen a new one.
-
-8. Install qiutil_.
-
-9. Clone the `qipipe repository`_::
-
-       cd ~/workspace
-       git clone git@quip1:qipipe
-       cd qipipe
-
-10. Install packages managed by Anaconda::
-
-       for p in `cat requirements.txt`; do conda install $p; done
-   
-   The ``for`` loop attempts to install packages managed by Anaconda one at a
-   time. Package installation will fail for packages not managed by Anaconda.
-   Anaconda installations are preferred because Anaconda attempts to impose
-   additional constraints to ensure the consistency of the Python scientific
-   platform.
-
-11. Install the remaining dependency packages using pip_::
-
-       for p in `cat requirements.txt`; do pip install $p; done
-
-    Use this command in preference to ``pip install -r requirements.txt``
-    in order to install Git repository packages.
-
-12. On Linux only, install mpi4py::
-       
-       pip install mpi4py=1.3.1
-
-13. Install the ``qipipe`` package::
-
-       pip install -e .
-
-14. If you will be running the PK modeling workflow, then install the proprietary
-    ``fastfit`` module from the Mercurial repository::
-    
-       pip install hg+https://everett.ohsu.edu/hg/fastfit#egg=fastfit
+9. Install any additional packages used in the pipeline. For example, the base
+   installation has an optional pipeline modeling phase which uses the OHSU
+   proprietary shutter speed PK modeling package.
 
 
 *****
@@ -129,21 +91,16 @@ Run the following command for the pipeline options::
 
      qipipe --help
 
-The `OHSU QIN Sharepoint`_ `TCIA Upload Procedure`_ document describes how
-to import the staged QIN images into TCIA.
-
 ---------
 
 .. container:: copyright
 
   Copyright (C) 2014 Oregon Health & Science University
-  `Knight Cancer Institute`_. All rights reserved. ``qipipe`` is confidential
-  and may not be distributed in any form without authorization.
+  `Knight Cancer Institute`_. All rights reserved.
+  See the license_ for permissions.
 
 
 .. Targets:
-
-.. _Advanced Imaging Research Center: http://www.ohsu.edu/xd/research/centers-institutes/airc/
 
 .. _Anaconda: http://docs.continuum.io/anaconda/
 
@@ -157,9 +114,7 @@ to import the staged QIN images into TCIA.
 
 .. _Knight Cancer Institute: http://www.ohsu.edu/xd/health/services/cancer
 
-.. _OHSU QIN Git administrator: loneyf@ohsu.edu
-
-.. _OHSU QIN Sharepoint: https://bridge.ohsu.edu/research/knight/projects/qin/SitePages/Home.aspx
+.. _license: https://github.com/ohsu-qin/qipipe/blob/master/LICENSE.txt
 
 .. _pip: https://pypi.python.org/pypi/pip
 
@@ -169,13 +124,15 @@ to import the staged QIN images into TCIA.
 
 .. _QIN XNAT: http://quip5.ohsu.edu:8080/xnat
 
+.. _qixnat: https://github.com/ohsu-qin/qixnat
+
+.. _qixnat installation instructions: https://github.com/ohsu-qin/qixnat/blob/master/doc/index.rst
+
 .. _QIN collection: https://wiki.cancerimagingarchive.net/display/Public/Quantitative+Imaging+Network+Collections
 
-.. _qipipe repository: http://quip1.ohsu.edu:6060/qipipe
+.. _qipipe repository: https://github.com/ohsu-qin/qipipe
 
-.. _qiutil: http://quip1.ohsu.edu:6060/qiutil
-
-.. _TCIA Upload Procedure: https://bridge.ohsu.edu/research/knight/projects/qin/_layouts/WordViewer.aspx?id=/research/knight/projects/qin/Shared%20Documents/TCIA%20upload%20procedure.docx&Source=https%3A%2F%2Fbridge%2Eohsu%2Eedu%2Fresearch%2Fknight%2Fprojects%2Fqin%2FSitePages%2FHome%2Easpx&DefaultItemOpen=1&DefaultItemOpen=1
+.. _qixnat: https://github.com/ohsu-qin/qixnat
 
 .. _The Cancer Imaging Archive: http://cancerimagingarchive.net
 
