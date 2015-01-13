@@ -36,8 +36,10 @@ Feature List
 Installation
 ************
 The following instructions assume that you start in your home directory.
-Note that Python installation environments are usually fragile and these
-instructions can break in unanticipated ways. Caveat emptor.
+``qipipe`` has dependencies with special installation requirements.
+Consequently, ``qipipe`` installation cannot be performed using the
+customary Python_ pip_ command ``pip install qixnat`` alone. Install
+``qipipe`` using the following procedure:
 
 1. Install Git_ on your workstation, if necessary.
 
@@ -74,6 +76,13 @@ instructions can break in unanticipated ways. Caveat emptor.
 
   Ignore ``No packages found`` messages for non-Anaconda packages. These
   packages will be installed in the next step.
+
+7. Install the ``qipipe`` dependencies hosted by pip::
+
+      wget -O - https://raw.githubusercontent.com/ohsu-qin/qipipe/master/requirements.txt | xargs -n 1 pip install
+
+  The dependencies must be installed in succession one at a time because some requirements,
+  e.g. ``nipy``, have implicit dependencies that necessitate this one-at-a-time approach.
 
 8. Install the ``qipipe`` package::
 
