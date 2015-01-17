@@ -68,7 +68,7 @@ class StagedTestBase(object):
         subjects = input_dict.keys()
         with qixnat.connect() as xnat:
             # Delete the existing subjects.
-            qixnat.delete_subjects(project(), *subjects)
+            xnat.delete_subjects(project(), *subjects)
             # Iterate over the sessions within subjects.
             for sbj, sess_dict in input_dict.iteritems():
                 for sess, sess_opts in sess_dict.iteritems():
@@ -89,7 +89,7 @@ class StagedTestBase(object):
                     # Verify the result.
                     self._verify_result(xnat, sbj, sess, result)
             # Clean up.
-            qixnat.delete_subjects(project(), *subjects)
+            xnat.delete_subjects(project(), *subjects)
 
     def _group_files(self, fixture):
         """

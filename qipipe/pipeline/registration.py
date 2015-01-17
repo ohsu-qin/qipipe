@@ -8,9 +8,9 @@ from nipype.interfaces.ants import (AverageImages, Registration,
                                     ApplyTransforms)
 from nipype.interfaces import fsl
 from nipype.interfaces.dcmstack import CopyMeta
-from qiutil import file_helper
+import qiutil
 from qiutil.logging import logger
-from .. import project
+from qixnat import project
 from ..interfaces import (Copy, XNATUpload)
 from ..helpers import bolus_arrival
 from .workflow_base import WorkflowBase
@@ -49,7 +49,7 @@ def generate_resource_name():
 
     :return: a unique XNAT registration resource name
     """
-    return "%s_%s" % (REG_PREFIX, file_helper.generate_file_name())
+    return "%s_%s" % (REG_PREFIX, qiutil.file.generate_file_name())
 
 
 class RegistrationWorkflow(WorkflowBase):

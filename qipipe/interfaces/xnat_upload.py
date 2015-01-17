@@ -41,14 +41,14 @@ class XNATUpload(BaseInterface):
     :meth:`qiutil.qixnat.upload` method.
     
     :Note: This XNATUpload interface is deprecated due to the following
-    XNAT bug:
+        XNAT bug:
 
-    * XNAT or pyxnat concurrent file inserts sporadically fails
-      with error that the experiment already exists. Some files
-      are inserted, but insert fails unpredictably. The work-around
-      is to spawn a qicp executable, which seems to work.
+        * XNAT or pyxnat concurrent file inserts sporadically fails
+          with error that the experiment already exists. Some files
+          are inserted, but insert fails unpredictably.
 
-    The work-around is to use the XNATCopy interface instead.
+        The work-around is to use the :class:`qipipe.interfaces.XNATCopy`
+        interface instead.
 
     TODO - retry this XNATUpload interface in late 2015 when pyxnat
     hopefully matures.

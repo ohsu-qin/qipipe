@@ -4,7 +4,7 @@ import shutil
 from nose.tools import assert_equal
 
 from qipipe.staging.fix_dicom import fix_dicom_headers
-from qiutil.dicom import reader
+from qidicom import reader
 from ... import ROOT
 
 # The test fixture.

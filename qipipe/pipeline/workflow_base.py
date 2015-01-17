@@ -2,7 +2,7 @@ import os
 import re
 import tempfile
 import networkx as nx
-from .. import project
+from qixnat import project
 import qixnat
 from qiutil.collections import EMPTY_DICT
 from qiutil.ast_config import read_config

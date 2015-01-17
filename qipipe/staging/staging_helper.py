@@ -4,9 +4,9 @@ import os
 import re
 import glob
 from collections import defaultdict
-from .. import project
+from qixnat import project
 import qixnat
-from qiutil.dicom import reader
+from qidicom import reader
 from qiutil.collections import nested_defaultdict
 from qiutil.logging import logger
 from . import airc_collection as airc
@@ -136,23 +136,6 @@ def get_subjects(collection, source, pattern=None):
                 (subject, d))
 
     return sbj_dir_dict
-
-
-def group_dicom_files_by_series(*dicom_files):
-    """
-    Groups the given DICOM files by series. Subtraction images, indicated by
-    a ``SUB`` DICOM Image Type, are ignored.
-
-    :param dicom_files: the DICOM files or directories
-    :return: a {series number: DICOM file names} dictionary
-    """
-    series_dict = defaultdict(list)
-    for ds in reader.iter_dicom_headers(*dicom_files):
-        # Ignore subtraction images.
-        if not 'SUB' in ds.ImageType:
-            series_dict[int(ds.SeriesNumber)].append(ds.filename)
-
-    return series_dict
 
 
 def _collect_visits(collection, *inputs, **opts):

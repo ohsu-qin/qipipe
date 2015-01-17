@@ -34,7 +34,8 @@ class TestXNATDownload(object):
     """The  XNAT download interface unit tests."""
 
     def setUp(self):
-        qixnat.delete_subjects(project(), SUBJECT)
+        with qixnat.connect() as xnat:
+            xnat.delete_subjects(project(), SUBJECT)
         shutil.rmtree(RESULTS, True)
 
         with qixnat.connect() as xnat:
@@ -50,7 +51,8 @@ class TestXNATDownload(object):
 
 
     def tearDown(self):
-        qixnat.delete_subjects(project(), SUBJECT)
+        with qixnat.connect() as xnat:
+            xnat.delete_subjects(project(), SUBJECT)
         shutil.rmtree(RESULTS, True)
 
     def test_download_scan(self):

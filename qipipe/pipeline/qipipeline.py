@@ -256,8 +256,6 @@ class QIPipelineWorkflow(WorkflowBase):
     instance variable. The workflow input node is named *input_spec*
     with the same input fields as the
     :class:`qipipe.staging.RegistrationWorkflow` workflow *input_spec*.
-
-    .. _AIRC Grid Engine: https://everett.ohsu.edu/wiki/GridEngine
     """
 
     REG_SERIES_PAT = re.compile('series(\d+)_reg_')
@@ -265,7 +263,7 @@ class QIPipelineWorkflow(WorkflowBase):
     def __init__(self, **opts):
         """
         :param opts: the :class:`qipipe.staging.WorkflowBase`
-        initialization options as well as the following options:
+            initialization options as well as the following options:
         :keyword base_dir: the workflow execution directory
             (default a new temp directory)
         :keyword mask: the XNAT mask reconstruction name

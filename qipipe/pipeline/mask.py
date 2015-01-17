@@ -3,7 +3,7 @@ import logging
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Function)
 from nipype.interfaces import fsl
-from .. import project
+from qixnat import project
 from ..interfaces import (XNATUpload, MriVolCluster)
 from .workflow_base import WorkflowBase
 from qiutil.logging import logger

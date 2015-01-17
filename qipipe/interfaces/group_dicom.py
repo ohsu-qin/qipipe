@@ -1,7 +1,7 @@
 from nipype.interfaces.base import (traits,
                                     BaseInterfaceInputSpec, TraitedSpec, BaseInterface,
                                     InputMultiPath, OutputMultiPath, Directory, File)
-from qipipe.staging.staging_helper import group_dicom_files_by_series
+from qidicom.hierarchy import group_dicom_files_by_series
 
 
 class GroupDicomInputSpec(BaseInterfaceInputSpec):

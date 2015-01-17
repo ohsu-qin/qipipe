@@ -39,14 +39,15 @@ class TestXNATCopy(object):
     """The XNAT upload interface unit tests."""
     
     def setUp(self):
-        qixnat.delete_subjects(project(), SUBJECT)
-        # The session must exist.
         with qixnat.connect() as xnat:
+            xnat.delete_subjects(project(), SUBJECT)
+            # The session must exist.
             xnat.find(project=project(), subject=SUBJECT, session=SESSION,
                       create=True)
         
     def tearDown(self):
-        qixnat.delete_subjects(project(), SUBJECT)
+        with qixnat.connect() as xnat:
+            xnat.delete_subjects(project(), SUBJECT)
         shutil.rmtree(RESULTS, True)
     
     def test_scan(self):

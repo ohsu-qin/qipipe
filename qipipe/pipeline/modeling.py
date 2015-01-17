@@ -4,14 +4,13 @@ from nipype.pipeline import engine as pe
 from nipype.interfaces import fsl
 from nipype.interfaces.dcmstack import CopyMeta
 from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
-from .. import project
+import qiutil
+from qiutil.logging import logger
+from qixnat import project
 from ..interfaces import XNATUpload #, UpdateQIProfile)
-from ..interfaces.fastfit import Fastfit
-from qiutil import file_helper
 from ..helpers.bolus_arrival import bolus_arrival_index, BolusArrivalError
 from .workflow_base import WorkflowBase
 from .distributable import DISTRIBUTABLE
-from qiutil.logging import logger
 
 
 PK_PREFIX = 'pk'
@@ -225,7 +224,7 @@ class ModelingWorkflow(WorkflowBase):
 
         :return: a unique XNAT modeling resource name
         """
-        return "%s_%s" % (PK_PREFIX, file_helper.generate_file_name())
+        return "%s_%s" % (PK_PREFIX, qiutil.file.generate_file_name())
 
     def _model(self, subject, session, time_series, mask):
         """
@@ -436,6 +435,13 @@ class ModelingWorkflow(WorkflowBase):
         base_wf.connect(input_spec, 'bolus_arrival_index',
                         get_params, 'bolus_arrival_index')
 
+        # Import Fastfit on demand. This allows the modeling module to be
+        # imported by applications without the proprietary Fastfit modeling
+        # tool, e.g. the documentation builder Sphinx.
+        try:
+            Fastfit
+        except NameError:
+            from ..interfaces.fastfit import Fastfit
         # Optimize the pharmacokinetic model.
         pk_map = pe.Node(Fastfit(), name='pk_map')
         pk_map.inputs.model_name = 'fxr.model'

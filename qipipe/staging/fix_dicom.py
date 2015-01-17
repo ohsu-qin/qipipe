@@ -1,6 +1,6 @@
 import os
 import re
-from qiutil.dicom import meta
+from qidicom import meta
 from .sarcoma_config import sarcoma_location
 
 from qiutil.logging import logger

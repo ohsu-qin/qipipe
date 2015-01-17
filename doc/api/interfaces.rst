@@ -20,12 +20,6 @@ interfaces
     :members:
     :show-inheritance:
 
-:mod:`fastfit`
---------------
-.. automodule:: qipipe.interfaces.fastfit
-    :members:
-    :show-inheritance:
-
 :mod:`fix_dicom`
 ----------------
 .. automodule:: qipipe.interfaces.fix_dicom

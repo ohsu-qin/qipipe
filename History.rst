@@ -1,7 +1,11 @@
 This history lists major release themes. See the GitHub commits
 (http://quip1:6060/qipipe) for change details.
 
-4.5.3 / 2014-01-12
+4.5.4 / 2015-01-14
+------------------
+* Pull in qi* API changes.
+
+4.5.3 / 2015-01-12
 ------------------
 * Adapt for PyPI.
 

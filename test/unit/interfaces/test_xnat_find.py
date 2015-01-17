@@ -35,10 +35,12 @@ class TestXNATFind(object):
     """The XNAT find interface unit tests."""
 
     def setUp(self):
-        qixnat.delete_subjects(project(), SUBJECT)
+        with qixnat.connect() as xnat:
+            xnat.delete_subjects(project(), SUBJECT)
         
     def tearDown(self):
-        qixnat.delete_subjects(project(), SUBJECT)
+        with qixnat.connect() as xnat:
+            xnat.delete_subjects(project(), SUBJECT)
         shutil.rmtree(RESULTS, True)
     
     def test_find_subject(self):

@@ -67,7 +67,7 @@ class TestStagingWorkflow(object):
 
         with qixnat.connect() as xnat:
             # Delete any existing test subjects.
-            qixnat.delete_subjects(project(), *subjects)
+            xnat.delete_subjects(project(), *subjects)
             # Run the workflow on each session fixture.
             for sbj, sess, scan_type_dict in iter_stage(collection, *inputs,
                                                         dest=dest):
@@ -92,7 +92,7 @@ class TestStagingWorkflow(object):
                                     " not created in XNAT" % (sbj, sess, scan))
 
             # Delete the test subjects.
-            qixnat.delete_subjects(project(), *subjects)
+            xnat.delete_subjects(project(), *subjects)
 
 
 if __name__ == "__main__":

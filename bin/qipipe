@@ -17,7 +17,7 @@ def main(argv=sys.argv):
     inputs, opts = _parse_arguments()
 
     # Break out the logging options.
-    log_opts = {k: opts.pop(k) for k in ['log', 'log_level'] if k in opts}
+    log_opts = {k: opts.pop(k) for k in opts if k.beginswith('log')}
     # Configure the logger.
     command.configure_log('qipipe', log_opts)
     # Set the Nipype log directory environment variable before importing
@@ -39,7 +39,7 @@ def main(argv=sys.argv):
         os.environ[NIPYPE_LOG_DIR_ENV_VAR] = log_dir
 
     # Import the qipipe pipeline module after configuring the logger
-    # above.
+    # above, since importing any nipype module writes to the log.
     from qipipe.pipeline import qipipeline as qip
 
     # Run the QIN workflow.
@@ -58,7 +58,7 @@ def _parse_arguments():
     parser = argparse.ArgumentParser()
     
     # The log options.
-    command.add_log_options(parser)
+    command.add_options(parser)
 
     # The actions.
     parser.add_argument('--stage', dest='actions', action='append_const',
