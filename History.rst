@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub commits
 (http://quip1:6060/qipipe) for change details.
 
+4.5.5 / 2015-01-30
+------------------
+* Import group function from qidicom.
+
 4.5.4 / 2015-01-14
 ------------------
 * Pull in qi* API changes.

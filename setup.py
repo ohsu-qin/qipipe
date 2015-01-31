@@ -50,7 +50,7 @@ setup(
     include_package_data = True,
     scripts = glob.glob('bin/*'),
     url = 'http://quip1.ohsu.edu/8080/qipipe',
-    description = 'Quantitative Imaging OHSU QIN pipeline.',
+    description = 'OHSU QIN Quantitative Imaging pipeline.',
     long_description = readme(),
     classifiers = [
         'Development Status :: 5 - Production/Stable',

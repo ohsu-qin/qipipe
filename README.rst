@@ -1,7 +1,8 @@
 qipipe - OHSU QIN pipeline
 ==========================
 
-qipipe processes the OHSU QIN study images. See the `documentation`_ for more information.
+OHSU QIN Quantitative Imaging pipelines.
+See the `documentation`_ for more information.
 
 .. Targets:
 
