@@ -11,3 +11,4 @@ there is a refactoring or bug fix. All major, minor and patch
 version numbers begin at 1.
 """
 
+from helpers.project import project
