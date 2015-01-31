@@ -130,7 +130,7 @@ def _run_with_xnat_input(*inputs, **opts):
     :param opts: the ``project`` and :class:`QIPipelineWorkflow`
         initializer options
     """
-    prj = opts.pop('project', qipipe.project())
+    prj = opts.get('project', qipipe.project())
     with qixnat.connect() as xnat:
         for label in inputs:
             # Convert a path to a label.
