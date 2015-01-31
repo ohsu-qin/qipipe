@@ -135,7 +135,7 @@ def _run_with_xnat_input(*inputs, **opts):
         for label in inputs:
             # Convert a path to a label.
             if '/' in label:
-                label = label.sub('/', '_')
+                label = label.replace('/', '_')
             sbj, sess = qixnat.parse_session_label(label)
             # Check for an existing mask.
             mask_obj = xnat.find(project=prj, subject=sbj, session=sess,
