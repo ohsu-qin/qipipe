@@ -17,7 +17,7 @@ def main(argv=sys.argv):
     inputs, opts = _parse_arguments()
 
     # Break out the logging options.
-    log_opts = {k: opts.pop(k) for k in opts if k.beginswith('log')}
+    log_opts = {k: opts.pop(k) for k in opts if k.startswith('log')}
     # Configure the logger.
     command.configure_log('qipipe', log_opts)
     # Set the Nipype log directory environment variable before importing
