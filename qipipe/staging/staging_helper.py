@@ -4,11 +4,12 @@ import os
 import re
 import glob
 from collections import defaultdict
-from qixnat import project
-import qixnat
-from qidicom import reader
 from qiutil.collections import nested_defaultdict
 from qiutil.logging import logger
+import qixnat
+from qixnat import project
+from qidicom import reader
+from qidicom.hierarchy import group_dicom_files_by_series
 from . import airc_collection as airc
 from .staging_error import StagingError
 
