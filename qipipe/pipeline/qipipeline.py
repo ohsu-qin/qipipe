@@ -448,8 +448,8 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # The registration workflow node.
         if 'register' in actions:
-            reg_inputs = ['subject', 'session', 'in_files',
-                          'bolus_arrival_index', 'mask', 'opts']
+            reg_inputs = ['subject', 'session', 'bolus_arrival_index',
+                          'in_files', 'mask', 'opts']
             
             # The registration function keyword options.
             reg_opts = dict(base_dir=base_dir)
@@ -773,26 +773,29 @@ def select_scan_files(scans, in_files):
             if int(series_pat.search(f).group(1)) in scans]
 
 
-def register_scans(subject, session, in_files, bolus_arrival_index,
+def register_scans(subject, session, bolus_arrival_index, in_files,
                    mask, opts):
     """
     Runs the registration workflow on the given session scan images.
 
     :Note: contrary to Python convention, the opts method parameter
-      is a required dictionary rather than a keyword aggregate (e.g.
+      is a required dictionary rather than a keyword aggregate (i.e.,
       ``**opts``). The Nipype ``Function`` interface does not support
-      method aggregates.
+      method aggregates. Similiarly, the in_files parameter is a
+      required list rather than a splat argument (i.e., *in_files).
 
     :param subject: the subject name
     :param session: the session name
+    :param bolus_arrival_index: the bolus uptake series index
     :param in_files: the input session scan images
     :param mask: the image mask file path
-    :param bolus_arrival_index: the bolus uptake series index
     :param opts: the :meth:`qipipe.pipeline.registration.run` keyword
         options
     :return: the realigned image file path array
     """
     from qipipe.pipeline import registration
 
-    return registration.run(subject, session, in_files, bolus_arrival_index,
-                            mask, **opts)
+    if mask:
+        opts['mask'] = mask
+    return registration.run(subject, session, bolus_arrival_index,
+                            *in_files, **opts)
