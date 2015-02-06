@@ -1,5 +1,5 @@
 This history lists major release themes. See the GitHub commits
-(http://quip1:6060/qipipe) for change details.
+for change details.
 
 4.5.5 / 2015-01-30
 ------------------
