@@ -96,7 +96,7 @@ def _parse_arguments():
 
     # The registration arguments.
     parser.add_argument('--registration',
-                        help='the XNAT registration resource name',
+                        help='the XNAT registration resource label',
                         metavar='RESOURCE')
     technique_grp = parser.add_mutually_exclusive_group()
     technique_grp.add_argument('--ants',
