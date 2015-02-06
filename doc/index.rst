@@ -9,7 +9,7 @@ Synopsis
 ********
 qipipe processes the OHSU QIN study images.
 
-:API: http://qipipe.readthedocs.org/en/latest/
+:API: http://qipipe.readthedocs.org/en/latest/api/index.html
 
 :Git: https://github.com/ohsu-qin/qipipe
 
