@@ -9,7 +9,6 @@ import os
 import imp
 import argparse
 from qiutil import command
-# TODO - load this file directly to avoid nipype garbage injection.
 from qipipe.helpers import colors
 
 def main(argv=sys.argv):
