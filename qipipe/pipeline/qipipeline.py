@@ -6,6 +6,9 @@ from collections import defaultdict
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
 from nipype.interfaces.dcmstack import MergeNifti
+import qixnat
+from qixnat.helpers import parse_session_label
+from qiutil.logging import logger
 import qipipe
 from . import staging
 from .workflow_base import WorkflowBase
@@ -13,9 +16,6 @@ from .staging import StagingWorkflow
 from .mask import MaskWorkflow
 import registration
 from ..interfaces import (XNATDownload, XNATUpload)
-import qixnat
-from qixnat.helpers import parse_session_label
-from qiutil.logging import logger
 from ..staging.staging_helper import iter_stage
 from ..staging.map_ctp import map_ctp
 
@@ -533,8 +533,8 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(iter_dicom, 'dicom_file',
                             stg_wf, 'iter_dicom.dicom_file')
 
-        # Some workflows require the scans. If staging is
-        # enabled then collect the staged NiFTI scan images. Otherwise,
+        # Some workflows require the scans. If staging is enabled,
+        # then collect the staged NiFTI scan images. Otherwise,
         # download the XNAT NiFTI scan images. In either case, the
         # staged images are collected in a node named 'staged' with
         # output 'images'.
