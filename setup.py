@@ -49,7 +49,7 @@ setup(
     packages = find_packages(exclude=['test**']),
     include_package_data = True,
     scripts = glob.glob('bin/*'),
-    url = 'http://quip1.ohsu.edu/8080/qipipe',
+    url = 'http://qipipe.readthedocs.org/en/latest/',
     description = 'OHSU QIN Quantitative Imaging pipeline.',
     long_description = readme(),
     classifiers = [
