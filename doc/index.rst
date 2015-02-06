@@ -28,8 +28,8 @@ Feature List
 
 5. Performs pharmokinetic modeling.
 
-6. Imports the input scans and processing results into the OSHU `QIN XNAT`_
-   instance.
+6. Imports the input scans and processing results into the XNAT_
+   image database.
 
 
 ************
@@ -65,7 +65,9 @@ customary Python_ pip_ command ``pip install qixnat`` alone. Install
       ANTS_HOME=$HOME/ants
       export PATH=$ANTS_HOME/bin
 
-4. Refresh your environment, e.g. quit your console and reopen a new one.
+4. Refresh your environment::
+
+      . $HOME/.bash_profile
    
 5. Install ``qixnat`` using Anaconda_ as described in the
    `qixnat installation instructions`_.
@@ -81,8 +83,9 @@ customary Python_ pip_ command ``pip install qixnat`` alone. Install
 
       wget -O - https://raw.githubusercontent.com/ohsu-qin/qipipe/master/requirements.txt | xargs -n 1 pip install
 
-  The dependencies must be installed in succession one at a time because some requirements,
-  e.g. ``nipy``, have implicit dependencies that necessitate this one-at-a-time approach.
+  The dependencies must be installed in succession one at a time because some
+  requirements, e.g. ``nipy``, have implicit dependencies that necessitate this
+  one-at-a-time approach.
 
 8. Install the ``qipipe`` package::
 
@@ -131,8 +134,6 @@ Run the following command for the pipeline options::
 
 .. _Python: http://www.python.org
 
-.. _QIN XNAT: http://quip5.ohsu.edu:8080/xnat
-
 .. _qixnat: https://github.com/ohsu-qin/qixnat
 
 .. _qixnat installation instructions: https://github.com/ohsu-qin/qixnat/blob/master/doc/index.rst
@@ -144,6 +145,8 @@ Run the following command for the pipeline options::
 .. _qixnat: https://github.com/ohsu-qin/qixnat
 
 .. _The Cancer Imaging Archive: http://cancerimagingarchive.net
+
+.. _XNAT: http://www.xnat.org/
 
 
 .. toctree::
