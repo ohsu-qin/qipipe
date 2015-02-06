@@ -20,15 +20,17 @@ def collection_with_name(name):
 def _create_collections():
     """Creates the pre-defined AIRC collections."""
 
-    # The AIRC T1 scan DICOM files are in the concat directory.
-    # The AIRC T2 scan DICOM files are in the sorted subdirectories. 
-    dcm_pat_dict = dict(t1='*concat*/*', t2='*sorted*/*/*')
+    # The AIRC T1 scan DICOM files are in the concat subdirectory.
+    # The AIRC T2 scan DICOM files are in special subdirectories.
+    t1_pat = '*concat*/*'
+    breast_pat_dict = dict(t1=t1_pat, t2='*sorted/2_tirm_tra_bilat/*')
+    sarcoma_pat_dict = dict(t1=t1_pat, t2='*T2*/*')
 
     return dict(
         Breast=AIRCCollection(
-            'Breast', 'BreastChemo(\d+)', 'Visit(\d+)', dcm_pat_dict),
+            'Breast', 'BreastChemo(\d+)', 'Visit(\d+)', breast_pat_dict),
         Sarcoma=AIRCCollection(
-            'Sarcoma', 'Subj_(\d+)', '(?:Visit_|S\d+V)(\d+)', dcm_pat_dict))
+            'Sarcoma', 'Subj_(\d+)', '(?:Visit_|S\d+V)(\d+)', sarcoma_pat_dict))
 
 
 class AIRCCollection(object):
