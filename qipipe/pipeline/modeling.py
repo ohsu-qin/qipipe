@@ -6,7 +6,7 @@ from nipype.interfaces.dcmstack import CopyMeta
 from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
 import qiutil
 from qiutil.logging import logger
-from qixnat import project
+from .. import project
 from ..interfaces import XNATUpload #, UpdateQIProfile)
 from ..helpers.bolus_arrival import bolus_arrival_index, BolusArrivalError
 from .workflow_base import WorkflowBase

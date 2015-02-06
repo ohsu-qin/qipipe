@@ -4,7 +4,7 @@ from collections import defaultdict
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import IdentityInterface
 from nipype.interfaces.dcmstack import DcmStack
-from qixnat import project
+from .. import project
 from ..interfaces import (Gate, FixDicom, Compress, XNATFind, XNATCopy)
 import qixnat
 from .workflow_base import WorkflowBase
