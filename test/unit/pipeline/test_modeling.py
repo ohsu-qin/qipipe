@@ -36,20 +36,20 @@ class TestModelingWorkflow(StagedTestBase):
             breast
                 Breast003
                     Session01
-                        series009.nii.gz
-                        series023.nii.gz
+                        volume009.nii.gz
+                        volume023.nii.gz
                          ...
             sarcoma
                 Sarcoma001
                     Session01
-                        series011.nii.gz
-                        series013.nii.gz
+                        volume011.nii.gz
+                        volume013.nii.gz
                          ...
     
-    The fixture is not included in the Git source repository due to storage
-    constraints.
+        The fixture is not included in the Git source repository due to
+        storage constraints.
     
-    Note:: this test takes app. 8 hours to run on the AIRC cluster.
+    Note:: this test takes several hours to run on the AIRC cluster.
     """
 
     def __init__(self):
