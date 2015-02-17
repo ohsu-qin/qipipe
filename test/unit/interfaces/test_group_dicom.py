@@ -14,10 +14,10 @@ class TestGroupDicom(object):
 
     """GroupDicom interface unit tests."""
 
-    def test_link_dicom(self):
+    def test_group_dicom(self):
         logger(__name__).debug("Testing the GroupDicom interface on %s..."
                                % FIXTURE)
-        grouper = GroupDicom(in_files=FIXTURE)
+        grouper = GroupDicom(tag='SeriesNumber', in_files=FIXTURE)
         result = grouper.run()
         ser_dict = result.outputs.series_files_dict
         assert_true(not not ser_dict, "GroupDicom did not group the files")

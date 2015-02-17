@@ -1,10 +1,12 @@
 from nipype.interfaces.base import (traits,
                                     BaseInterfaceInputSpec, TraitedSpec, BaseInterface,
                                     InputMultiPath, OutputMultiPath, Directory, File)
-from qidicom.hierarchy import group_dicom_files_by_series
+from qidicom import hierarchy
 
 
 class GroupDicomInputSpec(BaseInterfaceInputSpec):
+    tag = traits.String(mandatory=True)
+    
     in_files = InputMultiPath(
         traits.Either(File(exists=True), Directory(exists=True)),
         mandatory=True, desc='The DICOM files to group')
@@ -20,7 +22,7 @@ class GroupDicom(BaseInterface):
     output_spec = GroupDicomOutputSpec
 
     def _run_interface(self, runtime):
-        self.grp_dict = group_dicom_files_by_series(*self.inputs.in_files)
+        self.grp_dict = hierarchy.group_by(self.inputs.tag, *self.inputs.in_files)
         return runtime
 
     def _list_outputs(self):

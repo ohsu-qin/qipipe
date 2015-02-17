@@ -9,7 +9,7 @@ from qiutil.logging import logger
 import qixnat
 from .. import project
 from qidicom import reader
-from qidicom.hierarchy import group_dicom_files_by_series
+from qidicom.hierarchy import group_by
 from . import airc_collection as airc
 from .staging_error import StagingError
 
@@ -17,7 +17,7 @@ SUBJECT_FMT = '%s%03d'
 """The QIN subject name format with arguments (collection, subject number)."""
 
 SESSION_FMT = 'Session%02d'
-"""The QIN series name format with arguments (subject, series number)."""
+"""The QIN session name format with argument session number."""
 
 
 def iter_stage(collection, *inputs, **opts):
@@ -33,7 +33,7 @@ def iter_stage(collection, *inputs, **opts):
         >> print sess
         Session01
         >> print scan_type_dict
-        {'t1': {20: ['/path/to/file', ...]}, ...}
+        {'t1': {20: ['/path/to/image1.dcm', ...]}, ...}
 
     The input directories conform to the
     :class:`qipipe.staging.airc_collection.AIRCCollection` *subject_pattern*)
@@ -41,11 +41,9 @@ def iter_stage(collection, *inputs, **opts):
     :param collection: the AIRC image collection name
     :param inputs: the AIRC source subject directories to stage
     :param opts: the following keyword option:
-    :keyword dest: the TCIA staging destination directory (default is
-        the current working directory)
     :keyword skip_existing: flag indicating whether to ignore existing
         sessions (default True)
-    :yield: stage the DICOM files
+    :yield: the DICOM files
     :yieldparam subject: the subject name
     :yieldparam session: the session name
     :yieldparam scan_type_dict: the *{scan type: {scan number: [DICOM files]}}*
@@ -54,16 +52,9 @@ def iter_stage(collection, *inputs, **opts):
     # Validate that there is a collection
     if not collection:
         raise ValueError('Staging is missing the AIRC collection name')
-
-    # The staging location.
-    dest = opts.pop('dest', None)
-    if dest:
-        dest = os.path.abspath(dest)
-    else:
-        dest = os.getcwd()
     
     # Group the new DICOM files into a
-    # {subject: {session: [(series, dicom_files), ...]}} dictionary.
+    # {subject: {session: [(volume, dicom_files), ...]}} dictionary.
     stg_dict = _collect_visits(collection, *inputs, **opts)
     if not stg_dict:
         return
@@ -72,12 +63,11 @@ def iter_stage(collection, *inputs, **opts):
     subjects = stg_dict.keys()
 
     # Print a debug message.
-    series_cnt = sum(map(len, stg_dict.itervalues()))
-    logger(__name__).debug("Staging %d new %s series from %d subjects in"
-                           " %s..." % (series_cnt, collection, len(subjects),
-                                       dest))
+    volume_cnt = sum(map(len, stg_dict.itervalues()))
+    logger(__name__).debug("Staging %d new %s volumes from %d subjects" %
+                           (volume_cnt, collection, len(subjects)))
     
-    # Generate the (subject, session, {scan type: {series: [dicom files]}})
+    # Generate the (subject, session, {scan type: {volume: [dicom files]}})
     # tuples.
     for sbj, sess_dict in stg_dict.iteritems():
         logger(__name__).debug("Staging subject %s..." % sbj)
@@ -87,8 +77,8 @@ def iter_stage(collection, *inputs, **opts):
             yield sbj, sess, scan_type_dict
             logger(__name__).debug("Staged %s session %s." % (sbj, sess))
         logger(__name__).debug("Staged subject %s." % sbj)
-    logger(__name__).debug("Staged %d new %s series from %d subjects in %s." %
-                           (series_cnt, collection, len(subjects), dest))
+    logger(__name__).debug("Staged %d new %s volumes from %d subjects." %
+                           (volume_cnt, collection, len(subjects)))
 
 
 def subject_for_directory(collection, path):
@@ -142,7 +132,7 @@ def get_subjects(collection, source, pattern=None):
 def _collect_visits(collection, *inputs, **opts):
     """
     Collects the AIRC visits in the given input directories.
-    The visit DICOM files are grouped by series.
+    The visit DICOM files are grouped by volume.
 
     :param collection: the AIRC image collection name
     :param inputs: the AIRC source subject directories
@@ -158,19 +148,19 @@ def _collect_visits(collection, *inputs, **opts):
     else:
         visits = list(_iter_visits(collection, *inputs, **opts))
 
-    # Group the DICOM files by series.
+    # Group the DICOM files by volume.
     return _group_visits(*visits)
 
 
 def _detect_new_visits(collection, *inputs, **opts):
     """
     Detects the new AIRC visits in the given input directories. The visit
-    DICOM files are grouped by series.
+    DICOM files are grouped by volume.
 
     :param collection: the AIRC image collection name
     :param inputs: the AIRC source subject directories
     :param opts: the :class:`VisitIterator` initializer options
-    :return: the *{subject: {session: {series: [dicom files]}}}* dictionary
+    :return: the *{subject: {session: {volume: [dicom files]}}}* dictionary
     """
     # Collect the AIRC visits into (subject, session, dicom_files)
     # tuples.
@@ -183,14 +173,14 @@ def _detect_new_visits(collection, *inputs, **opts):
         return {}
     logger(__name__).debug("%d new visits were detected" % len(visits))
 
-    # Group the DICOM files by series.
+    # Group the DICOM files by volume.
     return visits
 
 
 def _iter_visits(collection, *inputs, **opts):
     """
     Iterates over the visits in the given subject directories.
-    Each iteration item is a *(subject, session, series_dict)* tuple,
+    Each iteration item is a *(subject, session, volume_dict)* tuple,
     formed as follows:
 
     - The *subject* is the XNAT subject name formatted by
@@ -199,7 +189,7 @@ def _iter_visits(collection, *inputs, **opts):
     - The *session* is the XNAT experiment name formatted by
       :data:`SESSION_FMT`.
 
-    - The *series_dict* generator iterates over the files which match the
+    - The *volume_dict* generator iterates over the files which match the
       :mod:`qipipe.staging.airc_collection` DICOM file include pattern,
       grouped by the scan type.
 
@@ -222,7 +212,7 @@ def _iter_new_visits(collection, *inputs, **opts):
     :param collection: the AIRC image collection name
     :param inputs: the subject directories over which to iterate
     :param opts: the :meth:`_iter_visits` options
-    :yield: iterate over the new visit *(subject, session, series_dict)* tuples
+    :yield: iterate over the new visit *(subject, session, volume_dict)* tuples
     """
     opts['filter'] = _is_new_session
     return _iter_visits(collection, *inputs, **opts)
@@ -247,17 +237,17 @@ def _group_visits(*visit_tuples):
 
     :param visit_tuples: the *(subject, session, {scan type: [dicom files]})*
         tuples to group
-    :return: the *{subject: {session: {scan type: {series: [dicom files]}}}}*
+    :return: the *{subject: {session: {scan type: {volume: [dicom files]}}}}*
         dictionary
     """
-    # The {subject: {session: {series: {scan_type: [dicom files]}}}} output.
+    # The {subject: {session: {volume: {scan_type: [dicom files]}}}} output.
     stg_dict = nested_defaultdict(dict, 3)
     for sbj, sess, scan_type_dict in visit_tuples:
-        # Group the session DICOM input files by series within scan type.
+        # Group the session DICOM input files by volume within scan type.
         for scan_type, dcm_iter in scan_type_dict.iteritems():
-            series_dict = group_dicom_files_by_series(dcm_iter)
-            for series, dcm_iter in series_dict.iteritems():
-                stg_dict[sbj][sess][scan_type][series] = dcm_iter
+            volume_dict = group_by('SeriesNumber', *dcm_iter)
+            for volume, dcm_iter in volume_dict.iteritems():
+                stg_dict[sbj][sess][scan_type][volume] = dcm_iter
 
     return stg_dict
 
