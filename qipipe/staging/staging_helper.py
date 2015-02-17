@@ -285,6 +285,8 @@ class VisitIterator(object):
         """
         # The visit subdirectory match pattern.
         vpat = self.collection.session_pattern
+        logger(__name__).debug("The visit directory search pattern is %s..." %
+                               vpath)
         
         # The DICOM file search pattern depends on the scan type.
         dcm_pat_dict = self.collection.dcm_pat_dict
