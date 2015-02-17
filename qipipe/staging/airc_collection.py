@@ -30,7 +30,9 @@ def _create_collections():
         Breast=AIRCCollection(
             'Breast', 'BreastChemo(\d+)', 'Visit(\d+)', breast_pat_dict),
         Sarcoma=AIRCCollection(
-            'Sarcoma', 'Subj_(\d+)', '(?:Visit_|S\d+V)(\d+)', sarcoma_pat_dict))
+            # The visit pattern matches 'Visit_3', 'Visit3' and 'S4V3'
+            # with groups ['3'].
+            'Sarcoma', 'Subj_(\d+)', '(?:Visit_?|S\d+V)(\d+)', sarcoma_pat_dict))
 
 
 class AIRCCollection(object):
