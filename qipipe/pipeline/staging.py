@@ -271,26 +271,33 @@ class StagingWorkflow(WorkflowBase):
             workflow.connect(fix_dicom, 'out_file', compress_dicom, 'in_file')
             workflow.connect(iter_series, 'dest', compress_dicom, 'dest')
 
-            # Force the DICOM upload to follow session create.
-            # Since only one upload task can run at a time for a given series,
-            # this upload gate node is a JoinNode that collects the iterated
-            # scan DICOM files.
-            upload_dicom_gate_xfc = Gate(fields=['xnat_id', 'scan', 'files'])
-            upload_dicom_gate = pe.JoinNode(upload_dicom_gate_xfc,
-                                            joinsource='iter_dicom',
-                                            joinfield='files',
-                                            name='upload_dicom_gate')
-            workflow.connect(find_session, 'xnat_id', upload_dicom_gate, 'xnat_id')
-            workflow.connect(iter_series, 'series', upload_dicom_gate, 'scan')
-            workflow.connect(compress_dicom, 'out_file', upload_dicom_gate, 'files')
+            # TODO - if there are sporadic upload race conditions, then restore
+            # the commented code below, else remove it.
+            #
+            # # Force the DICOM upload to follow session create.
+            # # Since only one upload task can run at a time for a given series,
+            # # this upload gate node is a JoinNode that collects the iterated
+            # # scan DICOM files.
+            # upload_dicom_gate_xfc = Gate(fields=['xnat_id', 'scan', 'files'])
+            # upload_dicom_gate = pe.JoinNode(upload_dicom_gate_xfc,
+            #                                 joinsource='iter_dicom',
+            #                                 joinfield='files',
+            #                                 name='upload_dicom_gate')
+            # workflow.connect(find_session, 'xnat_id', upload_dicom_gate, 'xnat_id')
+            # workflow.connect(iter_series, 'series', upload_dicom_gate, 'scan')
+            # workflow.connect(compress_dicom, 'out_file', upload_dicom_gate, 'files')
 
             upload_dicom_xfc = XNATCopy(project=project(), resource='DICOM',
                                           skip_existing=True)
-            upload_dicom = pe.Node(upload_dicom_xfc, name='upload_dicom')
+            # upload_dicom = pe.Node(upload_dicom_xfc, name='upload_dicom')
+            upload_dicom = pe.JoinNode(upload_dicom_xfc, joinsource='iter_dicom',
+                                       joinfield='in_files', name='upload_dicom')
             workflow.connect(input_spec, 'subject', upload_dicom, 'subject')
             workflow.connect(input_spec, 'session', upload_dicom, 'session')
-            workflow.connect(upload_dicom_gate, 'scan', upload_dicom, 'scan')
-            workflow.connect(upload_dicom_gate, 'files', upload_dicom, 'in_files')
+            # workflow.connect(upload_dicom_gate, 'scan', upload_dicom, 'scan')
+            # workflow.connect(upload_dicom_gate, 'files', upload_dicom, 'in_files')
+            workflow.connect(iter_series, 'series', upload_dicom, 'scan')
+            workflow.connect(compress_dicom, 'out_file', upload_dicom, 'in_files')
 
         # Stack the scan into a 3D NiFTI file.
         suffix = "_%s" % scan_type
