@@ -89,9 +89,9 @@ class ModelingWorkflow(WorkflowBase):
     - `fxr_v_e`, `fxl_v_e`: the |ve| extravascular extracellular volume
        fraction
 
-    - `fxr_tau_i`: the intracellular |H2O| mean lifetime
+    - `fxr_tau_i`: the |taui| intracellular |H2O| mean lifetime
 
-    - `fxr_chisq`, `fxl_chisq`: the intracellular |H2O| mean lifetime
+    - `fxr_chi_sq`, `fxl_chi_sq`: the |chisq| intensity goodness of fit
 
     In addition, if |R10| is computed, then the output includes the
     following fields:
@@ -108,9 +108,12 @@ class ModelingWorkflow(WorkflowBase):
         BOLERO implementation of the shutter speed model.
 
     .. reST substitutions:
+    .. include:: <isogrk3.txt>
     .. |H2O| replace:: H\ :sub:`2`\ O
     .. |Ktrans| replace:: K\ :sup:`trans`
     .. |ve| replace:: v\ :sub:`e`
+    .. |taui| replace:: |tau|\ :sub:`i`
+    .. |chisq| replace:: |chi|\ :sup:`2`
     .. |R10| replace:: R1\ :sub:`0`
 
     .. _Tofts standard: http://onlinelibrary.wiley.com/doi/10.1002/(SICI)1522-2586(199909)10:3%3C223::AID-JMRI2%3E3.0.CO;2-S/abstract
