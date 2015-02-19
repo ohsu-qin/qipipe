@@ -38,7 +38,7 @@ class XNATUploadOutputSpec(TraitedSpec):
 class XNATUpload(BaseInterface):
     """
     The ``XNATUpload`` Nipype interface wraps the
-    :meth:`qiutil.qixnat.upload` method.
+    :meth:`qixnat.facade.XNAT.upload` method.
     
     :Note: This XNATUpload interface is deprecated due to the following
         XNAT bug:

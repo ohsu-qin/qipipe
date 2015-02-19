@@ -43,7 +43,7 @@ class XNATDownload(BaseInterface):
 
     """
     The ``XNATDownload`` Nipype interface wraps the
-    :meth:`qiutil.qixnat.download` method.
+    :meth:`qixnat.facade.XNAT.download` method.
     
     :Note: only one XNAT operation can run at a time.
     

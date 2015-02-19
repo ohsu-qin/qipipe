@@ -171,7 +171,7 @@ class WorkflowBase(object):
         """
         Download the NIFTI scan files for the given session.
 
-        :param xnat: the :class:`qiutil.qixnat.XNAT` connection
+        :param xnat: the :class:`qixnat.facade.XNAT` connection
         :param subject: the XNAT subject label
         :param session: the XNAT session label
         :param dest: the destination directory path

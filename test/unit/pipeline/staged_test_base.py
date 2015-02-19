@@ -152,7 +152,7 @@ class StagedTestBase(object):
         where *files* is a list consisting of the session image files found
         in the test fixture directory.
         
-        :param xnat: the :class:`qiutil.qixnats.XNAT` connection
+        :param xnat: the :class:`qixnat.facade.XNAT` connection
         :param subject: the input subject
         :param session: the input session
         :param result: the :meth`_run_workflow` result
