@@ -30,7 +30,7 @@ class Copy(BaseInterface):
 
     def _run_interface(self, runtime):
         self._out_file = self._copy(self.inputs.in_file, self.inputs.dest,
-                                   self.inputs.out_fname)
+                                    self.inputs.out_fname)
         return runtime
 
     def _list_outputs(self):
