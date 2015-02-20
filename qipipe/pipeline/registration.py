@@ -311,8 +311,8 @@ class RegistrationWorkflow(WorkflowBase):
         exec_wf.connect(join_realigned, 'images', concat_reg, 'in2')
 
         # Upload the registration result into the XNAT registration resource.
-        upload_reg_xfc = XNATUpload(project=project(),
-                                    resource=self.resource)
+        upload_reg_xfc = XNATUpload(project=project(), resource=self.resource,
+                                    modality='MR')
         upload_reg = pe.Node(upload_reg_xfc, name='upload_reg')
         exec_wf.connect(input_spec, 'subject', upload_reg, 'subject')
         exec_wf.connect(input_spec, 'session', upload_reg, 'session')

@@ -33,9 +33,6 @@ class TestStagingWorkflow(object):
     def test_breast(self):
         self._test_collection('Breast')
 
-    def test_t2(self):
-        self._test_collection('Breast')
-
     def test_sarcoma(self):
         self._test_collection('Sarcoma')
 
@@ -51,8 +48,8 @@ class TestStagingWorkflow(object):
         :param collection: the AIRC collection name
         """
         fixture = os.path.join(FIXTURES, collection.lower())
-        logger(__name__).debug(
-            "Testing the staging workflow on %s..." % fixture)
+        logger(__name__).debug("Testing the staging workflow on %s..." %
+                               fixture)
 
         # The staging destination and work area.
         dest = os.path.join(RESULTS, 'staged')
@@ -90,6 +87,14 @@ class TestStagingWorkflow(object):
                         scan_obj = xnat.get_scan(project(), sbj, sess, scan)
                         assert_true(scan_obj.exists(), "The %s %s scan %s was"
                                     " not created in XNAT" % (sbj, sess, scan))
+
+
+
+                    break
+                break
+
+
+
 
             # Delete the test subjects.
             xnat.delete_subjects(project(), *subjects)

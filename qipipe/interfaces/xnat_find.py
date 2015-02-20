@@ -26,6 +26,8 @@ class XNATFindInputSpec(BaseInterfaceInputSpec):
     create = traits.Bool(default=False, desc='Flag indicating whether to '
                          'create the XNAT object if it does not yet exist')
 
+    modality = traits.Str(desc="The XNAT scan modality, e.g. 'MR'")
+
 
 class XNATFindOutputSpec(TraitedSpec):
     xnat_id = traits.Str(desc='The XNAT object id')
@@ -50,6 +52,8 @@ class XNATFind(BaseInterface):
     def _run_interface(self, runtime):
         # The find options.
         opts = dict(create=self.inputs.create)
+        if self.inputs.modality:
+            opts['modality'] = self.inputs.modality
 
         # The session is optional.
         if isdefined(self.inputs.session):
@@ -59,7 +63,6 @@ class XNATFind(BaseInterface):
 
         # The resource parent.
         if self.inputs.scan:
-            opts['modality'] = 'MR'
             opts['scan'] = self.inputs.scan
         elif self.inputs.reconstruction:
             opts['reconstruction'] = self.inputs.reconstruction

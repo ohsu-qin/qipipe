@@ -51,7 +51,7 @@ class TestXNATUpload(object):
                                " scan %d..." % (SUBJECT, SESSION, SCAN))
         # Upload the file.
         upload = XNATUpload(project=project(), subject=SUBJECT, session=SESSION,
-            scan=SCAN, in_files=FIXTURE)
+                            scan=SCAN, modality='MR', in_files=FIXTURE)
         result = upload.run()
 
         # Verify the result.
@@ -76,7 +76,7 @@ class TestXNATUpload(object):
                                (SUBJECT, SESSION, REGISTRATION))
         # Upload the file.
         upload = XNATUpload(project=project(), subject=SUBJECT, session=SESSION,
-                            resource=REGISTRATION, in_files=FIXTURE)
+                            resource=REGISTRATION, modality='MR', in_files=FIXTURE)
         result = upload.run()
 
         # Verify the result.
@@ -101,7 +101,7 @@ class TestXNATUpload(object):
                                (SUBJECT, SESSION, RECON))
         # Upload the file.
         upload = XNATUpload(project=project(), subject=SUBJECT, session=SESSION,
-                            reconstruction=RECON, resource='NIFTI',
+                            reconstruction=RECON, resource='NIFTI', modality='MR',
                             in_files=FIXTURE)
         result = upload.run()
 
@@ -123,7 +123,8 @@ class TestXNATUpload(object):
                                " analysis %s..." % (SUBJECT, SESSION, ANALYSIS))
         # Upload the file.
         upload = XNATUpload(project=project(), subject=SUBJECT, session=SESSION,
-                            assessor=ANALYSIS, resource='params', in_files=FIXTURE)
+                            assessor=ANALYSIS, resource='params', modality='MR',
+                            in_files=FIXTURE)
         result = upload.run()
 
         # Verify the result.

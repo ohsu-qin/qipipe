@@ -38,6 +38,9 @@ class XNATCopyInputSpec(CommandLineInputSpec):
     in_files = InputMultiPath(File(exists=True), argstr='%s', position=-3,
                               desc='The files to upload')
 
+    modality = traits.Str(argstr='--modality %s',
+                          desc="The XNAT scan modality, e.g. 'MR'")
+
     force = traits.Bool(argstr='--force',
                         desc='Flag indicating whether to replace an existing'
                              ' XNAT file')

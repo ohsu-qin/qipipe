@@ -1,6 +1,7 @@
 import os
 import shutil
 from nose.tools import (assert_equal, assert_in, assert_true)
+from nipype.pipeline import engine as pe
 import qixnat
 from qipipe.interfaces import XNATCopy
 from ... import (project, ROOT)
@@ -36,28 +37,21 @@ ANALYSIS = 'pk'
 
 
 class TestXNATCopy(object):
-    """The XNAT upload interface unit tests."""
-    
-    def setUp(self):
-        with qixnat.connect() as xnat:
-            xnat.delete_subjects(project(), SUBJECT)
-            # The session must exist.
-            xnat.find(project=project(), subject=SUBJECT, session=SESSION,
-                      create=True)
-        
+    """The XNATCopy interface unit tests."""
+
     def tearDown(self):
         with qixnat.connect() as xnat:
             xnat.delete_subjects(project(), SUBJECT)
         shutil.rmtree(RESULTS, True)
-    
+
     def test_scan(self):
         logger(__name__).debug("Testing the XNATCopy interface on %s %s"
                                " scan %d..." % (SUBJECT, SESSION, SCAN))
         # Upload the file.
         copy = XNATCopy(project=project(), subject=SUBJECT, session=SESSION,
-            scan=SCAN, in_files=FIXTURE)
+                        scan=SCAN, modality='MR', in_files=FIXTURE)
         result = copy.run()
-        
+    
         # Verify the result.
         xnat_files = set(result.outputs.xnat_files)
         with qixnat.connect() as xnat:
@@ -74,15 +68,16 @@ class TestXNATCopy(object):
                         "XNATCopy did not create the %s %s scan %d file: %s" %
                         (SUBJECT, SESSION, SCAN, fname))
     
+    
     def test_registration(self):
         logger(__name__).debug("Testing the XNATCopy interface on %s %s"
                                " registration resource %s..." %
                                (SUBJECT, SESSION, REGISTRATION))
         # Upload the file.
-        upload = XNATCopy(project=project(), subject=SUBJECT, session=SESSION,
-                            resource=REGISTRATION, in_files=FIXTURE)
-        result = upload.run()
-        
+        copy = XNATCopy(project=project(), subject=SUBJECT, session=SESSION,
+                        resource=REGISTRATION, modality='MR', in_files=FIXTURE)
+        result = copy.run()
+    
         # Verify the result.
         with qixnat.connect() as xnat:
             exp_obj = xnat.get_experiment(project(), SUBJECT, SESSION)
@@ -104,11 +99,11 @@ class TestXNATCopy(object):
                                " reconstruction %s..." %
                                (SUBJECT, SESSION, RECON))
         # Upload the file.
-        upload = XNATCopy(project=project(), subject=SUBJECT, session=SESSION,
-                          reconstruction=RECON, resource='NIFTI',
-                          in_files=FIXTURE)
-        result = upload.run()
-        
+        copy = XNATCopy(project=project(), subject=SUBJECT, session=SESSION,
+                        reconstruction=RECON, resource='NIFTI', modality='MR',
+                        in_files=FIXTURE)
+        result = copy.run()
+    
         # Verify the result.
         with qixnat.connect() as xnat:
             recon_obj = xnat.get_reconstruction(project(), SUBJECT, SESSION,
@@ -122,15 +117,15 @@ class TestXNATCopy(object):
                         "XNATCopy did not create the %s %s %s file: %s" %
                         (SUBJECT, SESSION, REGISTRATION, fname))
     
-    
     def test_analysis(self):
         logger(__name__).debug("Testing the XNATCopy interface on %s %s"
                                " analysis %s..." % (SUBJECT, SESSION, ANALYSIS))
         # Upload the file.
-        upload = XNATCopy(project=project(), subject=SUBJECT, session=SESSION,
-                          assessor=ANALYSIS, resource='params', in_files=FIXTURE)
-        result = upload.run()
-        
+        copy = XNATCopy(project=project(), subject=SUBJECT, session=SESSION,
+                        assessor=ANALYSIS, resource='params', modality='MR',
+                        in_files=FIXTURE)
+        result = copy.run()
+    
         # Verify the result.
         with qixnat.connect() as xnat:
             exp_obj = xnat.get_experiment(project(), SUBJECT, SESSION)
@@ -150,5 +145,5 @@ class TestXNATCopy(object):
 
 if __name__ == "__main__":
     import nose
-    
+
     nose.main(defaultTest=__name__)

@@ -30,6 +30,8 @@ class XNATUploadInputSpec(BaseInterfaceInputSpec):
     in_files = InputMultiPath(File(exists=True), mandatory=True,
                               desc='The files to upload')
 
+    modality = traits.Str(desc="The XNAT scan modality, e.g. 'MR'")
+
 
 class XNATUploadOutputSpec(TraitedSpec):
     xnat_files = traits.List(traits.Str, desc='The XNAT file object labels')
@@ -43,7 +45,7 @@ class XNATUpload(BaseInterface):
     :Note: This XNATUpload interface is deprecated due to the following
         XNAT bug:
 
-        * XNAT or pyxnat concurrent file inserts sporadically fails
+        * XNAT or pyxnat concurrent file insert sporadically fails
           with error that the experiment already exists. Some files
           are inserted, but insert fails unpredictably.
 
@@ -67,10 +69,11 @@ class XNATUpload(BaseInterface):
             opts['force'] = True
         if self.inputs.skip_existing:
             opts['skip_existing'] = True
+        if self.inputs.modality:
+            opts['modality'] = self.inputs.modality
 
         # The resource parent.
         if self.inputs.scan:
-            opts['modality'] = 'MR'
             opts['scan'] = self.inputs.scan
         elif self.inputs.reconstruction:
             opts['reconstruction'] = self.inputs.reconstruction

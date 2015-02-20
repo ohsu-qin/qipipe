@@ -161,7 +161,8 @@ class MaskWorkflow(WorkflowBase):
         workflow.connect(mask_name, 'out_file', inv_mask, 'out_file')
         
         # Upload the mask to XNAT.
-        upload_mask_xfc = XNATUpload(project=project(), resource=RESOURCE)
+        upload_mask_xfc = XNATUpload(project=project(), resource=RESOURCE,
+                                     modality='MR')
         upload_mask = pe.Node(upload_mask_xfc, name='upload_mask')
         workflow.connect(input_spec, 'subject', upload_mask, 'subject')
         workflow.connect(input_spec, 'session', upload_mask, 'session')

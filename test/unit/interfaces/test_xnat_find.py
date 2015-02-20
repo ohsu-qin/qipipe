@@ -87,7 +87,7 @@ class TestXNATFind(object):
             (inputs, result.outputs.xnat_id))
         
         # Create the object.
-        find = XNATFind(project=project(), create=True, **inputs)
+        find = XNATFind(project=project(), modality='MR', create=True, **inputs)
         result = find.run()
         assert_true(isdefined(result.outputs.xnat_id),
             "Find %s with create did not return an id." % inputs)
