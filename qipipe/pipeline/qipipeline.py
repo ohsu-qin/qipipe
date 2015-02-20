@@ -114,8 +114,8 @@ def _run_with_dicom_input(*inputs, **opts):
             # Create a new workflow for the current scan type.
             wf_gen = QIPipelineWorkflow(scan_type=scan_type)
             # Run the workflow on each {series: [DICOM files]} item.
-            wf_gen.run_with_dicom_input(collection, sbj, sess,
-                                        scan_dict, dest)
+            wf_gen.run_with_dicom_input(collection, sbj, sess, scan_dict,
+                                        dest)
     
     # Make the TCIA subject map.
     map_ctp(collection, *subjects, dest=dest)
