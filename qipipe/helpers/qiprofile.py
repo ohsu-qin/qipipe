@@ -18,8 +18,10 @@ def sync():
         criterion = "/project/%s/subjects" % prj
         for xnat_sbj in xnat.interface.select(criterion):
             prf_sbj = qiprofile.find_subject(prj, xnat_sbj.name, create=True)
+            # TODO - add clinical data.
             for xnat_sess in xnat_sbj.sessions():
                 prf_sess = qiprofile.find_session(prj, xnat_sbj.name,
-                                                  xnat_sess.name, create=True)
+                                                  xnat_sess.name, modality='MR',
+                                                  create=True)
                 # TODO - get image acquisition date from DICOM?
                 # TODO - add modeling
