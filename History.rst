@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub commits
 for change details.
 
+4.5.6 / 2015-02-19
+------------------
+* Gate staging upload on session creation.
+
 4.5.5 / 2015-01-30
 ------------------
 * Import group function from qidicom.
