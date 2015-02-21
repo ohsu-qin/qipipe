@@ -103,6 +103,22 @@ Run the following command for the pipeline options::
 
      qipipe --help
 
+
+***********
+Development
+***********
+
+Testing is performed with the nose_ package, which must be installed separately.
+
+Documentation is built automatically by ReadTheDocs_ when the project is pushed
+to GitHub. Documentation can be generated locally as follows:
+
+* Install Sphinx_, if necessary.
+
+* Run the following in the ``doc`` subdirectory::
+
+      make html
+
 ---------
 
 .. container:: copyright
@@ -128,6 +144,8 @@ Run the following command for the pipeline options::
 
 .. _license: https://github.com/ohsu-qin/qipipe/blob/master/LICENSE.txt
 
+.. _nose: https://nose.readthedocs.org/en/latest/
+
 .. _pip: https://pypi.python.org/pypi/pip
 
 .. _pip Installation Instructions: http://pip.readthedocs.org/en/latest/installing.html
@@ -143,6 +161,10 @@ Run the following command for the pipeline options::
 .. _qipipe repository: https://github.com/ohsu-qin/qipipe
 
 .. _qixnat: https://github.com/ohsu-qin/qixnat
+
+.. _ReadTheDocs: https://www.readthedocs.org
+
+.. _Sphinx: http://sphinx-doc.org/index.html
 
 .. _The Cancer Imaging Archive: http://cancerimagingarchive.net
 
