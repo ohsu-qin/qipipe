@@ -50,7 +50,7 @@ setup(
     include_package_data = True,
     scripts = glob.glob('bin/*'),
     url = 'http://qipipe.readthedocs.org/en/latest/',
-    description = 'OHSU QIN Quantitative Imaging pipeline.',
+    description = 'Quantitative Imaging Profile pipeline',
     long_description = readme(),
     classifiers = [
         'Development Status :: 5 - Production/Stable',
