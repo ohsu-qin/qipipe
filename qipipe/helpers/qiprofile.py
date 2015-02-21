@@ -4,7 +4,7 @@ REST database.
 """
 
 import qixnat
-from qiprofile-rest import qiprofile
+from qiprofile_rest import qiprofile
 
 def sync():
     """
