@@ -30,8 +30,6 @@ def fix_dicom_headers(collection, subject, *dicom_files, **opts):
     - The file name is lower-case
 
     - The file extension is ``.dcm``
-    
-    - The scan type is appended to the fie name, e.g. ``_t1``
 
     - Each non-word character is replaced by an underscore
     
