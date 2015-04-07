@@ -13,7 +13,9 @@ class GroupDicomInputSpec(BaseInterfaceInputSpec):
 
 
 class GroupDicomOutputSpec(TraitedSpec):
-    series_files_dict = traits.Dict(desc='The series number: [DICOM files] dictionary')
+    groups = traits.Dict(
+        desc='The {tag value: [DICOM files]} dictionary'
+    )
 
 
 class GroupDicom(BaseInterface):
@@ -27,5 +29,5 @@ class GroupDicom(BaseInterface):
 
     def _list_outputs(self):
         outputs = self._outputs().get()
-        outputs['series_files_dict'] = self.grp_dict
+        outputs['groups'] = self.grp_dict
         return outputs
