@@ -27,7 +27,7 @@ class TestRegistrationWorkflow(StagedTestBase):
     """
     Registration workflow unit tests.
 
-    This test exercises the registration workflow on three series of one visit
+    This test exercises the registration workflow on three volumes of one visit
     in each of the Breast and Sarcoma studies.
     
     The :class:`qiprofile.pipeline.registration.RegistrationWorkflow` technique

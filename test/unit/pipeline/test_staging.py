@@ -7,13 +7,6 @@ from qipipe.staging.staging_helper import (get_subjects, iter_stage)
 from ... import (project, ROOT)
 from ...helpers.logging import logger
 
-
-# FIXME - test module resolves to qiutil/test!?!
-# This, and presumably other, tests are consequently broken.
-# Relative import fails.
-# TODO - WHY DOES THIS HAPPEN? HOW TO FIX IT?
-
-
 FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
 """The test fixture directory."""
 
@@ -66,13 +59,12 @@ class TestStagingWorkflow(object):
             # Delete any existing test subjects.
             xnat.delete_subjects(project(), *subjects)
             # Run the workflow on each session fixture.
-            for sbj, sess, scan_type_dict in iter_stage(collection, *inputs,
-                                                        dest=dest):
-                for scan_type, scan_dict in scan_type_dict.iteritems():
-                    work_dir = os.path.join(work, scan_type)
-                    stg_wf = staging.StagingWorkflow(scan_type,
-                                                     base_dir=work_dir)
-                    stg_wf.set_inputs(collection, sbj, sess, scan_dict,
+            for sbj, sess, scan_dict in iter_stage(collection, *inputs,
+                                                   dest=dest):
+                for scan, vol_dcm_dict in scan_dict.iteritems():
+                    work_dir = os.path.join(work, 'scan', str(scan))
+                    stg_wf = staging.StagingWorkflow(scan, base_dir=work_dir)
+                    stg_wf.set_inputs(collection, sbj, sess, vol_dcm_dict,
                                       dest=dest)
                     stg_wf.run()
                     # Verify the result.
@@ -83,18 +75,19 @@ class TestStagingWorkflow(object):
                     sess_dest = os.path.join(dest, sbj, sess)
                     assert_true(os.path.exists(sess_dest), "The staging area"
                                 " was not created: %s" % sess_dest)
-                    for scan, dcm_files in scan_dict.iteritems():
-                        scan_obj = xnat.get_scan(project(), sbj, sess, scan)
-                        assert_true(scan_obj.exists(), "The %s %s scan %s was"
-                                    " not created in XNAT" % (sbj, sess, scan))
-
-
-
-                    break
-                break
-
-
-
+                    # The XNAT scan object.
+                    scan_obj = xnat.get_scan(project(), sbj, sess, 1)
+                    assert_true(scan_obj.exists(), "The %s %s scan %s was"
+                                " not created in XNAT" % (sbj, sess, scan))
+                    # The XNAT NiFTI resource object.
+                    rsc_obj = scan_obj.resource('NIFTI')
+                    assert_true(rsc_obj.exists(), "The %s %s scan %s %s resource was"
+                                " not created in XNAT" % (sbj, sess, scan, 'NIFTI'))
+                    for volume in vol_dcm_dict.iterkeys():
+                        fname = "volume%03d.nii.gz" % volume
+                        file_obj = rsc_obj.file(fname)
+                        assert_true(file_obj.exists(), "The %s %s scan %s file %s was"
+                                    " not created in XNAT" % (sbj, sess, scan, fname))
 
             # Delete the test subjects.
             xnat.delete_subjects(project(), *subjects)
