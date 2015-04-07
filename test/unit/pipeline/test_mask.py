@@ -24,7 +24,7 @@ class TestMaskWorkflow(StagedTestBase):
     """
     Mask workflow unit tests.
     
-    This test exercises the mask workflow on three series of one visit in each
+    This test exercises the mask workflow on three volumes of one visit in each
     of the Breast and Sarcoma studies.
     
     :Note: This test is disabled pending a time series test fixture.
@@ -35,7 +35,6 @@ class TestMaskWorkflow(StagedTestBase):
     def __init__(self):
         super(TestMaskWorkflow, self).__init__(logger(__name__), FIXTURES,
                                                RESULTS)
-
 
     def tearDown(self):
         super(TestMaskWorkflow, self).tearDown()
