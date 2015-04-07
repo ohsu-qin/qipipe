@@ -52,30 +52,19 @@ class XNATDownload(BaseInterface):
     >>> # Download the scan NiFTI files.
     >>> from qipipe.interfaces import XNATDownload
     >>> XNATDownload(project='QIN', subject='Breast003',
-    ...     session='Session02', dest='data').run()
+    ...     session='Session02', scan=1, resource='NIFTI',
+    ...     dest='data').run()
     
     >>> # Download the scan DICOM files.
     >>> from qipipe.interfaces import XNATDownload
     >>> XNATDownload(project='QIN', subject='Breast003',
-    ...     session='Session02', resource='DICOM',
+    ...     session='Session02', scan=1, resource='DICOM',
     ...     dest='data').run()
     
-    >>> # Download the XNAT registration result reg_H3pIz4s.
+    >>> # Download the registration reg_H3pIz4s images.
     >>> from qipipe.interfaces import XNATDownload
     >>> XNATDownload(project='QIN', subject='Breast003',
-    ...     session='Session02', reconstruction='reg_H3pIz4',
-    ...     dest='data').run()
-    
-    >>> # Download the XNAT registration result reg_H3pIz4s.
-    >>> from qipipe.interfaces import XNATDownload
-    >>> XNATDownload(project='QIN', subject='Breast003',
-    ...     session='Session02', reconstruction='reg_H3pIz4',
-    ...     file='series15_reg_H3pIz4.nii.gz', dest='data').run()
-    
-    >>> # Download the XNAT modeling result pk_r8C4dY.
-    >>> from qipipe.interfaces import XNATDownload
-    >>> XNATDownload(project='QIN', subject='Breast003',
-    ...     session='Session02', assessor='pk_r8C4dY',
+    ...     session='Session02', resource='reg_H3pIz4',
     ...     dest='data').run()
     """
 
