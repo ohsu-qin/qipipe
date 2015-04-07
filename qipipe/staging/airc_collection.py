@@ -1,7 +1,6 @@
 import re
 from .staging_error import StagingError
 
-
 def collection_with_name(name):
     """
     :param name: the OHSU QIN collection name
@@ -16,47 +15,70 @@ def collection_with_name(name):
 
     return collection_with_name.extent[name]
 
+T1_PAT = '*concat*/*'
+"""The T1 scan directory match pattern."""
+
+VOLUME_TAG = 'AcquisitionNumber'
+"""
+The DICOM tag which identifies the volume.
+The AIRC collections are unusual in that the DICOM images which comprise
+a 3D volume have the same DICOM Series Number and Acquisition Number tag.
+The series numbers are consecutive, non-sequential integers, e.g. 9, 11,
+13, ..., whereas the acquisition numbers are consecutive, sequential
+integers starting at 1. The Acquisition Number tag is selected as the
+volume number identifier.
+"""
 
 def _create_collections():
     """Creates the pre-defined AIRC collections."""
 
     # The AIRC T1 scan DICOM files are in the concat subdirectory.
     # The AIRC T2 scan DICOM files are in special subdirectories.
-    t1_pat = '*concat*/*'
-    breast_pat_dict = dict(t1=t1_pat, t2='*sorted/2_tirm_tra_bilat/*')
-    sarcoma_pat_dict = dict(t1=t1_pat, t2='*T2*/*')
+    breast_dcm_pat_dict = {1: T1_PAT, 2: '*sorted/2_tirm_tra_bilat/*'}
+    sarcoma_dcm_pat_dict = {1: T1_PAT, 2: '*T2*/*'}
 
-    return dict(
-        Breast=AIRCCollection(
-            'Breast', 'BreastChemo(\d+)', 'Visit(\d+)', breast_pat_dict),
-        Sarcoma=AIRCCollection(
-            # The visit pattern matches 'Visit_3', 'Visit3' and 'S4V3'
-            # with groups ['3'].
-            'Sarcoma', 'Subj_(\d+)', '(?:Visit_?|S\d+V)(\d+)', sarcoma_pat_dict))
+    # The Breast images are in BreastChemo*subject*/Visit*session*.
+    breast_opts = dict(subject='BreastChemo(\d+)', session='Visit(\d+)',
+                       dicom=breast_dcm_pat_dict, volume=VOLUME_TAG)
+
+    # The Sarcoma images are in Subj_*subject*/Visit_*session* with
+    # visit pattern variations, e.g. 'Visit_3', 'Visit3' and 'S4V3'
+    # all match session 3.
+    sarcoma_opts = dict(subject='Subj_(\d+)', session='(?:Visit_?|S\d+V)(\d+)',
+                        dicom=sarcoma_dcm_pat_dict, volume=VOLUME_TAG)
+
+    return dict(Breast=AIRCCollection('Breast', **breast_opts),
+                Sarcoma=AIRCCollection('Sarcoma', **sarcoma_opts))
 
 
 class AIRCCollection(object):
+    """The OHSU AIRC collection characteristics."""
 
-    """The AIRC Study characteristics."""
-
-    def __init__(self, name, subject_pattern, session_pattern, dcm_pat_dict):
+    def __init__(self, name, **opts):
         """
         :param name: `self.name`
-        :param subject_pattern: `self.subject_pattern`
-        :param session_pattern: `self.session_pattern`
-        :param dicom_pat_dict: `self.dicom_pat_dict`
+        :param opts: the following required arguments:
+        :option subject: the subject directory regular expression match pattern
+        :option session: the session directory regular expression match pattern
+        :option dicom: the
+          {scan number: image file directory regular expression match pattern}
+          dictionary
+        :option volume: the DICOM tag which identifies a scan volume
         """
         self.name = name
         """The collection name."""
 
-        self.subject_pattern = subject_pattern
-        """The subject directory name match regular expression pattern."""
+        self.subject_pattern = opts['subject']
+        """The subject directory match pattern."""
 
-        self.session_pattern = session_pattern
-        """The session directory name match regular expression pattern."""
+        self.session_pattern = opts['session']
+        """The subject directory match pattern."""
 
-        self.dcm_pat_dict = dcm_pat_dict
-        """The {type: DICOM directory name match glob pattern} dictionary."""
+        self.scan_dicom_patterns = opts['dicom']
+        """The {scan number: image file directory match pattern} dictionary."""
+
+        self.volume_tag = opts['volume']
+        """The DICOM tag which identifies a scan volume."""
 
     def path2subject_number(self, path):
         """
