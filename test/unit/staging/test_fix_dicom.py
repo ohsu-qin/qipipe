@@ -19,9 +19,6 @@ COLLECTION = 'Sarcoma'
 # The new subject.
 SUBJECT = 'Sarcoma003'
 
-# The scan type.
-SCAN_TYPE = 't1'
-
 class TestFixDicom(object):
 
     """Fix DICOM header unit tests."""
