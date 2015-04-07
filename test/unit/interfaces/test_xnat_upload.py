@@ -17,8 +17,8 @@ SCAN = 9
 """The test scan number."""
 
 FIXTURE = os.path.join(ROOT, 'fixtures', 'interfaces', 'xnat', 'Sarcoma001',
-                      'Session01', 'scans', '9', 'resource', 'NIFTI',
-                      'series09_t1.nii.gz')
+                      'Session01', 'scans', '1', 'resources', 'NIFTI',
+                      'volume001.nii.gz')
 """The test fixture file."""
 
 RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'xnat')
