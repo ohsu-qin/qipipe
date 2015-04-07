@@ -5,7 +5,7 @@ The ``pipeline`` module includes the following QIN workflows:
   register and model new images
 
 - :mod:`qipipe.pipeline.staging`: executes the staging workflow to detect new
-  images, group them by series, import them into XNAT and prepare them for
+  images, group them by volume, import them into XNAT and prepare them for
   TCIA import
 
 - :mod:`qipipe.pipeline.mask`: creates a mask to subtract extraneous tissue

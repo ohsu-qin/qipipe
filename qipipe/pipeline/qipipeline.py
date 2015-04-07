@@ -20,7 +20,7 @@ from ..staging.staging_helper import iter_stage
 from ..staging.map_ctp import map_ctp
 
 SCAN_TS_RSC = 'scan_ts'
-"""The XNAT scan time series resouce name."""
+"""The XNAT scan time series resource name."""
 
 MASK_RSC = 'mask'
 """The XNAT mask resouce name."""
@@ -97,23 +97,22 @@ def _run_with_dicom_input(*inputs, **opts):
     # after the workflow is completed.
     subjects = set()
     # Run the workflow on each session and scan type.
-    for sbj, sess, scan_type_dict in iter_stage(collection, *inputs, **opts):
+    for sbj, sess, scan_dict in iter_stage(collection, *inputs, **opts):
         # Capture the subject.
         subjects.add(sbj)
         # Pull out the actions, since the non-stage actions only apply
         # to the T1 scan type.
         actions = opts.pop('actions')
         # Run the workflow on each scan type.
-        for scan_type, scan_dict in scan_type_dict.iteritems():
-            opts['scan_type'] = scan_type
-            # Only T1 can do more than staging.
-            if scan_type == 't1':
-                opts['actions'] = actions
+        for scan, scan_dict in scan_dict.iteritems():
+            # Scan 1 is scan type T1. Only T1 can do more than staging.
+            if scan == 1:
+                wf_actions = actions
             else:
-                opts['actions'] = ['stage']
+                wf_actions = ['stage']
             # Create a new workflow for the current scan type.
-            wf_gen = QIPipelineWorkflow(scan_type=scan_type)
-            # Run the workflow on each {series: [DICOM files]} item.
+            wf_gen = QIPipelineWorkflow(scan=scan, actions=wf_actions)
+            # Run the workflow on each {volume: [DICOM files]} item.
             wf_gen.run_with_dicom_input(collection, sbj, sess, scan_dict,
                                         dest)
     
@@ -125,7 +124,7 @@ def _run_with_xnat_input(*inputs, **opts):
     """
     Run the pipeline with a XNAT download.
     Each input is either a session label or path, e.g.
-    ``Breast012_Session03`` or  ``Breast012/Session03``.
+    ``Breast012_Session03`` or ``Breast012/Session03``.
     
     :param inputs: the XNAT session labels or paths
     :param opts: the ``project`` and :class:`QIPipelineWorkflow`
@@ -217,7 +216,7 @@ class QIPipelineWorkflow(WorkflowBase):
     - If staging is performed, then the DICOM files are staged for the
       subject directory inputs. Otherwise, staging is not performed.
       In that case, if registration is enabled as described below, then
-      the previously staged series scan stack images are downloaded.
+      the previously staged volume scan stack images are downloaded.
 
     - If registration is performed and the ``registration`` resource option
       is set, then the previously realigned images with the given resource
@@ -235,10 +234,10 @@ class QIPipelineWorkflow(WorkflowBase):
     - *session*: the session name
 
     In addition, if the staging or registration workflow is enabled
-    then the *iter_series* node iterables input includes the
+    then the *iter_volume* node iterables input includes the
     following fields:
 
-    - *series*: the scan number
+    - *volume*: the scan number
 
     - *dest*: the target staging directory, if the staging
       workflow is enabled
@@ -259,7 +258,7 @@ class QIPipelineWorkflow(WorkflowBase):
     :class:`qipipe.staging.RegistrationWorkflow` workflow *input_spec*.
     """
 
-    REG_SERIES_PAT = re.compile('series(\d+)_reg_')
+    REG_SERIES_PAT = re.compile('volume(\d+)_reg_')
 
     def __init__(self, **opts):
         """
@@ -328,7 +327,7 @@ class QIPipelineWorkflow(WorkflowBase):
         input_spec = self.workflow.get_node('input_spec')
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
-        input_spec.inputs.unregistered_series = unreg_scans
+        input_spec.inputs.unregistered_volumes = unreg_scans
 
         # Execute the workflow.
         self._run_workflow(self.workflow)
@@ -482,10 +481,10 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # The staging workflow.
         if 'stage' in actions:
-            scan_type = opts.pop('scan_type', None)
-            if not scan_type:
-                raise ArgumentError("The required staging argument scan_type is missing")
-            stg_wf = StagingWorkflow(scan_type, base_dir=base_dir).workflow
+            scan = opts.pop('scan', None)
+            if not scan:
+                raise ArgumentError("The required staging argument scan is missing")
+            stg_wf = StagingWorkflow(scan, base_dir=base_dir).workflow
         else:
             self._logger.info("Skipping staging.")
             stg_wf = None
@@ -496,27 +495,27 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # The workflow input fields.
         input_fields = ['subject', 'session']
-        iter_series_fields = ['series']
+        iter_volume_fields = ['volume']
         # The staging workflow has additional input fields.
         # Partial registration requires the unregistered scans input.
         if stg_wf:
             input_fields.append('collection')
-            iter_series_fields.append('dest')
+            iter_volume_fields.append('dest')
         elif reg_node and reg_rsc:
-            input_fields.append('unregistered_series')
+            input_fields.append('unregistered_volumes')
         
         # The workflow input node.
         input_spec_xfc = IdentityInterface(fields=input_fields)
         input_spec = pe.Node(input_spec_xfc, name='input_spec')
-        # Most workflows require a series iterator node.
+        # Most workflows require a volume iterator node.
         if stg_wf or reg_node or mask_wf or (mdl_wf and not scan_ts_rsc):
-            iter_series_xfc = IdentityInterface(fields=iter_series_fields)
-            iter_series = pe.Node(iter_series_xfc, name='iter_series')
+            iter_volume_xfc = IdentityInterface(fields=iter_volume_fields)
+            iter_volume = pe.Node(iter_volume_xfc, name='iter_volume')
         # Staging requires a DICOM iterator node.
         if stg_wf:
-            iter_dicom_xfc = IdentityInterface(fields=['series', 'dicom_file'])
+            iter_dicom_xfc = IdentityInterface(fields=['volume', 'dicom_file'])
             iter_dicom = pe.Node(iter_dicom_xfc, name='iter_dicom')
-            exec_wf.connect(iter_series, 'series', iter_dicom, 'series')
+            exec_wf.connect(iter_volume, 'volume', iter_dicom, 'volume')
 
         # Stitch together the workflows:
 
@@ -527,9 +526,9 @@ class QIPipelineWorkflow(WorkflowBase):
             for field in input_spec.inputs.copyable_trait_names():
                 exec_wf.connect(input_spec, field,
                                 stg_wf, 'input_spec.' + field)
-            for field in iter_series.inputs.copyable_trait_names():
-                exec_wf.connect(iter_series, field,
-                                stg_wf, 'iter_series.' + field)
+            for field in iter_volume.inputs.copyable_trait_names():
+                exec_wf.connect(iter_volume, field,
+                                stg_wf, 'iter_volume.' + field)
             exec_wf.connect(iter_dicom, 'dicom_file',
                             stg_wf, 'iter_dicom.dicom_file')
 
@@ -541,7 +540,7 @@ class QIPipelineWorkflow(WorkflowBase):
         if reg_node or mask_wf or (mdl_wf and not scan_ts_rsc):
             if stg_wf:
                 staged = pe.JoinNode(IdentityInterface(fields=['out_files']),
-                                    joinsource='iter_series', name='staged')
+                                    joinsource='iter_volume', name='staged')
                 exec_wf.connect(stg_wf, 'output_spec.image',
                                 staged, 'out_files')
             else:
@@ -615,7 +614,7 @@ class QIPipelineWorkflow(WorkflowBase):
                                          output_names=['out_files'],
                                          function=select_scan_files)
                 unreged = pe.Node(sel_unreg_xfc, name='unregistered')
-                exec_wf.connect(input_spec, 'unregistered_series',
+                exec_wf.connect(input_spec, 'unregistered_volumes',
                                 unreged, 'scans')
                 exec_wf.connect(staged, 'out_files', unreged, 'in_files')
                 exec_wf.connect(unreged, 'out_files', reg_node, 'in_files')
@@ -763,14 +762,14 @@ def select_scan_files(scans, in_files):
     """
     :param scans: the scan numbers
     :param in_files: the scan files
-    :return: the scan files for the given series 
+    :return: the scan files for the given volume 
     """
     import re
     
     scans = set(scans)
-    series_pat = re.compile("series(\d{3}).nii.gz$")
+    vol_pat = re.compile("volume(\d{3}).nii.gz$")
     return [f for f in in_files
-            if int(series_pat.search(f).group(1)) in scans]
+            if int(vol_pat.search(f).group(1)) in scans]
 
 
 def register_scans(subject, session, bolus_arrival_index, in_files,
@@ -786,7 +785,7 @@ def register_scans(subject, session, bolus_arrival_index, in_files,
 
     :param subject: the subject name
     :param session: the session name
-    :param bolus_arrival_index: the bolus uptake series index
+    :param bolus_arrival_index: the bolus uptake volume index
     :param in_files: the input session scan images
     :param mask: the image mask file path
     :param opts: the :meth:`qipipe.pipeline.registration.run` keyword

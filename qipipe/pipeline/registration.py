@@ -28,7 +28,7 @@ def run(subject, session, bolus_arrival_index, *images, **opts):
     :param session: the session name
     :param images: the input session scan images
     :param mask: the image mask
-    :param bolus_arrival_index: the required bolus uptake series index
+    :param bolus_arrival_index: the required bolus uptake volume index
     :param opts: the :class:`RegistrationWorkflow` initializer
         and :meth:`RegistrationWorkflow.run` options
     :return: the realigned image file path array
@@ -90,8 +90,8 @@ class RegistrationWorkflow(WorkflowBase):
 
     - ``fnirt``: FSL_ FNIRT_ non-linear registration
     
-    - ``mock``: Test technique which copies each input scan image to
-      the output image file
+    - ``mock``: Test technique which copies each input scan image to the
+      output image file
 
     The optional workflow configuration file can contain overrides for the
     Nipype interface inputs in the following sections:
@@ -103,10 +103,11 @@ class RegistrationWorkflow(WorkflowBase):
     - ``fsl.FNIRT``: the FSL `FNIRT interface`_ options
 
     :Note: Since the XNAT *resource* name is unique, a
-        :class:`qipipe.pipeline.registration.RegistrationWorkflow` instance
-        can be used for only one registration workflow. Different registration
-        inputs require different
-        :class:`qipipe.pipeline.registration.RegistrationWorkflow` instances.
+        :class:`qipipe.pipeline.registration.RegistrationWorkflow`
+        instance can be used for only one registration workflow.
+        Different registration inputs require different
+        :class:`qipipe.pipeline.registration.RegistrationWorkflow`
+        instances.
 
     .. _ANTS: http://stnava.github.io/ANTs/
     .. _ApplyTransform interface: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.ants.resampling.html
@@ -149,7 +150,7 @@ class RegistrationWorkflow(WorkflowBase):
 
         :param subject: the subject name
         :param session: the session name
-        :param bolus_arrival_index: the required bolus uptake series index
+        :param bolus_arrival_index: the required bolus uptake volume index
         :param images: the input session scan images
         :param opts: the following options:
         :option mask: the image mask file path
@@ -159,7 +160,7 @@ class RegistrationWorkflow(WorkflowBase):
         """
         if not images:
             return []
-        # Sort the images by series number.
+        # Sort the images by volume number.
         sorted_scans = sorted(images)
 
         # Split the images into pre- and post-arrival.
@@ -209,8 +210,8 @@ class RegistrationWorkflow(WorkflowBase):
         Makes the registration execution workflow on the given session
         scan images.
 
-        The execution workflow input is the *input_spec* node consisting of the
-        following input fields:
+        The execution workflow input is the *input_spec* node consisting of
+        the following input fields:
 
         - *subject*: the subject name
 
@@ -228,7 +229,7 @@ class RegistrationWorkflow(WorkflowBase):
 
         The *reference* input is set by :meth:`connect_reference`.
 
-        :param bolus_arrival_index: the required bolus uptake series index
+        :param bolus_arrival_index: the required bolus uptake volume index
         :param ref_0_image: the required initial fixed reference image
         :param dest: the required target realigned image directory
         :return: the execution workflow
@@ -240,8 +241,8 @@ class RegistrationWorkflow(WorkflowBase):
             raise ValueError('Registration workflow is missing the initial' +
                              ' fixed reference image')
         if not dest:
-            raise ValueError('Registration workflow is missing the destination' +
-                             ' directory')
+            raise ValueError('Registration workflow is missing the' +
+                             ' destination directory')
         self._logger.debug("Creating the registration execution workflow"
                            " with bolus arrival index %d and initial reference"
                            " %s..." % (bolus_arrival_index, ref_0_image))
@@ -250,7 +251,8 @@ class RegistrationWorkflow(WorkflowBase):
         exec_wf = pe.Workflow(name='reg_exec', base_dir=self.workflow.base_dir)
 
         # The registration workflow input.
-        input_fields = ['subject', 'session', 'pre_arrival', 'mask', 'ref_0', 'resource']
+        input_fields = ['subject', 'session', 'pre_arrival', 'mask', 'ref_0',
+                        'resource']
         input_spec = pe.Node(IdentityInterface(fields=input_fields),
                              name='input_spec')
         input_spec.inputs.ref_0 = ref_0_image
@@ -350,7 +352,7 @@ class RegistrationWorkflow(WorkflowBase):
             (``ants``, `fnirt`` or ``mock``, default ``ants``)
         :return: the Workflow object
         """
-        self._logger.debug("Creating the registration realignment workflow...")
+        self._logger.debug('Creating the registration realignment workflow...')
 
         # The workflow.
         base_dir = opts.get('base_dir', tempfile.mkdtemp())
@@ -375,10 +377,10 @@ class RegistrationWorkflow(WorkflowBase):
 
         if technique.lower() == 'ants':
             # Nipype bug work-around:
-            # Setting the registration metric and metric_weight inputs after the
-            # node is created results in a Nipype input trait dependency warning.
-            # Avoid this warning by setting these inputs in the constructor
-            # from the values in the configuration.
+            # Setting the registration metric and metric_weight inputs
+            # after the node is created results in a Nipype input trait
+            # dependency warning. Avoid this warning by setting these
+            # inputs in the constructor from the values in the configuration.
             reg_cfg = self._interface_configuration(Registration)
             metric_inputs = {field: reg_cfg[field]
                              for field in ['metric', 'metric_weight']
@@ -484,13 +486,13 @@ def copy_files(in_files, dest):
 def connect_reference(workflow, realigned_nodes, input_nodes,
                       bolus_arrival_index, initial_reference):
     """
-    Connects the reference input for the given reference workflow input nodes
-    as follows:
+    Connects the reference input for the given reference workflow input
+    nodes as follows:
 
     * Prior to bolus arrival, the reference is the successor realignment.
 
-    * The reference for the nodes before and after the given initial reference
-      node is that initial reference.
+    * The reference for the nodes before and after the given initial
+      reference node is that initial reference.
 
     * The bolus arrival successor node reference is the *initial_reference*.
 
@@ -501,7 +503,7 @@ def connect_reference(workflow, realigned_nodes, input_nodes,
     :param workflow: the workflow delegate which connects nodes
     :param ref_nodes: the iterable expansion reference input nodes
     :param realigned_nodes: the iterable expansion realignment output nodes
-    :param bolus_arrival_index: the bolus uptake series index
+    :param bolus_arrival_index: the bolus uptake volume index
     :param initial_reference: the starting reference input node
     """
     # The number of input and realigned nodes.

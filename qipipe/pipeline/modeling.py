@@ -7,7 +7,7 @@ from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
 import qiutil
 from qiutil.logging import logger
 from .. import project
-from ..interfaces import XNATUpload #, UpdateQIProfile)
+from ..interfaces import XNATUpload
 from ..helpers.bolus_arrival import bolus_arrival_index, BolusArrivalError
 from .workflow_base import WorkflowBase
 from .distributable import DISTRIBUTABLE
@@ -63,7 +63,7 @@ class ModelingWorkflow(WorkflowBase):
 
     - *time_series*: the 4D time series NiFTI file to model
 
-    - *bolus_arrival_index*: the bolus uptake series index
+    - *bolus_arrival_index*: the bolus uptake volume index
 
     - the PK modeling parameters described below
 
@@ -153,7 +153,7 @@ class ModelingWorkflow(WorkflowBase):
             |R10| option is not set
         :keyword pd_dir: the proton density files parent directory, if the
             fixed |R10| option is not set
-        :keyword baseline_end_idx: the number of series to merge into a R1
+        :keyword baseline_end_idx: the number of volumes to merge into a R1
             series baseline image (default is 1)
         """
         cfg_file = opts.pop('cfg_file', None)
@@ -167,7 +167,7 @@ class ModelingWorkflow(WorkflowBase):
         The XNAT resource name for all executions of this
         :class:`qipipe.pipeline.modeling.ModelingWorkflow` instance. The
         name is unique, which permits more than one model to be stored for
-        each input series without a name conflict.
+        each input volume without a name conflict.
         """
 
         self.workflow = self._create_workflow(**opts)
@@ -242,7 +242,7 @@ class ModelingWorkflow(WorkflowBase):
             (sbj, sess, time_series))
 
         # Determine the bolus uptake. If it could not be determined,
-        # then take the first series as the uptake.
+        # then take the first volume as the uptake.
         try:
             bolus_arv_ndx = bolus_arrival_index(time_series)
         except BolusArrivalError:
@@ -312,12 +312,7 @@ class ModelingWorkflow(WorkflowBase):
         mdl_wf.connect(input_spec, 'session', upload_node, 'session')
         mdl_wf.connect(merge_outputs, 'out', upload_node, 'in_files')
 
-        # TODO - Get the FSL mean parameters.
-
-        # TODO - Add the session to qiprofile.
-        # update_profile_db = pe.Node(UpdateQIProfile())
-        # mdl_wf.connect(input_spec, 'subject', upload_node, 'subject')
-        # mdl_wf.connect(input_spec, 'session', upload_node, 'session')
+        # TODO - Get the overall and ROI FSL mean intensity values.
 
         # The output is the modeling outputs.
         output_xfc = IdentityInterface(fields=out_fields)
@@ -439,8 +434,8 @@ class ModelingWorkflow(WorkflowBase):
                         get_params, 'bolus_arrival_index')
 
         # Import Fastfit on demand. This allows the modeling module to be
-        # imported by applications without the proprietary Fastfit modeling
-        # tool, e.g. the documentation builder Sphinx.
+        # imported by clients without the proprietary Fastfit modeling
+        # tool.
         try:
             Fastfit
         except NameError:
@@ -456,7 +451,7 @@ class ModelingWorkflow(WorkflowBase):
         # Set the MPI flag.
         pk_map.inputs.use_mpi = DISTRIBUTABLE
 
-        # Compute the K_trans difference.
+        # Compute the Ktrans difference.
         delta_k_trans = pe.Node(fsl.ImageMaths(), name='delta_k_trans')
         delta_k_trans.inputs.op_string = '-sub'
         base_wf.connect(pk_map, 'k_trans', delta_k_trans, 'in_file')
