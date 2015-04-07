@@ -24,16 +24,16 @@ def iter_stage(collection, *inputs, **opts):
     """
     Iterates over the the new AIRC visits in the given input directories.
     This method is a staging generator which yields a tuple consisting
-    of the subject, session and a {scan type: {scan number: [DICOM files]}}
+    of the subject, session and a {scan number: {volume: [dicom files]}}
     dictionary, e.g.::
     
-        >> sbj, sess, scan_type_dict = next(iter_stage('Sarcoma', '/path/to/subject'))
+        >> sbj, sess, scan_dict = next(iter_stage('Sarcoma', '/path/to/subject'))
         >> print sbj
         Sarcoma001
         >> print sess
         Session01
-        >> print scan_type_dict
-        {'t1': {20: ['/path/to/image1.dcm', ...]}, ...}
+        >> print scan_dict
+        {1: {1: ['/path/to/t1/image1.dcm', ...], ...}, 2: {1: ['/path/to/t2/image1.dcm', ...], ...}
 
     The input directories conform to the
     :class:`qipipe.staging.airc_collection.AIRCCollection` *subject_pattern*)
@@ -46,7 +46,7 @@ def iter_stage(collection, *inputs, **opts):
     :yield: the DICOM files
     :yieldparam subject: the subject name
     :yieldparam session: the session name
-    :yieldparam scan_type_dict: the *{scan type: {scan number: [DICOM files]}}*
+    :yieldparam scan_dict: the *{scan number: [DICOM files]}*
         dictionary
     """
     # Validate that there is a collection
@@ -67,14 +67,14 @@ def iter_stage(collection, *inputs, **opts):
     logger(__name__).debug("Staging %d new %s volumes from %d subjects" %
                            (volume_cnt, collection, len(subjects)))
     
-    # Generate the (subject, session, {scan type: {volume: [dicom files]}})
+    # Generate the (subject, session, {scan number: {volume: [dicom files]}})
     # tuples.
     for sbj, sess_dict in stg_dict.iteritems():
         logger(__name__).debug("Staging subject %s..." % sbj)
-        for sess, scan_type_dict in sess_dict.iteritems():
+        for sess, scan_dict in sess_dict.iteritems():
             logger(__name__).debug("Staging %s session %s..." % (sbj, sess))
             # Delegate to the workflow executor.
-            yield sbj, sess, scan_type_dict
+            yield sbj, sess, scan_dict
             logger(__name__).debug("Staged %s session %s." % (sbj, sess))
         logger(__name__).debug("Staged subject %s." % sbj)
     logger(__name__).debug("Staged %d new %s volumes from %d subjects." %
@@ -232,22 +232,27 @@ def _is_new_session(subject, session):
 
 def _group_visits(*visit_tuples):
     """
-    Creates the staging dictionary for the new images in the given
-    visit tuples.
+    Creates the staging dictionary for the images in the given visit tuples.
+    The input tuples are grouped into a dictionary expressing the hierarchy
+    *subject*/*session*/*scan*/*volume*/[DICOM files]. The 2D DICOM files
+    are grouped by ``AcquisitionNumber``.
+    
+    TODO - get the grouping criterion from airc_collection.
 
-    :param visit_tuples: the *(subject, session, {scan type: [dicom files]})*
+    :param visit_tuples: the *(subject, session, {scan: [dicom files]})*
         tuples to group
-    :return: the *{subject: {session: {scan type: {volume: [dicom files]}}}}*
+    :return: the *{subject: {session: {scan: {volume: [dicom files]}}}}*
         dictionary
     """
-    # The {subject: {session: {volume: {scan_type: [dicom files]}}}} output.
+    # The dictionary to build.
     stg_dict = nested_defaultdict(dict, 3)
-    for sbj, sess, scan_type_dict in visit_tuples:
+    # Add each tuple as a dictionary entry.
+    for sbj, sess, scan_dict in visit_tuples:
         # Group the session DICOM input files by volume within scan type.
-        for scan_type, dcm_iter in scan_type_dict.iteritems():
-            volume_dict = group_by('SeriesNumber', *dcm_iter)
-            for volume, dcm_iter in volume_dict.iteritems():
-                stg_dict[sbj][sess][scan_type][volume] = dcm_iter
+        for scan, dcm_iter in scan_dict.iteritems():
+            vol_dcm_dict = group_by('AcquisitionNumber', *dcm_iter)
+            for volume, dcm_iter in vol_dcm_dict.iteritems():
+                stg_dict[sbj][sess][scan][volume] = dcm_iter
 
     return stg_dict
 
@@ -281,7 +286,7 @@ class VisitIterator(object):
         """
         Iterates over the visits in the subject directories.
         
-        :yield: the next (subject, session, {scan type: DICOM files}) tuple
+        :yield: the next (subject, session, {scan: DICOM files}) tuple
         """
         # The visit subdirectory match pattern.
         vpat = self.collection.session_pattern
@@ -289,9 +294,9 @@ class VisitIterator(object):
                                vpat)
         
         # The DICOM file search pattern depends on the scan type.
-        dcm_pat_dict = self.collection.dcm_pat_dict
+        dcm_dict = self.collection.scan_dicom_patterns
         logger(__name__).debug("The DICOM file search pattern is %s..." %
-                               dcm_pat_dict)
+                               dcm_dict)
         
         # Iterate over the visits.
         with qixnat.connect():
@@ -307,7 +312,7 @@ class VisitIterator(object):
                 sess_matches = [subdir for subdir in os.listdir(sbj_dir)
                                 if re.match(vpat, subdir)]
                 
-                # Generate the new (subject, session, DICOM files) items in
+                # Generate the new (subject, session, scanDICOM files) items in
                 # each visit.
                 for sess_subdir in sess_matches:
                     # The visit directory path.
@@ -327,10 +332,10 @@ class VisitIterator(object):
                             logger(__name__).debug("Discovered session %s in"
                                                    " %s" % (sess, sess_dir))
                             # The DICOM file match patterns.
-                            scan_type_dict = {}
-                            for scan_type, dcm_pat in dcm_pat_dict.iteritems():
+                            scan_dict = {}
+                            for scan, dcm_pat in dcm_dict.iteritems():
                                 file_pat = os.path.join(sess_dir, dcm_pat)
                                 # The visit directory DICOM file iterator.
                                 dcm_file_iter = glob.iglob(file_pat)
-                                scan_type_dict[scan_type] = dcm_file_iter
-                            yield (sbj, sess, scan_type_dict)
+                                scan_dict[scan] = dcm_file_iter
+                            yield (sbj, sess, scan_dict)
