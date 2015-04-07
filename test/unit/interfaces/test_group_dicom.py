@@ -17,19 +17,21 @@ class TestGroupDicom(object):
     def test_group_dicom(self):
         logger(__name__).debug("Testing the GroupDicom interface on %s..."
                                % FIXTURE)
-        grouper = GroupDicom(tag='SeriesNumber', in_files=FIXTURE)
+        grouper = GroupDicom(tag='AcquisitionNumber', in_files=FIXTURE)
         result = grouper.run()
-        ser_dict = result.outputs.series_files_dict
-        assert_true(not not ser_dict, "GroupDicom did not group the files")
-        for series in [7, 33]:
-            assert_in(series, ser_dict, "GroupDicom did not group the"
-                      " series %d" % series)
-            assert_equal(len(ser_dict[series]), 1, "Too many DICOM files were"
-                         " grouped in series %d: %d" %
-                         (series, len(ser_dict[series])))
+        grp_dict = result.outputs.groups
+        assert_true(not not grp_dict, "GroupDicom did not group the files")
+        for volume in [1, 14]:
+            assert_in(volume, grp_dict, "GroupDicom did not group the volume %d"
+                                        % volume)
+            assert_equal(len(grp_dict[volume]), 1, "Too many DICOM files were"
+                         " grouped into volume %d: %d" %
+                         (volume, len(grp_dict[volume])))
         logger(__name__).debug("GroupDicom interface test completed")
+
 
 if __name__ == "__main__":
     import nose
 
     nose.main(defaultTest=__name__)
+
