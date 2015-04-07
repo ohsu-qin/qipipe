@@ -4,24 +4,22 @@ REST database.
 """
 
 import qixnat
-from qiprofile_rest import qiprofile
+from qiprofile_rest_client.model.subject import Subject
+from qiprofile_rest_client.model.imaging import (
+  Session, SessionDetail, Modeling, ModelingProtocol, Scan, ScanProtocol,
+  Registration, RegistrationProtocol, LabelMap, Volume)
+from qiprofile_rest_client.model.uom import (Measurement, Weight)
+from qiprofile_rest_client.model.clinical import (
+  Treatment, Drug, Dosage, Biopsy, Surgery, Assessment, GenericEvaluation,
+  TNM, BreastPathology, BreastReceptorStatus, HormoneReceptorStatus,
+  BreastGeneticExpression, NormalizedAssay, ModifiedBloomRichardsonGrade,
+  SarcomaPathology, FNCLCCGrade, NecrosisPercentValue, NecrosisPercentRange)
 
-def sync():
+def sync_session(project, subject, session):
     """
-    Updates the qiprofile database from the XNAT database.
-    The subjects, sessions and modeling results in the
-    :meth:`qiutil.project.project` are added, if necessary,
-    to the QuIP database.
+    Updates the qiprofile database from the XNAT database content for the
+    given session.
     """
-    prj = project()
     with qixnat.connect as xnat:
-        criterion = "/project/%s/subjects" % prj
-        for xnat_sbj in xnat.interface.select(criterion):
-            prf_sbj = qiprofile.find_subject(prj, xnat_sbj.name, create=True)
-            # TODO - add clinical data.
-            for xnat_sess in xnat_sbj.sessions():
-                prf_sess = qiprofile.find_session(prj, xnat_sbj.name,
-                                                  xnat_sess.name, modality='MR',
-                                                  create=True)
-                # TODO - get image acquisition date from DICOM?
-                # TODO - add modeling
+        sbj = xnat.find_session(project, subject, session)
+        
