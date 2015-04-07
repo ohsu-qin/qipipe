@@ -6,20 +6,20 @@ import qixnat
 from qiutil.collections import nested_defaultdict
 from ... import project
 
-
 class StagedTestBase(object):
-
     """
     Base class for testing workflows on a test fixture directory in the
     standard staging subject/session/images hierarchy, e.g.::
         
         Breast003/
-            Session01/
-                scans/
-                    series09.nii.gz
-                    series23.nii.gz
-                    ...
-                breast003_session01_mask.nii.gz
+          Session01/
+            scan/
+              1/
+                volume001.nii.gz
+                volume002.nii.gz
+                ...
+            resource/
+              breast003_session01_mask.nii.gz
     """
 
     def __init__(self, logger, fixtures, results, use_mask=False):
@@ -109,15 +109,17 @@ class StagedTestBase(object):
                                (sbj, sbj_dir))
             for sess_dir in glob.glob(sbj_dir + '/Session*'):
                 _, sess = os.path.split(sess_dir)
-                images = glob.glob(sess_dir + '/scans/*')
+                images = glob.glob(sess_dir + '/scans/1/resources/NIFTI/*')
                 if not images:
                     raise ValueError("No images found for %s %s test input in %s"
                                      (sbj, sess, sess_dir))
                 self._logger.debug("Discovered %d %s %s test input images in %s" %
                                    (len(images), sbj, sess, sess_dir))
+                # TODO - input_dict[sbj][sess] should be a Bunch with attributes
+                # images and mask.
                 input_dict[sbj][sess]['images'] = images
                 if self._use_mask:
-                    masks = glob.glob(sess_dir + '/*mask.*')
+                    masks = glob.glob(sess_dir + '/resources/*mask.*')
                     if not masks:
                         raise ValueError("Mask not found in %s" % sess_dir)
                     if len(masks) > 1:
