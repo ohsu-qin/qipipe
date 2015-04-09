@@ -34,9 +34,9 @@ class TestStagingWorkflow(object):
         Run the staging workflow on the given collection and verify that
         the sessions are created in XNAT.
 
-        Note:: This test does not verify the CTP staging area nor that the
-        image files are correctly uploaded. These features should be
-        verified manually.
+        :Note: This test does not verify the CTP staging area nor the
+        uploaded image file content. These features should be verified
+        manually.
         
         :param collection: the AIRC collection name
         """
