@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub commits
 for change details.
 
+5.1.1 / 2015-04-13
+------------------
+* Replace series with scan volumes.
+
 4.5.6 / 2015-02-19
 ------------------
 * Gate staging upload on session creation.
