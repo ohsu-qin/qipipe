@@ -93,28 +93,25 @@ def _run_with_dicom_input(*inputs, **opts):
     if opts.pop('resume', None):
         opts['skip_existing'] = False
         
+    # Pull out the actions, since the non-stage actions only apply
+    # to the T1 scan type.
+    actions = opts.pop('actions')
     # The set of input subjects is used to build the CTP mapping file
     # after the workflow is completed.
     subjects = set()
     # Run the workflow on each session and scan type.
-    for sbj, sess, scan_dict in iter_stage(collection, *inputs, **opts):
+    for sbj, sess, scan, vol_dcm_dict in iter_stage(collection, *inputs, **opts):
         # Capture the subject.
         subjects.add(sbj)
-        # Pull out the actions, since the non-stage actions only apply
-        # to the T1 scan type.
-        actions = opts.pop('actions')
-        # Run the workflow on each scan type.
-        for scan, scan_dict in scan_dict.iteritems():
-            # Scan 1 is scan type T1. Only T1 can do more than staging.
-            if scan == 1:
-                wf_actions = actions
-            else:
-                wf_actions = ['stage']
-            # Create a new workflow for the current scan type.
-            wf_gen = QIPipelineWorkflow(scan=scan, actions=wf_actions)
-            # Run the workflow on each {volume: [DICOM files]} item.
-            wf_gen.run_with_dicom_input(collection, sbj, sess, scan_dict,
-                                        dest)
+        # Scan 1 is scan type T1. Only T1 can do more than staging.
+        if scan == 1:
+            wf_actions = actions
+        else:
+            wf_actions = ['stage']
+        # Create a new workflow for the current scan type.
+        wf_gen = QIPipelineWorkflow(scan=scan, actions=wf_actions)
+        # Run the workflow on each {volume: [DICOM files]} item.
+        wf_gen.run_with_dicom_input(collection, sbj, sess, scan_dict, dest)
     
     # Make the TCIA subject map.
     map_ctp(collection, *subjects, dest=dest)
