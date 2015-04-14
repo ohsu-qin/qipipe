@@ -15,18 +15,19 @@ TIME_SERIES = 'scan_ts'
 """The XNAT scan time series resource name."""
 
 
-def run(subject, session, time_series, **opts):
+def run(subject, session, scan, time_series, **opts):
     """
     Creates a :class:`qipipe.pipeline.mask.MaskWorkflow` and runs it
     on the given inputs.
     
     :param subject: the input subject
     :param session: the input session
+    :param scan: the input scan number
     :param time_series: the input 4D NiFTI time series to mask
     :param opts: additional :class:`MaskWorkflow` initialization parameters
     :return: the XNAT mask resource name
     """
-    return MaskWorkflow(**opts).run(subject, session, time_series)
+    return MaskWorkflow(**opts).run(subject, session, scan, time_series)
 
 
 class MaskWorkflow(WorkflowBase):
@@ -43,6 +44,8 @@ class MaskWorkflow(WorkflowBase):
      - subject: the XNAT subject name
      
      - session: the XNAT session name
+     
+     - scan: the XNAT scan number
      
      - time_series: the 4D NiFTI series image file
     
@@ -73,33 +76,35 @@ class MaskWorkflow(WorkflowBase):
         self.workflow = self._create_workflow(base_dir)
         """The mask creation workflow."""
     
-    def run(self, subject, session, time_series):
+    def run(self, subject, session, scan, time_series):
         """
         Runs the mask workflow on the scan NiFTI files for the given
         time series.
         
         :param subject: the input subject
         :param session: the input session
+        :param scan: the input scan number
         :param time_series: the input 3D NiFTI time series to mask
         :return: the mask XNAT resource name
         """
-        self._logger.debug("Creating the mask for the %s %s time series"
-                           " %s..." % (subject, session, time_series))
-        self.set_inputs(subject, session, time_series)
+        self._logger.debug("Creating the mask for the %s %s scan %d time series"
+                           " %s..." % (subject, session, scan, time_series))
+        self.set_inputs(subject, session, scan, time_series)
         # Execute the workflow.
         self._run_workflow(self.workflow)
-        self._logger.debug("Created the %s %s time series %s mask XNAT"
+        self._logger.debug("Created the %s %s scan %s time series %s mask XNAT"
                            " resource %s." %
-                           (subject, session, time_series, RESOURCE))
+                           (subject, session, scan, time_series, RESOURCE))
         
         # Return the mask XNAT resource name.
         return RESOURCE
     
-    def set_inputs(self, subject, session, time_series):
+    def set_inputs(self, subject, session, scan, time_series):
         # Set the inputs.
         input_spec = self.workflow.get_node('input_spec')
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
+        input_spec.inputs.scan = scan
         input_spec.inputs.time_series = time_series
     
     def _create_workflow(self, base_dir=None):
@@ -116,7 +121,7 @@ class MaskWorkflow(WorkflowBase):
         workflow = pe.Workflow(name='mask', base_dir=base_dir)
         
         # The workflow input.
-        in_fields = ['subject', 'session', 'time_series']
+        in_fields = ['subject', 'session', 'scan', 'time_series']
         input_spec = pe.Node(IdentityInterface(fields=in_fields),
                              name='input_spec')
         
@@ -166,6 +171,7 @@ class MaskWorkflow(WorkflowBase):
         upload_mask = pe.Node(upload_mask_xfc, name='upload_mask')
         workflow.connect(input_spec, 'subject', upload_mask, 'subject')
         workflow.connect(input_spec, 'session', upload_mask, 'session')
+        workflow.connect(input_spec, 'scan', upload_mask, 'scan')
         workflow.connect(inv_mask, 'out_file', upload_mask, 'in_files')
         
         # The output is the mask file.

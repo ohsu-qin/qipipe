@@ -1,24 +1,33 @@
 import os
 import glob
-from nose.tools import assert_equal
-from qipipe.staging.staging_helper import iter_stage
+from nose.tools import (assert_equal, assert_not_equal)
+import qixnat
 from qiutil.logging import logger
-from ... import ROOT
+from qipipe.staging.staging_helper import iter_stage
+from ... import (ROOT, project)
 
-# The test fixture.
 FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'sarcoma')
+"""The test fixture directory."""
+
+SUBJECTS = set(["Sarcoma00%d" % n for n in range(1, 3)])
+"""The test subjects."""
 
 
 class TestStagingHelper(object):
     """staging_helper unit tests."""
 
+    def setUp(self):
+        # Delete the existing test subjects, since staging only detects
+        # new visits.
+        with qixnat.connect() as xnat:
+            xnat.delete_subjects(project(), *SUBJECTS)
+        
     def test_staging_iterator(self):
         dirs = glob.glob(FIXTURE + '/Subj*')
-        sbj_dict = {sbj: {sess: vol_dcm_dict}
-                    for sbj, sess, vol_dcm_dict in iter_stage('Sarcoma', *dirs)}
-        expected_sbjs = set(["Sarcoma00%d" % n for n in range(1, 3)])
-        actual_sbjs = set(sbj_dict.keys())
-        assert_equal(actual_sbjs, expected_sbjs, "Subjects are incorrect: %s" %
+        stg = iter_stage('Sarcoma', *dirs)
+        actual_sbjs = set([item[0] for item in stg])
+        assert_not_equal(len(actual_sbjs), 0, "No scan images were discovered")
+        assert_equal(actual_sbjs, SUBJECTS, "Subjects are incorrect: %s" %
                                                  actual_sbjs)
 
 

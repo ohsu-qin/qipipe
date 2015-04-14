@@ -71,23 +71,24 @@ class StagedTestBase(object):
             xnat.delete_subjects(project(), *subjects)
             # Iterate over the sessions within subjects.
             for sbj, sess_dict in input_dict.iteritems():
-                for sess, sess_opts in sess_dict.iteritems():
-                    # The input images.
-                    images = sess_opts.pop('images')
-                    # The session options now only includes at most the mask.
-                    # Add the general workflow options to the session options.
-                    sess_opts.update(opts)
-                    # Run the workflow in the results work subdirectory.
-                    cwd = os.getcwd()
-                    work_dir = os.path.join(self._results, 'work')
-                    os.makedirs(work_dir)
-                    os.chdir(work_dir)
-                    try:
-                        result = self._run_workflow(sbj, sess, *images, **sess_opts)
-                    finally:
-                        os.chdir(cwd)
-                    # Verify the result.
-                    self._verify_result(xnat, sbj, sess, result)
+                for sess, scan_dict in sess_dict.iteritems():
+                    for scan, scan_opts in scan_dict.iteritems():
+                        # The input images.
+                        images = scan_opts.pop('images')
+                        # The session options now only includes at most the mask.
+                        # Add the general workflow options to the session options.
+                        scan_opts.update(opts)
+                        # Run the workflow in the results work subdirectory.
+                        cwd = os.getcwd()
+                        work_dir = os.path.join(self._results, 'work')
+                        os.makedirs(work_dir)
+                        os.chdir(work_dir)
+                        try:
+                            result = self._run_workflow(sbj, sess, scan, *images, **scan_opts)
+                        finally:
+                            os.chdir(cwd)
+                        # Verify the result.
+                        self._verify_result(xnat, sbj, sess, scan, result)
             # Clean up.
             xnat.delete_subjects(project(), *subjects)
 
@@ -97,11 +98,11 @@ class StagedTestBase(object):
         parent directory which contains a subject/session/scans images hierarchy.
         
         :param fixture: the input data parent directory
-        :return: the input *{subject: {session: [images]}}* or
-            input *{subject: {session: ([images], mask)}}* dictionary
+        :return: the input *{subject: {session: {scan: [images]}}}* or
+            input *{subject: {session: {scan: ([images], mask)}}}* dictionary
         """
-        # The {subject: {session: [files]}} dictionary return value.
-        input_dict = nested_defaultdict(dict, 1)
+        # The {subject: {session: {scan: [files]}}} dictionary return value.
+        input_dict = nested_defaultdict(dict, 2)
         # Group the files in each subject subdirectory.
         for sbj_dir in glob.glob(fixture + '/*'):
             _, sbj = os.path.split(sbj_dir)
@@ -109,35 +110,37 @@ class StagedTestBase(object):
                                (sbj, sbj_dir))
             for sess_dir in glob.glob(sbj_dir + '/Session*'):
                 _, sess = os.path.split(sess_dir)
-                images = glob.glob(sess_dir + '/scans/1/resources/NIFTI/*')
-                if not images:
-                    raise ValueError("No images found for %s %s test input in %s"
-                                     (sbj, sess, sess_dir))
-                self._logger.debug("Discovered %d %s %s test input images in %s" %
-                                   (len(images), sbj, sess, sess_dir))
-                # TODO - input_dict[sbj][sess] should be a Bunch with attributes
-                # images and mask.
-                input_dict[sbj][sess]['images'] = images
-                if self._use_mask:
-                    masks = glob.glob(sess_dir + '/resources/*mask.*')
-                    if not masks:
-                        raise ValueError("Mask not found in %s" % sess_dir)
-                    if len(masks) > 1:
-                        raise ValueError("Too many masks found in %s" % sess_dir)
-                    mask = masks[0]
-                    self._logger.debug("Discovered %d %s %s test input mask %s" %
-                                       (len(images), sbj, sess, mask))
-                    input_dict[sbj][sess]['mask'] = mask
+                for scan_dir in glob.glob(sess_dir + '/scans/*'):
+                    _, scan_s = os.path.split(scan_dir)
+                    scan = int(scan_s)
+                    images = glob.glob(scan_dir + '/resources/NIFTI/*')
+                    if not images:
+                        raise ValueError("No images found for %s %s %d test input in %s"
+                                         (sbj, sess, scan, scan_dir))
+                    self._logger.debug("Discovered %d %s %s %d test input images in %s" %
+                                       (len(images), sbj, sess, scan, scan_dir))
+                    input_dict[sbj][sess][scan]['images'] = images
+                    if self._use_mask:
+                        masks = glob.glob(sess_dir + '/resources/*mask.*')
+                        if not masks:
+                            raise ValueError("Mask not found in %s" % sess_dir)
+                        if len(masks) > 1:
+                            raise ValueError("Too many masks found in %s" % sess_dir)
+                        mask = masks[0]
+                        self._logger.debug("Discovered %d %s %s test input mask %s" %
+                                           (len(images), sbj, sess, mask))
+                        input_dict[sbj][sess][scan]['mask'] = mask
 
         return input_dict
 
-    def _run_workflow(self, subject, session, *images, **opts):
+    def _run_workflow(self, subject, session, scan, *images, **opts):
         """
         This method is implemented by subclasses to execute the subclass
         target workflow on the given inputs.
         
         :param subject: the input subject
         :param session: the input session
+        :param scan: the input scan number
         :param images: the input image files
         :param opts: the target workflow options
         :return: the execution result
@@ -146,7 +149,7 @@ class StagedTestBase(object):
         """
         raise NotImplementedError("_run_workflow is a subclass responsibility")
 
-    def _verify_result(self, xnat, subject, session, result):
+    def _verify_result(self, xnat, subject, session, scan, result):
         """
         This method is implemented by subclasses to verify the workflow
         execution result against the given session file inputs. The session
@@ -157,6 +160,7 @@ class StagedTestBase(object):
         :param xnat: the :class:`qixnat.facade.XNAT` connection
         :param subject: the input subject
         :param session: the input session
+        :param scan: the input scan number
         :param result: the :meth`_run_workflow` result
         :raise NotImplementedError: if the class:`StagedTestBase` subclass
             does not implement this method

@@ -45,13 +45,13 @@ class TestMaskWorkflow(StagedTestBase):
     def test_sarcoma(self):
         self._test_sarcoma()
 
-    def _run_workflow(self, subject, session, *images, **opts):
+    def _run_workflow(self, subject, session, scan, *images, **opts):
         """
         Executes :meth:`qipipe.pipeline.mask.run` on the given input.
         
         :param subject: the input subject
         :param session: the input session
-        :param time_series: the input time series
+        :param scan: the input scan number
         :param opts: the :class:`qipipe.pipeline.modeling.MaskWorkflow`
             initializer options
         :return: the :meth:`qipipe.pipeline.mask.run` result
@@ -64,14 +64,14 @@ class TestMaskWorkflow(StagedTestBase):
                                " series %s..." %
                                (subject, session, time_series))
         
-        return mask.run(subject, session, time_series, cfg_file=MASK_CONF,
+        return mask.run(subject, session, scan, time_series, cfg_file=MASK_CONF,
                         **opts)
 
-    def _verify_result(self, xnat, subject, session, result):
+    def _verify_result(self, xnat, subject, session, scan, result):
         # Verify that the mask XNAT resource was created.
-        rsc_obj = xnat.find(project(), subject, session, resource=result)
-        assert_is_not_none(rsc_obj, "The %s %s XNAT mask resource object was"
-                                    " not created" % (subject, session))
+        rsc_obj = xnat.find(project(), subject, session, scan=scan, resource=result)
+        assert_is_not_none(rsc_obj, "The %s %s scan %d XNAT mask resource object was"
+                                    " not created" % (subject, session, scan))
 
 
 if __name__ == "__main__":

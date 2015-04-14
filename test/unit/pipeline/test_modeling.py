@@ -67,21 +67,22 @@ class TestModelingWorkflow(StagedTestBase):
         if modeling:
             self._test_sarcoma()
 
-    def _run_workflow(self, subject, session, *images, **opts):
+    def _run_workflow(self, subject, session, scan, *images, **opts):
         """
         Executes :meth:`qipipe.pipeline.modeling.run` on the input session scans.
         
         :param subject: the input subject
         :param session: the input session
+        :param scan: the input scan number
         :param images: the input 3D NiFTI images to model
         :param opts: the  workflow options
         :return: the :meth:`qipipe.pipeline.modeling.run` result
         """
         # Run the workflow.
-        return modeling.run(subject, session, *images, **opts)
+        return modeling.run(subject, session, scan, *images, **opts)
 
-    def _verify_result(self, xnat, subject, session, result):
-        anl_obj = xnat.get_analysis(project(), sbj, sess, result)
+    def _verify_result(self, xnat, subject, session, scan, result):
+        anl_obj = xnat.get_analysis(project(), sbj, sess,scan, result)
         assert_true(anl_obj.exists(),
                     "The %s %s %s XNAT analysis object was not created" %
                     (sbj, sess, result))

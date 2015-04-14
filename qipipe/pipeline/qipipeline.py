@@ -131,6 +131,10 @@ def _run_with_xnat_input(*inputs, **opts):
         initializer options
     """
     prj = opts.get('project', qipipe.project())
+    
+    # TODO - add the scan number to the inputs and get it from there.
+    #   Only support the / delimiter in the inputs.
+    
     with qixnat.connect() as xnat:
         for label in inputs:
             # Convert a path to a label.
@@ -139,7 +143,7 @@ def _run_with_xnat_input(*inputs, **opts):
             sbj, sess = parse_session_label(label)
             # Check for an existing mask.
             mask_obj = xnat.find(project=prj, subject=sbj, session=sess,
-                                 resource=MASK_RSC)
+                                 scan=1, resource=MASK_RSC)
             if mask_obj and mask_obj.files().get():
                 opts['mask'] = MASK_RSC
                 status = 'found'
@@ -152,7 +156,7 @@ def _run_with_xnat_input(*inputs, **opts):
             # for an existing scan time series.
             if 'register' in opts['actions'] or 'model' in opts['actions']:
                 scan_ts_obj = xnat.find(project=prj, subject=sbj, session=sess,
-                                        resource=SCAN_TS_RSC)
+                                        scan=1, resource=SCAN_TS_RSC)
                 if scan_ts_obj and scan_ts_obj.files().get():
                     opts['scan_time_series'] = SCAN_TS_RSC
                     status = 'found'
@@ -166,7 +170,7 @@ def _run_with_xnat_input(*inputs, **opts):
             if 'model' in opts['actions'] and 'registration' in opts:
                 reg_ts_rsc = opts['registration'] + '_ts'
                 reg_ts_obj = xnat.find(project=prj, subject=sbj, session=sess,
-                             resource=reg_ts_rsc)
+                                       resource=reg_ts_rsc)
                 if reg_ts_obj and reg_ts_obj.files().get():
                     opts['realigned_time_series'] = reg_ts_rsc
                     status = 'found'
@@ -220,7 +224,7 @@ class QIPipelineWorkflow(WorkflowBase):
 
     - If registration is performed and the ``registration`` resource option
       is set, then the previously realigned images with the given resource
-      name are downloaded. The remaining scans are registered.
+      name are downloaded. The remaining volumes are registered.
 
     - If registration or modeling is performed and the XNAT ``mask``
       resource is found, then that resource file is downloaded. Otherwise,
@@ -309,8 +313,10 @@ class QIPipelineWorkflow(WorkflowBase):
         """
         Runs the execution workflow on downloaded scan image files.
         """
-        self._logger.debug("Processing the %s %s %s scans..." %
+        self._logger.debug("Processing the %s %s %s T1 scan..." %
                            (project, subject, session))
+
+        # FIXME - get volume files, not scan objects.
 
         # Get the scan numbers.
         scans = xnat.get_scan_numbers(project, subject, session)
@@ -334,12 +340,12 @@ class QIPipelineWorkflow(WorkflowBase):
         self._logger.debug("Processed %d %s %s %s scans." %
                            (len(scans), project, subject, session))
 
-    def _partition_scans(self, xnat, project, subject, session, scans):
+    def _partition_volumes(self, xnat, project, subject, session, volumes):
         """
-        Partitions the given scans into those which have a corresponding
+        Partitions the given volumes into those which have a corresponding
         registration reconstruction file and those which don't.
 
-        :return: the (registered, unregistered) scan numbers
+        :return: the (registered, unregistered) volume numbers
         """
         # The XNAT registration object.
         if self.registration_resource:
@@ -348,33 +354,33 @@ class QIPipelineWorkflow(WorkflowBase):
         else:
             reg_obj = None
         # If the registration has not yet been performed, then
-        # download all of the scans.
+        # download all of the volumes.
         if not (reg_obj and reg_obj.exists()):
-            return [], scans
+            return [], volumes
 
-        # The realigned scan numbers.
-        reg_scans = set(self._registered_scans(reg_obj))
+        # The realigned volume numbers.
+        reg_volumes = set(self._registered_volumes(reg_obj))
         
-        # The unregistered scan numbers.
-        unreg_scans = set(scans) - reg_scans
-        self._logger.debug("The %s %s %s resource has %d registered scans"
-                           " and %d unregistered scans." %
-                           (project, subject, session, len(reg_scans),
-                            len(unreg_scans)))
+        # The unregistered volume numbers.
+        unreg_volumes = set(volumes) - reg_volumes
+        self._logger.debug("The %s %s %s resource has %d registered volumes"
+                           " and %d unregistered volumes." %
+                           (project, subject, session, len(reg_volumes),
+                            len(unreg_volumes)))
 
-        return (reg_scans, unreg_scans)
+        return (reg_volumes, unreg_volumes)
 
-    def _registered_scans(self, reg_obj):
+    def _registered_volumes(self, reg_obj):
         """
-        Returns the scans which have a corresponding registration
+        Returns the volumes which have a corresponding registration
         reconstruction file.
 
         :param reg_obj: the XNAT registration reconstruction object
-        :return: the registered scan numbers
+        :return: the registered volume numbers
         """
         # The XNAT registration file names.
         reg_files = reg_obj.files().get()
-        # Match on the realigned scan file pattern.
+        # Match on the realigned volume file pattern.
         matches = ((QIPipelineWorkflow.REG_SERIES_PAT.match(f)
                     for f in reg_files))
 
@@ -465,7 +471,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # The registration function.
             reg_xfc = Function(input_names=reg_inputs,
                                output_names=['out_files'],
-                               function=register_scans)
+                               function=register_volumes)
             reg_node = pe.Node(reg_xfc, name='registration')
             reg_node.inputs.opts = reg_opts
         else:
@@ -497,7 +503,7 @@ class QIPipelineWorkflow(WorkflowBase):
         input_fields = ['subject', 'session']
         iter_volume_fields = ['volume']
         # The staging workflow has additional input fields.
-        # Partial registration requires the unregistered scans input.
+        # Partial registration requires the unregistered volumes input.
         if stg_wf:
             input_fields.append('collection')
             iter_volume_fields.append('dest')
@@ -532,7 +538,7 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(iter_dicom, 'dicom_file',
                             stg_wf, 'iter_dicom.dicom_file')
 
-        # Some workflows require the scans. If staging is enabled,
+        # Some workflows require the scan volumes. If staging is enabled,
         # then collect the staged NiFTI scan images. Otherwise,
         # download the XNAT NiFTI scan images. In either case, the
         # staged images are collected in a node named 'staged' with
@@ -544,10 +550,10 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(stg_wf, 'output_spec.image',
                                 staged, 'out_files')
             else:
-                dl_scans_xfc = XNATDownload(project=qipipe.project(),
+                dl_scan_xfc = XNATDownload(project=qipipe.project(),
                                             container_type='scan',
                                             resource='NIFTI')
-                staged = pe.Node(dl_scans_xfc, name='staged')
+                staged = pe.Node(dl_scan_xfc, name='staged')
                 exec_wf.connect(input_spec, 'subject', staged, 'subject')
                 exec_wf.connect(input_spec, 'session', staged, 'session')
 
@@ -566,7 +572,7 @@ class QIPipelineWorkflow(WorkflowBase):
             else:
                 # Merge the staged files.
                 scan_ts_xfc = MergeNifti(out_format=SCAN_TS_RSC)
-                scan_ts = pe.Node(scan_ts_xfc, name='merge_scans')
+                scan_ts = pe.Node(scan_ts_xfc, name='merge_volumes')
                 exec_wf.connect(staged, 'out_files', scan_ts, 'in_files')
                 # Upload the time series.
                 ul_scan_ts_xfc = XNATUpload(project=qipipe.project(),
@@ -609,13 +615,13 @@ class QIPipelineWorkflow(WorkflowBase):
             if stg_wf or not reg_rsc:
                 exec_wf.connect(staged, 'out_files', reg_node, 'in_files')
             else:
-                # Select only the unregistered scans.
-                sel_unreg_xfc = Function(input_names=['scans', 'in_files'],
+                # Select only the unregistered volumes.
+                sel_unreg_xfc = Function(input_names=['volumes', 'in_files'],
                                          output_names=['out_files'],
                                          function=select_scan_files)
                 unreged = pe.Node(sel_unreg_xfc, name='unregistered')
                 exec_wf.connect(input_spec, 'unregistered_volumes',
-                                unreged, 'scans')
+                                unreged, 'volumes')
                 exec_wf.connect(staged, 'out_files', unreged, 'in_files')
                 exec_wf.connect(unreged, 'out_files', reg_node, 'in_files')
             # The mask input.

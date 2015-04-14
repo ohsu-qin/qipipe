@@ -59,35 +59,34 @@ class TestStagingWorkflow(object):
             # Delete any existing test subjects.
             xnat.delete_subjects(project(), *subjects)
             # Run the workflow on each session fixture.
-            for sbj, sess, scan_dict in iter_stage(collection, *inputs,
+            for sbj, sess, scan, vol_dcm_dict in iter_stage(collection, *inputs,
                                                    dest=dest):
-                for scan, vol_dcm_dict in scan_dict.iteritems():
-                    work_dir = os.path.join(work, 'scan', str(scan))
-                    stg_wf = staging.StagingWorkflow(scan, base_dir=work_dir)
-                    stg_wf.set_inputs(collection, sbj, sess, vol_dcm_dict,
-                                      dest=dest)
-                    stg_wf.run()
-                    # Verify the result.
-                    sess_obj = xnat.get_session(project(), sbj, sess)
-                    assert_true(sess_obj.exists(),
-                                "The %s %s session was not created in XNAT" %
-                                (sbj, sess))
-                    sess_dest = os.path.join(dest, sbj, sess)
-                    assert_true(os.path.exists(sess_dest), "The staging area"
-                                " was not created: %s" % sess_dest)
-                    # The XNAT scan object.
-                    scan_obj = xnat.get_scan(project(), sbj, sess, 1)
-                    assert_true(scan_obj.exists(), "The %s %s scan %s was"
-                                " not created in XNAT" % (sbj, sess, scan))
-                    # The XNAT NiFTI resource object.
-                    rsc_obj = scan_obj.resource('NIFTI')
-                    assert_true(rsc_obj.exists(), "The %s %s scan %s %s resource was"
-                                " not created in XNAT" % (sbj, sess, scan, 'NIFTI'))
-                    for volume in vol_dcm_dict.iterkeys():
-                        fname = "volume%03d.nii.gz" % volume
-                        file_obj = rsc_obj.file(fname)
-                        assert_true(file_obj.exists(), "The %s %s scan %s file %s was"
-                                    " not created in XNAT" % (sbj, sess, scan, fname))
+                work_dir = os.path.join(work, 'scan', str(scan))
+                stg_wf = staging.StagingWorkflow(scan, base_dir=work_dir)
+                stg_wf.set_inputs(collection, sbj, sess, vol_dcm_dict,
+                                  dest=dest)
+                stg_wf.run()
+                # Verify the result.
+                sess_obj = xnat.get_session(project(), sbj, sess)
+                assert_true(sess_obj.exists(),
+                            "The %s %s session was not created in XNAT" %
+                            (sbj, sess))
+                sess_dest = os.path.join(dest, sbj, sess)
+                assert_true(os.path.exists(sess_dest), "The staging area"
+                            " was not created: %s" % sess_dest)
+                # The XNAT scan object.
+                scan_obj = xnat.get_scan(project(), sbj, sess, 1)
+                assert_true(scan_obj.exists(), "The %s %s scan %s was"
+                            " not created in XNAT" % (sbj, sess, scan))
+                # The XNAT NiFTI resource object.
+                rsc_obj = scan_obj.resource('NIFTI')
+                assert_true(rsc_obj.exists(), "The %s %s scan %s %s resource was"
+                            " not created in XNAT" % (sbj, sess, scan, 'NIFTI'))
+                for volume in vol_dcm_dict.iterkeys():
+                    fname = "volume%03d.nii.gz" % volume
+                    file_obj = rsc_obj.file(fname)
+                    assert_true(file_obj.exists(), "The %s %s scan %s file %s was"
+                                " not created in XNAT" % (sbj, sess, scan, fname))
 
             # Delete the test subjects.
             xnat.delete_subjects(project(), *subjects)
