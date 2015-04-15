@@ -12,25 +12,28 @@ from ..helpers.bolus_arrival import bolus_arrival_index, BolusArrivalError
 from .workflow_base import WorkflowBase
 from .distributable import DISTRIBUTABLE
 
-
 PK_PREFIX = 'pk'
 """The XNAT modeling resource object label prefix."""
 
 
-def run(subject, session, *images, **opts):
+def run(subject, session, scan, time_series, **opts):
     """
     Creates a :class:`qipipe.pipeline.modeling.ModelingWorkflow` and
     runs it on the given inputs.
 
     :param subject: the input subject
     :param session: the input session
-    :param images: the input 3D NiFTI images
+    :param scan: input scan
+    :param time_series: the input 4D NiFTI time series
     :param opts: the :class:`qipipe.pipeline.modeling.ModelingWorkflow`
         initializer options
     :return: the :meth:`qipipe.pipeline.modeling.ModelingWorkflow.run`
         result
     """
-    return ModelingWorkflow(**opts).run(subject, session, *images)
+    mask = opts.pop('mask', None)
+    wf = ModelingWorkflow(**opts)
+    
+    return wf.run(subject, session, scan, time_series, mask=mask)
 
 
 class ModelingWorkflow(WorkflowBase):
@@ -176,48 +179,53 @@ class ModelingWorkflow(WorkflowBase):
         :class:`qipipe.pipeline.modeling.ModelingWorkflow`.
         """
 
-    def run(self, input_dict, **opts):
+    def run(self, subject, session, scan, time_series, mask=None):
         """
         Executes the modeling workflow described in
         :class:`qipipe.pipeline.modeling.ModelingWorkflow`
-        on the given inputs.
+        on the given input time series resource. The time series can
+        be the merged scan NIFTI files or merged registration files.
 
         This run method connects the given inputs to the modeling workflow
         inputs. The execution workflow is then executed, resulting in a
-        new uploaded XNAT analysis resource for each input session. This
-        method returns the uploaded XNAT *(subject, session, analysis)*
-        name tuples.
+        new uploaded XNAT resource.
 
-        The input is a *{subject: {session: image_dict}}* dictionary, where
-        *image_dict* is a dictionary with the following content:
-
-            {``time_series``: 4D time series, ``mask``: mask file}
-
-        :param input_dict: the input *{subject: {session: image_dict}}*
-            to model
-        :param opts: the following workflow options:
-        :keyword resource: the XNAT resource to model
+        :param subject: the subject name
+        :param session: the session name
+        :param scan: the scan number
+        :param time_series: the 4D time series resource name
+        :param mask: the XNAT mask resource
         :return: the modeling result XNAT resource name
         """
-        # The image dictionaries lists.
-        img_dict_lists = [img_dict.values()
-                     for img_dict in input_dict.itervalues()]
-        # The number of sessions.
-        sess_cnt = len(img_dict_lists)
+        self._logger.debug("Modeling the %s %s %s time series..." %
+            (sbj, sess, time_series))
 
-        # Model the images.
-        self._logger.debug("Modeling %d sessions..." % sess_cnt)
-        for sbj, sess_dict in input_dict.iteritems():
-            self._logger.debug("Modeling subject %s..." % sbj)
-            for sess, img_dict in sess_dict.iteritems():
-                self._logger.debug("Modeling %s %s..." % (sbj, sess))
-                self._model(sbj, sess, **img_dict)
-                self._logger.debug("Modeled %s %s." % (sbj, sess))
-            self._logger.debug("Modeled subject %s." % sbj)
-        self._logger.debug("Modeled %d images from %d sessions." %
-                           (img_cnt, sess_cnt))
+        # Determine the bolus uptake. If it could not be determined,
+        # then take the first volume as the uptake.
+        try:
+            bolus_arrival_index = bolus_arrival_index(time_series)
+        except BolusArrivalError:
+            bolus_arrival_index = 0
 
-        # Return the analysis name.
+        # Set the workflow input.
+        input_spec = self.workflow.get_node('input_spec')
+        input_spec.inputs.subject = subject
+        input_spec.inputs.session = session
+        input_spec.inputs.scan = scan
+        input_spec.inputs.time_series = time_series
+        input_spec.inputs.bolus_arrival_index = bolus_arrival_index
+        input_spec.inputs.mask = mask
+
+        # Execute the modeling workflow.
+        self._logger.debug("Executing the %s workflow on the %s %s scan %d"
+                           " %s time series..." %
+                           (self.workflow.name, subject, session, scan, time_series))
+        self._run_workflow(self.workflow)
+        self._logger.debug("Executed the %s workflow on the %s %s scan %d %s"
+                            " time series." %
+                           (self.workflow.name, subject, session, scan, time_series))
+        
+        # Return the resource name.
         return self.resource
 
     def _generate_resource_name(self):
@@ -227,43 +235,7 @@ class ModelingWorkflow(WorkflowBase):
 
         :return: a unique XNAT modeling resource name
         """
-        return "%s_%s" % (PK_PREFIX, qiutil.file.generate_file_name())
-
-    def _model(self, subject, session, time_series, mask):
-        """
-        Runs the modeling workflow on the given session images.
-
-        :param subject: the subject name
-        :param session: the session name
-        :param time_series: the 4D NiFTI time series image file
-        :param mask: the mask file
-        """
-        self._logger.debug("Modeling the %s %s %s time series..." %
-            (sbj, sess, time_series))
-
-        # Determine the bolus uptake. If it could not be determined,
-        # then take the first volume as the uptake.
-        try:
-            bolus_arv_ndx = bolus_arrival_index(time_series)
-        except BolusArrivalError:
-            bolus_arv_ndx = 0
-
-        # Set the workflow input.
-        input_spec = self.workflow.get_node('input_spec')
-        input_spec.inputs.subject = subject
-        input_spec.inputs.session = session
-        input_spec.inputs.time_series = time_series
-        input_spec.inputs.bolus_arrival_index = bolus_arv_ndx
-        input_spec.inputs.mask = mask
-
-        # Execute the modeling workflow.
-        self._logger.debug("Executing the %s workflow on the %s %s %s time"
-                           " series..." %
-                           (self.workflow.name, subject, session, time_series))
-        self._run_workflow(self.workflow)
-        self._logger.debug("Executed the %s workflow on the %s %s %s time"
-                            " series." %
-                           (self.workflow.name, subject, session, time_series))
+        return '_'.join((PK_PREFIX, qiutil.file.generate_file_name()))
 
     def _create_workflow(self, base_dir=None, **opts):
         """
@@ -285,7 +257,7 @@ class ModelingWorkflow(WorkflowBase):
         base_wf = self._create_base_workflow(base_dir=base_dir, **opts)
 
         # The workflow input fields.
-        in_fields = ['subject', 'session', 'time_series', 'mask',
+        in_fields = ['subject', 'session', 'scan', 'time_series', 'mask',
                      'bolus_arrival_index']
         input_xfc = IdentityInterface(fields=in_fields)
         input_spec = pe.Node(input_xfc, name='input_spec')
@@ -310,6 +282,7 @@ class ModelingWorkflow(WorkflowBase):
         upload_node = pe.Node(upload_xfc, name='upload_outputs')
         mdl_wf.connect(input_spec, 'subject', upload_node, 'subject')
         mdl_wf.connect(input_spec, 'session', upload_node, 'session')
+        mdl_wf.connect(input_spec, 'scan', upload_node, 'scan')
         mdl_wf.connect(merge_outputs, 'out', upload_node, 'in_files')
 
         # TODO - Get the overall and ROI FSL mean intensity values.
@@ -331,16 +304,6 @@ class ModelingWorkflow(WorkflowBase):
             self.depict_workflow(mdl_wf)
 
         return mdl_wf
-
-    def _create_upload_node(self, resource):
-        """
-        :param resource: the modeling parameter resource name
-        :return: the modeling parameter XNAT upload node
-        """
-        upload_xfc = XNATUpload(project=project(), resource=resource)
-        name = 'upload_' + resource
-
-        return pe.Node(upload_xfc, name=name)
 
     def _create_base_workflow(self, base_dir=None, **opts):
         """
@@ -444,7 +407,7 @@ class ModelingWorkflow(WorkflowBase):
         pk_map = pe.Node(Fastfit(), name='pk_map')
         pk_map.inputs.model_name = 'fxr.model'
         pk_map.inputs.optional_outs = ['chisq', 'guess_model.k_trans',
-                                       'guess_model.v_e', 'guess_model.chisq']
+                                       'guess_files.v_e', 'guess_model.chisq']
         base_wf.connect(copy_meta, 'dest_file', pk_map, 'target_data')
         base_wf.connect(input_spec, 'mask', pk_map, 'mask')
         base_wf.connect(get_params, 'params_csv', pk_map, 'params_csv')
