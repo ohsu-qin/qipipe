@@ -13,6 +13,7 @@ fastfit application will raise an ImportError.
 
 from .compress import Compress
 from .copy import Copy
+from .convert_bolero_mask import ConvertBoleroMask
 from .fix_dicom import FixDicom
 from .gate import Gate
 from .group_dicom import GroupDicom
@@ -26,4 +27,5 @@ from .xnat_copy import XNATCopy
 from .xnat_download import XNATDownload
 from .xnat_upload import XNATUpload
 from .xnat_find import XNATFind
+# TODO - enable QuIP update
 #from .update_qiprofile import UpdateQIProfile

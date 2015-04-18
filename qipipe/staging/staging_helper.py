@@ -1,4 +1,4 @@
-"""Pipeline utility functions."""
+"""Staging utility functions."""
 
 import os
 import re
