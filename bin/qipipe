@@ -63,6 +63,8 @@ def _parse_arguments():
     # The actions.
     parser.add_argument('--stage', dest='actions', action='append_const',
                         const='stage', help='stage the input DICOM files')
+    parser.add_argument('--roi', dest='actions', action='append_const',
+                        const='roi', help='generate the ROI mask files')
     parser.add_argument('--register', dest='actions', action='append_const',
                         const='register', help='register the scans')
     parser.add_argument('--model', dest='actions', action='append_const',
@@ -115,10 +117,9 @@ def _parse_arguments():
                         help='the XNAT modeling resource name',
                         metavar='RESOURCE')
 
-    # The input subject directories or XNAT labels to process.
+    # The input directories or XNAT labels to process.
     parser.add_argument('input', nargs='+',
-                        help='the AIRC DICOM subject directory to stage'
-                             ' or XNAT session label to process')
+                        help='the directory or XNAT session label to process')
 
     args = vars(parser.parse_args())
     nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)

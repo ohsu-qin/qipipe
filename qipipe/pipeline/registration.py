@@ -20,12 +20,13 @@ REG_PREFIX = 'reg'
 """The XNAT registration resource name prefix."""
 
 
-def run(subject, session, bolus_arrival_index, *images, **opts):
+def run(subject, session, scan, bolus_arrival_index, *images, **opts):
     """
     Runs the registration workflow on the given session scan images.
 
     :param subject: the subject name
     :param session: the session name
+    :param scan: the scan number
     :param images: the input session scan images
     :param mask: the image mask
     :param bolus_arrival_index: the required bolus uptake volume index
@@ -38,7 +39,7 @@ def run(subject, session, bolus_arrival_index, *images, **opts):
     # Make the workflow.
     reg_wf = RegistrationWorkflow(**opts)
     # Run the workflow.
-    return reg_wf.run(subject, session, bolus_arrival_index, *images,
+    return reg_wf.run(subject, session, scan, bolus_arrival_index, *images,
                       **run_opts)
 
 
@@ -80,10 +81,9 @@ class RegistrationWorkflow(WorkflowBase):
     The reference can be obtained by running the
     :class:`qipipe.pipeline.reference.ReferenceWorkflow` workflow.
 
-    The output realigned image file is named
-    *scan*\ ``_``\ *resource*\ *image*\ , where *resource* is the XNAT
-    registration resource name and *image* is the input image file name.
-    The default resource name is auto-generated.
+    The output realigned image file is named the same as the input scan
+    image file name is in the XNAT registration resource. The default
+    resource name is auto-generated.
     
     Three registration techniques are supported:
 
