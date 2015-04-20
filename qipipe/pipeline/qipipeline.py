@@ -58,8 +58,9 @@ def run(*inputs, **opts):
         existing sessions (default False)
     """
     # Tailor the actions.
-    actions = opts.get('actions', _default_actions(**opts))
-    opts['actions'] = actions
+    actions = opts.get('actions', None)
+    if not actions:
+        actions = opts['actions'] = _default_actions(**opts)
     if 'stage' in actions:
         _run_with_dicom_input(*inputs, **opts)
     elif 'roi' in actions:
@@ -552,10 +553,7 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # The staging workflow.
         if 'stage' in actions:
-            scan = opts.pop('scan', None)
-            if not scan:
-                raise ArgumentError("The required staging argument scan is missing")
-            stg_wf = StagingWorkflow(scan, base_dir=base_dir).workflow
+            stg_wf = StagingWorkflow(base_dir=base_dir).workflow
             self._logger.info("Enabled staging.")
         else:
             stg_wf = None

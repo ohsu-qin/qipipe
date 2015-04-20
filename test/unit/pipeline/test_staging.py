@@ -62,8 +62,8 @@ class TestStagingWorkflow(object):
             for sbj, sess, scan, vol_dcm_dict in iter_stage(collection, *inputs,
                                                    dest=dest):
                 work_dir = os.path.join(work, 'scan', str(scan))
-                stg_wf = staging.StagingWorkflow(scan, base_dir=work_dir)
-                stg_wf.set_inputs(collection, sbj, sess, vol_dcm_dict,
+                stg_wf = staging.StagingWorkflow(base_dir=work_dir)
+                stg_wf.set_inputs(collection, sbj, sess, scan, vol_dcm_dict,
                                   dest=dest)
                 stg_wf.run()
                 # Verify the result.
