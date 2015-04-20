@@ -279,7 +279,7 @@ class StagingWorkflow(WorkflowBase):
         workflow.connect(fix_dicom, 'out_file', compress_dicom, 'in_file')
         workflow.connect(iter_volume, 'dest', compress_dicom, 'dest')
         # Upload the compressed DICOM files.
-        upload_dicom_xfc = XNATCopy(project=project()resource='DICOM',
+        upload_dicom_xfc = XNATCopy(project=project(), resource='DICOM',
                                     skip_existing=True)
         upload_dicom = pe.JoinNode(upload_dicom_xfc, joinsource='iter_dicom',
                                    joinfield='in_files', name='upload_dicom')
