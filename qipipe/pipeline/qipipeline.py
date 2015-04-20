@@ -505,7 +505,7 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # The registration workflow node.
         if 'register' in actions:
-            reg_inputs = ['subject', 'session', 'bolus_arrival_index',
+            reg_inputs = ['subject', 'session', 'scan', 'bolus_arrival_index',
                           'in_files', 'mask', 'opts']
 
             # The registration function keyword options.
