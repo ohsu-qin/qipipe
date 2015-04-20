@@ -407,7 +407,7 @@ class ModelingWorkflow(WorkflowBase):
         pk_map = pe.Node(Fastfit(), name='pk_map')
         pk_map.inputs.model_name = 'fxr.model'
         pk_map.inputs.optional_outs = ['chisq', 'guess_model.k_trans',
-                                       'guess_files.v_e', 'guess_model.chisq']
+                                       'guess_model.v_e', 'guess_model.chisq']
         base_wf.connect(copy_meta, 'dest_file', pk_map, 'target_data')
         base_wf.connect(input_spec, 'mask', pk_map, 'mask')
         base_wf.connect(get_params, 'params_csv', pk_map, 'params_csv')
