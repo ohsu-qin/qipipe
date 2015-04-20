@@ -109,13 +109,6 @@ def _run_with_dicom_input(*inputs, **opts):
     if opts.pop('resume', None):
         opts['skip_existing'] = False
 
-    # Pull out the actions, since the non-stage actions only apply
-    # to the T1 scan type.
-    #
-    # TODO - specify the actions in the options? Remove
-    # scan number/scan type/action dependency.
-    #
-    actions = opts.pop('actions')
     # The set of input subjects is used to build the CTP mapping file
     # after the workflow is completed.
     subjects = set()
@@ -123,10 +116,13 @@ def _run_with_dicom_input(*inputs, **opts):
     for sbj, sess, scan, vol_dcm_dict in iter_stage(collection, *inputs, **opts):
         # Capture the subject.
         subjects.add(sbj)
+        # The workflow options are augmented from the base options.
+        wf_opts = dict(opts)
         # Scan 1 is scan type T1. Only T1 can do more than staging.
-        wf_actions = actions if scan == 1 else ['stage']
+        if scan != 1:
+            wf_opts['actions'] = ['stage']
         # Create a new workflow for the current scan type.
-        wf_gen = QIPipelineWorkflow(actions=wf_actions)
+        wf_gen = QIPipelineWorkflow(wf_opts)
         # Run the workflow on each {volume: [DICOM files]} item.
         wf_gen.run_with_dicom_input(collection, sbj, sess, scan, vol_dcm_dict, dest)
 
