@@ -190,7 +190,7 @@ class StagingWorkflow(WorkflowBase):
             self._logger.debug("Set the XNAT project to %s." % prj)
 
         # Make the workflow.
-        self.workflow = self._create_workflow(scan, **opts)
+        self.workflow = self._create_workflow(**opts)
         """
         The staging workflow sequence described in
         :class:`qipipe.pipeline.staging.StagingWorkflow`.
