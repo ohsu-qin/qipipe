@@ -5,10 +5,10 @@ from nose.tools import (assert_equal, assert_is_not_none, assert_true)
 from qipipe.pipeline import qipipeline as qip
 import qixnat
 from qipipe.staging import airc_collection as airc
-from qipipe.staging.staging_helper import get_subjects
 from qiutil.ast_config import read_config
 from ... import (project, ROOT)
 from ...helpers.logging import logger
+from ...helpers.staging import subject_sources
 from ...unit.pipeline.test_mask import MASK_CONF
 from ...unit.pipeline.test_registration import REG_CONF
 from ...unit.pipeline.test_modeling import MODELING_CONF
@@ -103,7 +103,7 @@ class TestQIPipeline(object):
             opts['actions'] = ['stage', 'register']
 
         # The test subject => directory dictionary.
-        sbj_dir_dict = get_subjects(collection, fixture)
+        sbj_dir_dict = subject_sources(collection, fixture)
         # The test subjects.
         subjects = sbj_dir_dict.keys()
         # The test source directories.

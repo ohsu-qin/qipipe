@@ -5,7 +5,7 @@ from qipipe.interfaces import XNATFind
 import qixnat
 from ... import (project, ROOT)
 from ...helpers.logging import logger
-from ...helpers.xnat_test_helper import generate_unique_name
+from ...helpers.name_generator import generate_unique_name
 
 FIXTURE = os.path.join(ROOT, 'fixtures', 'interfaces', 'xnat', 'Sarcoma001',
                       'Session01', 'scans', '1', 'resources', 'NIFTI',

@@ -7,7 +7,7 @@ import nipype.pipeline.engine as pe
 from qipipe.pipeline import registration
 from ... import (project, ROOT)
 from ...helpers.logging import logger
-from ...helpers.xnat_test_helper import generate_unique_name
+from ...helpers.name_generator import generate_unique_name
 from ...unit.pipeline.staged_test_base import StagedTestBase
 
 REG_CONF = os.path.join(ROOT, 'conf', 'registration.cfg')

@@ -6,7 +6,7 @@ import qixnat
 from qipipe.interfaces import XNATCopy
 from ... import (project, ROOT)
 from ...helpers.logging import logger
-from ...helpers.xnat_test_helper import generate_unique_name
+from ...helpers.name_generator import generate_unique_name
 
 SUBJECT = generate_unique_name(__name__)
 """The test subject name."""
