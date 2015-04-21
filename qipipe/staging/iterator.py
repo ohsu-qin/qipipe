@@ -27,7 +27,8 @@ def iter_stage(collection, *inputs, **opts):
     of the subject, session, scan number and {volume number: [dicom files]}
     dictionary, e.g.::
     
-        >> sbj, sess, scan, vol_dcm_dict = next(iter_stage('Sarcoma', '/path/to/subject'))
+        >> sbj, sess, scan, vol_dcm_dict =
+        ...    next(iter_stage('Sarcoma', '/path/to/subject'))
         >> print sbj
         Sarcoma001
         >> print sess
@@ -38,7 +39,7 @@ def iter_stage(collection, *inputs, **opts):
         {1: ['/path/to/t1/image1.dcm', ...], ...}
 
     The input directories conform to the
-    :class:`qipipe.staging.airc_collection.AIRCCollection` *subject_pattern*)
+    :attr:`qipipe.staging.airc_collection.AIRCCollection.subject_pattern`
 
     :param collection: the AIRC image collection name
     :param inputs: the AIRC source subject directories to stage
@@ -69,67 +70,21 @@ def iter_stage(collection, *inputs, **opts):
     logger(__name__).debug("Staging %d new %s volumes from %d subjects" %
                            (volume_cnt, collection, len(subjects)))
     
-    # Generate the (subject, session, {scan number: {volume: [dicom files]}})
+    # Generate the (subject, session, scan number, {volume: [dicom files]})
     # tuples.
     for sbj, sess_dict in stg_dict.iteritems():
         logger(__name__).debug("Staging subject %s..." % sbj)
         for sess, scan_dict in sess_dict.iteritems():
             for scan, vol_dcm_dict in scan_dict.iteritems():
-                logger(__name__).debug("Staging %s session %s scan %d..." % (sbj, sess, scan))
+                logger(__name__).debug("Staging %s session %s scan %d..." %
+                                       (sbj, sess, scan))
                 # Delegate to the workflow executor.
                 yield sbj, sess, scan, vol_dcm_dict
-                logger(__name__).debug("Staged %s session %s scan %d." % (sbj, sess, scan))
+                logger(__name__).debug("Staged %s session %s scan %d." %
+                                       (sbj, sess, scan))
         logger(__name__).debug("Staged subject %s." % sbj)
     logger(__name__).debug("Staged %d new %s volumes from %d subjects." %
                            (volume_cnt, collection, len(subjects)))
-
-
-def subject_for_directory(collection, path):
-    """
-    Infers the XNAT subject names from the given directory name.
-
-    :param collection: the AIRC collection name
-    :return: the corresponding XNAT subject label
-    :raise StagingError: if the name does not match the collection subject
-        pattern
-    """
-    airc_coll = airc.collection_with_name(collection)
-    sbj_nbr = airc_coll.path2subject_number(path)
-    return SUBJECT_FMT % (collection, sbj_nbr)
-
-
-def get_subjects(collection, source, pattern=None):
-    """
-    Infers the XNAT subject names from the given source directory.
-    The source directory contains subject subdirectories.
-    The match pattern matches on the subdirectories and captures the
-    subject number. The subject name is the collection name followed
-    by the subject number, e.g. ``Breast004``.
-
-    :param collection: the AIRC collection name
-    :param source: the input parent directory
-    :param pattern: the subject directory name match pattern (default
-        is the :class:`qipipe.staging.airc_collection.AIRCCollection`
-        *subject_pattern*)
-    :return: the subject name => directory dictionary
-    """
-    logger(__name__).debug("Detecting %s subjects from %s..." %
-          (collection, source))
-    airc_coll = airc.collection_with_name(collection)
-    pat = pattern or airc_coll.subject_pattern
-    sbj_dir_dict = {}
-    for d in os.listdir(source):
-        match = re.match(pat, d)
-        if match:
-            # The XNAT subject name.
-            subject = SUBJECT_FMT % (collection, int(match.group(1)))
-            # The subject source directory.
-            sbj_dir_dict[subject] = os.path.join(source, d)
-            logger(__name__).debug(
-                "Discovered XNAT test subject %s subdirectory: %s" %
-                (subject, d))
-
-    return sbj_dir_dict
 
 
 def _collect_visits(collection, *inputs, **opts):
@@ -206,14 +161,15 @@ def _iter_visits(collection, *inputs, **opts):
     :param collection: the AIRC image collection name
     :param inputs: the subject directories over which to iterate
     :param opts: the :class:`VisitIterator` initializer options
-    :yield: iterate over the visit *(subject, session, scan, vol_dict)* tuples
+    :yield: iterate over the visit *(subject, session, scan, vol_dict)*
+        tuples
     """
     return VisitIterator(collection, *inputs, **opts)
 
 
 def _iter_new_visits(collection, *inputs, **opts):
     """
-    Filters :meth:`qipipe.staging.staging_helper._iter_visits` to iterate
+    Filters :meth:`qipipe.staging.iterator._iter_visits` to iterate
     over the new visits in the given subject directories which are not in XNAT.
 
     :param collection: the AIRC image collection name

@@ -18,7 +18,7 @@ from .roi import ROIWorkflow
 import registration
 from ..interfaces import (XNATDownload, XNATUpload)
 from ..staging import airc_collection
-from ..staging.staging_helper import iter_stage
+from ..staging.iterator import iter_stage
 from ..staging.map_ctp import map_ctp
 from ..staging.roi import iter_roi
 
@@ -50,7 +50,7 @@ def run(*inputs, **opts):
 
     :param inputs: the DICOM directories or XNAT session labels to
         process
-    :param opts: the :meth:`qipipe.staging.staging_helper.iter_stage`
+    :param opts: the :meth:`qipipe.staging.iterator.iter_stage`
         and :class:`QIPipelineWorkflow` initializer options,
         as well as the following keyword options:
     :keyword collection: the AIRC collection name

@@ -3,9 +3,10 @@ import shutil
 from nose.tools import assert_true
 from qipipe.pipeline import staging
 import qixnat
-from qipipe.staging.staging_helper import (get_subjects, iter_stage)
+from qipipe.staging.iterator import iter_stage
 from ... import (project, ROOT)
 from ...helpers.logging import logger
+from ...helpers.staging import subject_sources
 
 FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
 """The test fixture directory."""
@@ -49,7 +50,7 @@ class TestStagingWorkflow(object):
         work = os.path.join(RESULTS, 'work')
 
         # The test subject => directory dictionary.
-        sbj_dir_dict = get_subjects(collection, fixture)
+        sbj_dir_dict = subject_sources(collection, fixture)
         # The test subjects.
         subjects = sbj_dir_dict.keys()
         # The test source directories.

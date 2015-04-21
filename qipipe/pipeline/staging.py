@@ -9,7 +9,7 @@ from ..interfaces import (Gate, FixDicom, Compress, XNATFind, XNATCopy)
 import qixnat
 from .workflow_base import WorkflowBase
 from qiutil.logging import logger
-from ..staging import staging_helper
+from ..staging import iterator
 
 
 def set_workflow_inputs(exec_wf, collection, subject, session, scan,
