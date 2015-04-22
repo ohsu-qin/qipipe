@@ -191,8 +191,7 @@ def _run_with_xnat_input(*inputs, **opts):
             if not scan:
                 raise ArgumentError("The XNAT path is missing a scan: %s" % path)
             # The XNAT scan object must exist.
-            scan_obj = xnat.find(project=project, subject=subject, session=session,
-                                scan=scan)
+            scan_obj = xnat.find(project=prj, subject=sbj, session=sess,scan=scan)
             if not scan_obj or not scan_obj.exists():
                 raise ArgumentError("The XNAT scan object does not exist: %s" % path)
             
