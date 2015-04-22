@@ -231,7 +231,7 @@ class RegistrationWorkflow(WorkflowBase):
         - *reference*: the fixed reference for the given image registration
         
         In addition, the caller has the responsibility of setting the
-        ``iter_reg_input`` iterables to the scans to realign.
+        ``iter_reg_input`` iterables to the 3D image files to realign.
 
         The *reference* input is set by :meth:`connect_reference`.
 
@@ -309,16 +309,16 @@ class RegistrationWorkflow(WorkflowBase):
                                   connect_reference, **connect_ref_args)
 
         # Collect the realigned images.
-        join_realigned = pe.JoinNode(IdentityInterface(fields=['images']),
-                                     joinsource='iter_reg_input',
-                                     joinfield='images',
-                                     name='join_realigned')
-        exec_wf.connect(copy_realigned, 'out_file', join_realigned, 'images')
+        collect_realigned = pe.JoinNode(IdentityInterface(fields=['images']),
+                                        joinsource='iter_reg_input',
+                                        joinfield='images',
+                                        name='collect_realigned')
+        exec_wf.connect(copy_realigned, 'out_file', collect_realigned, 'images')
 
         # Merge the pre-arrival and realigned images.
-        concat_reg = pe.Node(Merge(2), name='concat_reg')
-        exec_wf.connect(copy_pre_arrival, 'out_files', concat_reg, 'in1')
-        exec_wf.connect(join_realigned, 'images', concat_reg, 'in2')
+        collect_reg = pe.Node(Merge(2), name='collect_reg')
+        exec_wf.connect(copy_pre_arrival, 'out_files', collect_reg, 'in1')
+        exec_wf.connect(collect_realigned, 'images', collect_reg, 'in2')
 
         # Upload the registration result into the XNAT registration resource.
         upload_reg_xfc = XNATUpload(project=project(), resource=self.resource,
@@ -327,12 +327,12 @@ class RegistrationWorkflow(WorkflowBase):
         exec_wf.connect(input_spec, 'subject', upload_reg, 'subject')
         exec_wf.connect(input_spec, 'session', upload_reg, 'session')
         exec_wf.connect(input_spec, 'scan', upload_reg, 'scan')
-        exec_wf.connect(concat_reg, 'out', upload_reg, 'in_files')
+        exec_wf.connect(collect_reg, 'out', upload_reg, 'in_files')
 
         # The execution output.
         output_spec = pe.Node(IdentityInterface(fields=['images']),
                               name='output_spec')
-        exec_wf.connect(concat_reg, 'out', output_spec, 'images')
+        exec_wf.connect(collect_reg, 'out', output_spec, 'images')
 
         self._logger.debug("Created the %s workflow." % exec_wf.name)
         # If debug is set, then diagram the workflow graph.
