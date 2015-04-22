@@ -7,7 +7,7 @@ from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
 from nipype.interfaces.dcmstack import MergeNifti
 import qixnat
-from qixnat.helpers import parse_session_label
+from qixnat.helpers import path_hierarchy
 from qiutil.logging import logger
 import qipipe
 from . import staging
@@ -168,36 +168,45 @@ def _run_with_roi_input(*inputs, **opts):
 
 def _run_with_xnat_input(*inputs, **opts):
     """
-    Run the pipeline with a XNAT download.
-    Each input is either a session label or path, e.g.
-    ``Breast012_Session03`` or ``Breast012/Session03``.
+    Run the pipeline with a XNAT download. Each input is a XNAT scan
+    path, e.g. ``/QIN/Breast012/Session03/scan/1``.
 
-    :param inputs: the XNAT session labels or paths
-    :param opts: the ``project`` and :class:`QIPipelineWorkflow`
-        initializer options
+    :param inputs: the XNAT scan resource paths
+    :param opts: the :class:`QIPipelineWorkflow` initializer options
     """
-    prj = opts.get('project', qipipe.project())
-
-    # TODO - add the scan number to the inputs and get it from there.
-    #   Only support the / delimiter in the inputs.
 
     with qixnat.connect() as xnat:
-        for label in inputs:
-            # Convert a path to a label.
-            if '/' in label:
-                label = label.replace('/', '_')
-            sbj, sess = parse_session_label(label)
+        for path in inputs:
+            hierarchy = dict(path_hierarchy(path))
+            prj = hierarchy.pop('project', None)
+            if not prj:
+                raise ArgumentError("The XNAT path is missing a project: %s" % path)
+            sbj = hierarchy.pop('subject', None)
+            if not sbj:
+                raise ArgumentError("The XNAT path is missing a subject: %s" % path)
+            sess = hierarchy.pop('session', None)
+            if not sess:
+                raise ArgumentError("The XNAT path is missing a session: %s" % path)
+            scan = hierarchy.pop('scan', None)
+            if not scan:
+                raise ArgumentError("The XNAT path is missing a scan: %s" % path)
+            # The XNAT scan object must exist.
+            scan_obj = xnat.find(project=project, subject=subject, session=session,
+                                scan=scan)
+            if not scan_obj or not scan_obj.exists():
+                raise ArgumentError("The XNAT scan object does not exist: %s" % path)
+            
             # The workflow options are augmented from the base options.
             wf_opts = dict(opts)
             # Check for an existing mask.
             if _scan_resource_exists(project=prj, subject=sbj, session=sess,
-                                     scan=1, resource=MASK_RSC):
+                                     scan=scan, resource=MASK_RSC):
                 wf_opts['mask'] = MASK_RSC
 
             # Every post-stage action requires a 4D scan time series.
             ts_actions = (action for action in opts[actions] if action != 'stage')
             if any(ts_actions):
-                if _scan_resource_exists(prj, sbj, sess, 1, SCAN_TS_RSC):
+                if _scan_resource_exists(prj, sbj, sess, scan, SCAN_TS_RSC):
                     wf_opts['scan_time_series'] = SCAN_TS_RSC
 
             # If modeling will be performed on a specified registration
@@ -205,12 +214,13 @@ def _run_with_xnat_input(*inputs, **opts):
             if 'model' in opts['actions'] and 'registration' in opts:
                 reg_ts_rsc = opts['registration'] + '_ts'
                 if _scan_resource_exists(project=prj, subject=sbj, session=sess,
-                                         scan=1, resource=reg_ts_rsc):
+                                         scan=scan, resource=reg_ts_rsc):
                     wf_opts['realigned_time_series'] = reg_ts_rsc
 
             # Execute the workflow.
             wf_gen = QIPipelineWorkflow(**wf_opts)
-            wf_gen.run_with_scan_download(xnat, prj, sbj, sess)
+            wf_gen.run_with_scan_download(xnat, prj, sbj, sess, scan)
+
 
 def _scan_resource_exists(project, subject, session, scan, resource):
     """
@@ -225,6 +235,7 @@ def _scan_resource_exists(project, subject, session, scan, resource):
                             (project, subject, session, scan, resource, status))
 
     return exists
+
 
 class ArgumentError(Exception):
     pass

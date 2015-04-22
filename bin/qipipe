@@ -119,7 +119,7 @@ def _parse_arguments():
 
     # The input directories or XNAT labels to process.
     parser.add_argument('input', nargs='+',
-                        help='the directory or XNAT session label to process')
+                        help='the directory or XNAT object path to process')
 
     args = vars(parser.parse_args())
     nonempty_args = dict((k, v) for k, v in args.iteritems() if v != None)
