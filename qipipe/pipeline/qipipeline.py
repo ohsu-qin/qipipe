@@ -184,7 +184,7 @@ def _run_with_xnat_input(*inputs, **opts):
             sbj = hierarchy.pop('subject', None)
             if not sbj:
                 raise ArgumentError("The XNAT path is missing a subject: %s" % path)
-            sess = hierarchy.pop('session', None)
+            sess = hierarchy.pop('experiment', None)
             if not sess:
                 raise ArgumentError("The XNAT path is missing a session: %s" % path)
             scan = hierarchy.pop('scan', None)
