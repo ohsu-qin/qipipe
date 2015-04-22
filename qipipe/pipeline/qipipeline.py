@@ -191,15 +191,14 @@ def _run_with_xnat_input(*inputs, **opts):
             if not scan:
                 raise ArgumentError("The XNAT path is missing a scan: %s" % path)
             # The XNAT scan object must exist.
-            scan_obj = xnat.find(project=prj, subject=sbj, session=sess,scan=scan)
+            scan_obj = xnat.find(prj, sbj, sess, scan=scan)
             if not scan_obj or not scan_obj.exists():
                 raise ArgumentError("The XNAT scan object does not exist: %s" % path)
             
             # The workflow options are augmented from the base options.
             wf_opts = dict(opts)
             # Check for an existing mask.
-            if _scan_resource_exists(project=prj, subject=sbj, session=sess,
-                                     scan=scan, resource=MASK_RSC):
+            if _scan_resource_exists(prj, sbj, sess, scan, MASK_RSC):
                 wf_opts['mask'] = MASK_RSC
 
             # Every post-stage action requires a 4D scan time series.
@@ -212,8 +211,7 @@ def _run_with_xnat_input(*inputs, **opts):
             # resource, then check for an existing 4D registration time series.
             if 'model' in opts['actions'] and 'registration' in opts:
                 reg_ts_rsc = opts['registration'] + '_ts'
-                if _scan_resource_exists(project=prj, subject=sbj, session=sess,
-                                         scan=scan, resource=reg_ts_rsc):
+                if _scan_resource_exists(prj, sbj, sess, scan, reg_ts_rsc):
                     wf_opts['realigned_time_series'] = reg_ts_rsc
 
             # Execute the workflow.
@@ -226,8 +224,8 @@ def _scan_resource_exists(project, subject, session, scan, resource):
     @return whether the given XNAT scan resource exists
     """
     with qixnat.connect() as xnat:
-        rsc_obj = xnat.find(project=project, subject=subject, session=session,
-                            scan=scan, resource=resource)
+        rsc_obj = xnat.find(project, subject, session, scan=scan,
+                            resource=resource)
     exists = rsc_obj and rsc_obj.files().get()
     status = 'found' if exists else 'not found'
     logger(__name__).debug("The %s %s %s scan %d resource %s was %s." %
