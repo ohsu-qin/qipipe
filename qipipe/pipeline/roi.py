@@ -79,7 +79,7 @@ class ROIWorkflow(WorkflowBase):
         self.workflow = self._create_workflow(**opts)
         """The ROI workflow."""
 
-    def run(self, subject, session, scan, time_series, *inputs, **opts):
+    def run(self, subject, session, scan, time_series, *inputs):
         """
         Runs the ROI workflow on the given session scan images.
 
@@ -89,7 +89,6 @@ class ROIWorkflow(WorkflowBase):
         :param time_series: the 4D scan time series
         :param inputs: the input (lesion, slice index, in_file) tuples
             to convert
-        :param opts: the standard workflow options, e.g. *base_dir*
         :return: the XNAT converted ROI resource name
         """
         if not inputs:
@@ -157,6 +156,9 @@ class ROIWorkflow(WorkflowBase):
         ``iter_roi`` synchronized (lesion, slice_index, in_file)
         iterables.
 
+        :param opts: the following workflow creation options:
+        :keyword base_dir: the workflow execution directory
+            (default a new temp directory)
         :return: the execution workflow
         """
         if not dest:
