@@ -27,9 +27,8 @@ def run(subject, session, scan, bolus_arrival_index, *images, **opts):
     :param subject: the subject name
     :param session: the session name
     :param scan: the scan number
-    :param images: the input session scan images
-    :param mask: the image mask
     :param bolus_arrival_index: the required bolus uptake volume index
+    :param images: the input session scan images
     :param opts: the :class:`RegistrationWorkflow` initializer
         and :meth:`RegistrationWorkflow.run` options
     :return: the realigned image file path array
