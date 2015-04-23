@@ -542,6 +542,7 @@ class QIPipelineWorkflow(WorkflowBase):
             roi_xfc = Function(input_names=roi_inputs, output_names=[],
                                function=roi)
             roi_node = pe.Node(roi_xfc, name='roi')
+            roi_node.opts = dict(base_dir=base_dir)
             self._logger.info("Enabled BOLERO ROI mask conversion.")
         else:
             roi_node = None
@@ -866,7 +867,8 @@ def bolus_arrival_index_or_zero(time_series):
         return 0
 
 
-def register(subject, session, scan, bolus_arrival_index, in_files, opts):
+def register(subject, session, scan, bolus_arrival_index, mask, in_files,
+             opts):
     """
     Runs the registration workflow on the given session scan images.
 
@@ -875,11 +877,12 @@ def register(subject, session, scan, bolus_arrival_index, in_files, opts):
       ``**opts``). The Nipype ``Function`` interface does not support
       method aggregates. Similarly, the in_files parameter is a
       required list rather than a splat argument (i.e., *in_files).
-
+    
     :param subject: the subject name
     :param session: the session name
     :param scan: the scan number
     :param bolus_arrival_index: the bolus uptake volume index
+    :param mask: the required scan mask file
     :param in_files: the input session scan 3D NiFTI images
     :param opts: the :meth:`qipipe.pipeline.registration.run` keyword
         options
@@ -887,8 +890,15 @@ def register(subject, session, scan, bolus_arrival_index, in_files, opts):
     """
     from qipipe.pipeline import registration
 
+    # Note: There is always a mask argument. The mask file is either
+    # specified as an input or built by the workflow. The mask is
+    # optional in the registration run function. Therefore, the
+    # the registration run options include the mask.
+    run_opts = dict(mask=mask)
+    run_opts.update(opts) 
+    
     return registration.run(subject, session, scan, bolus_arrival_index,
-                            *in_files, **opts)
+                            *in_files, **run_opts)
 
 
 def roi(subject, session, scan, time_series, in_rois, opts):
@@ -905,8 +915,5 @@ def roi(subject, session, scan, time_series, in_rois, opts):
     :param opts: the :meth:`qipipe.pipeline.roi.run` keyword options
     """
     from qipipe.pipeline import roi
-
-    # TODO - where is the in_dir
-    # TODO - call iter_roi for run inputs
 
     roi.run(subject, session, scan, time_series, *in_rois, **opts)
