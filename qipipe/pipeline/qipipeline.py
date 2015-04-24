@@ -187,9 +187,10 @@ def _run_with_xnat_input(*inputs, **opts):
             sess = hierarchy.pop('experiment', None)
             if not sess:
                 raise ArgumentError("The XNAT path is missing a session: %s" % path)
-            scan = hierarchy.pop('scan', None)
-            if not scan:
+            scan_s = hierarchy.pop('scan', None)
+            if not scan_s:
                 raise ArgumentError("The XNAT path is missing a scan: %s" % path)
+            scan = int(scan_s)
             # The XNAT scan object must exist.
             scan_obj = xnat.find(prj, sbj, sess, scan=scan)
             if not scan_obj or not scan_obj.exists():
@@ -221,7 +222,7 @@ def _run_with_xnat_input(*inputs, **opts):
 
 def _scan_resource_exists(project, subject, session, scan, resource):
     """
-    @return whether the given XNAT scan resource exists
+    :return: whether the given XNAT scan resource exists
     """
     with qixnat.connect() as xnat:
         rsc_obj = xnat.find(project, subject, session, scan=scan,
@@ -229,7 +230,7 @@ def _scan_resource_exists(project, subject, session, scan, resource):
     exists = rsc_obj and rsc_obj.files().get()
     status = 'found' if exists else 'not found'
     logger(__name__).debug("The %s %s %s scan %d resource %s was %s." %
-                            (project, subject, session, scan, resource, status))
+                           (project, subject, session, scan, resource, status))
 
     return exists
 
