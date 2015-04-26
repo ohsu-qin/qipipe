@@ -429,8 +429,8 @@ class QIPipelineWorkflow(WorkflowBase):
         """
         # The XNAT registration object.
         if self.registration_resource:
-            reg_obj = xnat.get_experiment_resource(project, subject, session,
-                                                   scan, self.registration_resource)
+            reg_obj = xnat.get_scan_resource(project, subject, session, scan,
+                                             self.registration_resource)
         else:
             reg_obj = None
         # If the registration has not yet been performed, then
