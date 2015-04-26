@@ -558,10 +558,10 @@ class QIPipelineWorkflow(WorkflowBase):
         # Registration and modeling require a mask.
         if (reg_node or mdl_wf) and not mask_rsc:
             mask_wf = MaskWorkflow(base_dir=base_dir).workflow
-            self._logger.info("Enabled mask creation.")
+            self._logger.info("Enabled scan mask creation.")
         else:
             mask_wf = None
-            self._logger.info("Skipping mask creation.")
+            self._logger.info("Skipping scan mask creation.")
 
         # The staging workflow.
         if 'stage' in actions:
@@ -643,10 +643,8 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(input_spec, 'session', staged, 'session')
                 exec_wf.connect(input_spec, 'scan', staged, 'scan')
 
-        # The mask and ROI actions require a scan time series.
-        # Modeling requires a scan time series if the modeling is not
-        # performed on a registration result.
-        if mask_wf or roi_node or (mdl_wf and not model_reg):
+        # All downstream actions require a scan time series.
+        if reg_node or mask_wf or roi_node or mdl_wf:
             # If there is a scan time series, then download it.
             # Otherwise, if staging is enabled, then stack the resulting
             # staged 3D images into the scan time series.
