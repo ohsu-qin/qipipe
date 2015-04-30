@@ -15,8 +15,9 @@ class TestStagingIterator(object):
     """iter_stage unit tests."""
     def test_breast(self):
         discovered = self._test_collection('Breast')
-        # The first visit has both a T1 and a T2 scan.
-        expected_scans = {1: set([1, 2]), 2: set([1])}
+        # The first visit has a T1, T2 and DWI scan with numbers
+        # 1, 2 and 4, resp. Visit 2 has only a T1 scan.
+        expected_scans = {1: set([1, 2, 4]), 2: set([1])}
         for visit in [1, 2]:
             session = "Session0%d" % visit
             scans = {scan_input.scan for scan_input in discovered
@@ -27,17 +28,13 @@ class TestStagingIterator(object):
         for scan_input in discovered:
             # Validate the DICOM inputs.
             if scan_input.session == "Session01":
-                # Visit 1 has two files. T1 has one 2 volumes,
-                # T2 has one volume.
+                # T1 has two volumes, T2 and DWI have one volume.
                 expected_vol_cnt = 2 if scan_input.scan == 1 else 1
                 expected_dcm_cnt = 2
-            elif scan_input.scan == 1:
+            else:
                 # Visit 2 T1 has two files in one volume.
                 expected_vol_cnt = 1
                 expected_dcm_cnt = 2
-            else:
-                # Visit 2 T2 has no scan files.
-                expected_vol_cnt = expected_dcm_cnt = 0
             dicom = scan_input.iterators.dicom
             volumes = dicom.keys()
             concat = lambda x,y: x + y
@@ -55,15 +52,19 @@ class TestStagingIterator(object):
             
             # Validate the ROI inputs.
             rois = scan_input.iterators.roi
-            if scan_input.scan == 2:
+            # Only T1 has ROIs.
+            if scan_input.scan == 1:
+                if scan_input.session == "Session01":
+                    # The first visit has two lesions.
+                    expected_lesions = set([1, 2])
+                    expected_slices = set([12, 13])
+                else:
+                    # The second visit has one lesion.
+                    expected_lesions = set([1])
+                    expected_slices = set([12, 13])
+            else:
                 expected_lesions = set([])
                 expected_slices = set([])
-            elif scan_input.session == "Session01":
-                expected_lesions = set([1, 2])
-                expected_slices = set([12, 13])
-            else:
-                expected_lesions = set([1])
-                expected_slices = set([12, 13])
             expected_roi_cnt = len(expected_lesions) * len(expected_slices)
             assert_equal(len(rois), expected_roi_cnt,
                          "%s %s scan %d input ROI file count is"
