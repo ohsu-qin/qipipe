@@ -1,5 +1,9 @@
-This history lists major release themes. See the GitHub commits
+This history lists major release themes. See the GitHub log
 for change details.
+
+5.2.1 / 2015-04-29
+------------------
+* Detect and stage ROIs.
 
 5.1.1 / 2015-04-13
 ------------------
