@@ -4,91 +4,130 @@ import os
 import re
 import glob
 from collections import defaultdict
-from qiutil.collections import nested_defaultdict
 from qiutil.logging import logger
 import qixnat
 from .. import project
-from qidicom import reader
-from qidicom.hierarchy import group_by
+import qidicom.hierarchy
 from . import airc_collection as airc
 from .roi import iter_roi
 from .staging_error import StagingError
+
 
 SUBJECT_FMT = '%s%03d'
 """The QIN subject name format with arguments (collection, subject number)."""
 
 SESSION_FMT = 'Session%02d'
 """The QIN session name format with argument session number."""
+
+
+class ScanInput(object):
+    def __init__(self, collection, subject, session, scan, iterators):
+        self.collection = collection
+        """The image collection name."""
+
+        self.subject = subject
+        """The scan subject name."""
         
+        self.session = session
+        """The scan session name."""
+        
+        self.scan = scan
+        """The scan number."""
+        
+        self.iterators = iterators
+        """The :class:`ScanIterators` object."""
+
+    def __repr__(self):
+        return str(dict(collection=self.collection, subject=self.subject,
+                        scan=self.scan, iterators=self.iterators))
+
+
+class ScanIterators(object):
+    """Aggregate with attributes :meth:`dicom` and :meth:`roi`."""
+
+    def __init__(self, dicom_gen, roi_gen=None):
+        """
+        :param dicom_gen: the :attr:`dicom` generator
+        :param roi_gen: the :attr:`roi` generator
+        """
+        self._dicom_gen = dicom_gen
+        self._dicom = None
+        self._roi_gen = roi_gen
+        self._roi = None
+    
+    @property
+    def dicom(self):
+        """The {volume: [DICOM files]} dictionary."""
+        if self._dicom == None:
+            # The {volume: iterator} dictionary.
+            dicom_iters = next(self._dicom_gen)
+            # The {volume: list} dictionary.
+            dicom_lists = {k: list(v) for k, v in dicom_iters.iteritems()}
+            # Remove the empty file lists.
+            self._dicom = {k: v for k, v in dicom_lists.iteritems() if v}
+        return self._dicom
+    
+    @property
+    def roi(self):
+        """The :meth:`qipipe.staging.roi.iter_roi` iterator."""
+        if self._roi == None:
+            self._roi = list(self._roi_gen) if self._roi_gen else []
+        return self._roi
+
+    def __repr__(self):
+        return str(dict(dicom=self.dicom, roi=self.roi))
+
 
 def iter_stage(collection, *inputs, **opts):
     """
     Iterates over the the new AIRC visits in the given input directories.
     This method is a staging generator which yields a tuple consisting
-    of the subject, session, scan number and {volume number: [dicom files]}
-    dictionary, e.g.::
+    of the subject, session, scan number and :class:`ScanIterators`
+    object, e.g.::
     
-        >> sbj, sess, scan, vol_dcm_dict, rois =
-        ...    next(iter_stage('Sarcoma', '/path/to/subject'))
-        >> print sbj
+        >> scan_input = next(iter_stage('Sarcoma', '/path/to/subject'))
+        >> print scan_input.subject
         Sarcoma001
-        >> print sess
+        >> print scan_input.session
         Session01
-        >> print scan
+        >> print scan_input.scan
         1
-        >> print vol_dcm_dict
+        >> print scan_input.iterators.dicom
         {1: ['/path/to/t1/image1.dcm', ...], ...}
-        >> print rois
+        >> print scan_input.iterators.roi
         [(1, 19, '/path/to/roi19.bqf'), ...]
 
     The input directories conform to the
     :attr:`qipipe.staging.airc_collection.AIRCCollection.subject_pattern`
 
-    :param collection: the AIRC image collection name
+    :param collection: the
+        :attr:`qipipe.staging.airc_collection.AIRCCollection.name`
     :param inputs: the AIRC source subject directories to stage
     :param opts: the following keyword option:
     :keyword skip_existing: flag indicating whether to ignore existing
         sessions (default True)
-    :yield: the DICOM files
-    :yieldparam subject: the subject name
-    :yieldparam session: the session name
-    :yieldparam scan: the scan number
-    :yieldparam vol_dcm_dict: the {volume number: [DICOM files]} dictionary
-    :yieldparam rois: the :meth:`qipipe.staging.roi.iter_roi` tuples
+    :yield: the :class:`ScanInput` object
     """
     # Validate that there is a collection
     if not collection:
         raise ValueError('Staging is missing the AIRC collection name')
     
     # Group the new DICOM files into a
-    # {subject: {session: {scan: [(volume, [files]), ...]}}} dictionary.
+    # {subject: {session: {scan: scan iterators}} dictionary.
     stg_dict = _collect_visits(collection, *inputs, **opts)
-    if not stg_dict:
-        return
 
-    # The workflow subjects.
-    subjects = stg_dict.keys()
-
-    # Print a debug message.
-    volume_cnt = sum(map(len, stg_dict.itervalues()))
-    logger(__name__).debug("Staging %d new %s volumes from %d subjects" %
-                           (volume_cnt, collection, len(subjects)))
-    
-    # Generate the (subject, session, scan number, {volume: [dicom files]})
-    # tuples.
+    # Generate the (subject, session, :class:ScanIterators) tuples.
+    _logger = logger(__name__)
     for sbj, sess_dict in stg_dict.iteritems():
-        logger(__name__).debug("Staging subject %s..." % sbj)
         for sess, scan_dict in sess_dict.iteritems():
-            for scan, vol_dcm_dict, rois in scan_dict.iteritems():
-                logger(__name__).debug("Staging %s session %s scan %d..." %
-                                       (sbj, sess, scan))
-                # Delegate to the workflow executor.
-                yield sbj, sess, scan, vol_dcm_dict, rois
-                logger(__name__).debug("Staged %s session %s scan %d." %
-                                       (sbj, sess, scan))
-        logger(__name__).debug("Staged subject %s." % sbj)
-    logger(__name__).debug("Staged %d new %s volumes from %d subjects." %
-                           (volume_cnt, collection, len(subjects)))
+            for scan, scan_iters in scan_dict.iteritems():
+                # The scan must have at least one DICOM file.
+                if scan_iters.dicom:
+                    _logger.debug("Staging %s session %s scan %d..." %
+                                  (sbj, sess, scan))
+                    yield ScanInput(collection, sbj, sess, scan, scan_iters)
+                    _logger.debug("Staged %s session %s scan %d." %
+                                  (sbj, sess, scan))
 
 
 def _collect_visits(collection, *inputs, **opts):
@@ -102,16 +141,22 @@ def _collect_visits(collection, *inputs, **opts):
         as well as the following keyword option:
     :keyword skip_existing: flag indicating whether to ignore existing
         sessions (default True)
-    :return: the {subject: {session: {scan: ({volume: [dicom files]}, rois)}}}
+    :return: the {subject: {session: {scan: :class:`ScanIterators`}}}
         dictionary
     """
+    # The visit (subject, session, scan dictionary) tuples.
     if opts.pop('skip_existing', True):
         visits = _detect_new_visits(collection, *inputs, **opts)
     else:
-        visits = list(_iter_visits(collection, *inputs, **opts))
+        visits = _iter_visits(collection, *inputs, **opts)
 
-    # Group the DICOM files by volume.
-    return _group_visits(*visits)
+    # The dictionary to build.
+    visit_dict = defaultdict(dict)
+    # Add each tuple as a dictionary entry.
+    for sbj, sess, scan_dict in visits:
+        visit_dict[sbj][sess] = scan_dict
+    
+    return visit_dict
 
 
 def _detect_new_visits(collection, *inputs, **opts):
@@ -143,7 +188,7 @@ def _detect_new_visits(collection, *inputs, **opts):
 def _iter_visits(collection, *inputs, **opts):
     """
     Iterates over the visits in the given subject directories.
-    Each iteration item is a *(subject, session, scan, vol_dict)* tuple,
+    Each iteration item is a *(subject, session, scan, scan_iters)* tuple,
     formed as follows:
 
     - The *subject* is the XNAT subject name formatted by
@@ -154,12 +199,7 @@ def _iter_visits(collection, *inputs, **opts):
 
     - The *scan* is the XNAT scan number.
 
-    - The *vol_dict* generator iterates over the files which match the
-      :mod:`qipipe.staging.airc_collection` DICOM file include pattern,
-      grouped by the volume number.
-
-    The supported AIRC collections are defined by
-    :mod:`qipipe.staging.airc_collection`.
+    - The *scan_iters* is the :class:`ScanIterators` object.
 
     :param collection: the AIRC image collection name
     :param inputs: the subject directories over which to iterate
@@ -193,39 +233,10 @@ def _is_new_session(subject, session):
                                (project(), subject, session))
 
     return not exists
-
-
-def _group_visits(*visit_tuples):
-    """
-    Creates the staging dictionary for the images in the given visit tuples.
-    The input tuples are grouped into a dictionary expressing the hierarchy
-    *subject*/*session*/*scan*/*volume*/[DICOM files]. The 2D DICOM files
-    are grouped by ``AcquisitionNumber``.
-    
-    TODO - get the grouping criterion from airc_collection.
-
-    :param visit_tuples: the :meth:`_iter_visits` tuples to group
-    :return: the *{subject: {session: {scan: {volume: [dicom files]}}}}*
-        dictionary
-    """
-    # The dictionary to build.
-    stg_dict = nested_defaultdict(dict, 3)
-    # Add each tuple as a dictionary entry.
-    for sbj, sess, scan_dict in visit_tuples:
-        # Group the session DICOM input files by volume within scan type.
-        for scan, dcm_iter in scan_dict.iteritems():
-            vol_dcm_dict = group_by('AcquisitionNumber', *dcm_iter)
-            for volume, dcm_iter in vol_dcm_dict.iteritems():
-                stg_dict[sbj][sess][scan][volume] = dcm_iter
-
-    return stg_dict
-
+        
 
 class VisitIterator(object):
-
-    """
-    **VisitIterator** is a generator class for AIRC visits.
-    """
+    """Generator class for AIRC visits."""
 
     def __init__(self, collection, *subject_dirs, **opts):
         """
@@ -251,21 +262,21 @@ class VisitIterator(object):
         """
         Iterates over the visits in the subject directories.
         
-        :yield: the next (subject, session, scan_dict, rois) tuple
+        :yield: the next (subject, session, scan_dict) tuple
         :yieldparam subject: the subject name
         :yieldparam session: the session name
-        :yieldparam scan_dict: the {scan number: [DICOM files]} dictionary
-        :yieldparam rois: the :meth:`qipipe.staging.roi.iter_roi` iterator
+        :yieldparam scan_dict: the {scan number: :class:`ScanIterators`}
+            dictionary
         """
         # The visit subdirectory match pattern.
         vpat = self.collection.session_pattern
         logger(__name__).debug("The visit directory search pattern is %s..." %
                                vpat)
         
-        # The DICOM file search pattern depends on the scan type.
-        dcm_dict = self.collection.scan_dicom_patterns
-        logger(__name__).debug("The DICOM file search pattern is %s..." %
-                               dcm_dict)
+        # The {scan number: {dicom, roi}} file search patterns.
+        scan_pats = self.collection.scan_patterns
+        logger(__name__).debug("The scan file search pattern is %s..." %
+                               scan_pats)
         
         # Iterate over the visits.
         with qixnat.connect():
@@ -273,39 +284,60 @@ class VisitIterator(object):
                 sbj_dir = os.path.abspath(sbj_dir)
                 logger(__name__).debug("Discovering sessions in %s..." %
                                        sbj_dir)
-                
                 # Make the XNAT subject name.
                 sbj_nbr = self.collection.path2subject_number(sbj_dir)
                 sbj = SUBJECT_FMT % (self.collection.name, sbj_nbr)
                 # The subject subdirectories which match the visit pattern.
                 sess_matches = [subdir for subdir in os.listdir(sbj_dir)
                                 if re.match(vpat, subdir)]
-                # Generate the new (subject, session, scanDICOM files) items in
-                # each visit.
+                # Generate the new (subject, session, scanDICOM files) items
+                # in each visit.
                 for sess_subdir in sess_matches:
                     # The visit directory path.
                     sess_dir = os.path.join(sbj_dir, sess_subdir)
                     # Silently skip non-directories.
                     if os.path.isdir(sess_dir):
                         # The visit (session) number.
-                        sess_nbr = self.collection.path2session_number(
-                            sess_subdir)
+                        sess_nbr = self.collection.path2session_number(sess_subdir)
                         # The XNAT session name.
                         sess = SESSION_FMT % sess_nbr
                         # Apply the selection filter, e.g. an XNAT existence
-                        # check. If the session passes the filter, then
-                        # the files qualify for iteration.
+                        # check. If the session passes the filter, then the
+                        # files qualify for iteration.
                         if self.filter(sbj, sess):
                             logger(__name__).debug("Discovered session %s in"
                                                    " %s" % (sess, sess_dir))
-                            # The DICOM file match patterns.
-                            scan_dict = {}
-                            for scan, dcm_pat in dcm_dict.iteritems():
-                                file_pat = os.path.join(sess_dir, dcm_pat)
-                                # The visit directory DICOM file iterator.
-                                dcm_file_iter = glob.iglob(file_pat)
-                                scan_dict[scan] = dcm_file_iter
-                            
-                            # The ROI file match pattern.
-                            roi_iter = iter_roi(self.collection.name, sess_dir)
-                            yield (sbj, sess, scan_dict, roi_iter)
+                            # The DICOM and ROI iterators for each scan number.
+                            scan_dict = {scan: self._scan_iterators(pats, sess_dir)
+                                         for scan, pats in scan_pats.iteritems()}
+                            yield sbj, sess, scan_dict
+
+    def _scan_iterators(self, patterns, base_dir):
+        # The DICOM glob pattern.
+        dcm_pat = os.path.join(base_dir, patterns.dicom)
+        # The DICOM file generator.
+        dcm_gen = _scan_dicom_generator(dcm_pat, self.collection.volume_tag)
+        # The ROI file match patterns.
+        roi_pats = patterns.roi
+        # Make the ROI generator, if necessary.
+        if roi_pats:
+            roi_gen = iter_roi(roi_pats.glob, roi_pats.regex, base_dir)
+        else:
+            roi_gen = None 
+        
+        return ScanIterators(dicom_gen=dcm_gen, roi_gen=roi_gen)
+
+    
+def _scan_dicom_generator(pattern, tag):
+    """
+    :param pattern: the DICOM file glob pattern
+    :param tag: the DICOM volume tag
+    :yield: the {volume: [DICOM files]} dictionary 
+    """
+    # The visit directory DICOM file iterator.
+    dicom_files = glob.iglob(pattern)
+    
+    # Group the DICOM files by volume.
+    yield qidicom.hierarchy.group_by(tag, *dicom_files)
+
+        

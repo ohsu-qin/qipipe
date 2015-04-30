@@ -12,26 +12,23 @@ from qiutil.logging import logger
 from ..staging import iterator
 
 
-def set_workflow_inputs(exec_wf, collection, subject, session, scan,
-                        vol_dcm_dict, dest=None):
+def set_workflow_inputs(exec_wf, scan_input, dest=None):
     """
     Sets the given execution workflow inputs.
     The execution workflow must have the same input and iterable
     node names and fields as the :class:`StagingWorkflow` workflow.
 
     :param exec_wf: the workflow to execute
-    :param collection: the AIRC collection name
-    :param subject: the subject name
-    :param session: the session name
-    :param scan: the scan number
-    :param vol_dcm_dict: the *{volume number: [dicom files]}* dictionary
+    :param scan_input: the :class:`qipipe.staging.iterator.ScanInput`
+        object
     :param dest: the TCIA staging destination directory (default is
         the current working directory)
     """
     # The input volumes to stage.
-    volumes = vol_dcm_dict.keys()
+    volumes = scan_input.iterators.dicom.keys()
     # Make a staging area subdirectory for each volumes.
-    stg_dict = _create_staging_area(subject, session, volumes, dest)
+    stg_dict = _create_staging_area(scan_input.subject, scan_input.session,
+                                    volumes, dest)
     # The staging destination directories are pair-wise synchronized
     # with the input volumes.
     dests = [stg_dict[volume] for volume in volumes]
@@ -39,10 +36,10 @@ def set_workflow_inputs(exec_wf, collection, subject, session, scan,
 
     # Set the top-level inputs.
     input_spec = exec_wf.get_node('input_spec')
-    input_spec.inputs.collection = collection
-    input_spec.inputs.subject = subject
-    input_spec.inputs.session = session
-    input_spec.inputs.scan = scan
+    input_spec.inputs.collection = scan_input.collection
+    input_spec.inputs.subject = scan_input.subject
+    input_spec.inputs.session = scan_input.session
+    input_spec.inputs.scan = scan_input.scan
 
     # Set the volume iterator inputs.
     iter_volume = exec_wf.get_node('iter_volume')
@@ -53,7 +50,7 @@ def set_workflow_inputs(exec_wf, collection, subject, session, scan,
     # Set the DICOM file iterator inputs.
     iter_dicom = exec_wf.get_node('iter_dicom')
     iter_dicom.itersource = ('iter_volume', 'volume')
-    iter_dicom.iterables = ('dicom_file', vol_dcm_dict)
+    iter_dicom.iterables = ('dicom_file', scan_input.iterators.dicom)
 
 
 def _create_staging_area(subject, session, volumes, dest=None):
@@ -196,21 +193,16 @@ class StagingWorkflow(WorkflowBase):
         :class:`qipipe.pipeline.staging.StagingWorkflow`.
         """
 
-    def set_inputs(self, collection, subject, session, scan, vol_dcm_dict,
-                   dest=None):
+    def set_inputs(self, scan_input, dest=None):
         """
         Sets the staging workflow inputs.
 
-        :param collection: the collection name
-        :param subject: the subject name
-        :param session: the session name
-        :param scan: the scan number
-        :param vol_dcm_dict: the *{volume: [dicom files]}* dictionary
+        :param scan_input: the :class:`qipipe.staging.iterator.ScanInput`
+            object
         :param dest: the TCIA staging destination directory (default is
             the current working directory)
         """
-        set_workflow_inputs(self.workflow, collection, subject, session,
-                            scan, vol_dcm_dict, dest)
+        set_workflow_inputs(self.workflow, scan_input, dest)
 
     def run(self):
         """Executes the staging workflow."""

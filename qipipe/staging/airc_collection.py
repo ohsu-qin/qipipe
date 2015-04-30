@@ -1,20 +1,5 @@
 import re
-from bunch import Bunch
 from .staging_error import StagingError
-
-def collection_with_name(name):
-    """
-    :param name: the OHSU QIN collection name
-    :return: the corresponding AIRC collection
-    :raise ValueError: if the given collection name is not recognized
-    """
-    if not hasattr(collection_with_name, 'extent'):
-        setattr(collection_with_name, 'extent', _create_collections())
-    if name not in collection_with_name.extent:
-        raise ValueError(
-            "The AIRC collection name is not recognized: %s" % name)
-
-    return collection_with_name.extent[name]
 
 T1_PAT = '*concat*/*'
 """The T1 scan directory match pattern."""
@@ -30,53 +15,100 @@ integers starting at 1. The Acquisition Number tag is selected as the
 volume number identifier.
 """
 
+def collection_with_name(name):
+    """
+    :param name: the OHSU QIN collection name
+    :return: the corresponding AIRC collection
+    :raise ValueError: if the given collection name is not recognized
+    """
+    if not hasattr(collection_with_name, 'extent'):
+        setattr(collection_with_name, 'extent', _create_collections())
+    if name not in collection_with_name.extent:
+        raise ValueError(
+            "The AIRC collection name is not recognized: %s" % name)
+
+    return collection_with_name.extent[name]
+
+
 def _create_collections():
     """Creates the pre-defined AIRC collections."""
 
-    # The AIRC T1 scan DICOM files are in the concat subdirectory.
     # The AIRC T2 scan DICOM files are in special subdirectories.
-    breast_dcm_pat_dict = {1: T1_PAT, 2: '*sorted/2_tirm_tra_bilat/*'}
-    sarcoma_dcm_pat_dict = {1: T1_PAT, 2: '*T2*/*'}
+    breast_t2_dcm_pat = '*sorted/2_tirm_tra_bilat/*'
+    sarcoma_t2_dcm_pat = '*T2*/*'
 
-    # The Breast .bqf ROI files are in the session subdirectory
+    # The Breast T1 scan .bqf ROI files are in the session subdirectory
     # processing/<R10 directory>/slice<slice index>/, where
     # <R10 directory> can be qualified by a lesion number.
-    breast_roi_pat = Bunch()
-    breast_roi_pat.glob = 'processing/R10_0.[456]*/slice*/*.bqf'
-    breast_roi_pat.regex = re.compile("""
+    breast_roi_glob = 'processing/R10_0.[456]*/slice*/*.bqf'
+    breast_roi_regex = re.compile("""
         processing/                 # The visit processing subdirectory
         R10_0.[456]                 # The R10 series subdirectory
         (_L(?P<lesion>\d+))?/       # The lesion modifier
         slice(?P<slice_index>\d+)/  # The slice subdirectory
         (?P<fname>.*\.bqf)          # The ROI file base name
     """, re.VERBOSE)
+    breast_roi_pats = ROIPatterns(glob=breast_roi_glob, regex=breast_roi_regex)
+    breast_t1_pats = ScanPatterns(dicom=T1_PAT, roi=breast_roi_pats)
+    breast_t2_pats = ScanPatterns(dicom=breast_t2_dcm_pat)
+    breast_scan_pats = {1: breast_t1_pats, 2: breast_t2_pats}
 
-    # The Sarcom .bqf ROI files are in the session subdirectory
+    # The Sarcoma T1 scan .bqf ROI files are in the session subdirectory
     # <processing>/<R10 directory>/slice<slice index>/, and do not
     # have a lesion qualifier.
-    sarcoma_roi_pat = Bunch()
-    sarcoma_roi_pat.glob = '*processing*/R10_0.[3456]*/slice*/*.bqf'
-    sarcoma_roi_pat.regex = re.compile("""
+    sarcoma_roi_glob = '*processing*/R10_0.[3456]*/slice*/*.bqf'
+    sarcoma_roi_regex = re.compile("""
         .*processing.*/             # The visit processing subdirectory
         R10_0.[3456].*/             # The R10 series subdirectory
         slice(?P<slice_index>\d+)/  # The slice subdirectory
         (?P<fname>.*\.bqf)          # The ROI file base name
     """, re.VERBOSE)
+    sarcoma_roi_pats = ROIPatterns(glob=sarcoma_roi_glob,
+                                   regex=sarcoma_roi_regex)
+    sarcoma_t1_pats = ScanPatterns(dicom=T1_PAT, roi=sarcoma_roi_pats)
+    sarcoma_t2_pats = ScanPatterns(dicom=sarcoma_t2_dcm_pat)
+    sarcoma_scan_pats = {1: sarcoma_t1_pats, 2: sarcoma_t2_pats}
 
     # The Breast images are in BreastChemo<subject>/Visit<session>/.
     breast_opts = dict(subject='BreastChemo(\d+)', session='Visit(\d+)',
-                       dicom=breast_dcm_pat_dict, roi=breast_roi_pat,
-                       volume=VOLUME_TAG)
+                       scan=breast_scan_pats, volume=VOLUME_TAG)
 
     # The Sarcoma images are in Subj_<subject>/Visit_<session> with
     # visit pattern variations, e.g. 'Visit_3', 'Visit3' and 'S4V3'
     # all match session 3.
     sarcoma_opts = dict(subject='Subj_(\d+)', session='(?:Visit_?|S\d+V)(\d+)',
-                        dicom=sarcoma_dcm_pat_dict, roi=sarcoma_roi_pat,
-                        volume=VOLUME_TAG)
+                        scan=sarcoma_scan_pats, volume=VOLUME_TAG)
 
     return dict(Breast=AIRCCollection('Breast', **breast_opts),
                 Sarcoma=AIRCCollection('Sarcoma', **sarcoma_opts))
+
+
+class ROIPatterns(object):
+    """Aggregate with attributes :attr:`glob` and :attr:`regex`."""
+
+    def __init__(self, glob, regex):
+        self.glob = glob
+        """The ROI file glob pattern."""
+        
+        self.regex = regex
+        """The ROI file name match regular expression."""
+
+    def __repr__(self):
+        return str(dict(glob=self.glob, regex=self.regex))
+
+
+class ScanPatterns(object):
+    """Aggregate with attributes :attr:`dicom` and :attr:`roi`."""
+
+    def __init__(self, dicom, roi=None):
+        self.dicom = dicom
+        """The DICOM file match *glob* and *regex* patterns."""
+        
+        self.roi = roi
+        """The :class:`ROIPatterns` object."""
+
+    def __repr__(self):
+        return str(dict(dicom=self.dicom, roi=self.roi))
 
 
 class AIRCCollection(object):
@@ -88,7 +120,8 @@ class AIRCCollection(object):
         :param opts: the following required arguments:
         :option subject: the subject directory regular expression match pattern
         :option session: the session directory regular expression match pattern
-        :option roi: the ROI patterns, a Bunch with items ``glob`` and ``regex``
+        :option roi: the {scan number: ROI patterns} dictionary, where the
+            ROI patterns is a Bunch with items ``glob`` and ``regex``
         :option dicom: the
           {scan number: image file directory regular expression match pattern}
           dictionary
@@ -103,11 +136,8 @@ class AIRCCollection(object):
         self.session_pattern = opts['session']
         """The subject directory match pattern."""
 
-        self.scan_dicom_patterns = opts['dicom']
-        """The {scan number: image file directory match pattern} dictionary."""
-
-        self.roi_patterns = opts['roi']
-        """The ROI file match pattern."""
+        self.scan_patterns = opts['scan']
+        """The {scan number: :class:`ScanPatterns`} dictionary."""
 
         self.volume_tag = opts['volume']
         """The DICOM tag which identifies a scan volume."""

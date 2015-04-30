@@ -116,9 +116,9 @@ def _run_with_dicom_input(actions, *inputs, **opts):
     # after the workflow is completed.
     subjects = set()
     # Run the workflow on each session and scan type.
-    for sbj, sess, scan, vol_dcm_dict in iter_stage(collection, *inputs, **opts):
+    for scan_input in iter_stage(collection, *inputs, **opts):
         # Capture the subject.
-        subjects.add(sbj)
+        subjects.add(scan_input.subject)
         # The workflow options are augmented from the base options.
         wf_opts = dict(opts)
         # Scan 1 is scan type T1. Only T1 can do more than staging.
@@ -126,7 +126,7 @@ def _run_with_dicom_input(actions, *inputs, **opts):
         # Create a new workflow for the current scan type.
         wf_gen = QIPipelineWorkflow(wf_actions, **wf_opts)
         # Run the workflow on each {volume: [DICOM files]} item.
-        wf_gen.run_with_dicom_input(collection, sbj, sess, scan, vol_dcm_dict, dest)
+        wf_gen.run_with_dicom_input(scan_input, dest)
 
     # Make the TCIA subject map.
     map_ctp(collection, *subjects, dest=dest)
@@ -350,19 +350,19 @@ class QIPipelineWorkflow(WorkflowBase):
         :meth:`run_with_scan_download` method.
         """
 
-    def run_with_dicom_input(self, collection, subject, session, scan,
-                             vol_dcm_dict, dest=None):
+    def run_with_dicom_input(self, scan_input, dest=None):
         """
-        :param collection: the AIRC collection name
-        :param subject: the subject name
-        :param session: the session name
-        :param scan: the scan number
-        :param vol_dcm_dict: the *{volume number: [DICOM files]}* dictionary
+        :param scan_input: the :class:`qipipe.staging.iterator.ScanInput`
+            object
         :param dest: the TCIA staging destination directory (default is
             the current working directory)
         """
-        staging.set_workflow_inputs(self.workflow, collection, subject,
-                                    session, scan, vol_dcm_dict, dest)
+        # Set the staging inputs.
+        staging.set_workflow_inputs(self.workflow, scan_input, dest)
+        # Set the roi function inputs, if necessary.
+        if scan_iters.roi:
+            self._set_roi_inputs(*scan_iters.roi)
+        # Execute the workflow.
         self._run_workflow(self.workflow)
 
     def run_with_roi_input(self, collection, subject, session, scan, *inputs):
@@ -374,9 +374,8 @@ class QIPipelineWorkflow(WorkflowBase):
         :param inputs: the :meth:`roi` inputs
         """
         # Set the roi function inputs.
-        roi_node = self.workflow.get_node('roi')
-        roi_node.inputs.in_rois = inputs
-        roi_node.inputs.opts = dict(base_dir=self.workflow.base_dir)
+        self._set_roi_inputs(*inputs)
+        # Execute the workflow.
         self._run_workflow(self.workflow)
 
     def run_with_scan_download(self, xnat, project, subject, session, scan):
@@ -418,6 +417,19 @@ class QIPipelineWorkflow(WorkflowBase):
         self._run_workflow(self.workflow)
         self._logger.debug("Processed %d %s %s %s scan %d volumes." %
                            (len(volumes), project, subject, session, scan))
+
+    def _set_roi_inputs(self, *inputs):
+        """
+        :param collection: the AIRC collection name
+        :param subject: the subject name
+        :param session: the session name
+        :param scan: the scan number
+        :param inputs: the :meth:`roi` inputs
+        """
+        # Set the roi function inputs.
+        roi_node = self.workflow.get_node('roi')
+        roi_node.inputs.in_rois = inputs
+        roi_node.inputs.opts = dict(base_dir=self.workflow.base_dir)
 
     def _partition_registered(self, xnat, project, subject, session, scan, files):
         """

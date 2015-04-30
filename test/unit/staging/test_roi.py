@@ -3,6 +3,7 @@ from nose.tools import (assert_equal, assert_is_not_none)
 from collections import defaultdict
 from ... import ROOT
 from ...helpers.logging import logger
+from qipipe.staging import airc_collection
 from qipipe.staging.roi import iter_roi
 
 COLLECTION = 'Breast'
@@ -17,15 +18,20 @@ SUBJECT = 'Breast001'
 
 class TestROI(object):
     """ROI iteration unit tests."""
-
+    
+    def setUp(self):
+        collection = airc_collection.collection_with_name(COLLECTION)
+        self.patterns = collection.scan_patterns[1].roi
+    
     def test_multi_lesion(self):
         multi_lesion_visit = os.path.join(FIXTURES, 'Visit1')
-        rois = list(iter_roi(COLLECTION, multi_lesion_visit))
+        rois = list(iter_roi(self.patterns.glob, self.patterns.regex,
+                             multi_lesion_visit))
         assert_equal(len(rois), 4, "The multi-lesion ROI file count is"
                                    " incorrect: %d" % len(rois))
         roi_grps = defaultdict(dict)
-        for lesion, slice_index, path in rois:
-            roi_grps[lesion][slice_index] = path
+        for roi in rois:
+            roi_grps[roi.lesion][roi.slice] = roi.path
         expected_lesions = {1, 2}
         expected_slice_indexes = {12, 13}
         lesions = set(roi_grps.iterkeys())
@@ -42,12 +48,13 @@ class TestROI(object):
 
     def test_single_lesion(self):
         single_lesion_visit = os.path.join(FIXTURES, 'Visit2')
-        rois = list(iter_roi(COLLECTION, single_lesion_visit))
+        rois = list(iter_roi(self.patterns.glob, self.patterns.regex,
+                             single_lesion_visit))
         assert_equal(len(rois), 2, "The single lesion ROI file count is"
                                    " incorrect: %d" % len(rois))
         roi_grps = defaultdict(dict)
-        for lesion, slice_index, path in rois:
-            roi_grps[lesion][slice_index] = path
+        for roi in rois:
+            roi_grps[roi.lesion][roi.slice] = roi.path
         expected_lesions = {1}
         expected_slice_indexes = {12, 13}
         lesions = set(roi_grps.iterkeys())

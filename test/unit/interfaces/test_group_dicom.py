@@ -7,7 +7,7 @@ from ...helpers.logging import logger
 
 # The test fixture.
 FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'breast', 'BreastChemo3',
-                       'Visit1')
+                       'Visit1', 'BC3_V1_concatenated')
 
 
 class TestGroupDicom(object):
