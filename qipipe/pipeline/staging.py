@@ -237,7 +237,8 @@ class StagingWorkflow(WorkflowBase):
         workflow.connect(input_spec, 'session', find_scan, 'session')
         workflow.connect(input_spec, 'scan', find_scan, 'scan')
         scan_gate_xfc = Gate(fields=['scan', 'xnat_id'])
-        scan_gate = pe.Node(scan_gate_xfc, name='scan_gate')
+        scan_gate = pe.Node(scan_gate_xfc, run_without_submitting=True,
+                            name='scan_gate')
         workflow.connect(input_spec, 'scan', scan_gate, 'scan')
         workflow.connect(find_scan, 'xnat_id', scan_gate, 'xnat_id')
 
@@ -303,6 +304,7 @@ class StagingWorkflow(WorkflowBase):
                                           output_names=['out_list'],
                                           function=merge)
         collect_scan_dicom = pe.JoinNode(collect_scan_dicom_xfc,
+                                         run_without_submitting=True,
                                          joinsource='iter_volume',
                                          joinfield='lists',
                                          name='collect_scan_dicom')
@@ -371,7 +373,8 @@ class StagingWorkflow(WorkflowBase):
         # rather than an IdentityInterface in order to prevent nipype from
         # overzealously pruning it as extraneous.
         output_spec_xfc = Gate(fields=['image', 'xnat_files'])
-        output_spec = pe.Node(output_spec_xfc, name='output_spec')
+        output_spec = pe.Node(output_spec_xfc, run_without_submitting=True,
+                              name='output_spec')
         workflow.connect(stack, 'out_file', output_spec, 'image')
         workflow.connect(upload_3d, 'xnat_files', output_spec, 'xnat_files')
 

@@ -802,7 +802,9 @@ class QIPipelineWorkflow(WorkflowBase):
                                     download_reg, 'scan')
                     if reg_node:
                         # Merge the previously and newly realigned images.
-                        concat_reg = pe.Node(Merge(2), name='concat_reg')
+                        concat_reg = pe.Node(Merge(2),
+                                             run_without_submitting=True,
+                                             name='concat_reg')
                         exec_wf.connect(download_reg, 'out_files',
                                         concat_reg, 'in1')
                         exec_wf.connect(reg_node, 'out_files',

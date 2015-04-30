@@ -274,7 +274,9 @@ class ModelingWorkflow(WorkflowBase):
         # Upload these files to the modeling resource.
         base_output = base_wf.get_node('output_spec')
         out_fields = base_output.outputs.copyable_trait_names()
-        merge_outputs = pe.Node(Merge(len(out_fields)), name='merge_outputs')
+        merge_outputs = pe.Node(Merge(len(out_fields)),
+                                run_without_submitting=True,
+                                name='merge_outputs')
         for i, field in enumerate(out_fields):
             base_field = 'output_spec.' + field
             mdl_wf.connect(base_wf, base_field, merge_outputs, "in%d" % (i + 1))

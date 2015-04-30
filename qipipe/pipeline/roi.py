@@ -47,7 +47,7 @@ class ROIWorkflow(WorkflowBase):
 
     - *scan*: the scan number
 
-    - *time_series*: the 4D time series
+    - *time_series*: the 4D time series file path
 
     - *lesion*: the lesion number
 
@@ -86,7 +86,7 @@ class ROIWorkflow(WorkflowBase):
         :param subject: the subject name
         :param session: the session name
         :param scan: the scan number
-        :param time_series: the 4D scan time series
+        :param time_series: the 4D scan time series file path
         :param inputs: the input (lesion, slice index, in_file) tuples
             to convert
         :return: the XNAT converted ROI resource name
@@ -180,9 +180,10 @@ class ROIWorkflow(WorkflowBase):
                                  name='iter_roi')
 
         # The output file base name.
-        basename = pe.Node(Function(input_names=['lesion', 'slice_index'],
-                                    output_names=['basename'],
-                                    function=base_name))
+        basename_xfc = Function(input_names=['lesion', 'slice_index'],
+                                output_names=['basename'],
+                                function=base_name)
+        basename = pe.Node(basename_xfc, run_without_submitting=True)
         exec_wf.connect(iter_roi, 'lesion', basename, 'lesion')
         exec_wf.connect(iter_roi, 'slice_index', basename, 'slice_index')
         
