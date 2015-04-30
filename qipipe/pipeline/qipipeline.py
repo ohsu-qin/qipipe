@@ -363,8 +363,8 @@ class QIPipelineWorkflow(WorkflowBase):
         # Set the staging inputs.
         staging.set_workflow_inputs(self.workflow, scan_input, dest)
         # Set the roi function inputs, if necessary.
-        if scan_iters.roi:
-            self._set_roi_inputs(*scan_iters.roi)
+        if scan_input.iterators.roi:
+            self._set_roi_inputs(*scan_input.iterators.roi)
         # Execute the workflow.
         self._run_workflow(self.workflow)
 
