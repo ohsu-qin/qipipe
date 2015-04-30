@@ -129,7 +129,7 @@ def _run_with_dicom_input(actions, *inputs, **opts):
         # Create a new workflow for the current scan type.
         wf_gen = QIPipelineWorkflow(wf_actions, **wf_opts)
         # Run the workflow on each {volume: [DICOM files]} item.
-        wf_gen.run_with_dicom_input(scan_input, dest)
+        wf_gen.run_with_dicom_input(wf_actions, scan_input, dest)
 
     # Make the TCIA subject map.
     map_ctp(collection, *subjects, dest=dest)
@@ -353,8 +353,9 @@ class QIPipelineWorkflow(WorkflowBase):
         :meth:`run_with_scan_download` method.
         """
 
-    def run_with_dicom_input(self, scan_input, dest=None):
+    def run_with_dicom_input(self, actions, scan_input, dest=None):
         """
+        :param actions: the workflow actions to perform
         :param scan_input: the :class:`qipipe.staging.iterator.ScanInput`
             object
         :param dest: the TCIA staging destination directory (default is
@@ -363,7 +364,7 @@ class QIPipelineWorkflow(WorkflowBase):
         # Set the staging inputs.
         staging.set_workflow_inputs(self.workflow, scan_input, dest)
         # Set the roi function inputs, if necessary.
-        if scan_input.iterators.roi:
+        if 'roi' in actions and scan_input.iterators.roi:
             self._set_roi_inputs(*scan_input.iterators.roi)
         # Execute the workflow.
         self._run_workflow(self.workflow)
