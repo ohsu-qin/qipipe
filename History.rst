@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
+5.2.2 / 2015-04-29
+------------------
+* Detect and stage DWI images.
+
 5.2.1 / 2015-04-29
 ------------------
 * Detect and stage ROIs.
