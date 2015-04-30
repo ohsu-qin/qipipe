@@ -287,30 +287,32 @@ class VisitIterator(object):
                 # Make the XNAT subject name.
                 sbj_nbr = self.collection.path2subject_number(sbj_dir)
                 sbj = SUBJECT_FMT % (self.collection.name, sbj_nbr)
-                # The subject subdirectories which match the visit pattern.
-                sess_matches = [subdir for subdir in os.listdir(sbj_dir)
-                                if re.match(vpat, subdir)]
-                # Generate the new (subject, session, scanDICOM files) items
-                # in each visit.
+                # The subject subdirectory names which match the visit
+                # pattern, sorted in visit order.
+                sess_matches = sorted((d for d in os.listdir(sbj_dir)
+                                       if re.match(vpat, d)))
+                # Generate the new (subject, session, {scan: DICOM files})
+                # tuples for each visit.
                 for sess_subdir in sess_matches:
                     # The visit directory path.
                     sess_dir = os.path.join(sbj_dir, sess_subdir)
                     # Silently skip non-directories.
-                    if os.path.isdir(sess_dir):
-                        # The visit (session) number.
-                        sess_nbr = self.collection.path2session_number(sess_subdir)
-                        # The XNAT session name.
-                        sess = SESSION_FMT % sess_nbr
-                        # Apply the selection filter, e.g. an XNAT existence
-                        # check. If the session passes the filter, then the
-                        # files qualify for iteration.
-                        if self.filter(sbj, sess):
-                            logger(__name__).debug("Discovered session %s in"
-                                                   " %s" % (sess, sess_dir))
-                            # The DICOM and ROI iterators for each scan number.
-                            scan_dict = {scan: self._scan_iterators(pats, sess_dir)
-                                         for scan, pats in scan_pats.iteritems()}
-                            yield sbj, sess, scan_dict
+                    if not os.path.isdir(sess_dir):
+                        continue
+                    # The visit (session) number.
+                    sess_nbr = self.collection.path2session_number(sess_subdir)
+                    # The XNAT session name.
+                    sess = SESSION_FMT % sess_nbr
+                    # Apply the selection filter, e.g. an XNAT existence
+                    # check. If the session passes the filter, then the
+                    # files qualify for iteration.
+                    if self.filter(sbj, sess):
+                        logger(__name__).debug("Discovered session %s in"
+                                               " %s" % (sess, sess_dir))
+                        # The DICOM and ROI iterators for each scan number.
+                        scan_dict = {scan: self._scan_iterators(pats, sess_dir)
+                                     for scan, pats in scan_pats.iteritems()}
+                        yield sbj, sess, scan_dict
 
     def _scan_iterators(self, patterns, base_dir):
         # The DICOM glob pattern.
