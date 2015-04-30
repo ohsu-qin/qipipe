@@ -122,9 +122,9 @@ def _run_with_dicom_input(actions, *inputs, **opts):
         # The workflow options are augmented from the base options.
         wf_opts = dict(opts)
         # Only multi-volume scans can have post-staging downstream actions.
-        if len(scan_input.iterators.dicom) == 1
+        if len(scan_input.iterators.dicom) == 1:
             wf_actions = ['stage']
-        else
+        else:
             wf_actions = actions
         # Create a new workflow for the current scan type.
         wf_gen = QIPipelineWorkflow(wf_actions, **wf_opts)
