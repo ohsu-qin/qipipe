@@ -33,9 +33,21 @@ def collection_with_name(name):
 def _create_collections():
     """Creates the pre-defined AIRC collections."""
 
-    # The AIRC T2 scan DICOM files are in special subdirectories.
+    # The following AIRC QIN scan numbers are captured:
+    # * 1: T1
+    # * 2: T2
+    # * 4: DWI
+    # These scans have DICOM files specified by the dicom glob pattern.
+    # The T1 scan has ROI files as well, specified by the roi glob
+    # and regex patterns.
+
+    # The AIRC T2 scan DICOM files.
     breast_t2_dcm_pat = '*sorted/2_tirm_tra_bilat/*'
     sarcoma_t2_dcm_pat = '*T2*/*'
+
+    # The AIRC DWI scan DICOM files.
+    breast_dwi_dcm_pat = '*sorted/*Diffusion/*'
+    sarcoma_dwi_dcm_pat = '*Diffusion/*'
 
     # The Breast T1 scan .bqf ROI files are in the session subdirectory
     # processing/<R10 directory>/slice<slice index>/, where
@@ -51,7 +63,8 @@ def _create_collections():
     breast_roi_pats = ROIPatterns(glob=breast_roi_glob, regex=breast_roi_regex)
     breast_t1_pats = ScanPatterns(dicom=T1_PAT, roi=breast_roi_pats)
     breast_t2_pats = ScanPatterns(dicom=breast_t2_dcm_pat)
-    breast_scan_pats = {1: breast_t1_pats, 2: breast_t2_pats}
+    breast_dwi_pats = ScanPatterns(dicom=breast_dwi_dcm_pat)
+    breast_scan_pats = {1: breast_t1_pats, 2: breast_t2_pats, 4: breast_dwi_pats}
 
     # The Sarcoma T1 scan .bqf ROI files are in the session subdirectory
     # <processing>/<R10 directory>/slice<slice index>/, and do not
@@ -67,7 +80,8 @@ def _create_collections():
                                    regex=sarcoma_roi_regex)
     sarcoma_t1_pats = ScanPatterns(dicom=T1_PAT, roi=sarcoma_roi_pats)
     sarcoma_t2_pats = ScanPatterns(dicom=sarcoma_t2_dcm_pat)
-    sarcoma_scan_pats = {1: sarcoma_t1_pats, 2: sarcoma_t2_pats}
+    sarcoma_dwi_pats = ScanPatterns(dicom=sarcoma_dwi_dcm_pat)
+    sarcoma_scan_pats = {1: sarcoma_t1_pats, 2: sarcoma_t2_pats, 4: sarcoma_dwi_pats}
 
     # The Breast images are in BreastChemo<subject>/Visit<session>/.
     breast_opts = dict(subject='BreastChemo(\d+)', session='Visit(\d+)',
