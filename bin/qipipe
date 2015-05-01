@@ -72,19 +72,15 @@ def _parse_arguments():
     parser.add_argument('--dry-run', action='store_true',
                         help='prepare but do not run the pipeline')
     
-    # The resume option.
+    # The staging options.
+    parser.add_argument('-p', '--project',
+                        help='the QIN project name (required for staging only)')
+    parser.add_argument('-c', '--collection',
+                        help='the collection to stage (required for staging only)')
+    parser.add_argument('--scan', help='the staging scan number', type=int,
+                        metavar='SCAN')
     parser.add_argument('--resume', action='store_true',
                         help='resume staging on existing sessions (default false)')
-    
-    # The AIRC collection to stage.
-    coll_grp = parser.add_mutually_exclusive_group()
-    coll_grp.add_argument('-b', '--breast', help='the breast TCIA collection',
-                          dest='collection', action='store_const',
-                          const='Breast')
-    coll_grp.add_argument('-s', '--sarcoma',
-                          help='the sarcoma TCIA collection',
-                          dest='collection', action='store_const',
-                          const='Sarcoma')
 
     # The output and work options.
     parser.add_argument('-o', '--output',
@@ -95,8 +91,8 @@ def _parse_arguments():
                         help='the work directory'
                              ' (default a new temp directory)',
                         metavar='DIR', dest='base_dir')
-
-    # The registration arguments.
+    
+    # The registration options.
     parser.add_argument('--registration',
                         help='the XNAT registration resource label',
                         metavar='RESOURCE')
@@ -112,7 +108,7 @@ def _parse_arguments():
                                dest='technique', action='store_const',
                                const='mock')
 
-    # The modeling arguments.
+    # The modeling options.
     parser.add_argument('--modeling',
                         help='the XNAT modeling resource name',
                         metavar='RESOURCE')
