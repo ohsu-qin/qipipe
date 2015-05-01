@@ -2,10 +2,10 @@ import os
 import glob
 import shutil
 from collections import defaultdict
+from nose.tools import (assert_equal, assert_not_equal)
 import qixnat
 from qiutil.collections import nested_defaultdict
 from ... import PROJECT
-from .pipeline_error import StagingError
 
 class StagedTestBase(object):
     """
@@ -115,18 +115,16 @@ class StagedTestBase(object):
                     _, scan_s = os.path.split(scan_dir)
                     scan = int(scan_s)
                     images = glob.glob(scan_dir + '/resources/NIFTI/*')
-                    if not images:
-                        raise StagingError("No images found for %s %s %d test input in %s"
-                                           (sbj, sess, scan, scan_dir))
+                    assert_not_equal(len(images), 0,
+                                     "No images found for %s %s %d test input in %s" %
+                                     (sbj, sess, scan, scan_dir))
                     self._logger.debug("Discovered %d %s %s %d test input images in %s" %
                                        (len(images), sbj, sess, scan, scan_dir))
                     input_dict[sbj][sess][scan]['images'] = images
                     if self._use_mask:
                         masks = glob.glob(sess_dir + '/resources/*mask.*')
-                        if not masks:
-                            raise StagingError("Mask not found in %s" % sess_dir)
-                        if len(masks) > 1:
-                            raise StagingError("Too many masks found in %s" % sess_dir)
+                        assert_not_equal(len(masks), 0, "Mask not found in %s" % sess_dir)
+                        assert_equal(len(masks), 1, "Too many masks found in %s" % sess_dir)
                         mask = masks[0]
                         self._logger.debug("Discovered %d %s %s test input mask %s" %
                                            (len(images), sbj, sess, mask))
