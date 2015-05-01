@@ -7,7 +7,7 @@ import os
 import re
 from .ctp_config import ctp_collection_for_name
 from qiutil.logging import logger
-from .pipeline_error import PipelineError
+from .staging_error import StagingError
 
 PROP_FMT = 'QIN-%s-OHSU.ID-LOOKUP.properties'
 """The format for the Patient ID map file name specified by CTP."""
