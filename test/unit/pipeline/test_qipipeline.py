@@ -6,7 +6,7 @@ from qipipe.pipeline import qipipeline as qip
 import qixnat
 from qipipe.staging import airc_collection as airc
 from qiutil.ast_config import read_config
-from ... import (project, ROOT)
+from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
 from ...helpers.staging import subject_sources
 from ...unit.pipeline.test_mask import MASK_CONF
@@ -111,7 +111,7 @@ class TestQIPipeline(object):
 
         with qixnat.connect() as xnat:
             # Delete any existing test subjects.
-            xnat.delete_subjects(project(), *subjects)
+            xnat.delete_subjects(PROJECT, *subjects)
 
             # Run the staging, mask and registration workflows, but not
             # the modeling.
@@ -133,20 +133,20 @@ class TestQIPipeline(object):
                                        " registration resource" %
                                        (sbj, sess))
                     reg_obj = xnat.get_resource(
-                        project(), sbj, sess, resource=rsc)
+                        PROJECT, sbj, sess, resource=rsc)
                     assert_true(reg_obj.exists(),
                                 "The %s %s registration resource %s was not"
                                 " created in XNAT" % (sbj, sess, rsc))
                     # Verify the modeling resource.
                     if opts['modeling'] != False:
                         rsc = results['modeling']
-                        mdl_obj = xnat.get_resource(project(), sbj, sess, rsc)
+                        mdl_obj = xnat.get_resource(PROJECT, sbj, sess, rsc)
                         assert_true(mdl_obj.exists(),
                                     "The %s %s modeling resource %s was not"
                                     " created in XNAT" % (sbj, sess, rsc))
 
             # Delete the test subjects.
-            xnat.delete_subjects(project(), *subjects)
+            xnat.delete_subjects(PROJECT, *subjects)
 
 
 if __name__ == "__main__":

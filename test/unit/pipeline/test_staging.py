@@ -4,7 +4,7 @@ from nose.tools import assert_true
 from qipipe.pipeline import staging
 import qixnat
 from qipipe.staging.iterator import iter_stage
-from ... import (project, ROOT)
+from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
 from ...helpers.staging import subject_sources
 
@@ -58,15 +58,16 @@ class TestStagingWorkflow(object):
 
         with qixnat.connect() as xnat:
             # Delete any existing test subjects.
-            xnat.delete_subjects(project(), *subjects)
+            xnat.delete_subjects(PROJECT, *subjects)
             # Run the workflow on each session fixture.
-            for scan_input in iter_stage(collection, *inputs, dest=dest):
+            for scan_input in iter_stage(PROJECT, collection, *inputs, dest=dest):
                 work_dir = os.path.join(work, 'scan', str(scan_input.scan))
-                stg_wf = staging.StagingWorkflow(base_dir=work_dir)
+                stg_wf = staging.StagingWorkflow(project=PROJECT,
+                                                 base_dir=work_dir)
                 stg_wf.set_inputs(scan_input, dest=dest)
                 stg_wf.run()
                 # Verify the result.
-                sess_obj = xnat.get_session(project(), scan_input.subject,
+                sess_obj = xnat.get_session(PROJECT, scan_input.subject,
                                             scan_input.session)
                 assert_true(sess_obj.exists(),
                             "The %s %s session was not created in XNAT" %
@@ -75,7 +76,7 @@ class TestStagingWorkflow(object):
                 assert_true(os.path.exists(sess_dest), "The staging area"
                             " was not created: %s" % sess_dest)
                 # The XNAT scan object.
-                scan_obj = xnat.get_scan(project(), scan_input.subject,
+                scan_obj = xnat.get_scan(PROJECT, scan_input.subject,
                                          scan_input.session, scan_input.scan)
                 assert_true(scan_obj.exists(),
                             "The %s %s scan %s was not created in XNAT" %
@@ -95,7 +96,7 @@ class TestStagingWorkflow(object):
                                  scan_input.scan, fname))
 
             # Delete the test subjects.
-            xnat.delete_subjects(project(), *subjects)
+            xnat.delete_subjects(PROJECT, *subjects)
 
 
 if __name__ == "__main__":

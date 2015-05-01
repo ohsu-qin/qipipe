@@ -2,7 +2,6 @@ import os
 import re
 import tempfile
 import networkx as nx
-from .. import project
 import qixnat
 from qiutil.collections import EMPTY_DICT
 from qiutil.ast_config import read_config
@@ -12,7 +11,7 @@ from .distributable import DISTRIBUTABLE
 class WorkflowBase(object):
 
     """
-    The WorkflowBase class is the base class for the QIN workflow
+    The WorkflowBase class is the base class for the qipipe workflow
     wrapper classes.
 
     If the :mod:`qipipe.pipeline.distributable' ``DISTRIBUTABLE`` flag
@@ -75,23 +74,29 @@ class WorkflowBase(object):
     None
     """
 
-    def __init__(self, logger, cfg_file=None, dry_run=False):
+    def __init__(self, project, logger, **opts):
         """
         Initializes this workflow wrapper object.
         If the optional configuration file is specified, then the workflow
         settings in that file override the default settings.
 
+        :param project: the XNAT project name
         :param logger: the logger to use
-        :param cfg_file: the optional workflow inputs configuration file
+        :parameter opts: the following keword options:
+        :keyword cfg_file: the optional workflow inputs configuration file
+        :param config: the optional workflow inputs configuration file
         :keyword dry_run: flag indicating whether to prepare but not
             run the pipeline
         """
+        self.project = project
+        
         self._logger = logger
 
+        cfg_file = opts.get('config', None)
         self.configuration = self._load_configuration(cfg_file)
         """The workflow configuration."""
 
-        self.dry_run = dry_run
+        self.dry_run = opts.get('dry_run', False)
         """Flag indicating whether to skip workflow job submission."""
 
     def depict_workflow(self, workflow):
@@ -177,7 +182,7 @@ class WorkflowBase(object):
         :param dest: the destination directory path
         :return: the download file paths
         """
-        return xnat.download(project(), subject, session, dest=dest)
+        return xnat.download(self.project, subject, session, dest=dest)
 
     def _run_workflow(self, workflow):
         """

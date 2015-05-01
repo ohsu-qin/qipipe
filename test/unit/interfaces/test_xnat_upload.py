@@ -3,7 +3,7 @@ import shutil
 from nose.tools import (assert_equal, assert_in, assert_true)
 from qipipe.interfaces import XNATUpload
 import qixnat
-from ... import (project, ROOT)
+from ... import (ROOT, PROJECT)
 from test.helpers.logging import logger
 from test.helpers.name_generator import generate_unique_name
 
@@ -39,25 +39,25 @@ class TestXNATUpload(object):
 
     def setUp(self):
         with qixnat.connect() as xnat:
-            xnat.delete_subjects(project(), SUBJECT)
+            xnat.delete_subjects(PROJECT, SUBJECT)
 
     def tearDown(self):
         with qixnat.connect() as xnat:
-            xnat.delete_subjects(project(), SUBJECT)
+            xnat.delete_subjects(PROJECT, SUBJECT)
         shutil.rmtree(RESULTS, True)
 
     def test_upload_scan(self):
         logger(__name__).debug("Testing the XNATUpload interface on %s %s"
                                " scan %d..." % (SUBJECT, SESSION, SCAN))
         # Upload the file.
-        upload = XNATUpload(project=project(), subject=SUBJECT, session=SESSION,
+        upload = XNATUpload(project=PROJECT, subject=SUBJECT, session=SESSION,
                             scan=SCAN, modality='MR', in_files=FIXTURE)
         result = upload.run()
 
         # Verify the result.
         xnat_files = set(result.outputs.xnat_files)
         with qixnat.connect() as xnat:
-            scan_obj = xnat.get_scan(project(), SUBJECT, SESSION, SCAN)
+            scan_obj = xnat.get_scan(PROJECT, SUBJECT, SESSION, SCAN)
             assert_true(scan_obj.exists(),
                         "Upload did not create the %s %s scan: %s" %
                         (SUBJECT, SESSION, SCAN))
@@ -75,13 +75,13 @@ class TestXNATUpload(object):
                                " registration resource %s..." %
                                (SUBJECT, SESSION, REGISTRATION))
         # Upload the file.
-        upload = XNATUpload(project=project(), subject=SUBJECT, session=SESSION,
+        upload = XNATUpload(project=PROJECT, subject=SUBJECT, session=SESSION,
                             resource=REGISTRATION, modality='MR', in_files=FIXTURE)
         result = upload.run()
 
         # Verify the result.
         with qixnat.connect() as xnat:
-            exp_obj = xnat.get_experiment(project(), SUBJECT, SESSION)
+            exp_obj = xnat.get_experiment(PROJECT, SUBJECT, SESSION)
             assert_true(exp_obj.exists(),
                         "Upload did not create the %s %s experiment" %
                         (SUBJECT, SESSION))
@@ -100,14 +100,14 @@ class TestXNATUpload(object):
                                " reconstruction %s..." %
                                (SUBJECT, SESSION, RECON))
         # Upload the file.
-        upload = XNATUpload(project=project(), subject=SUBJECT, session=SESSION,
+        upload = XNATUpload(project=PROJECT, subject=SUBJECT, session=SESSION,
                             reconstruction=RECON, resource='NIFTI', modality='MR',
                             in_files=FIXTURE)
         result = upload.run()
 
         # Verify the result.
         with qixnat.connect() as xnat:
-            recon_obj = xnat.get_reconstruction(project(), SUBJECT, SESSION,
+            recon_obj = xnat.get_reconstruction(PROJECT, SUBJECT, SESSION,
                                                 RECON)
             assert_true(recon_obj.exists(),
                         "Upload did not create the %s %s reconstruction: %s" %
@@ -122,18 +122,18 @@ class TestXNATUpload(object):
         logger(__name__).debug("Testing the XNATUpload interface on %s %s"
                                " analysis %s..." % (SUBJECT, SESSION, ANALYSIS))
         # Upload the file.
-        upload = XNATUpload(project=project(), subject=SUBJECT, session=SESSION,
+        upload = XNATUpload(project=PROJECT, subject=SUBJECT, session=SESSION,
                             assessor=ANALYSIS, resource='params', modality='MR',
                             in_files=FIXTURE)
         result = upload.run()
 
         # Verify the result.
         with qixnat.connect() as xnat:
-            exp_obj = xnat.get_experiment(project(), SUBJECT, SESSION)
+            exp_obj = xnat.get_experiment(PROJECT, SUBJECT, SESSION)
             assert_true(exp_obj.exists(),
                         "XNATUpload did not create the %s %s experiment" %
                         (SUBJECT, SESSION))
-            anl_obj = xnat.get_assessor(project(), SUBJECT, SESSION, ANALYSIS)
+            anl_obj = xnat.get_assessor(PROJECT, SUBJECT, SESSION, ANALYSIS)
             assert_true(anl_obj.exists(),
                         "XNATUpload did not create the %s %s analysis: %s" %
                         (SUBJECT, SESSION, ANALYSIS))

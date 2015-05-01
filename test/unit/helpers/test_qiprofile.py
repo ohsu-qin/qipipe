@@ -3,7 +3,7 @@ import glob
 import shutil
 from nose.tools import (assert_equal, assert_is_not_none)
 import qixnat
-from ... import (project, ROOT)
+from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
 from qipipe.helpers import qiprofile
 
@@ -35,13 +35,13 @@ class TestQIProfile(object):
         """Deletes the test XNAT session."""
         with qixnat.connect() as xnat:
             # Delete the test subject, if it exists.
-            xnat.delete_subjects(project, subject)
+            xnat.delete_subjects(PROJECT, subject)
     
     def _seed(self):
         """Populates the test XNAT session."""
         with qixnat.connect() as xnat:
             # Delete the test subject, if it exists.
-            xnat.delete_subjects(project(), subject)
+            xnat.delete_subjects(PROJECT, subject)
 
 
 if __name__ == "__main__":

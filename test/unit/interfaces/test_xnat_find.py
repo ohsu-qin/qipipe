@@ -3,7 +3,7 @@ from nose.tools import (assert_equal, assert_false, assert_true)
 from nipype.interfaces.traits_extension import isdefined
 from qipipe.interfaces import XNATFind
 import qixnat
-from ... import (project, ROOT)
+from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
 from ...helpers.name_generator import generate_unique_name
 
@@ -36,11 +36,11 @@ class TestXNATFind(object):
 
     def setUp(self):
         with qixnat.connect() as xnat:
-            xnat.delete_subjects(project(), SUBJECT)
+            xnat.delete_subjects(PROJECT, SUBJECT)
         
     def tearDown(self):
         with qixnat.connect() as xnat:
-            xnat.delete_subjects(project(), SUBJECT)
+            xnat.delete_subjects(PROJECT, SUBJECT)
         shutil.rmtree(RESULTS, True)
     
     def test_find_subject(self):
@@ -80,21 +80,21 @@ class TestXNATFind(object):
             inputs['session'] = args[1]
         
         # Try to find the object.
-        find = XNATFind(project=project(), **inputs)
+        find = XNATFind(project=PROJECT, **inputs)
         result = find.run()
         assert_false(isdefined(result.outputs.xnat_id),
             "Find %s incorrectly returned an id: %s." %
             (inputs, result.outputs.xnat_id))
         
         # Create the object.
-        find = XNATFind(project=project(), modality='MR', create=True, **inputs)
+        find = XNATFind(project=PROJECT, modality='MR', create=True, **inputs)
         result = find.run()
         assert_true(isdefined(result.outputs.xnat_id),
             "Find %s with create did not return an id." % inputs)
         xnat_id = result.outputs.xnat_id
         
         # Refind the object.
-        find = XNATFind(project=project(), **inputs)
+        find = XNATFind(project=PROJECT, **inputs)
         result = find.run()
         assert_equal(result.outputs.xnat_id, xnat_id,
             "Find %s returned the wrong id: %s." %

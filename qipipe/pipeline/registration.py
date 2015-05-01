@@ -10,7 +10,6 @@ from nipype.interfaces import fsl
 from nipype.interfaces.dcmstack import CopyMeta
 import qiutil
 from qiutil.logging import logger
-from .. import project
 from ..interfaces import (Copy, XNATUpload)
 from ..helpers import bolus_arrival
 from .workflow_base import WorkflowBase
@@ -20,10 +19,11 @@ REG_PREFIX = 'reg'
 """The XNAT registration resource name prefix."""
 
 
-def run(subject, session, scan, bolus_arrival_index, *images, **opts):
+def run(project, subject, session, scan, bolus_arrival_index, *images, **opts):
     """
     Runs the registration workflow on the given session scan images.
 
+    :param project: the project name
     :param subject: the subject name
     :param session: the session name
     :param scan: the scan number
@@ -36,7 +36,7 @@ def run(subject, session, scan, bolus_arrival_index, *images, **opts):
     # Extract the run options.
     run_opts = {k: opts.pop(k) for k in ['dest', 'mask'] if k in opts}
     # Make the workflow.
-    reg_wf = RegistrationWorkflow(**opts)
+    reg_wf = RegistrationWorkflow(project, **opts)
     # Run the workflow.
     return reg_wf.run(subject, session, scan, bolus_arrival_index, *images,
                       **run_opts)
@@ -119,21 +119,22 @@ class RegistrationWorkflow(WorkflowBase):
     .. _SyN: http://www.ncbi.nlm.nih.gov/pubmed/17659998
     """
 
-    def __init__(self, **opts):
+    def __init__(self, project, **opts):
         """
         If the optional configuration file is specified, then the workflow
         settings in that file override the default settings.
 
-        :param opts: the following initialization options:
+        :param project: the XNAT project name
+        :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
+            initializer options, as well as the following options:
         :keyword base_dir: the workflow execution directory
             (default a new temp directory)
-        :keyword cfg_file: the optional workflow inputs configuration file
         :keyword resource: the XNAT resource name to use
         :keyword technique: the case-insensitive workflow technique
             (``ANTS`` or ``FNIRT``, default ``ANTS``)
         """
-        cfg_file = opts.pop('cfg_file', None)
-        super(RegistrationWorkflow, self).__init__(logger(__name__), cfg_file)
+        super(RegistrationWorkflow, self).__init__(project, logger(__name__),
+                                                   **opts)
 
         rsc = opts.pop('resource', None)
         if not rsc:
@@ -320,7 +321,7 @@ class RegistrationWorkflow(WorkflowBase):
         exec_wf.connect(collect_realigned, 'images', collect_reg, 'in2')
 
         # Upload the registration result into the XNAT registration resource.
-        upload_reg_xfc = XNATUpload(project=project(), resource=self.resource,
+        upload_reg_xfc = XNATUpload(project=self.project, resource=self.resource,
                                     modality='MR')
         upload_reg = pe.Node(upload_reg_xfc, name='upload_reg')
         exec_wf.connect(input_spec, 'subject', upload_reg, 'subject')

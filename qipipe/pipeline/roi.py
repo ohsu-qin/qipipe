@@ -6,7 +6,6 @@ from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface)
 import qiutil
 from qiutil.logging import logger
-from .. import project
 from ..interfaces import (ConvertBoleroMask, XNATUpload)
 from .workflow_base import WorkflowBase
 
@@ -14,10 +13,11 @@ from .workflow_base import WorkflowBase
 ROI_RESOURCE = 'roi'
 """The XNAT ROI resource name."""
 
-def run(subject, session, scan, time_series, *inputs, **opts):
+def run(project, subject, session, scan, time_series, *inputs, **opts):
     """
     Runs the ROI workflow on the given session BOLERO mask files.
 
+    :param project: the project name
     :param subject: the subject name
     :param session: the session name
     :param scan: the scan number
@@ -28,7 +28,7 @@ def run(subject, session, scan, time_series, *inputs, **opts):
     :return: the ROI resource name
     """
     # Make the workflow.
-    roi_wf = ROIWorkflow(**opts)
+    roi_wf = ROIWorkflow(project, **opts)
     # Run the workflow.
     return roi_wf.run(subject, session, scan, time_series, *inputs)
 
@@ -67,15 +67,19 @@ class ROIWorkflow(WorkflowBase):
     ``lesion2_slice12.nii.gz``.
     """
 
-    def __init__(self, **opts):
+    def __init__(self, project, **opts):
         """
         If the optional configuration file is specified, then the workflow
         settings in that file override the default settings.
 
-        :param opts: the following initialization options:
+        :param project: the XNAT project name
+        :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
+            initializer options, as well as the following options:
         :keyword base_dir: the workflow execution directory
             (default a new temp directory)
         """
+        super(RegistrationWorkflow, self).__init__(project, logger(__name__),
+                                                   cfg_file)
         self.workflow = self._create_workflow(**opts)
         """The ROI workflow."""
 
@@ -197,7 +201,7 @@ class ROIWorkflow(WorkflowBase):
         exec_wf.connect(basename, 'basename', convert, 'out_base')
 
         # Upload the ROI results into the XNAT ROI resource.
-        upload_roi_xfc = XNATUpload(project=project(), resource=ROI_RESOURCE)
+        upload_roi_xfc = XNATUpload(project=self.project, resource=ROI_RESOURCE)
         upload_roi = pe.JoinNode(upload_roi_xfc, joinsource='iter_roi',
                                  joinfield='in_files', name='upload_roi')
         exec_wf.connect(input_spec, 'subject', upload_roi, 'subject')

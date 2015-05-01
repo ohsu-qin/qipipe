@@ -3,7 +3,7 @@ import glob
 from nose.tools import (assert_equal, assert_not_equal, assert_is_not_none)
 import qixnat
 from qipipe.staging.iterator import iter_stage
-from ... import (ROOT, project)
+from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
 from ...helpers.staging import subject_sources
 
@@ -104,10 +104,10 @@ class TestStagingIterator(object):
         # Delete the existing test subjects, since staging only detects
         # new visits.
         with qixnat.connect() as xnat:
-            xnat.delete_subjects(project(), *subjects)
+            xnat.delete_subjects(PROJECT, *subjects)
         
         # Iterate over the scans.
-        discovered = list(iter_stage(collection, *inputs))
+        discovered = list(iter_stage(PROJECT, collection, *inputs))
         assert_not_equal(len(discovered), 0, 'No scan images were discovered')
         discovered_sbjs = set((scan_input.subject for scan_input in discovered))
         assert_equal(discovered_sbjs, subjects, "Subjects are incorrect: %s" %

@@ -2,7 +2,7 @@ import os
 from nose.tools import (assert_true, assert_is_not_none)
 from nipype.interfaces.dcmstack import MergeNifti
 from qipipe.pipeline import (mask, qipipeline)
-from ... import (project, ROOT)
+from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
 from ...unit.pipeline.staged_test_base import StagedTestBase
 
@@ -56,12 +56,12 @@ class TestMaskWorkflow(StagedTestBase):
                                " series %s..." %
                                (subject, session, time_series))
         
-        return mask.run(subject, session, scan, time_series, cfg_file=MASK_CONF,
+        return mask.run(PROJECT, subject, session, scan, time_series, cfg_file=MASK_CONF,
                         **opts)
 
     def _verify_result(self, xnat, subject, session, scan, result):
         # Verify that the mask XNAT resource was created.
-        rsc_obj = xnat.find(project(), subject, session, scan=scan, resource=result)
+        rsc_obj = xnat.find(PROJECT, subject, session, scan=scan, resource=result)
         assert_is_not_none(rsc_obj, "The %s %s scan %d XNAT mask resource object was"
                                     " not created" % (subject, session, scan))
 

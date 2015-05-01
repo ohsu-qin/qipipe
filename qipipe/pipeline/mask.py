@@ -3,7 +3,6 @@ import logging
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Function)
 from nipype.interfaces import fsl
-from .. import project
 from ..interfaces import (XNATUpload, MriVolCluster)
 from .workflow_base import WorkflowBase
 from qiutil.logging import logger
@@ -15,11 +14,12 @@ TIME_SERIES = 'scan_ts'
 """The XNAT scan time series resource name."""
 
 
-def run(subject, session, scan, time_series, **opts):
+def run(project, subject, session, scan, time_series, **opts):
     """
     Creates a :class:`qipipe.pipeline.mask.MaskWorkflow` and runs it
     on the given inputs.
     
+    :param project: the project name
     :param subject: the input subject
     :param session: the input session
     :param scan: the input scan number
@@ -27,7 +27,9 @@ def run(subject, session, scan, time_series, **opts):
     :param opts: additional :class:`MaskWorkflow` initialization parameters
     :return: the XNAT mask resource name
     """
-    return MaskWorkflow(**opts).run(subject, session, scan, time_series)
+    wf_gen = MaskWorkflow(project, **opts)
+    
+    return wf_gen.run(subject, session, scan, time_series)
 
 
 class MaskWorkflow(WorkflowBase):
@@ -62,17 +64,20 @@ class MaskWorkflow(WorkflowBase):
         interface options
     """
     
-    def __init__(self, cfg_file=None, base_dir=None):
+    def __init__(self, project, **opts):
         """
         If the optional configuration file is specified, then the workflow
         settings in that file override the default settings.
         
+        :param project: the XNAT project name
+        :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
+            initializer options, as well as the following options:
         :keyword base_dir: the workflow execution directory
             (default is a new temp directory)
-        :keyword cfg_file: the optional workflow inputs configuration file
         """
-        super(MaskWorkflow, self).__init__(logger(__name__), cfg_file)
+        super(MaskWorkflow, self).__init__(project, logger(__name__), **opts)
         
+        base_dir = opts.get('base_dir')
         self.workflow = self._create_workflow(base_dir)
         """The mask creation workflow."""
     
@@ -167,7 +172,7 @@ class MaskWorkflow(WorkflowBase):
         workflow.connect(mask_name, 'out_file', inv_mask, 'out_file')
         
         # Upload the mask to XNAT.
-        upload_mask_xfc = XNATUpload(project=project(), resource=RESOURCE,
+        upload_mask_xfc = XNATUpload(project=self.project, resource=RESOURCE,
                                      modality='MR')
         upload_mask = pe.Node(upload_mask_xfc, name='upload_mask')
         workflow.connect(input_spec, 'subject', upload_mask, 'subject')

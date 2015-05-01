@@ -4,9 +4,9 @@ import os
 import re
 import glob
 from collections import defaultdict
+from functools import partial
 from qiutil.logging import logger
 import qixnat
-from .. import project
 import qidicom.hierarchy
 from . import airc_collection as airc
 from .roi import iter_roi
@@ -14,7 +14,7 @@ from .staging_error import StagingError
 
 
 SUBJECT_FMT = '%s%03d'
-"""The QIN subject name format with arguments (collection, subject number)."""
+"""The QIN subject name format with argument subject number."""
 
 SESSION_FMT = 'Session%02d'
 """The QIN session name format with argument session number."""
@@ -78,14 +78,14 @@ class ScanIterators(object):
         return str(dict(dicom=self.dicom, roi=self.roi))
 
 
-def iter_stage(collection, *inputs, **opts):
+def iter_stage(project, collection, *inputs, **opts):
     """
     Iterates over the the new AIRC visits in the given input directories.
     This method is a staging generator which yields a tuple consisting
     of the subject, session, scan number and :class:`ScanIterators`
     object, e.g.::
     
-        >> scan_input = next(iter_stage('Sarcoma', '/path/to/subject'))
+        >> scan_input = next(iter_stage('QIN', 'Sarcoma', '/path/to/subject'))
         >> print scan_input.subject
         Sarcoma001
         >> print scan_input.session
@@ -100,6 +100,7 @@ def iter_stage(collection, *inputs, **opts):
     The input directories conform to the
     :attr:`qipipe.staging.airc_collection.AIRCCollection.subject_pattern`
 
+    :param project: the XNAT project name
     :param collection: the
         :attr:`qipipe.staging.airc_collection.AIRCCollection.name`
     :param inputs: the AIRC source subject directories to stage
@@ -114,7 +115,7 @@ def iter_stage(collection, *inputs, **opts):
     
     # Group the new DICOM files into a
     # {subject: {session: {scan: scan iterators}} dictionary.
-    stg_dict = _collect_visits(collection, *inputs, **opts)
+    stg_dict = _collect_visits(project, collection, *inputs, **opts)
 
     # Generate the (subject, session, :class:ScanIterators) tuples.
     _logger = logger(__name__)
@@ -130,11 +131,12 @@ def iter_stage(collection, *inputs, **opts):
                                   (sbj, sess, scan))
 
 
-def _collect_visits(collection, *inputs, **opts):
+def _collect_visits(project, collection, *inputs, **opts):
     """
     Collects the AIRC visits in the given input directories.
     The visit DICOM files are grouped by volume.
 
+    :param project: the XNAT project name
     :param collection: the AIRC image collection name
     :param inputs: the AIRC source subject directories
     :param opts: the :class:`VisitIterator` initializer options,
@@ -146,7 +148,7 @@ def _collect_visits(collection, *inputs, **opts):
     """
     # The visit (subject, session, scan dictionary) tuples.
     if opts.pop('skip_existing', True):
-        visits = _detect_new_visits(collection, *inputs, **opts)
+        visits = _detect_new_visits(project, collection, *inputs, **opts)
     else:
         visits = _iter_visits(collection, *inputs, **opts)
 
@@ -159,12 +161,13 @@ def _collect_visits(collection, *inputs, **opts):
     return visit_dict
 
 
-def _detect_new_visits(collection, *inputs, **opts):
+def _detect_new_visits(project, collection, *inputs, **opts):
     """
     Detects the new AIRC visits in the given input directories. The visit
     DICOM files are grouped by volume within scan within session within
     subject.
 
+    :param project: the XNAT project name
     :param collection: the AIRC image collection name
     :param inputs: the AIRC source subject directories
     :param opts: the :class:`VisitIterator` initializer options
@@ -172,7 +175,7 @@ def _detect_new_visits(collection, *inputs, **opts):
     """
     # Collect the AIRC visits into (subject, session, dicom_files)
     # tuples.
-    visits = list(_iter_new_visits(collection, *inputs, **opts))
+    visits = list(_iter_new_visits(project, collection, *inputs, **opts))
 
     # If no images were detected, then bail.
     if not visits:
@@ -209,28 +212,32 @@ def _iter_visits(collection, *inputs, **opts):
     return VisitIterator(collection, *inputs, **opts)
 
 
-def _iter_new_visits(collection, *inputs, **opts):
+def _iter_new_visits(project, collection, *inputs, **opts):
     """
     Filters :meth:`qipipe.staging.iterator._iter_visits` to iterate over
     the new visits in the given subject directories which are not in XNAT.
 
+    :param project: the XNAT project name
     :param collection: the AIRC image collection name
     :param inputs: the subject directories over which to iterate
     :param opts: the :meth:`_iter_visits` options
     :yield: the :meth:`_iter_visits` tuple
     """
-    opts['filter'] = _is_new_session
+    # The visit filter is the _is_new_session function with the
+    # project parameter fixed to the project argument.
+    opts['filter'] = partial(_is_new_session, project)
+    
     return _iter_visits(collection, *inputs, **opts)
 
 
-def _is_new_session(subject, session):
+def _is_new_session(project, subject, session):
     # If the session is not yet in XNAT, then yield the tuple.
     with qixnat.connect() as xnat:
-        exists = xnat.get_session(project(), subject, session).exists()
+        exists = xnat.get_session(project, subject, session).exists()
     if exists:
         logger(__name__).debug("Skipping the %s %s %s session since it has"
                                " already been loaded to XNAT." %
-                               (project(), subject, session))
+                               (project, subject, session))
 
     return not exists
         

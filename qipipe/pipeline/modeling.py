@@ -6,7 +6,6 @@ from nipype.interfaces.dcmstack import CopyMeta
 from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
 import qiutil
 from qiutil.logging import logger
-from .. import project
 from ..interfaces import XNATUpload
 from ..helpers.bolus_arrival import bolus_arrival_index, BolusArrivalError
 from .workflow_base import WorkflowBase
@@ -16,11 +15,12 @@ PK_PREFIX = 'pk'
 """The XNAT modeling resource object label prefix."""
 
 
-def run(subject, session, scan, time_series, **opts):
+def run(project, subject, session, scan, time_series, **opts):
     """
     Creates a :class:`qipipe.pipeline.modeling.ModelingWorkflow` and
     runs it on the given inputs.
 
+    :param project: the project name
     :param subject: the input subject
     :param session: the input session
     :param scan: input scan
@@ -31,7 +31,7 @@ def run(subject, session, scan, time_series, **opts):
         result
     """
     mask = opts.pop('mask', None)
-    wf = ModelingWorkflow(**opts)
+    wf = ModelingWorkflow(project, **opts)
     
     return wf.run(subject, session, scan, time_series, mask=mask)
 
@@ -124,7 +124,7 @@ class ModelingWorkflow(WorkflowBase):
     .. _AIRC DCE: https://everett.ohsu.edu/hg/qin_dce
     """
 
-    def __init__(self, **opts):
+    def __init__(self, project, **opts):
         """
         The modeling parameters can be defined in either the options or the
         configuration as follows:
@@ -147,8 +147,9 @@ class ModelingWorkflow(WorkflowBase):
         - The *baseline_end_idx* defaults to 1 if it is not set in
           either the input options or the configuration.
 
-        :param opts: the following initialization options:
-        :keyword cfg_file: the optional workflow inputs configuration file
+        :param project: the XNAT project name
+        :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
+            initializer options, as well as the following options:
         :keyword base_dir: the workflow execution directory
             (default a new temp directory)
         :keyword r1_0_val: the optional fixed |R10| value
@@ -159,8 +160,7 @@ class ModelingWorkflow(WorkflowBase):
         :keyword baseline_end_idx: the number of volumes to merge into a R1
             series baseline image (default is 1)
         """
-        cfg_file = opts.pop('cfg_file', None)
-        super(ModelingWorkflow, self).__init__(logger(__name__), cfg_file)
+        super(ModelingWorkflow, self).__init__(project, logger(__name__), **opts)
 
         resource = opts.pop('modeling', None)
         if not resource:
@@ -237,7 +237,7 @@ class ModelingWorkflow(WorkflowBase):
         """
         return '_'.join((PK_PREFIX, qiutil.file.generate_file_name()))
 
-    def _create_workflow(self, base_dir=None, **opts):
+    def _create_workflow(self, **opts):
         """
         Builds the modeling workflow.
 
@@ -249,12 +249,11 @@ class ModelingWorkflow(WorkflowBase):
         self._logger.debug("Building the modeling workflow...")
 
         # The base workflow.
-        if not base_dir:
-            base_dir = tempfile.mkdtemp()
+        base_dir = opts.pop('base_dir', tempfile.mkdtemp())
         mdl_wf = pe.Workflow(name='modeling', base_dir=base_dir)
 
         # Start with a base workflow.
-        base_wf = self._create_base_workflow(base_dir=base_dir, **opts)
+        base_wf = self._create_base_workflow(base_dir, **opts)
 
         # The workflow input fields.
         in_fields = ['subject', 'session', 'scan', 'time_series', 'mask',
@@ -280,7 +279,7 @@ class ModelingWorkflow(WorkflowBase):
         for i, field in enumerate(out_fields):
             base_field = 'output_spec.' + field
             mdl_wf.connect(base_wf, base_field, merge_outputs, "in%d" % (i + 1))
-        upload_xfc = XNATUpload(project=project(), resource=self.resource)
+        upload_xfc = XNATUpload(project=self.project, resource=self.resource)
         upload_node = pe.Node(upload_xfc, name='upload_outputs')
         mdl_wf.connect(input_spec, 'subject', upload_node, 'subject')
         mdl_wf.connect(input_spec, 'session', upload_node, 'session')
@@ -307,7 +306,7 @@ class ModelingWorkflow(WorkflowBase):
 
         return mdl_wf
 
-    def _create_base_workflow(self, base_dir=None, **opts):
+    def _create_base_workflow(self, base_dir, **opts):
         """
         Creates the modeling base workflow. This workflow performs the steps
         described in :class:`qipipe.pipeline.modeling.ModelingWorkflow` with

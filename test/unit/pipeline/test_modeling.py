@@ -8,7 +8,7 @@ try:
     from qipipe.pipeline import modeling
 except ImportError:
     modeling = None
-from ... import (project, ROOT)
+from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
 from ...unit.pipeline.staged_test_base import StagedTestBase
 
@@ -79,10 +79,10 @@ class TestModelingWorkflow(StagedTestBase):
         :return: the :meth:`qipipe.pipeline.modeling.run` result
         """
         # Run the workflow.
-        return modeling.run(subject, session, scan, *images, **opts)
+        return modeling.run(PROJECT, subject, session, scan, *images, **opts)
 
     def _verify_result(self, xnat, subject, session, scan, result):
-        anl_obj = xnat.get_analysis(project(), sbj, sess,scan, result)
+        anl_obj = xnat.get_analysis(PROJECT, sbj, sess,scan, result)
         assert_true(anl_obj.exists(),
                     "The %s %s %s XNAT analysis object was not created" %
                     (sbj, sess, result))

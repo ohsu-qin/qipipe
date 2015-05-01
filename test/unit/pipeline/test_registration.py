@@ -5,7 +5,7 @@ import shutil
 from nose.tools import (assert_equal, assert_is_not_none)
 import nipype.pipeline.engine as pe
 from qipipe.pipeline import registration
-from ... import (project, ROOT)
+from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
 from ...helpers.name_generator import generate_unique_name
 from ...unit.pipeline.staged_test_base import StagedTestBase
@@ -63,7 +63,7 @@ class TestRegistrationWorkflow(StagedTestBase):
         self.dest = os.path.join(RESULTS, subject, session, 'scans', str(scan),
                             'registration', RESOURCE)
         # Execute the workflow.
-        return registration.run(subject, session, scan, bolus_arrival_index,
+        return registration.run(PROJECT, subject, session, scan, bolus_arrival_index,
                                 cfg_file=REG_CONF, resource=RESOURCE,
                                 dest=self.dest, *images, **opts)
 
@@ -77,7 +77,7 @@ class TestRegistrationWorkflow(StagedTestBase):
             output file paths
         """
         # Verify that the XNAT resource object was created.
-        rsc_obj = xnat.find(project(), subject, session, scan=scan, resource=RESOURCE)
+        rsc_obj = xnat.find(PROJECT, subject, session, scan=scan, resource=RESOURCE)
         assert_is_not_none(rsc_obj,
                            "The %s %s %s XNAT registration resource object was"
                            " not created" % (subject, session, RESOURCE))

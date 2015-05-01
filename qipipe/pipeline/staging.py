@@ -4,8 +4,7 @@ from collections import defaultdict
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Function)
 from nipype.interfaces.dcmstack import DcmStack
-from .. import project
-from ..interfaces import (Gate, FixDicom, Compress, XNATFind, XNATCopy)
+from ..interfaces import (Gate, FixDicom, Compress, XNATFind, XNATUpload)
 import qixnat
 from .workflow_base import WorkflowBase
 from qiutil.logging import logger
@@ -24,6 +23,29 @@ def set_workflow_inputs(exec_wf, scan_input, dest=None):
     :param dest: the TCIA staging destination directory (default is
         the current working directory)
     """
+    # Set the top-level inputs.
+    input_spec = exec_wf.get_node('input_spec')
+    input_spec.inputs.collection = scan_input.collection
+    input_spec.inputs.subject = scan_input.subject
+    input_spec.inputs.session = scan_input.session
+    input_spec.inputs.scan = scan_input.scan
+
+    # Set the iterables.
+    set_workflow_iterables(exec_wf, scan_input, dest)
+
+
+def set_workflow_iterables(exec_wf, scan_input, dest=None):
+    """
+    Sets the given execution workflow iterables.
+    The execution workflow must have the same iterable
+    node names and fields as the :class:`StagingWorkflow` workflow.
+
+    :param exec_wf: the workflow to execute
+    :param scan_input: the :class:`qipipe.staging.iterator.ScanInput`
+        object
+    :param dest: the TCIA staging destination directory (default is
+        the current working directory)
+    """
     # The input volumes to stage.
     volumes = scan_input.iterators.dicom.keys()
     # Make a staging area subdirectory for each volumes.
@@ -33,13 +55,6 @@ def set_workflow_inputs(exec_wf, scan_input, dest=None):
     # with the input volumes.
     dests = [stg_dict[volume] for volume in volumes]
     iterables = dict(volume=volumes, dest=dests).items()
-
-    # Set the top-level inputs.
-    input_spec = exec_wf.get_node('input_spec')
-    input_spec.inputs.collection = scan_input.collection
-    input_spec.inputs.subject = scan_input.subject
-    input_spec.inputs.session = scan_input.session
-    input_spec.inputs.scan = scan_input.scan
 
     # Set the volume iterator inputs.
     iter_volume = exec_wf.get_node('iter_volume')
@@ -166,28 +181,22 @@ class StagingWorkflow(WorkflowBase):
     .. _DcmStack: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.dcmstack.html
     """
 
-    def __init__(self, **opts):
+    def __init__(self, project, **opts):
         """
         If the optional configuration file is specified, then the workflow
         settings in that file override the default settings.
 
-        :parameter opts: the following keword options:
-        :keyword project: the XNAT project (default ``QIN``)
+        :param project: the XNAT project name
+        :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
+            initializer options, as well as the following options:
         :keyword base_dir: the workflow execution directory
             (default a new temp directory)
-        :keyword cfg_file: the optional workflow inputs configuration file
         """
-        cfg_file = opts.pop('cfg_file', None)
-        super(StagingWorkflow, self).__init__(logger(__name__), cfg_file)
-
-        # Set the XNAT project.
-        prj = opts.pop('project', None)
-        if prj:
-            project(prj)
-            self._logger.debug("Set the XNAT project to %s." % prj)
+        super(StagingWorkflow, self).__init__(project, logger(__name__), **opts)
 
         # Make the workflow.
-        self.workflow = self._create_workflow(**opts)
+        base_dir = opts.get('base_dir')
+        self.workflow = self._create_workflow(base_dir=base_dir)
         """
         The staging workflow sequence described in
         :class:`qipipe.pipeline.staging.StagingWorkflow`.
@@ -231,7 +240,7 @@ class StagingWorkflow(WorkflowBase):
 
         # Create the scan, if necessary. The gate blocks upload until the
         # scan is created.
-        find_scan_xfc = XNATFind(project=project(), modality='MR', create=True)
+        find_scan_xfc = XNATFind(project=self.project, modality='MR', create=True)
         find_scan = pe.Node(find_scan_xfc, name='find_scan')
         workflow.connect(input_spec, 'subject', find_scan, 'subject')
         workflow.connect(input_spec, 'session', find_scan, 'session')
@@ -312,8 +321,8 @@ class StagingWorkflow(WorkflowBase):
                          collect_scan_dicom, 'lists')
         
         # Upload the compressed DICOM files.
-        upload_dicom_xfc = XNATCopy(project=project(), resource='DICOM',
-                                    skip_existing=True)
+        upload_dicom_xfc = XNATUpload(project=self.project, resource='DICOM',
+                                      skip_existing=True)
         upload_dicom = pe.Node(upload_dicom_xfc, name='upload_dicom')
         workflow.connect(input_spec, 'subject', upload_dicom, 'subject')
         workflow.connect(input_spec, 'session', upload_dicom, 'session')
@@ -359,8 +368,8 @@ class StagingWorkflow(WorkflowBase):
         #     workflow.connect(stack, 'out_file', upload_3d_gate, 'out_file')
 
         # Upload the 3D NiFTI stack files to XNAT.
-        upload_3d_xfc = XNATCopy(project=project(), resource='NIFTI',
-                                 skip_existing=True)
+        upload_3d_xfc = XNATUpload(project=self.project, resource='NIFTI',
+                                   skip_existing=True)
         upload_3d = pe.Node(upload_3d_xfc, name='upload_3d')
         workflow.connect(input_spec, 'subject', upload_3d, 'subject')
         workflow.connect(input_spec, 'session', upload_3d, 'session')

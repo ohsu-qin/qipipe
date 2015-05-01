@@ -4,7 +4,7 @@ import shutil
 from collections import defaultdict
 import qixnat
 from qiutil.collections import nested_defaultdict
-from ... import project
+from ... import PROJECT
 
 class StagedTestBase(object):
     """
@@ -68,7 +68,7 @@ class StagedTestBase(object):
         subjects = input_dict.keys()
         with qixnat.connect() as xnat:
             # Delete the existing subjects.
-            xnat.delete_subjects(project(), *subjects)
+            xnat.delete_subjects(PROJECT, *subjects)
             # Iterate over the sessions within subjects.
             for sbj, sess_dict in input_dict.iteritems():
                 for sess, scan_dict in sess_dict.iteritems():
@@ -90,7 +90,7 @@ class StagedTestBase(object):
                         # Verify the result.
                         self._verify_result(xnat, sbj, sess, scan, result)
             # Clean up.
-            xnat.delete_subjects(project(), *subjects)
+            xnat.delete_subjects(PROJECT, *subjects)
 
     def _group_files(self, fixture):
         """

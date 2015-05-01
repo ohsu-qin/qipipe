@@ -5,7 +5,7 @@ import shutil
 from nose.tools import (assert_equal, assert_is_not_none, assert_true)
 from qipipe.interfaces import XNATDownload
 import qixnat
-from ... import (project, ROOT)
+from ... import (ROOT, PROJECT)
 from test.helpers.logging import logger
 from test.helpers.name_generator import generate_unique_name
 
@@ -35,12 +35,12 @@ class TestXNATDownload(object):
 
     def setUp(self):
         with qixnat.connect() as xnat:
-            xnat.delete_subjects(project(), SUBJECT)
+            xnat.delete_subjects(PROJECT, SUBJECT)
         shutil.rmtree(RESULTS, True)
 
         with qixnat.connect() as xnat:
             # Make the XNAT scan object.
-            scan_obj = xnat.get_scan(project(), SUBJECT, SESSION, SCAN)
+            scan_obj = xnat.get_scan(PROJECT, SUBJECT, SESSION, SCAN)
             rsc_obj = scan_obj.resource(RESOURCE)
             _, fname = os.path.split(FIXTURE)
             file_obj = rsc_obj.file(fname)
@@ -52,14 +52,14 @@ class TestXNATDownload(object):
 
     def tearDown(self):
         with qixnat.connect() as xnat:
-            xnat.delete_subjects(project(), SUBJECT)
+            xnat.delete_subjects(PROJECT, SUBJECT)
         shutil.rmtree(RESULTS, True)
 
     def test_download_scan(self):
         logger(__name__).debug("Testing the XNATDownload interface on "
                                "%s %s scan %d..." % (SUBJECT, SESSION, SCAN))
         # Download the files.
-        download = XNATDownload(project=project(), subject=SUBJECT,
+        download = XNATDownload(project=PROJECT, subject=SUBJECT,
                                 session=SESSION, scan=SCAN, resource=RESOURCE,
                                 dest=RESULTS)
         result = download.run()
