@@ -1,0 +1,2 @@
+class InterfaceError(Exception):
+    pass

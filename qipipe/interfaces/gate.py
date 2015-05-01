@@ -1,6 +1,7 @@
 from nipype.interfaces.base import (traits, Undefined, isdefined)
 from nipype.interfaces.io import (IOBase, add_traits)
 from nipype.interfaces.utility import IdentityInterface
+from .interface_error import InterfaceError
 
 
 class Gate(IOBase):
@@ -30,11 +31,11 @@ class Gate(IOBase):
     def __init__(self, fields=None, mandatory_inputs=True, **inputs):
         super(Gate, self).__init__(**inputs)
         if fields is None or not fields:
-            raise ValueError('Gate fields must be a non-empty list')
+            raise InterfaceError('Gate fields must be a non-empty list')
         # Each input must be in the fields.
         for in_field in inputs:
             if in_field not in fields:
-                raise ValueError('Gate input is not in the fields: %s' % in_field)
+                raise InterfaceError('Gate input is not in the fields: %s' % in_field)
         self._fields = fields
         self._mandatory_inputs = mandatory_inputs
         add_traits(self.inputs, fields)
@@ -60,7 +61,7 @@ class Gate(IOBase):
                     msg = "%s requires a value for input '%s' because it was listed in 'fields'. \
                     You can turn off mandatory inputs checking by passing mandatory_inputs = False to the constructor." % \
                     (self.__class__.__name__, key)
-                    raise ValueError(msg)
+                    raise InterfaceError(msg)
 
         outputs = self._outputs().get()
         for key in self._fields:

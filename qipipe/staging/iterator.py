@@ -105,13 +105,14 @@ def iter_stage(project, collection, *inputs, **opts):
         :attr:`qipipe.staging.airc_collection.AIRCCollection.name`
     :param inputs: the AIRC source subject directories to stage
     :param opts: the following keyword option:
+    :keyword scan: only stage the given scan number
     :keyword skip_existing: flag indicating whether to ignore existing
         sessions (default True)
     :yield: the :class:`ScanInput` object
     """
     # Validate that there is a collection
     if not collection:
-        raise ValueError('Staging is missing the AIRC collection name')
+        raise StagingError('Staging is missing the AIRC collection name')
     
     # Group the new DICOM files into a
     # {subject: {session: {scan: scan iterators}} dictionary.
@@ -262,6 +263,9 @@ class VisitIterator(object):
         self.filter = opts.get('filter', lambda subject, session: True)
         """The (subject, session) selection filter."""
 
+        self.scan = opts.get('scan')
+        """The scan number to stage (default stage all detected scans)."""
+
     def __iter__(self):
         return self.next()
 
@@ -281,7 +285,15 @@ class VisitIterator(object):
                                vpat)
         
         # The {scan number: {dicom, roi}} file search patterns.
-        scan_pats = self.collection.scan_patterns
+        if self.scan:
+            # Filter on only the specified scan.
+            if self.scan not in self.collection.scan_patterns:
+                raise StagingError("The %s scan %d is not supported" %
+                                   (self.collection.name, self.scan))
+            scan_pats = {self.scan: self.collection.scan_patterns[self.scan]}
+        else:
+            # Detect all scans.
+            scan_pats = self.collection.scan_patterns
         logger(__name__).debug("The scan file search pattern is %s..." %
                                scan_pats)
         

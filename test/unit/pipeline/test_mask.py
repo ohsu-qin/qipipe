@@ -56,7 +56,7 @@ class TestMaskWorkflow(StagedTestBase):
                                " series %s..." %
                                (subject, session, time_series))
         
-        return mask.run(PROJECT, subject, session, scan, time_series, cfg_file=MASK_CONF,
+        return mask.run(PROJECT, subject, session, scan, time_series, config=MASK_CONF,
                         **opts)
 
     def _verify_result(self, xnat, subject, session, scan, result):

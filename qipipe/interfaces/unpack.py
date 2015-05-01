@@ -1,5 +1,6 @@
 from nipype.interfaces.base import (traits, DynamicTraitedSpec, isdefined)
 from nipype.interfaces.io import (IOBase, add_traits)
+from .interface_error import InterfaceError
 
 class Unpack(IOBase):
     """
@@ -30,9 +31,9 @@ class Unpack(IOBase):
         """
         super(Unpack, self).__init__(**inputs)
         if not input_name:
-            raise Exception('Unpack input field name is missing')
+            raise InterfaceError('Unpack input field name is missing')
         if not output_names:
-            raise Exception('Unpack output field names must be a non-empty list')
+            raise InterfaceError('Unpack output field names must be a non-empty list')
         self.input_names = [input_name]
         self.output_names = output_names
         self._mandatory_inputs = mandatory_inputs
@@ -55,7 +56,7 @@ class Unpack(IOBase):
                         " listed in 'input_names'. You can turn off mandatory"
                         " inputs checking  by passing mandatory_inputs = False"
                         " to the constructor." % (self.__class__.__name__, key))
-                    raise ValueError(msg)
+                    raise InterfaceError(msg)
 
         # The input list.
         in_list = getattr(self.inputs, self.input_names[0])

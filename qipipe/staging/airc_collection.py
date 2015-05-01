@@ -19,13 +19,13 @@ def collection_with_name(name):
     """
     :param name: the OHSU QIN collection name
     :return: the corresponding AIRC collection
-    :raise ValueError: if the given collection name is not recognized
+    :raise StagingError: if the given collection name is not recognized
     """
     if not hasattr(collection_with_name, 'extent'):
         setattr(collection_with_name, 'extent', _create_collections())
     if name not in collection_with_name.extent:
-        raise ValueError(
-            "The AIRC collection name is not recognized: %s" % name)
+        raise StagingError("The AIRC collection name is not recognized: %s" %
+                           name)
 
     return collection_with_name.extent[name]
 

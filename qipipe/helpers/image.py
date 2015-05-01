@@ -3,6 +3,7 @@ from matplotlib import (pyplot, colors, cm)
 import numpy as np
 import nibabel as nib
 from qiutil.logging import logger
+from .
 
 def normalize(value, vmin, vspan):
     """
@@ -62,7 +63,8 @@ def discretize(in_file, out_file, nvalues, start=0, threshold=None,
         threshold = start
     # Validate the threshold.
     if threshold < start or threshold >= start + nvalues:
-        raise ValueError("The threshold is not in the color range [%d-%d]: %d" %
+        raise IndexError("The threshold is not in the color range"
+                         " [%d-%d]: %d" %
                          (start, start + nvalues, threshold))
     
     print ("Color LUT start: %d end: %d threshold: %d" %

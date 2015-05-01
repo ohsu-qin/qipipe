@@ -8,6 +8,7 @@ import qiutil
 from qiutil.logging import logger
 from ..interfaces import (ConvertBoleroMask, XNATUpload)
 from .workflow_base import WorkflowBase
+from .pipeline_error import PipelineError
 
 
 ROI_RESOURCE = 'roi'
@@ -78,8 +79,7 @@ class ROIWorkflow(WorkflowBase):
         :keyword base_dir: the workflow execution directory
             (default a new temp directory)
         """
-        super(RegistrationWorkflow, self).__init__(project, logger(__name__),
-                                                   cfg_file)
+        super(ROIWorkflow, self).__init__(project, logger(__name__), **opts)
         self.workflow = self._create_workflow(**opts)
         """The ROI workflow."""
 
@@ -166,7 +166,7 @@ class ROIWorkflow(WorkflowBase):
         :return: the execution workflow
         """
         if not dest:
-            raise ValueError('ROI workflow is missing the destination directory')
+            raise PipelineError('The ROI workflow is missing the destination directory')
         self._logger.debug("Creating the ROI execution workflow...")
 
         # The execution workflow.

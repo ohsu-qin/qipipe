@@ -7,6 +7,7 @@ import os
 import re
 from .ctp_config import ctp_collection_for_name
 from qiutil.logging import logger
+from .pipeline_error import PipelineError
 
 PROP_FMT = 'QIN-%s-OHSU.ID-LOOKUP.properties'
 """The format for the Patient ID map file name specified by CTP."""
@@ -85,15 +86,15 @@ class CTPPatientIdMap(dict):
 
         :param collection: the AIRC collection name 
         :param patient_ids: the DICOM Patient IDs to map
-        :raise ValueError: if an input patient id format is not the study followed by the
+        :raise StagingError: if an input patient id format is not the study followed by the
             patient number
         """
         ctp_coll = ctp_collection_for_name(collection)
         for in_pt_id in patient_ids:
             match = CTPPatientIdMap.AIRC_PAT.match(in_pt_id)
             if not match:
-                raise ValueError(
-                    "Unsupported input QIN patient id format: %s" % in_pt_id)
+                raise StagingError("Unsupported input QIN patient id format:"
+                                   " %s" % in_pt_id)
             pt_nbr = int(match.group(2))
             ctp_id = CTPPatientIdMap.CTP_FMT % (ctp_coll, pt_nbr)
             self[in_pt_id] = ctp_id

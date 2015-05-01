@@ -24,6 +24,10 @@ from nipype.interfaces.base import (DynamicTraitedSpec,
                                     isdefined)
 from nipype.interfaces.traits_extension import Undefined
 from fastfit.fastfit_cli import get_available_models
+from .interface_error import InterfaceError
+
+class FastfitError(Exception):
+    pass
 
 
 class FastfitInputSpec(MpiCommandLineInputSpec):
@@ -90,7 +94,7 @@ class Fastfit(MpiCommandLine):
             if (not self._min_outs is None and
                 any(not out in self._opt_params
                     for out in self._min_outs)):
-                raise ValueError("The model %s does not provide the "
+                raise FastfitError("The model %s does not provide the "
                                  "minimum outputs" % model_name)
             for param_name in self._opt_params:
                 if not param_name in fixed_params:
@@ -103,9 +107,9 @@ class Fastfit(MpiCommandLine):
                 outputs.add_trait(param_name, traits.File(exists=True))
                 undefined_traits[param_name] = Undefined
         else:
-            raise ValueError("Either the 'model_name' input must "
-                             "be static or the 'min_outs' argument "
-                             "to the constructor must be given.")
+            raise FastfitError("Either the 'model_name' input must "
+                               "be static or the 'min_outs' argument "
+                               "to the constructor must be given.")
 
         #Set up dynamic outputs for any requested optional outputs
         if isdefined(self.inputs.optional_outs):

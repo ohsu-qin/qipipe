@@ -64,7 +64,7 @@ class TestRegistrationWorkflow(StagedTestBase):
                             'registration', RESOURCE)
         # Execute the workflow.
         return registration.run(PROJECT, subject, session, scan, bolus_arrival_index,
-                                cfg_file=REG_CONF, resource=RESOURCE,
+                                config=REG_CONF, resource=RESOURCE,
                                 dest=self.dest, *images, **opts)
 
     def _verify_result(self, xnat, subject, session, scan, result):

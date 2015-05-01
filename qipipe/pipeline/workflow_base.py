@@ -36,7 +36,7 @@ class WorkflowBase(object):
     4. the standard config file name in the ``QIN_CONF`` environment
        variable directory
 
-    5. the *cfg_file* initialization parameter
+    5. the *config* initialization parameter
 
     .. _AIRC Grid Engine: https://everett.ohsu.edu/wiki/GridEngine
     """
@@ -83,8 +83,8 @@ class WorkflowBase(object):
         :param project: the XNAT project name
         :param logger: the logger to use
         :parameter opts: the following keword options:
-        :keyword cfg_file: the optional workflow inputs configuration file
-        :param config: the optional workflow inputs configuration file
+        :keyword config: the optional workflow inputs configuration
+            dictionary or file
         :keyword dry_run: flag indicating whether to prepare but not
             run the pipeline
         """
@@ -92,8 +92,12 @@ class WorkflowBase(object):
         
         self._logger = logger
 
-        cfg_file = opts.get('config', None)
-        self.configuration = self._load_configuration(cfg_file)
+        cfg_opt = opts.get('config', None)
+        if cfg_opt == None or isinstance(cfg_opt, str):
+            config = self._load_configuration(cfg_opt)
+        else:
+            config = cfg_opt
+        self.configuration = config
         """The workflow configuration."""
 
         self.dry_run = opts.get('dry_run', False)

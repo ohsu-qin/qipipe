@@ -10,6 +10,7 @@ from ..interfaces import XNATUpload
 from ..helpers.bolus_arrival import bolus_arrival_index, BolusArrivalError
 from .workflow_base import WorkflowBase
 from .distributable import DISTRIBUTABLE
+from .pipeline_error import PipelineError
 
 PK_PREFIX = 'pk'
 """The XNAT modeling resource object label prefix."""
@@ -514,7 +515,7 @@ class ModelingWorkflow(WorkflowBase):
                     opts[field] = config[field]
                 # Validate the R1 parameter.
                 if not opts.get(field):
-                    raise ValueError("Missing both the r1_0_val and the %s"
+                    raise PipelineError("Missing both the r1_0_val and the %s"
                         " parameter." % field)
 
         # If the use_fixed_r1_0 flag is set, then remove the
@@ -537,12 +538,12 @@ def make_baseline(time_series, baseline_end_idx):
     :param baseline_end_idx: the exclusive limit of the baseline
         computation input series
     :return: the baseline NiFTI file name
-    :raise ValueError: if the end index is a negative number
+    :raise PipelineError: if the end index is a negative number
     """
     from dcmstack.dcmmeta import NiftiWrapper
 
     if baseline_end_idx <= 0:
-        raise ValueError("The R1_0 computation baseline end index input value"
+        raise PipelineError("The R1_0 computation baseline end index input value"
                          " is not a positive number: %s" % baseline_end_idx)
     nii = nb.load(time_series)
     nw = NiftiWrapper(nii)

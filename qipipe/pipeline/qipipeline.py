@@ -58,16 +58,19 @@ def run(*inputs, **opts):
     :keyword resume: flag indicating whether to resume processing on
         existing sessions (default False)
     """
-    # Tailor the actions.
+    # The actions to perform.
     actions = opts.pop('actions', _default_actions(**opts))
     if 'stage' in actions:
+        # Run with staging DICOM subject directory input.
         _run_with_dicom_input(actions, *inputs, **opts)
     elif 'roi' in actions:
+        # The non-staging ROI action must be performed alone.
         if len(actions) > 1:
             raise ArgumentError("The ROI pipeline can only be run with"
                                 " staging or stand-alone")
         _run_with_dicom_input(actions, *inputs, **opts)
     else:
+        # Run downstream actions with XNAT session input.
         _run_with_xnat_input(actions, *inputs, **opts)
 
 
@@ -822,10 +825,17 @@ class QIPipelineWorkflow(WorkflowBase):
         """
         super(QIPipelineWorkflow, self)._run_workflow(workflow)
         if self.dry_run:
+            # Make a dummy empty file for simulating called workflows.
             _, path = tempfile.mkstemp()
             try:
-                opts = dict(base_dir=self.workflow.base_dir, dry_run=True)
-                register('Dummy', 'Dummy', 1, 0, [path], opts)
+                # If registration is enabled, then simulate it.
+                if self.workflow.get_node('register'):
+                    opts = dict(base_dir=self.workflow.base_dir, dry_run=True)
+                    register('Dummy', 'Dummy', 'Dummy', 1, 0, path, [path], opts)
+                # If ROI is enabled, then simulate it.
+                if self.workflow.get_node('roi'):
+                    opts = dict(base_dir=self.workflow.base_dir, dry_run=True)
+                    roi('Dummy', 'Dummy', 'Dummy', 1, path, [path], opts)
             finally:
                 os.remove(path)
 
@@ -873,8 +883,8 @@ def register(project, subject, session, scan, bolus_arrival_index,
     run_opts = dict(mask=mask)
     run_opts.update(opts) 
     
-    return registration.run(project, subject, session, scan, bolus_arrival_index,
-                            *in_files, **run_opts)
+    return registration.run(project, subject, session, scan,
+                            bolus_arrival_index, *in_files, **run_opts)
 
 
 def roi(project, subject, session, scan, time_series, in_rois, opts):

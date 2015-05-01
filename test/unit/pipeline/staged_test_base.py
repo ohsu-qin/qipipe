@@ -5,6 +5,7 @@ from collections import defaultdict
 import qixnat
 from qiutil.collections import nested_defaultdict
 from ... import PROJECT
+from .pipeline_error import StagingError
 
 class StagedTestBase(object):
     """
@@ -115,17 +116,17 @@ class StagedTestBase(object):
                     scan = int(scan_s)
                     images = glob.glob(scan_dir + '/resources/NIFTI/*')
                     if not images:
-                        raise ValueError("No images found for %s %s %d test input in %s"
-                                         (sbj, sess, scan, scan_dir))
+                        raise StagingError("No images found for %s %s %d test input in %s"
+                                           (sbj, sess, scan, scan_dir))
                     self._logger.debug("Discovered %d %s %s %d test input images in %s" %
                                        (len(images), sbj, sess, scan, scan_dir))
                     input_dict[sbj][sess][scan]['images'] = images
                     if self._use_mask:
                         masks = glob.glob(sess_dir + '/resources/*mask.*')
                         if not masks:
-                            raise ValueError("Mask not found in %s" % sess_dir)
+                            raise StagingError("Mask not found in %s" % sess_dir)
                         if len(masks) > 1:
-                            raise ValueError("Too many masks found in %s" % sess_dir)
+                            raise StagingError("Too many masks found in %s" % sess_dir)
                         mask = masks[0]
                         self._logger.debug("Discovered %d %s %s test input mask %s" %
                                            (len(images), sbj, sess, mask))

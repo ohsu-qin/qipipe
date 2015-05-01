@@ -13,7 +13,7 @@ from qiutil.logging import logger
 from ..interfaces import (Copy, XNATUpload)
 from ..helpers import bolus_arrival
 from .workflow_base import WorkflowBase
-
+from .pipeline_error import PipelineError
 
 REG_PREFIX = 'reg'
 """The XNAT registration resource name prefix."""
@@ -241,13 +241,13 @@ class RegistrationWorkflow(WorkflowBase):
         :return: the execution workflow
         """
         if bolus_arrival_index == None:
-            raise ValueError('Registration workflow is missing the bolus' +
+            raise PipelineError('Registration workflow is missing the bolus' +
                              ' arrival index')
         if not ref_0_image:
-            raise ValueError('Registration workflow is missing the initial' +
+            raise PipelineError('Registration workflow is missing the initial' +
                              ' fixed reference image')
         if not dest:
-            raise ValueError('Registration workflow is missing the' +
+            raise PipelineError('Registration workflow is missing the' +
                              ' destination directory')
         self._logger.debug("Creating the registration execution workflow"
                            " with bolus arrival index %d and initial reference"
@@ -451,7 +451,7 @@ class RegistrationWorkflow(WorkflowBase):
                                mock_copy, 'in_file')
             realign_wf.connect(mock_copy, 'out_file', copy_meta, 'dest_file')
         else:
-            raise ValueError("Registration technique not recognized: %s" %
+            raise PipelineError("Registration technique not recognized: %s" %
                              technique)
 
         # The output is the realigned image.
