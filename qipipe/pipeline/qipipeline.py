@@ -121,9 +121,8 @@ def _run_with_dicom_input(actions, *inputs, **opts):
     # Run the workflow on each session and scan type.
     for scan_input in iter_stage(project, collection, *inputs, **opts):
         # Only multi-volume scans can have post-staging downstream actions.
-        if 'stage' in actions:
-            if len(scan_input.iterators.dicom) == 1:
-                wf_actions = ['stage']
+        if 'stage' in actions and len(scan_input.iterators.dicom) == 1:
+            wf_actions = ['stage']
         else:
             wf_actions = actions
         # Capture the subject.
