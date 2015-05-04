@@ -265,6 +265,8 @@ class VisitIterator(object):
 
         self.scan = opts.get('scan')
         """The scan number to stage (default stage all detected scans)."""
+        
+        self.logger = logger(__name__)
 
     def __iter__(self):
         return self.next()
@@ -281,8 +283,8 @@ class VisitIterator(object):
         """
         # The visit subdirectory match pattern.
         vpat = self.collection.session_pattern
-        logger(__name__).debug("The visit directory search pattern is %s..." %
-                               vpat)
+        self.logger.debug("The visit directory search pattern is %s..." %
+                          vpat)
         
         # The {scan number: {dicom, roi}} file search patterns.
         if self.scan:
@@ -294,15 +296,13 @@ class VisitIterator(object):
         else:
             # Detect all scans.
             scan_pats = self.collection.scan_patterns
-        logger(__name__).debug("The scan file search pattern is %s..." %
-                               scan_pats)
+        self.logger.debug("The scan file search pattern is %s..." % scan_pats)
         
         # Iterate over the visits.
         with qixnat.connect():
             for sbj_dir in self.subject_dirs:
                 sbj_dir = os.path.abspath(sbj_dir)
-                logger(__name__).debug("Discovering sessions in %s..." %
-                                       sbj_dir)
+                self.logger.debug("Discovering sessions in %s..." % sbj_dir)
                 # Make the XNAT subject name.
                 sbj_nbr = self.collection.path2subject_number(sbj_dir)
                 sbj = SUBJECT_FMT % (self.collection.name, sbj_nbr)
@@ -326,11 +326,12 @@ class VisitIterator(object):
                     # check. If the session passes the filter, then the
                     # files qualify for iteration.
                     if self.filter(sbj, sess):
-                        logger(__name__).debug("Discovered session %s in"
-                                               " %s" % (sess, sess_dir))
                         # The DICOM and ROI iterators for each scan number.
                         scan_dict = {scan: self._scan_iterators(pats, sess_dir)
                                      for scan, pats in scan_pats.iteritems()}
+                        scans = scan_dict.keys()
+                        self.logger.debug("Discovered %s %s scans %s in %s" %
+                                          (sbj, sess, scans, sess_dir))
                         yield sbj, sess, scan_dict
 
     def _scan_iterators(self, patterns, base_dir):
@@ -348,7 +349,7 @@ class VisitIterator(object):
         
         return ScanIterators(dicom_gen=dcm_gen, roi_gen=roi_gen)
 
-    
+
 def _scan_dicom_generator(pattern, tag):
     """
     :param pattern: the DICOM file glob pattern
