@@ -4,7 +4,6 @@ import distutils
 from nose.tools import (assert_equal, assert_is_not_none, assert_true)
 from qipipe.pipeline import qipipeline as qip
 import qixnat
-from qipipe.staging import airc_collection as airc
 from qiutil.ast_config import read_config
 from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger

@@ -17,7 +17,6 @@ from .mask import MaskWorkflow
 from .roi import ROIWorkflow
 import registration
 from ..interfaces import (XNATDownload, XNATUpload)
-from ..staging import airc_collection
 from ..staging.iterator import iter_stage
 from ..staging.map_ctp import map_ctp
 from ..staging.roi import iter_roi

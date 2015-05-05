@@ -1,4 +1,7 @@
-"""Staging utility functions."""
+# Absolute import (the default in a future Python release) resolves
+# the collections import as the standard Python collections module
+# rather than the staging collections module.
+from __future__ import absolute_import
 
 import os
 import re
@@ -8,7 +11,7 @@ from functools import partial
 from qiutil.logging import logger
 import qixnat
 import qidicom.hierarchy
-from . import airc_collection as airc
+from . import collections
 from .roi import iter_roi
 from .staging_error import StagingError
 
@@ -98,11 +101,13 @@ def iter_stage(project, collection, *inputs, **opts):
         [(1, 19, '/path/to/roi19.bqf'), ...]
 
     The input directories conform to the
-    :attr:`qipipe.staging.airc_collection.AIRCCollection.subject_pattern`
+    :attr:`qipipe.staging.collection.Collection.patterns`
+    :attr:`qipipe.staging.collection.Patterns,subject`
+    regular expression.
 
     :param project: the XNAT project name
     :param collection: the
-        :attr:`qipipe.staging.airc_collection.AIRCCollection.name`
+        :attr:`qipipe.staging.collection.Collection.name`
     :param inputs: the AIRC source subject directories to stage
     :param opts: the following keyword option:
     :keyword scan: only stage the given scan number
@@ -254,7 +259,7 @@ class VisitIterator(object):
         :param opts: the following initialization options:
         :keyword filter: a *(subject, session)* selection filter
         """
-        self.collection = airc.collection_with_name(collection)
+        self.collection = collections.with_name(collection)
         """The AIRC collection with the given name."""
 
         self.subject_dirs = subject_dirs
@@ -281,22 +286,18 @@ class VisitIterator(object):
         :yieldparam scan_dict: the {scan number: :class:`ScanIterators`}
             dictionary
         """
-        # The visit subdirectory match pattern.
-        vpat = self.collection.session_pattern
-        self.logger.debug("The visit directory search pattern is %s..." %
-                          vpat)
-        
+        # The visit subdirectory matcher.
+        vpat = self.collection.patterns.session
         # The {scan number: {dicom, roi}} file search patterns.
         if self.scan:
             # Filter on only the specified scan.
-            if self.scan not in self.collection.scan_patterns:
+            if self.scan not in self.collection.patterns.scan:
                 raise StagingError("The %s scan %d is not supported" %
                                    (self.collection.name, self.scan))
-            scan_pats = {self.scan: self.collection.scan_patterns[self.scan]}
+            scan_pats = {self.scan: self.collection.patterns.scan[self.scan]}
         else:
             # Detect all scans.
-            scan_pats = self.collection.scan_patterns
-        self.logger.debug("The scan file search pattern is %s..." % scan_pats)
+            scan_pats = self.collection.patterns.scan
         
         # Iterate over the visits.
         with qixnat.connect():
@@ -304,12 +305,13 @@ class VisitIterator(object):
                 sbj_dir = os.path.abspath(sbj_dir)
                 self.logger.debug("Discovering sessions in %s..." % sbj_dir)
                 # Make the XNAT subject name.
-                sbj_nbr = self.collection.path2subject_number(sbj_dir)
+                _, sbj_subdir = os.path.split(sbj_dir)
+                sbj_nbr = self._match_subject_number(sbj_subdir)
                 sbj = SUBJECT_FMT % (self.collection.name, sbj_nbr)
                 # The subject subdirectory names which match the visit
                 # pattern, sorted in visit order.
                 sess_matches = sorted((d for d in os.listdir(sbj_dir)
-                                       if re.match(vpat, d)))
+                                       if vpat.match(d)))
                 # Generate the new (subject, session, {scan: DICOM files})
                 # tuples for each visit.
                 for sess_subdir in sess_matches:
@@ -319,7 +321,7 @@ class VisitIterator(object):
                     if not os.path.isdir(sess_dir):
                         continue
                     # The visit (session) number.
-                    sess_nbr = self.collection.path2session_number(sess_subdir)
+                    sess_nbr = self._match_session_number(sess_subdir)
                     # The XNAT session name.
                     sess = SESSION_FMT % sess_nbr
                     # Apply the selection filter, e.g. an XNAT existence
@@ -332,13 +334,23 @@ class VisitIterator(object):
                         scans = scan_dict.keys()
                         self.logger.debug("Discovered %s %s scans %s in %s" %
                                           (sbj, sess, scans, sess_dir))
+                        
+                        
+                        
+                        sd = {s: [list(sit.dicom), list(sit.roi)] for s, sit in scan_dict.iteritems()}
+                        self.logger.debug(">>it %s %s %s" % (sbj, sess, sd))
+                        
+                        
+                        
+                        
                         yield sbj, sess, scan_dict
 
     def _scan_iterators(self, patterns, base_dir):
         # The DICOM glob pattern.
         dcm_pat = os.path.join(base_dir, patterns.dicom)
         # The DICOM file generator.
-        dcm_gen = _scan_dicom_generator(dcm_pat, self.collection.volume_tag)
+        dcm_gen = _scan_dicom_generator(dcm_pat,
+                                        self.collection.patterns.volume)
         # The ROI file match patterns.
         roi_pats = patterns.roi
         # Make the ROI generator, if necessary.
@@ -348,6 +360,35 @@ class VisitIterator(object):
             roi_gen = None 
         
         return ScanIterators(dicom_gen=dcm_gen, roi_gen=roi_gen)
+
+    def _match_subject_number(self, path):
+        """
+        :param path: the directory path
+        :return: the subject number
+        :raise StagingError: if the path does not match the collection subject
+            pattern
+        """
+        match = self.collection.patterns.subject.match(path)
+        if not match:
+            raise StagingError(
+                "The directory path %s does not match the subject pattern %s" %
+                (path, self.collection.patterns.subject.pattern))
+
+        return int(match.group(1))
+
+    def _match_session_number(self, path):
+        """
+        :param path: the directory path
+        :return: the session number
+        :raise StagingError: if the path does not match the collection session
+            pattern
+        """
+        match = self.collection.patterns.session.match(path)
+        if not match:
+            raise StagingError(
+                "The directory path %s does not match the session pattern %s" %
+                (path, self.collection.patterns.session.pattern))
+        return int(match.group(1))
 
 
 def _scan_dicom_generator(pattern, tag):

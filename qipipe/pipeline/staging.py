@@ -167,8 +167,8 @@ class StagingWorkflow(WorkflowBase):
     * *session* is the session name, e.g. ``Session03``
 
     * *volume number* is determined by the
-      :class:`qipipe.staging.airc_collection.AIRCCollection` volume
-      DICOM tag
+      :attr:`qipipe.staging.collection.Collection.patterns`
+      :attr:`qipipe.staging.collection.Patterns.volume` DICOM tag
 
     * *file* is the DICOM file name
 
@@ -331,7 +331,7 @@ class StagingWorkflow(WorkflowBase):
                          upload_dicom, 'in_files')
 
         # Stack the scan volume into a 3D NiFTI file.
-        # TODO - obtain the DICOM volume_tag below from the AIRCCollection via
+        # TODO - obtain the DICOM volume_tag below from the Collection via
         # a function argument.
         volume_tag = 'AcquisitionNumber'
         out_format = "volume%%(%s)03d" % volume_tag

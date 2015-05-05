@@ -3,7 +3,7 @@ from nose.tools import (assert_equal, assert_is_not_none)
 from collections import defaultdict
 from ... import ROOT
 from ...helpers.logging import logger
-from qipipe.staging import airc_collection
+from qipipe.staging import collections
 from qipipe.staging.roi import iter_roi
 
 COLLECTION = 'Breast'
@@ -20,8 +20,8 @@ class TestROI(object):
     """ROI iteration unit tests."""
     
     def setUp(self):
-        collection = airc_collection.collection_with_name(COLLECTION)
-        self.patterns = collection.scan_patterns[1].roi
+        collection = collections.with_name(COLLECTION)
+        self.patterns = collection.patterns.scan[1].roi
     
     def test_multi_lesion(self):
         multi_lesion_visit = os.path.join(FIXTURES, 'Visit1')
