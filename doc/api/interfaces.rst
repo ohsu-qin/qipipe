@@ -10,9 +10,17 @@ interfaces
 ---------------
 .. automodule:: qipipe.interfaces.compress
 
+:mod:`convert_bolero_mask`
+--------------------------
+.. automodule:: qipipe.interfaces.convert_bolero_mask
+
 :mod:`copy`
 -----------
 .. automodule:: qipipe.interfaces.copy
+
+:mod:`fastfit`
+----------------
+.. automodule:: qipipe.interfaces.fastfit
 
 :mod:`fix_dicom`
 ----------------
@@ -25,6 +33,10 @@ interfaces
 :mod:`group_dicom`
 ------------------
 .. automodule:: qipipe.interfaces.group_dicom
+
+:mod:`interface_error`
+----------------
+.. automodule:: qipipe.interfaces.interface_error
 
 :mod:`lookup`
 -------------
@@ -54,6 +66,14 @@ interfaces
 :mod:`unpack`
 -------------
 .. automodule:: qipipe.interfaces.unpack
+
+:mod:`update_qiprofile`
+-------------
+.. automodule:: qipipe.interfaces.update_qiprofile
+
+:mod:`xnat_copy`
+--------------------
+.. automodule:: qipipe.interfaces.xnat_copy
 
 :mod:`xnat_download`
 --------------------

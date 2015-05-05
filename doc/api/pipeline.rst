@@ -18,6 +18,10 @@ pipeline
 ---------------
 .. automodule:: qipipe.pipeline.modeling
 
+:mod:`pipeline_error`
+---------------
+.. automodule:: qipipe.pipeline.pipeline_error
+
 :mod:`qipipeline`
 -----------------
 .. automodule:: qipipe.pipeline.qipipeline
@@ -25,6 +29,10 @@ pipeline
 :mod:`registration`
 -------------------
 .. automodule:: qipipe.pipeline.registration
+
+:mod:`roi`
+---------------
+.. automodule:: qipipe.pipeline.roi
 
 :mod:`staging`
 --------------

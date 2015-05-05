@@ -7,10 +7,10 @@ staging
 
 .. automodule:: qipipe.staging
 
-:mod:`airc_collection`
-----------------------
+:mod:`collection`
+-----------------
 
-.. automodule:: qipipe.staging.airc_collection
+.. automodule:: qipipe.staging.collection
 
 :mod:`ctp_config`
 -----------------
@@ -22,10 +22,25 @@ staging
 
 .. automodule:: qipipe.staging.fix_dicom
 
+:mod:`iterator`
+---------------
+
+.. automodule:: qipipe.staging.iterator
+
 :mod:`map_ctp`
 --------------
 
 .. automodule:: qipipe.staging.map_ctp
+
+:mod:`ohsu`
+-----------
+
+.. automodule:: qipipe.staging.ohsu
+
+:mod:`roi`
+-----------
+
+.. automodule:: qipipe.staging.roi
 
 :mod:`sarcoma_config`
 ---------------------
