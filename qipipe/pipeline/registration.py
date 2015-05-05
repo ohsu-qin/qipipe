@@ -53,7 +53,6 @@ def generate_resource_name():
 
 
 class RegistrationWorkflow(WorkflowBase):
-
     """
     The RegistrationWorkflow class builds and executes the registration workflow.
     The workflow registers an input NiFTI scan image against the input reference

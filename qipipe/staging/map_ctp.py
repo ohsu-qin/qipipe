@@ -58,10 +58,10 @@ def property_filename(collection):
 
 
 class CTPPatientIdMap(dict):
-
     """
-    CTPPatientIdMap is a dictionary augmented with a :meth:`map_subjects` input method
-    to build the map and a :meth:`write` output method to print the CTP map properties.
+    CTPPatientIdMap is a dictionary augmented with a :meth:`map_subjects`
+    input method to build the map and a :meth:`write` output method to
+    print the CTP map properties.
     """
 
     AIRC_PAT = re.compile("""
@@ -69,25 +69,37 @@ class CTPPatientIdMap(dict):
         _?              # An optional underscore delimiter
         (\d+)$          # The patient number
     """, re.VERBOSE)
-    """The input Patient ID pattern is the study name followed by a number, e.g. ``Breast010``."""
+    """
+    The input Patient ID pattern is the study name followed by a number,
+    e.g. ``Breast010``.
+    """
 
     CTP_FMT = '%s-%04d'
-    """The CTP Patient ID format with arguments (CTP collection name, input Patient ID number)."""
+    """
+    The CTP Patient ID format with arguments (CTP collection name, input
+    Patient ID number).
+    """
 
     MAP_FMT = 'ptid/%s=%s'
-    """The ID lookup entry format with arguments (input Paitent ID, CTP patient id)."""
+    """
+    The ID lookup entry format with arguments (input Paitent ID, CTP
+    patient id).
+    """
 
     MSG_FMT = 'Mapped the QIN patient id %s to the CTP subject id %s.'
-    """The log message format with arguments (input Paitent ID, CTP patient id)."""
+    """
+    The log message format with arguments (input Paitent ID, CTP patient id).
+    """
 
     def add_subjects(self, collection, *patient_ids):
         """
-        Adds the input => CTP Patient ID association for the given input DICOM patient ids.
+        Adds the input => CTP Patient ID association for the given input
+        DICOM patient ids.
 
         :param collection: the AIRC collection name 
         :param patient_ids: the DICOM Patient IDs to map
-        :raise StagingError: if an input patient id format is not the study followed by the
-            patient number
+        :raise StagingError: if an input patient id format is not the study
+            followed by the patient number
         """
         ctp_coll = ctp_collection_for_name(collection)
         for in_pt_id in patient_ids:

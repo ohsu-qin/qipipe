@@ -13,7 +13,6 @@ RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'compress')
 
 
 class TestCompress(object):
-
     """Compress interface unit tests."""
 
     def test_compress(self):

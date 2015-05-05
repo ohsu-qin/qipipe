@@ -38,7 +38,6 @@ def run(project, subject, session, scan, time_series, **opts):
 
 
 class ModelingWorkflow(WorkflowBase):
-
     """
     The ModelingWorkflow builds and executes the Nipype pharmacokinetic
     mapping workflow.

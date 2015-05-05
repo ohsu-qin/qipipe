@@ -20,7 +20,6 @@ COLLECTION = 'Sarcoma'
 SUBJECT = 'Sarcoma003'
 
 class TestFixDicom(object):
-
     """Fix DICOM header unit tests."""
 
     def test_fix_dicom_headers(self):

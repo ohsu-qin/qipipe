@@ -22,7 +22,6 @@ RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'modeling')
 
 
 class TestModelingWorkflow(StagedTestBase):
-
     """
     Modeling workflow unit tests.
     This test exercises the modeling workflow on the QIN Breast and Sarcoma

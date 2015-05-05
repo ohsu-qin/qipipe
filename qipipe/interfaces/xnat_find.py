@@ -34,7 +34,6 @@ class XNATFindOutputSpec(TraitedSpec):
 
 
 class XNATFind(BaseInterface):
-
     """
     The ``XNATFind`` Nipype interface wraps the
     :meth:`qixnat.facade.XNAT.find` method.

@@ -19,7 +19,6 @@ TARGET = os.path.join(RESULTS, 'target')
 
 
 class TestCopy(object):
-
     """Copy interface unit tests."""
 
     def setUp(self):

@@ -9,7 +9,6 @@ from .distributable import DISTRIBUTABLE
 
 
 class WorkflowBase(object):
-
     """
     The WorkflowBase class is the base class for the qipipe workflow
     wrapper classes.

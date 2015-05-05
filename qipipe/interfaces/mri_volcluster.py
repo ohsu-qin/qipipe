@@ -38,7 +38,6 @@ class MriVolClusterOutputSpec(TraitedSpec):
 
 
 class MriVolCluster(CommandLine):
-
     """
     MriVolCluster encapsulates the FSL mri_volcluster_ command.
     

@@ -12,7 +12,6 @@ RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'lookup')
 
 
 class TestLookup(object):
-
     """Lookup interface unit tests."""
 
     def test_lookup(self):

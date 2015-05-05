@@ -16,7 +16,6 @@ PAT = "ptid/(Sarcoma\d{3})\s*=\s*QIN-\w+-\d{2}-(\d{4})"
 
 
 class TestMapCTP(object):
-
     """Map CTP unit tests."""
 
     def test_map_ctp(self):

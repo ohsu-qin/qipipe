@@ -12,7 +12,6 @@ class TouchOutputSpec(TraitedSpec):
 
 
 class Touch(BaseInterface):
-
     """
     The Touch interface emulates the Unix ``touch`` command.
     This interface is useful for stubbing out processing

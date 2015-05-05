@@ -23,7 +23,6 @@ FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
 
 
 class TestQIPipeline(object):
-
     """
     QIN Pipeline unit tests.
     

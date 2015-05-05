@@ -19,7 +19,6 @@ TARGET = os.path.join(RESULTS, 'target')
 
 
 class TestMove(object):
-
     """Move interface unit tests."""
 
     def setUp(self):

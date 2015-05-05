@@ -14,7 +14,6 @@ class LookupOutputSpec(TraitedSpec):
 
 
 class Lookup(IOBase):
-
     """
     The Lookup Interface wraps a dictionary look-up.
 

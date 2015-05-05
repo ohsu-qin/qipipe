@@ -11,7 +11,6 @@ RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'unpack')
 
 
 class TestUnpack(object):
-
     """Unpack interface unit tests."""
 
     def test_unpack(self):

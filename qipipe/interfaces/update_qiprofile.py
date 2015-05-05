@@ -5,7 +5,6 @@ from ..helpers import qiprofile
 
 
 class UpdateQIProfileInputSpec(BaseInterfaceInputSpec):
-
     project = traits.Str(mandatory=True, desc='The XNAT project id')
 
     subject = traits.Str(mandatory=True, desc='The XNAT subject name')

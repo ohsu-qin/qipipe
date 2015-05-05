@@ -12,7 +12,6 @@ RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'map_ctp')
 
 
 class TestMapCTP(object):
-
     """Map CTP unit tests."""
 
     def tearDown(self):

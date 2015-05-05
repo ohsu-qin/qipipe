@@ -40,7 +40,6 @@ class XNATDownloadOutputSpec(TraitedSpec):
 
 
 class XNATDownload(BaseInterface):
-
     """
     The ``XNATDownload`` Nipype interface wraps the
     :meth:`qixnat.facade.XNAT.download` method.

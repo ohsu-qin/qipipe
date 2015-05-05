@@ -11,7 +11,6 @@ FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'breast', 'BreastChemo3',
 
 
 class TestGroupDicom(object):
-
     """GroupDicom interface unit tests."""
 
     def test_group_dicom(self):

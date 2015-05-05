@@ -30,7 +30,6 @@ RESOURCE = 'NIFTI'
 
 
 class TestXNATDownload(object):
-
     """The  XNAT download interface unit tests."""
 
     def setUp(self):

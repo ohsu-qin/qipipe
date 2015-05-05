@@ -16,7 +16,6 @@ PATH = os.path.join(RESULTS, FNAME)
 
 
 class TestTouch(object):
-
     """Touch interface unit tests."""
 
     def setUp(self):
