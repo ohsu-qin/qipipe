@@ -334,15 +334,6 @@ class VisitIterator(object):
                         scans = scan_dict.keys()
                         self.logger.debug("Discovered %s %s scans %s in %s" %
                                           (sbj, sess, scans, sess_dir))
-                        
-                        
-                        
-                        sd = {s: [list(sit.dicom), list(sit.roi)] for s, sit in scan_dict.iteritems()}
-                        self.logger.debug(">>it %s %s %s" % (sbj, sess, sd))
-                        
-                        
-                        
-                        
                         yield sbj, sess, scan_dict
 
     def _scan_iterators(self, patterns, base_dir):
