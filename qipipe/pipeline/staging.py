@@ -26,6 +26,7 @@ def set_workflow_inputs(exec_wf, scan_input, dest=None):
     # Set the top-level inputs.
     input_spec = exec_wf.get_node('input_spec')
     input_spec.inputs.collection = scan_input.collection
+    input_spec.inputs.volume_tag = scan_input.volume_tag
     input_spec.inputs.subject = scan_input.subject
     input_spec.inputs.session = scan_input.session
     input_spec.inputs.scan = scan_input.scan
@@ -329,62 +330,66 @@ class StagingWorkflow(WorkflowBase):
         workflow.connect(collect_scan_dicom, 'out_list',
                          upload_dicom, 'in_files')
 
-        # # Stack the scan volume into a 3D NiFTI file.
-        # # TODO - obtain the DICOM volume_tag below from the Collection via
-        # # a function argument.
-        # volume_tag = 'AcquisitionNumber'
-        # out_format = "volume%%(%s)03d" % volume_tag
-        # stack_xfc = DcmStack(embed_meta=True, out_format=out_format)
-        # stack = pe.JoinNode(stack_xfc, joinsource='iter_dicom',
-        #                     joinfield='dicom_files', name='stack')
-        # 
-        # workflow.connect(fix_dicom, 'out_file', stack, 'dicom_files')
-        # 
-        # # TODO - if upload works, then delete the commented lines below and
-        # # following the line:
-        # #   workflow.connect(iter_volume, 'volume', upload_3d, 'scan')
-        # #
-        # # # Force the T1 3D upload to follow DICOM upload.
-        # # # Note: XNAT fails app. 80% into the T1 upload. It appears to be a
-        # # # concurrency conflict, possibly arising from the following causes:
-        # # # * the non-reentrant pyxnat's custom non-http2lib cache is corrupted
-        # # # * an XNAT archive directory access race condition
-        # # #
-        # # # However, the error cannot be isolated for the following reasons:
-        # # # * the error is sporadic and unreproducible
-        # # # * since nipype swallows non-nipype Python log messages, the upload
-        # # #   and pyxnat log messages disappear
-        # # #
-        # # # This gate task serializes upload to prevent potential XNAT access
-        # # # conflicts.
-        # # #
-        # # # TODO - isolate and fix.
-        # # #
-        # # if scan == 1:
-        # #     upload_3d_gate_xfc = Gate(fields=['out_file', 'xnat_files'])
-        # #     upload_3d_gate = pe.Node(upload_3d_gate_xfc, name='upload_3d_gate')
-        # #     workflow.connect(upload_dicom, 'xnat_files', upload_3d_gate, 'xnat_files')
-        # #     workflow.connect(stack, 'out_file', upload_3d_gate, 'out_file')
-        # 
-        # # Upload the 3D NiFTI stack files to XNAT.
-        # upload_3d_xfc = XNATUpload(project=self.project, resource='NIFTI',
-        #                            skip_existing=True)
-        # upload_3d = pe.Node(upload_3d_xfc, name='upload_3d')
-        # workflow.connect(input_spec, 'subject', upload_3d, 'subject')
-        # workflow.connect(input_spec, 'session', upload_3d, 'session')
-        # workflow.connect(scan_gate, 'scan', upload_3d, 'scan')
-        # # 3D upload is gated by DICOM upload.
-        # # workflow.connect(upload_3d_gate, 'out_file', upload_3d, 'in_files')
-        # workflow.connect(stack, 'out_file', upload_3d, 'in_files')
-        # 
-        # # The output is the 3D NiFTI stack file. Make the output a Gate node
-        # # rather than an IdentityInterface in order to prevent nipype from
-        # # overzealously pruning it as extraneous.
-        # output_spec_xfc = Gate(fields=['image', 'xnat_files'])
-        # output_spec = pe.Node(output_spec_xfc, run_without_submitting=True,
-        #                       name='output_spec')
-        # workflow.connect(stack, 'out_file', output_spec, 'image')
-        # workflow.connect(upload_3d, 'xnat_files', output_spec, 'xnat_files')
+        # The volume file name format.
+        vol_fmt_xfc = Function(input_names=['collection'],
+                               output_names=['format'],
+                               function=volume_format))
+        vol_fmt = pe.Node(vol_fmt_xfc, run_without_submitting=True)
+        workflow.connect(input_spec, 'collection', vol_fmt, 'collection')
+        
+        # Stack the scan volume into a 3D NiFTI file.
+        stack_xfc = DcmStack(embed_meta=True)
+        stack = pe.JoinNode(stack_xfc, joinsource='iter_dicom',
+                            joinfield='dicom_files', name='stack')
+        workflow.connect(fix_dicom, 'out_file', stack, 'dicom_files')
+        workflow.connect(vol_fmt, 'format', stack, 'out_format')
+        
+        # Force the T1 3D upload to follow DICOM upload.
+        # Note: XNAT fails app. 80% into the scan upload. It appears to be
+        # a concurrency conflict, possibly arising from one of the following
+        # causes:
+        # * the pyxnat config in $HOME/.xnat/xnat.cfg specifies a temp
+        #   directory that *is not* shared by all concurrent jobs,
+        #   resulting in inconsistent cache content
+        # * the pyxnat config in $HOME/.xnat/xnat.cfg specifies a temp
+        #   directory that *is* shared by some concurrent jobs,
+        #   resulting in unsynchronized pyxnat write conflicts across
+        #   jobs
+        # * the non-reentrant pyxnat's custom non-http2lib cache is
+        #   corrupted
+        # * an XNAT archive directory access race condition
+        #
+        # The cause cannot be isolated for the following reasons:
+        # * there is no useful Nipype error or log message
+        # * the error is sporadic and unreproducible
+        # * Nipype swallows non-nipype Python log messages, causing the
+        #   upload and pyxnat log messages to disappear
+        #
+        # This gate task serializes upload to prevent potential XNAT access
+        # conflicts.
+        upload_3d_gate_xfc = Gate(fields=['out_file', 'xnat_files'])
+        upload_3d_gate = pe.Node(upload_3d_gate_xfc, name='upload_3d_gate')
+        workflow.connect(upload_dicom, 'xnat_files', upload_3d_gate, 'xnat_files')
+        workflow.connect(stack, 'out_file', upload_3d_gate, 'out_file')
+        
+        # Upload the 3D NiFTI stack files to XNAT.
+        upload_3d_xfc = XNATUpload(project=self.project, resource='NIFTI',
+                                   skip_existing=True)
+        upload_3d = pe.Node(upload_3d_xfc, name='upload_3d')
+        workflow.connect(input_spec, 'subject', upload_3d, 'subject')
+        workflow.connect(input_spec, 'session', upload_3d, 'session')
+        workflow.connect(scan_gate, 'scan', upload_3d, 'scan')
+        # 3D upload is gated by DICOM upload.
+        workflow.connect(upload_3d_gate, 'out_file', upload_3d, 'in_files')
+        
+        # The output is the 3D NiFTI stack file. Make the output a Gate node
+        # rather than an IdentityInterface in order to prevent nipype from
+        # overzealously pruning it as extraneous.
+        output_spec_xfc = Gate(fields=['image', 'xnat_files'])
+        output_spec = pe.Node(output_spec_xfc, run_without_submitting=True,
+                              name='output_spec')
+        workflow.connect(stack, 'out_file', output_spec, 'image')
+        workflow.connect(upload_3d, 'xnat_files', output_spec, 'xnat_files')
 
         # Instrument the nodes for cluster submission, if necessary.
         self._configure_nodes(workflow)
@@ -395,6 +400,18 @@ class StagingWorkflow(WorkflowBase):
             self.depict_workflow(workflow)
 
         return workflow
+
+
+def volume_format(collection):
+    """
+    :param collection: the collection name
+    :return: the volume file name format
+    """
+    from qipipe.staging import collections
+    
+    coll = collections.with_name(collection)
+    
+    return "volume%%(%s)03d" % coll.volume_tag
 
 
 def merge(lists):
