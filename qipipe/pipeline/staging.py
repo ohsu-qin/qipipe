@@ -280,7 +280,7 @@ class StagingWorkflow(WorkflowBase):
         compress_dicom = pe.Node(Compress(), name='compress_dicom')
         workflow.connect(fix_dicom, 'out_file', compress_dicom, 'in_file')
         workflow.connect(iter_volume, 'dest', compress_dicom, 'dest')
-        
+
         # Collect the compressed DICOM files, as follows:
         # * The volume DICOM files are collected into a list.
         # * The volume DICOM file lists are merged into a scan
@@ -319,7 +319,7 @@ class StagingWorkflow(WorkflowBase):
                                          name='collect_scan_dicom')
         workflow.connect(collect_vol_dicom, 'dicom_files',
                          collect_scan_dicom, 'lists')
-        
+
         # Upload the compressed DICOM files.
         upload_dicom_xfc = XNATUpload(project=self.project, resource='DICOM',
                                       skip_existing=True)
@@ -333,17 +333,18 @@ class StagingWorkflow(WorkflowBase):
         # The volume file name format.
         vol_fmt_xfc = Function(input_names=['collection'],
                                output_names=['format'],
-                               function=volume_format))
-        vol_fmt = pe.Node(vol_fmt_xfc, run_without_submitting=True)
+                               function=volume_format)
+        vol_fmt = pe.Node(vol_fmt_xfc, run_without_submitting=True,
+                          name='volume_format')
         workflow.connect(input_spec, 'collection', vol_fmt, 'collection')
-        
+
         # Stack the scan volume into a 3D NiFTI file.
         stack_xfc = DcmStack(embed_meta=True)
         stack = pe.JoinNode(stack_xfc, joinsource='iter_dicom',
                             joinfield='dicom_files', name='stack')
         workflow.connect(fix_dicom, 'out_file', stack, 'dicom_files')
         workflow.connect(vol_fmt, 'format', stack, 'out_format')
-        
+
         # Force the T1 3D upload to follow DICOM upload.
         # Note: XNAT fails app. 80% into the scan upload. It appears to be
         # a concurrency conflict, possibly arising from one of the following
@@ -371,7 +372,7 @@ class StagingWorkflow(WorkflowBase):
         upload_3d_gate = pe.Node(upload_3d_gate_xfc, name='upload_3d_gate')
         workflow.connect(upload_dicom, 'xnat_files', upload_3d_gate, 'xnat_files')
         workflow.connect(stack, 'out_file', upload_3d_gate, 'out_file')
-        
+
         # Upload the 3D NiFTI stack files to XNAT.
         upload_3d_xfc = XNATUpload(project=self.project, resource='NIFTI',
                                    skip_existing=True)
@@ -381,7 +382,7 @@ class StagingWorkflow(WorkflowBase):
         workflow.connect(scan_gate, 'scan', upload_3d, 'scan')
         # 3D upload is gated by DICOM upload.
         workflow.connect(upload_3d_gate, 'out_file', upload_3d, 'in_files')
-        
+
         # The output is the 3D NiFTI stack file. Make the output a Gate node
         # rather than an IdentityInterface in order to prevent nipype from
         # overzealously pruning it as extraneous.
@@ -408,9 +409,9 @@ def volume_format(collection):
     :return: the volume file name format
     """
     from qipipe.staging import collections
-    
+
     coll = collections.with_name(collection)
-    
+
     return "volume%%(%s)03d" % coll.volume_tag
 
 
@@ -418,15 +419,14 @@ def merge(lists):
     """
     Merges the given lists. This function works around the following
     Nipype Merge node limitation:
-    
+
     * The Nipype Merge initializer requires the number of lists to merge.
-    
+
     This merge function accepts an arbitrary number of lists.
-    
+
     :param lists: this lists to merge
     :return: the merged lists
     """
     merger = lambda x,y: x + y
-    
+
     return reduce(merger, lists)
-    
