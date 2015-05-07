@@ -19,11 +19,11 @@ for change details.
 
 4.5.5 / 2015-01-30
 ------------------
-* Import group function from qidicom.
+* Import the group function from qidicom.
 
 4.5.4 / 2015-01-14
 ------------------
-* Pull in qi* API changes.
+* Pull in the qi* API changes.
 
 4.5.3 / 2015-01-12
 ------------------
