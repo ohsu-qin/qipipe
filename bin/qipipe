@@ -7,7 +7,7 @@ import sys
 import os
 import imp
 import argparse
-from qiutil import command
+import qiutil
 
 NIPYPE_LOG_DIR_ENV_VAR = 'NIPYPE_LOG_DIR'
 """The environment variable used by Nipype to set the log directory."""
@@ -19,7 +19,7 @@ def main(argv=sys.argv):
     # Break out the logging options.
     log_opts = {k: opts.pop(k) for k in opts.keys() if k.startswith('log')}
     # Configure the logger.
-    command.configure_log('qipipe', log_opts)
+    qiutil.command.configure_log('qipipe', 'qixnat', 'qidicom', 'qiutil', log_opts)
     # Set the Nipype log directory environment variable before importing
     # any nipype module. The code below works around the following Nipype
     # bug:
@@ -58,7 +58,7 @@ def _parse_arguments():
     parser = argparse.ArgumentParser()
     
     # The log options.
-    command.add_options(parser)
+    qiutil.command.add_options(parser)
 
     # The actions.
     parser.add_argument('--stage', dest='actions', action='append_const',

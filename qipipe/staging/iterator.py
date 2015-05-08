@@ -46,17 +46,22 @@ class ScanInput(object):
 
 
 class ScanIterators(object):
-    """Aggregate with attributes :meth:`dicom` and :meth:`roi`."""
+    """
+    Aggregate with attributes :attr:`location`, :meth:`dicom` and :meth:`roi`.
+    """
 
-    def __init__(self, dicom_gen, roi_gen=None):
+    def __init__(self, pattern, dicom_gen, roi_gen=None):
         """
+        :param pattern: the scan file pattern
         :param dicom_gen: the :attr:`dicom` generator
         :param roi_gen: the :attr:`roi` generator
         """
+        self.pattern = pattern
         self._dicom_gen = dicom_gen
         self._dicom = None
         self._roi_gen = roi_gen
         self._roi = None
+    
     
     @property
     def dicom(self):
@@ -105,14 +110,29 @@ def iter_stage(project, collection, *inputs, **opts):
     :attr:`qipipe.staging.collection.Patterns,subject`
     regular expression.
 
+    Each iteration *(subject, session, scan, scan_iters)* tuple is
+    formed as follows:
+
+    - The *subject* is the XNAT subject name formatted by
+      :data:`SUBJECT_FMT`.
+
+    - The *session* is the XNAT experiment name formatted by
+      :data:`SESSION_FMT`.
+
+    - The *scan* is the XNAT scan number.
+
+    - The *scan_iters* is the :class:`ScanIterators` object.
+
     :param project: the XNAT project name
     :param collection: the
         :attr:`qipipe.staging.collection.Collection.name`
-    :param inputs: the AIRC source subject directories to stage
+    :param inputs: the source subject directories to stage
     :param opts: the following keyword option:
-    :keyword scan: only stage the given scan number
-    :keyword skip_existing: flag indicating whether to ignore existing
-        sessions (default True)
+    :keyword scan: the scan number to stage
+        (default stage all detected scans)
+    :keyword skip_existing: flag indicating whether to ignore each
+        existing session, or scan if the *scan* option is set
+        (default True)
     :yield: the :class:`ScanInput` object
     """
     # Validate that there is a collection
@@ -135,6 +155,10 @@ def iter_stage(project, collection, *inputs, **opts):
                     yield ScanInput(collection, sbj, sess, scan, scan_iters)
                     _logger.debug("Staged %s session %s scan %d." %
                                   (sbj, sess, scan))
+                else:
+                    _logger.debug("Skipping %s %s scan %d since no DICOM files"
+                                  " were found for this scan matching %s." %
+                                  (sbj, sess, scan, scan_iters.pattern))
 
 
 def _collect_visits(project, collection, *inputs, **opts):
@@ -145,18 +169,12 @@ def _collect_visits(project, collection, *inputs, **opts):
     :param project: the XNAT project name
     :param collection: the AIRC image collection name
     :param inputs: the AIRC source subject directories
-    :param opts: the :class:`VisitIterator` initializer options,
-        as well as the following keyword option:
-    :keyword skip_existing: flag indicating whether to ignore existing
-        sessions (default True)
+    :param opts: the :meth:`iter_stage` options
     :return: the {subject: {session: {scan: :class:`ScanIterators`}}}
         dictionary
     """
-    # The visit (subject, session, scan dictionary) tuples.
-    if opts.pop('skip_existing', True):
-        visits = _detect_new_visits(project, collection, *inputs, **opts)
-    else:
-        visits = _iter_visits(collection, *inputs, **opts)
+    # The visit (subject, session, scan dictionary) tuple generator.
+    visits = VisitIterator(project, collection, *inputs, **opts)
 
     # The dictionary to build.
     visit_dict = defaultdict(dict)
@@ -167,109 +185,31 @@ def _collect_visits(project, collection, *inputs, **opts):
     return visit_dict
 
 
-def _detect_new_visits(project, collection, *inputs, **opts):
-    """
-    Detects the new AIRC visits in the given input directories. The visit
-    DICOM files are grouped by volume within scan within session within
-    subject.
-
-    :param project: the XNAT project name
-    :param collection: the AIRC image collection name
-    :param inputs: the AIRC source subject directories
-    :param opts: the :class:`VisitIterator` initializer options
-    :return: the :meth:`iter_new_visits` tuples
-    """
-    # Collect the AIRC visits into (subject, session, dicom_files)
-    # tuples.
-    visits = list(_iter_new_visits(project, collection, *inputs, **opts))
-
-    # If no images were detected, then bail.
-    if not visits:
-        logger(__name__).info("No new visits were detected in the input"
-                              " directories.")
-        return {}
-    logger(__name__).debug("%d new visits were detected" % len(visits))
-
-    # Group the DICOM files by volume.
-    return visits
-
-
-def _iter_visits(collection, *inputs, **opts):
-    """
-    Iterates over the visits in the given subject directories.
-    Each iteration item is a *(subject, session, scan, scan_iters)* tuple,
-    formed as follows:
-
-    - The *subject* is the XNAT subject name formatted by
-      :data:`SUBJECT_FMT`.
-
-    - The *session* is the XNAT experiment name formatted by
-      :data:`SESSION_FMT`.
-
-    - The *scan* is the XNAT scan number.
-
-    - The *scan_iters* is the :class:`ScanIterators` object.
-
-    :param collection: the AIRC image collection name
-    :param inputs: the subject directories over which to iterate
-    :param opts: the :class:`VisitIterator` initializer options
-    :yield: the :class:`VisitIterator.next` tuple
-    """
-    return VisitIterator(collection, *inputs, **opts)
-
-
-def _iter_new_visits(project, collection, *inputs, **opts):
-    """
-    Filters :meth:`qipipe.staging.iterator._iter_visits` to iterate over
-    the new visits in the given subject directories which are not in XNAT.
-
-    :param project: the XNAT project name
-    :param collection: the AIRC image collection name
-    :param inputs: the subject directories over which to iterate
-    :param opts: the :meth:`_iter_visits` options
-    :yield: the :meth:`_iter_visits` tuple
-    """
-    # The visit filter is the _is_new_session function with the
-    # project parameter fixed to the project argument.
-    opts['filter'] = partial(_is_new_session, project)
-    
-    return _iter_visits(collection, *inputs, **opts)
-
-
-def _is_new_session(project, subject, session):
-    # If the session is not yet in XNAT, then yield the tuple.
-    with qixnat.connect() as xnat:
-        exists = xnat.get_session(project, subject, session).exists()
-    if exists:
-        logger(__name__).debug("Skipping the %s %s %s session since it has"
-                               " already been loaded to XNAT." %
-                               (project, subject, session))
-
-    return not exists
-        
-
 class VisitIterator(object):
     """Generator class for AIRC visits."""
 
-    def __init__(self, collection, *subject_dirs, **opts):
+    def __init__(self, project, collection, *subject_dirs, **opts):
         """
+        :param project: the XNAT project name
         :param collection: the AIRC image collection name
         :param subject_dirs: the subject directories over which
             to iterate
-        :param opts: the following initialization options:
-        :keyword filter: a *(subject, session)* selection filter
+        :param opts: the :meth:`iter_stage` options
         """
+        self.project = project
+        """The :meth:`iter_stage` project name parameter."""
+        
         self.collection = collections.with_name(collection)
-        """The AIRC collection with the given name."""
+        """The :meth:`iter_stage` collection name parameter."""
 
         self.subject_dirs = subject_dirs
         """The input directories."""
 
-        self.filter = opts.get('filter', lambda subject, session: True)
-        """The (subject, session) selection filter."""
-
         self.scan = opts.get('scan')
-        """The scan number to stage (default stage all detected scans)."""
+        """The :meth:`iter_stage` scan number option."""
+
+        self.skip_existing = opts.get('skip_existing', True)
+        """The :meth:`iter_stage` *skip_existing* flag option."""
         
         self.logger = logger(__name__)
 
@@ -289,15 +229,20 @@ class VisitIterator(object):
         # The visit subdirectory matcher.
         vpat = self.collection.patterns.session
         # The {scan number: {dicom, roi}} file search patterns.
+        all_scan_pats = self.collection.patterns.scan
+        # The selected file search patterns.
         if self.scan:
             # Filter on only the specified scan.
-            if self.scan not in self.collection.patterns.scan:
+            if self.scan not in all_scan_pats:
                 raise StagingError("The %s scan %d is not supported" %
                                    (self.collection.name, self.scan))
-            scan_pats = {self.scan: self.collection.patterns.scan[self.scan]}
+            scan_pats = {self.scan: all_scan_pats[self.scan]}
         else:
             # Detect all scans.
-            scan_pats = self.collection.patterns.scan
+            scan_pats = all_scan_pats
+
+        filter_sess = self.skip_existing and not self.scan
+        filter_scan = self.skip_existing and self.scan
         
         # Iterate over the visits.
         with qixnat.connect():
@@ -327,14 +272,19 @@ class VisitIterator(object):
                     # Apply the selection filter, e.g. an XNAT existence
                     # check. If the session passes the filter, then the
                     # files qualify for iteration.
-                    if self.filter(sbj, sess):
+                    if not filter_sess or self._is_new_session(sbj, sess):
                         # The DICOM and ROI iterators for each scan number.
                         scan_dict = {scan: self._scan_iterators(pats, sess_dir)
-                                     for scan, pats in scan_pats.iteritems()}
-                        scans = scan_dict.keys()
-                        self.logger.debug("Discovered %s %s scans %s in %s" %
-                                          (sbj, sess, scans, sess_dir))
-                        yield sbj, sess, scan_dict
+                                     for scan, pats in scan_pats.iteritems()
+                                     if not filter_scan or self._is_new_scan(sbj, sess, scan)}
+                        if scan_dict:
+                            scans = scan_dict.keys()
+                            self.logger.debug("Discovered %s %s scans %s in %s" %
+                                              (sbj, sess, scans, sess_dir))
+                            yield sbj, sess, scan_dict
+                        else:
+                            self.logger.debug("No %s %s scans were discovered"
+                                              " in %s" %  (sbj, sess, sess_dir))
 
     def _scan_iterators(self, patterns, base_dir):
         # The DICOM glob pattern.
@@ -350,7 +300,7 @@ class VisitIterator(object):
         else:
             roi_gen = None 
         
-        return ScanIterators(dicom_gen=dcm_gen, roi_gen=roi_gen)
+        return ScanIterators(pattern=dcm_pat, dicom_gen=dcm_gen, roi_gen=roi_gen)
 
     def _match_subject_number(self, path):
         """
@@ -380,7 +330,24 @@ class VisitIterator(object):
                 "The directory path %s does not match the session pattern %s" %
                 (path, self.collection.patterns.session.pattern))
         return int(match.group(1))
+    
+    def _is_new_session(self, subject, session):
+        with qixnat.connect() as xnat:
+            exists = xnat.get_session(self.project, subject, session).exists()
+        if exists:
+            logger(__name__).debug("Skipping the %s %s %s since it has already"
+                                   " been loaded to XNAT." % (subject, session))
+        return not exists
 
+
+    def _is_new_scan(self, subject, session, scan):
+        with qixnat.connect() as xnat:
+            exists = xnat.get_scan(self.project, subject, session, scan).exists()
+        if exists:
+            logger(__name__).debug("Skipping %s %s %s scan %d since it has"
+                                   " already been loaded to XNAT." %
+                                   (subject, session, scan))
+        return not exists
 
 def _scan_dicom_generator(pattern, tag):
     """
