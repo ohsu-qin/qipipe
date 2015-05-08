@@ -27,6 +27,61 @@ VALUE_TYPES = dict(
 )
 
 
+class CSVReader(object):
+    """Reads a clinical CSV file filtered on a subject and session."""
+    
+    def __init__(self, in_file, subject, session):
+        """
+        :param in_file: the CSV file to read
+        :param subject: the XNAT subject name
+        :param session: the XNAT session name
+        """
+        self.file = in_file
+        self.subject = subject
+        self.session = session
+
+    def next(self):
+        """
+        :yield a Bunch for the given subject and session
+        """
+        # The target subject and session numbers.
+        tgt_sbj_nbr = TRAILING_NUM_REGEX.match(self.subject)
+        tgt_sess_nbr = TRAILING_NUM_REGEX.match(self.session)
+        # Read each row.
+        with open(in_file, 'rb') as csvfile:
+            reader = csv.DictReader(csvfile):
+            for row in reader:
+                # Match on the subject number.
+                row_sbj = row.pop('subject', None) row.pop('patient', None)
+                row_sbj_nbr = TRAILING_NUM_REGEX.match(row_sbj)
+                if row_sbj_nbr == tgt_sbj_nbr:
+                    # If there is a row session, then match on the
+                    # session number.
+                    row_sess = row.pop('session', None) or row.pop('visit', None)
+                    if row_sess:
+                        row_sess_nbr = TRAILING_NUM_REGEX.match(row_sess)
+                        if row_sess_nbr != tgt_sess_nbr:
+                            # No match; skip this row.
+                            continue
+                    # Make a bunch from the row.
+                    bunch = Bunch()
+                    bunch.update(row)
+                    # Set the subject.
+                    bunch.subject = self.subject
+                    # If the session occurs in the row, then set the session.
+                    if row_sess:
+                        bunch.session = self.session
+                    
+                    # We have a winner.
+                    yield bunch
+
+
+class TreatmentReader(object):
+    """Reads the Treatment CSV file."""
+    
+    def __init__(self):
+        
+
 # TODO - make parser for each domain type, e.g.:
 #
 # Treatment:
