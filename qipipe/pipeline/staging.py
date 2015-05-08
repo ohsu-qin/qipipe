@@ -26,7 +26,6 @@ def set_workflow_inputs(exec_wf, scan_input, dest=None):
     # Set the top-level inputs.
     input_spec = exec_wf.get_node('input_spec')
     input_spec.inputs.collection = scan_input.collection
-    input_spec.inputs.volume_tag = scan_input.volume_tag
     input_spec.inputs.subject = scan_input.subject
     input_spec.inputs.session = scan_input.session
     input_spec.inputs.scan = scan_input.scan
@@ -412,7 +411,7 @@ def volume_format(collection):
 
     coll = collections.with_name(collection)
 
-    return "volume%%(%s)03d" % coll.volume_tag
+    return "volume%%(%s)03d" % coll.patterns.volume
 
 
 def merge(lists):
