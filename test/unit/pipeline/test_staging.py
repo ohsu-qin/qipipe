@@ -26,7 +26,7 @@ class TestStagingWorkflow(object):
 
     def test_breast(self):
         self._test_collection('Breast')
-
+    
     def test_sarcoma(self):
         self._test_collection('Sarcoma')
 
