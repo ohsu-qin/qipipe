@@ -5,9 +5,10 @@ Runs the QIN pipeline.
 
 import sys
 import os
+import shutil
 import imp
 import argparse
-import qiutil
+from qipipe.helpers import command
 
 NIPYPE_LOG_DIR_ENV_VAR = 'NIPYPE_LOG_DIR'
 """The environment variable used by Nipype to set the log directory."""
@@ -15,11 +16,10 @@ NIPYPE_LOG_DIR_ENV_VAR = 'NIPYPE_LOG_DIR'
 def main(argv=sys.argv):
     # Parse the command line arguments.
     inputs, opts = _parse_arguments()
-
     # Break out the logging options.
-    log_opts = {k: opts.pop(k) for k in opts.keys() if k.startswith('log')}
+    log_opts = {k: opts.pop(k) for k in ['log', 'log_level'] if k in opts}
     # Configure the logger.
-    qiutil.command.configure_log('qipipe', 'qixnat', 'qidicom', 'qiutil', log_opts)
+    command.configure_log(**log_opts)
     # Set the Nipype log directory environment variable before importing
     # any nipype module. The code below works around the following Nipype
     # bug:
@@ -27,11 +27,13 @@ def main(argv=sys.argv):
     #   set to /dev/null, then Nipype raises an error. The work-around
     #   is to set the NIPYPE_LOG_DIR environment variable to a new temp
     #   directory.
-    if 'log' in log_opts:
-        log_file = os.path.abspath(log_opts.get('log'))
+    log_file_opt = opts.get('log')
+    temp_log_dir = None
+    if log_file_opt:
+        log_file = os.path.abspath(log_file_opt)
         if log_file == '/dev/null':
             # Work around the Nipype bug described above.
-            log_dir = tempfile.mkdtemp(prefix='qi_')
+            temp_log_dir = log_dir = tempfile.mkdtemp(prefix='qipipe_')
         else:
             log_dir = os.path.dirname(log_file)
         if not os.path.exists(log_dir):
@@ -43,7 +45,12 @@ def main(argv=sys.argv):
     from qipipe.pipeline import qipipeline as qip
 
     # Run the QIN workflow.
-    qip.run(*inputs, **opts)
+    try:
+        qip.run(*inputs, **opts)
+    finally:
+        # Clean up.
+        if temp_log_dir:
+            shutil.rmtree(temp_log_dir)
 
     return 0
 

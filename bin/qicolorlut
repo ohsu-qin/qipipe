@@ -7,18 +7,15 @@ import sys
 import os
 import imp
 import argparse
-from qiutil import command
-from qipipe.helpers import colors
+from qipipe.helpers import (command, colors)
 
 def main(argv=sys.argv):
     # Parse the command line arguments.
     opts = _parse_arguments()
-
     # Break out the logging options.
     log_opts = {k: opts.pop(k) for k in ['log', 'log_level'] if k in opts}
     # Configure the logger.
-    command.configure_log('qicolorlut', log_opts)
-
+    command.configure_log(**log_opts)
     # Make the color map.
     colors.create_lookup_table(**opts)
 
