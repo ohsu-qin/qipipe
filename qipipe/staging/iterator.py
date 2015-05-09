@@ -150,11 +150,9 @@ def iter_stage(project, collection, *inputs, **opts):
             for scan, scan_iters in scan_dict.iteritems():
                 # The scan must have at least one DICOM file.
                 if scan_iters.dicom:
-                    _logger.debug("Staging %s session %s scan %d..." %
-                                  (sbj, sess, scan))
+                    _logger.debug("Staging %s %s scan %d..." % (sbj, sess, scan))
                     yield ScanInput(collection, sbj, sess, scan, scan_iters)
-                    _logger.debug("Staged %s session %s scan %d." %
-                                  (sbj, sess, scan))
+                    _logger.debug("Staged %s %s scan %d." % (sbj, sess, scan))
                 else:
                     _logger.debug("Skipping %s %s scan %d since no DICOM files"
                                   " were found for this scan matching %s." %
