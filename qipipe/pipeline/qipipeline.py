@@ -454,7 +454,7 @@ class QIPipelineWorkflow(WorkflowBase):
         if 'base_dir' in opts:
             base_dir = os.path.abspath(opts['base_dir'])
         else:
-            base_dir = tempfile.mkdtemp()
+            base_dir = tempfile.mkdtemp(prefix='qipipe_')
 
         # The execution workflow.
         exec_wf = pe.Workflow(name='qipipeline', base_dir=base_dir)

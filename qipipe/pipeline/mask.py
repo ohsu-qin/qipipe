@@ -122,7 +122,7 @@ class MaskWorkflow(WorkflowBase):
         self._logger.debug('Creating the mask reusable workflow...')
         
         if not base_dir:
-            base_dir = tempfile.mkdtemp()
+            base_dir = tempfile.mkdtemp(prefix='qipipe_')
         workflow = pe.Workflow(name='mask', base_dir=base_dir)
         
         # The workflow input.

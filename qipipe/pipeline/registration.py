@@ -363,7 +363,7 @@ class RegistrationWorkflow(WorkflowBase):
         self._logger.debug('Creating the registration realignment workflow...')
 
         # The workflow.
-        base_dir = opts.get('base_dir', tempfile.mkdtemp())
+        base_dir = opts.get('base_dir', tempfile.mkdtemp(prefix='qipipe_'))
         realign_wf = pe.Workflow(name='registration', base_dir=base_dir)
 
         # The workflow input.

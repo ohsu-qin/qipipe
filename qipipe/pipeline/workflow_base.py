@@ -204,7 +204,7 @@ class WorkflowBase(object):
         if workflow.base_dir:
             workflow.base_dir = os.path.abspath(workflow.base_dir)
         else:
-            workflow.base_dir = tempfile.mkdtemp()
+            workflow.base_dir = tempfile.mkdtemp(prefix='qipipe_')
 
         # Run the workflow.
         self._logger.debug("Executing the %s workflow in %s..." %

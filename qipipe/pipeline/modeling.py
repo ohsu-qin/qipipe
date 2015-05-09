@@ -249,7 +249,7 @@ class ModelingWorkflow(WorkflowBase):
         self._logger.debug("Building the modeling workflow...")
 
         # The base workflow.
-        base_dir = opts.pop('base_dir', tempfile.mkdtemp())
+        base_dir = opts.pop('base_dir', tempfile.mkdtemp(prefix='qipipe_'))
         mdl_wf = pe.Workflow(name='modeling', base_dir=base_dir)
 
         # Start with a base workflow.
