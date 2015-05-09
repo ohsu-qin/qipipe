@@ -3,7 +3,6 @@ from matplotlib import (pyplot, colors, cm)
 import numpy as np
 import nibabel as nib
 from qiutil.logging import logger
-from .
 
 def normalize(value, vmin, vspan):
     """
