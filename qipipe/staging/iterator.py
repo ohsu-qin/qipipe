@@ -335,8 +335,8 @@ class VisitIterator(object):
         with qixnat.connect() as xnat:
             exists = xnat.get_session(self.project, subject, session).exists()
         if exists:
-            logger(__name__).debug("Skipping the %s %s %s since it has already"
-                                   " been loaded to XNAT." % (subject, session))
+            logger(__name__).debug("Skipping %s %s since it has already been"
+                                   " loaded to XNAT." % (subject, session))
         return not exists
 
 
@@ -344,7 +344,7 @@ class VisitIterator(object):
         with qixnat.connect() as xnat:
             exists = xnat.get_scan(self.project, subject, session, scan).exists()
         if exists:
-            logger(__name__).debug("Skipping %s %s %s scan %d since it has"
+            logger(__name__).debug("Skipping %s %s scan %d since it has"
                                    " already been loaded to XNAT." %
                                    (subject, session, scan))
         return not exists
