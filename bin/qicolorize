@@ -35,8 +35,8 @@ def _parse_arguments():
     """
     parser = argparse.ArgumentParser()
     
-    # The log options.
-    command.add_log_options(parser)
+    # The general options.
+    command.add_options(parser)
 
     # The output option.
     parser.add_argument('-o', '--output', metavar='DIR', dest='dest',

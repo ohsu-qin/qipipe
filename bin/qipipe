@@ -64,8 +64,8 @@ def _parse_arguments():
     """
     parser = argparse.ArgumentParser()
     
-    # The log options.
-    qiutil.command.add_options(parser)
+    # The general options.
+    command.add_options(parser)
 
     # The actions.
     parser.add_argument('--stage', dest='actions', action='append_const',
