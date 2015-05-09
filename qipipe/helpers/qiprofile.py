@@ -49,7 +49,7 @@ class CSVReader(object):
         tgt_sess_nbr = TRAILING_NUM_REGEX.match(self.session)
         # Read each row.
         with open(in_file, 'rb') as csvfile:
-            reader = csv.DictReader(csvfile):
+            reader = csv.DictReader(csvfile)
             for row in reader:
                 # Match on the subject number.
                 row_sbj = row.pop('subject', None) row.pop('patient', None)
