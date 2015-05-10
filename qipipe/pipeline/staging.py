@@ -275,8 +275,11 @@ class StagingWorkflow(WorkflowBase):
         workflow.connect(input_spec, 'subject', fix_dicom, 'subject')
         workflow.connect(iter_dicom, 'dicom_file', fix_dicom, 'in_file')
 
-        # Compress the corrected DICOM files.
-        compress_dicom = pe.Node(Compress(), name='compress_dicom')
+        # Compress the corrected DICOM files. Run immediately rather
+        # than submitting to a cluster queue, since this task takes
+        # less than a minute.
+        compress_dicom = pe.Node(Compress(), run_without_submitting=True,
+                                 name='compress_dicom')
         workflow.connect(fix_dicom, 'out_file', compress_dicom, 'in_file')
         workflow.connect(iter_volume, 'dest', compress_dicom, 'dest')
 
