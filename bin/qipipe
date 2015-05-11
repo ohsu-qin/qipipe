@@ -20,6 +20,8 @@ def main(argv=sys.argv):
     log_opts = {k: opts.pop(k) for k in ['log', 'log_level'] if k in opts}
     # Configure the logger.
     command.configure_log(**log_opts)
+    # The log file option.
+    log_file_opt = opts.get('log')
     # Set the Nipype log directory environment variable before importing
     # any nipype module. The code below works around the following Nipype
     # bug:
@@ -27,7 +29,9 @@ def main(argv=sys.argv):
     #   set to /dev/null, then Nipype raises an error. The work-around
     #   is to set the NIPYPE_LOG_DIR environment variable to a new temp
     #   directory.
-    log_file_opt = opts.get('log')
+    #
+    # The temp log directory that stands in for a /dev/null log file
+    # option.
     temp_log_dir = None
     if log_file_opt:
         log_file = os.path.abspath(log_file_opt)
@@ -36,8 +40,10 @@ def main(argv=sys.argv):
             temp_log_dir = log_dir = tempfile.mkdtemp(prefix='qipipe_')
         else:
             log_dir = os.path.dirname(log_file)
+        # Make the log file parent directory, if necessary.
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
+        # Set the Nipype log directory environment variable.
         os.environ[NIPYPE_LOG_DIR_ENV_VAR] = log_dir
 
     # Import the qipipe pipeline module after configuring the logger
