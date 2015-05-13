@@ -31,25 +31,29 @@ SESSION_REGEX_PAT = """
      [vV]isit       # The Visit or visit prefix form
      _?             # with an optional underscore delimiter
      |              # ...or...
-     %s\d+V         # The alternate prefix form, beginning with
+     %s\d+_?V       # The alternate prefix form, beginning with
                     # a leading collection abbreviation
                     # substituted into the pattern below
     )               # End of the prefix
     (\d+)$          # The visit number
 """
+"""
+The session directory match pattern. This pattern must be specialized
+for each collection by replacing the %s place-holder with a string.
+"""
 
 BREAST_SESSION_REGEX = re.compile(SESSION_REGEX_PAT % 'BC?', re.VERBOSE)
 """
 The Sarcoma session directory match pattern. The variations
-``Visit_3``, ``Visit3``, ``visit3``, ``BC4V3`` and ``B4V3`` all match
-Breast Session03.
+``Visit_3``, ``Visit3``, ``visit3``, ``BC4V3``, ``BC4_V3`` and ``B4V3``
+all match Breast Session03.
 """
 
 SARCOMA_SESSION_REGEX = re.compile(SESSION_REGEX_PAT % 'S', re.VERBOSE)
 """
 The Sarcoma session directory match pattern. The variations
-``Visit_3``, ``Visit3``, ``visit3`` and ``S4V3`` all match Sarcoma
-Session03.
+``Visit_3``, ``Visit3``, ``visit3`` ``S4V3``, and ``S4_V3`` all match
+Sarcoma Session03.
 """
 
 T1_PAT = '*concat*/*'
