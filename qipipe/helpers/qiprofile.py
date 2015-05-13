@@ -50,9 +50,25 @@ class CSVReader(object):
         # Read each row.
         with open(in_file, 'rb') as csvfile:
             reader = csv.DictReader(csvfile)
+            sbj_match = ((n in reader.fieldnames if n == 'subject')) 
+            sbj_fld = next(reader.fieldnames, )
+            if 'subject' in reader.fieldnames:
+                sbj_fld = 'subject'
+            elif 'patient' in reader.fieldnames:
+                sbj_fld = 'patient'
+            else:
+                raise CSVError("CSV file does not have a subject or patient"
+                               " header: %s" % in_file) 
+            if 'subject' in reader.fieldnames:
+                sbj_fld = 'subject'
+            elif 'patient' in reader.fieldnames:
+                sbj_fld = 'patient'
+            else:
+                raise CSVError("CSV file does not have a subject or patient"
+                               " header: %s" % in_file) 
             for row in reader:
                 # Match on the subject number.
-                row_sbj = row.pop('subject', None) row.pop('patient', None)
+                row_sbj = row.pop('subject', None) or row.pop('patient', None)
                 row_sbj_nbr = TRAILING_NUM_REGEX.match(row_sbj)
                 if row_sbj_nbr == tgt_sbj_nbr:
                     # If there is a row session, then match on the
@@ -80,7 +96,7 @@ class TreatmentReader(object):
     """Reads the Treatment CSV file."""
     
     def __init__(self):
-        
+       
 
 # TODO - make parser for each domain type, e.g.:
 #
