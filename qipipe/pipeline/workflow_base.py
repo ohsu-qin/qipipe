@@ -76,31 +76,37 @@ class WorkflowBase(object):
     def __init__(self, project, logger, **opts):
         """
         Initializes this workflow wrapper object.
-        If the optional configuration file is specified, then the workflow
-        settings in that file override the default settings.
+        If the optional configuration file is specified, then the
+        workflow settings in that file override the default settings.
 
-        :param project: the XNAT project name
+        :param project: the :attr:`project`
         :param logger: the logger to use
         :parameter opts: the following keword options:
-        :keyword config: the optional workflow inputs configuration
-            dictionary or file
-        :keyword dry_run: flag indicating whether to prepare but not
-            run the pipeline
+        :keyword base_dir: the :attr:`base_dir`
+        :keyword config: the optional :attr:`configuration` dictionary
+            or file
+        :keyword dry_run: the :attr:`dry_run` flag
         """
         self.project = project
+        """The XNAT project name."""
         
         self._logger = logger
+        """This workflow's logger."""
 
+        self.base_dir = opts.get('base_dir',
+                                 tempfile.mkdtemp(prefix='qipipe_'))
+        "The workflow execution directory (default a new temp directory)."
+        
         cfg_opt = opts.get('config', None)
         if cfg_opt == None or isinstance(cfg_opt, str):
             config = self._load_configuration(cfg_opt)
         else:
             config = cfg_opt
         self.configuration = config
-        """The workflow configuration."""
+        """The workflow node inputs configuration."""
 
         self.dry_run = opts.get('dry_run', False)
-        """Flag indicating whether to skip workflow job submission."""
+        """Flag indicating whether to prepare but not run the workflow."""
 
     def depict_workflow(self, workflow):
         """
@@ -109,14 +115,11 @@ class WorkflowBase(object):
 
         :param workflow the workflow to diagram
         """
-        fname = workflow.name + '.dot'
-        if workflow.base_dir:
-            grf = os.path.join(workflow.base_dir, fname)
-        else:
-            grf = fname
-        workflow.write_graph(dotfilename=grf)
+        base = workflow.name + '.dot'
+        fname = os.path.join(self.base_dir, base)
+        workflow.write_graph(dotfilename=fname)
         self._logger.debug("The %s workflow graph is depicted at %s.png." %
-                         (workflow.name, grf))
+                         (workflow.name, fname))
 
     def _load_configuration(self, cfg_file=None):
         """
@@ -204,7 +207,7 @@ class WorkflowBase(object):
         if workflow.base_dir:
             workflow.base_dir = os.path.abspath(workflow.base_dir)
         else:
-            workflow.base_dir = tempfile.mkdtemp(prefix='qipipe_')
+            workflow.base_dir = self.base_dir
 
         # Run the workflow.
         self._logger.debug("Executing the %s workflow in %s..." %

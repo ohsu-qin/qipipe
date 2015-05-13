@@ -119,9 +119,9 @@ class TestQIPipeline(object):
             recon = qip
             for sbj, sess_dict in output_dict.iteritems():
                 for sess, results in sess_dict.iteritems():
-                    if opts['mask'] == False:
-                        continue
-                    # Verify the registration resource.
+                    # If registration is enabled, then verify the
+                    # registration resource.  Otherwise, skip the
+                    # remaining stage verification.
                     if opts['registration'] == False:
                         continue
                     # The XNAT registration resource name.
@@ -135,7 +135,7 @@ class TestQIPipeline(object):
                     assert_true(reg_obj.exists(),
                                 "The %s %s registration resource %s was not"
                                 " created in XNAT" % (sbj, sess, rsc))
-                    # Verify the modeling resource.
+                    # If modeling is enabled, then verify the modeling resource.
                     if opts['modeling'] != False:
                         rsc = results['modeling']
                         mdl_obj = xnat.get_resource(PROJECT, sbj, sess, rsc)

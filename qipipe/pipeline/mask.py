@@ -72,13 +72,10 @@ class MaskWorkflow(WorkflowBase):
         :param project: the XNAT project name
         :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
             initializer options, as well as the following options:
-        :keyword base_dir: the workflow execution directory
-            (default is a new temp directory)
         """
         super(MaskWorkflow, self).__init__(project, logger(__name__), **opts)
         
-        base_dir = opts.get('base_dir')
-        self.workflow = self._create_workflow(base_dir)
+        self.workflow = self._create_workflow()
         """The mask creation workflow."""
     
     def run(self, subject, session, scan, time_series):
@@ -112,18 +109,14 @@ class MaskWorkflow(WorkflowBase):
         input_spec.inputs.scan = scan
         input_spec.inputs.time_series = time_series
     
-    def _create_workflow(self, base_dir=None):
+    def _create_workflow(self):
         """
         Creates the mask workflow.
         
-        :param base_dir: the workflow execution directory
         :return: the Workflow object
         """
         self._logger.debug('Creating the mask reusable workflow...')
-        
-        if not base_dir:
-            base_dir = tempfile.mkdtemp(prefix='qipipe_')
-        workflow = pe.Workflow(name='mask', base_dir=base_dir)
+        workflow = pe.Workflow(name='mask', base_dir=self.base_dir)
         
         # The workflow input.
         in_fields = ['subject', 'session', 'scan', 'time_series']

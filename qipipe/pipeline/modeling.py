@@ -16,6 +16,11 @@ PK_PREFIX = 'pk'
 """The XNAT modeling resource object label prefix."""
 
 
+
+class ModelingError(Exception):
+    pass
+
+
 def run(project, subject, session, scan, time_series, **opts):
     """
     Creates a :class:`qipipe.pipeline.modeling.ModelingWorkflow` and
@@ -150,8 +155,8 @@ class ModelingWorkflow(WorkflowBase):
         :param project: the XNAT project name
         :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
             initializer options, as well as the following options:
-        :keyword base_dir: the workflow execution directory
-            (default a new temp directory)
+        :keyword resource: the XNAT resource name
+        :keyword technique: the modeling technique (default ``bolero``)
         :keyword r1_0_val: the optional fixed |R10| value
         :keyword max_r1_0: the maximum computed |R10| value, if the fixed
             |R10| option is not set
@@ -162,10 +167,7 @@ class ModelingWorkflow(WorkflowBase):
         """
         super(ModelingWorkflow, self).__init__(project, logger(__name__), **opts)
 
-        resource = opts.pop('modeling', None)
-        if not resource:
-            resource = self._generate_resource_name()
-        self.resource = resource
+        self.resource = opts.pop('resource', self._generate_resource_name())
         """
         The XNAT resource name for all executions of this
         :class:`qipipe.pipeline.modeling.ModelingWorkflow` instance. The
@@ -241,19 +243,23 @@ class ModelingWorkflow(WorkflowBase):
         """
         Builds the modeling workflow.
 
-        :param base_dir: the execution working directory
-            (default is a new temp directory)
         :param opts: the additional workflow initialization parameters
         :return: the Nipype workflow
         """
         self._logger.debug("Building the modeling workflow...")
 
-        # The base workflow.
-        base_dir = opts.pop('base_dir', tempfile.mkdtemp(prefix='qipipe_'))
-        mdl_wf = pe.Workflow(name='modeling', base_dir=base_dir)
+        # The supervisory workflow.
+        mdl_wf = pe.Workflow(name='modeling', base_dir=self.base_dir)
 
-        # Start with a base workflow.
-        base_wf = self._create_base_workflow(base_dir, **opts)
+        # The base workflow.
+        technique = opts.get('technique', 'bolero')
+        if technique == 'bolero':
+            base_wf = self._create_bolero_workflow(**opts)
+        elif technique == 'mock':
+            base_wf = self._create_mock_workflow(**opts)
+        else:
+            raise ModelingError("The modeling technique is unsupported: %s" %
+                                technique)
 
         # The workflow input fields.
         in_fields = ['subject', 'session', 'scan', 'time_series', 'mask',
@@ -306,7 +312,7 @@ class ModelingWorkflow(WorkflowBase):
 
         return mdl_wf
 
-    def _create_base_workflow(self, base_dir, **opts):
+    def _create_bolero_workflow(self, **opts):
         """
         Creates the modeling base workflow. This workflow performs the steps
         described in :class:`qipipe.pipeline.modeling.ModelingWorkflow` with
@@ -318,11 +324,10 @@ class ModelingWorkflow(WorkflowBase):
         method. Any change to the ``qin_dce`` workflow should be reflected in
         this method.
 
-        :param base_dir: the workflow working directory
         :param opts: the PK modeling parameters
         :return: the pyxnat Workflow
         """
-        base_wf = pe.Workflow(name='modeling_base', base_dir=base_dir)
+        base_wf = pe.Workflow(name='modeling_base', base_dir=self.base_dir)
 
         # The PK modeling parameters.
         opts = self._pk_parameters(**opts)
@@ -452,6 +457,52 @@ class ModelingWorkflow(WorkflowBase):
 
         return base_wf
 
+    def _create_mock_workflow(self, **opts):
+        """
+        Creates a dummy modeling base workflow. This workflow performs the steps
+        described in :class:`qipipe.pipeline.modeling.ModelingWorkflow` with
+        the exception of XNAT upload.
+
+        :param opts: the PK modeling parameters
+        :return: the pyxnat Workflow
+        """
+        base_wf = pe.Workflow(name='modeling_base', base_dir=self.base_dir)
+
+        # The PK modeling parameters.
+        opts = self._pk_parameters(**opts)
+        # Set the use_fixed_r1_0 flag.
+        use_fixed_r1_0 = not not opts.get('r1_0_val')
+
+        # Set up the input node.
+        non_pk_flds = ['time_series', 'mask', 'bolus_arrival_index']
+        in_fields = non_pk_flds + opts.keys()
+        input_xfc = IdentityInterface(fields=in_fields, **opts)
+        input_spec = pe.Node(input_xfc, name='input_spec')
+        # Set the config parameters.
+        for field in in_fields:
+            if field in opts:
+                setattr(input_spec.inputs, field, opts[field])
+
+        # Get the pharmacokinetic mapping parameters.
+        get_params_flds = ['time_series', 'bolus_arrival_index']
+        get_params_func = Function(input_names=get_params_flds,
+                                   output_names=['params_csv'],
+                                   function=get_fit_params)
+        get_params = pe.Node(get_params_func, name='get_params')
+        base_wf.connect(input_spec, 'time_series', get_params, 'time_series')
+        base_wf.connect(input_spec, 'bolus_arrival_index',
+                        get_params, 'bolus_arrival_index')
+
+        # Set up the outputs.
+        outputs = ['pk_params']
+        output_spec = pe.Node(IdentityInterface(fields=outputs),
+                              name='output_spec')
+        base_wf.connect(get_params, 'params_csv', output_spec, 'pk_params')
+
+        self._configure_nodes(base_wf)
+
+        return base_wf
+
     def _pk_parameters(self, **opts):
         """
         Collects the modeling parameters defined in either the options
@@ -468,32 +519,30 @@ class ModelingWorkflow(WorkflowBase):
         # The R1_0 computation fields.
         r1_fields = ['pd_dir', 'max_r1_0']
         # All of the possible fields.
-        fields = set(r1_fields).update(['baseline_end_idx', 'r1_0_val'])
-        # Validate the input options.
-        for field in opts.iterkeys():
-            if field not in fields:
-                raise KeyError("The PK paramter is not recognized: %s" % field)
-
-        if 'baseline_end_idx' not in opts:
+        fields = set(r1_fields)
+        fields.update(['baseline_end_idx', 'r1_0_val'])
+        # The PK options.
+        pk_opts = {k: opts[k] for k in fields if k in opts}
+        if 'baseline_end_idx' not in pk_opts:
             # Look for the the baseline parameter in the configuration.
             if 'baseline_end_idx' in config:
-                opts['baseline_end_idx'] = config['baseline_end_idx']
+                pk_opts['baseline_end_idx'] = config['baseline_end_idx']
             else:
                 # The default baseline image count.
-                opts['baseline_end_idx'] = 1
+                pk_opts['baseline_end_idx'] = 1
 
         # Set the use_fixed_r1_0 variable to None, signifying unknown.
         use_fixed_r1_0 = None
         # Get the R1_0 parameter values.
-        if 'r1_0_val' in opts:
-            r1_0_val = opts.get('r1_0_val')
+        if 'r1_0_val' in pk_opts:
+            r1_0_val = pk_opts.get('r1_0_val')
             if r1_0_val:
                 use_fixed_r1_0 = True
             else:
                 use_fixed_r1_0 = False
         else:
             for field in r1_fields:
-                value = opts.get(field)
+                value = pk_opts.get(field)
                 if value:
                     use_fixed_r1_0 = False
 
@@ -502,29 +551,29 @@ class ModelingWorkflow(WorkflowBase):
         if use_fixed_r1_0 == None:
             r1_0_val = config.get('r1_0_val')
             if r1_0_val:
-                opts['r1_0_val'] = r1_0_val
+                pk_opts['r1_0_val'] = r1_0_val
                 use_fixed_r1_0 = True
 
         # If R1_0 is not fixed, then augment the R1_0 options
         # from the configuration, if necessary.
         if not use_fixed_r1_0:
             for field in r1_fields:
-                if field not in opts and field in config:
+                if field not in pk_opts and field in config:
                     use_fixed_r1_0 = False
-                    opts[field] = config[field]
+                    pk_opts[field] = config[field]
                 # Validate the R1 parameter.
-                if not opts.get(field):
-                    raise PipelineError("Missing both the r1_0_val and the %s"
+                if not pk_opts.get(field):
+                    raise ModelingError("Missing both the r1_0_val and the %s"
                         " parameter." % field)
 
         # If the use_fixed_r1_0 flag is set, then remove the
         # extraneous R1 computation fields.
         if use_fixed_r1_0:
             for field in r1_fields:
-                opts.pop(field, None)
+                pk_opts.pop(field, None)
 
-        self._logger.debug("The PK modeling parameters: %s" % opts)
-        return opts
+        self._logger.debug("The PK modeling parameters: %s" % pk_opts)
+        return pk_opts
 
 
 ### Utility functions called by workflow nodes. ###
@@ -537,13 +586,13 @@ def make_baseline(time_series, baseline_end_idx):
     :param baseline_end_idx: the exclusive limit of the baseline
         computation input series
     :return: the baseline NiFTI file name
-    :raise PipelineError: if the end index is a negative number
+    :raise ModelingError: if the end index is a negative number
     """
     from dcmstack.dcmmeta import NiftiWrapper
 
     if baseline_end_idx <= 0:
-        raise PipelineError("The R1_0 computation baseline end index input value"
-                         " is not a positive number: %s" % baseline_end_idx)
+        raise ModelingError("The R1_0 computation baseline end index input value"
+                            " is not a positive number: %s" % baseline_end_idx)
     nii = nb.load(time_series)
     nw = NiftiWrapper(nii)
 

@@ -354,8 +354,6 @@ class RegistrationWorkflow(WorkflowBase):
         - Upload the realign outputs to XNAT
         
         :param opts: the following workflow options:
-        :keyword base_dir: the workflow execution directory
-            (default is a new temp directory)
         :keyword technique: the registration technique
             (``ants``, `fnirt`` or ``mock``, default ``ants``)
         :return: the Workflow object
@@ -364,7 +362,7 @@ class RegistrationWorkflow(WorkflowBase):
 
         # The workflow.
         base_dir = opts.get('base_dir', tempfile.mkdtemp(prefix='qipipe_'))
-        realign_wf = pe.Workflow(name='registration', base_dir=base_dir)
+        realign_wf = pe.Workflow(name='registration', base_dir=self.base_dir)
 
         # The workflow input.
         in_fields = ['subject', 'session', 'scan', 'moving_image', 'reference',

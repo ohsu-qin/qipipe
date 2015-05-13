@@ -3,16 +3,16 @@ import re
 import tempfile
 import logging
 from nipype.pipeline import engine as pe
-from nipype.interfaces.utility import (IdentityInterface)
+from nipype.interfaces.utility import (IdentityInterface, Function)
 import qiutil
 from qiutil.logging import logger
 from ..interfaces import (ConvertBoleroMask, XNATUpload)
 from .workflow_base import WorkflowBase
 from .pipeline_error import PipelineError
 
-
 ROI_RESOURCE = 'roi'
 """The XNAT ROI resource name."""
+
 
 def run(project, subject, session, scan, time_series, *inputs, **opts):
     """
@@ -75,9 +75,7 @@ class ROIWorkflow(WorkflowBase):
 
         :param project: the XNAT project name
         :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
-            initializer options, as well as the following options:
-        :keyword base_dir: the workflow execution directory
-            (default a new temp directory)
+            initializer options
         """
         super(ROIWorkflow, self).__init__(project, logger(__name__), **opts)
         self.workflow = self._create_workflow(**opts)
@@ -160,17 +158,13 @@ class ROIWorkflow(WorkflowBase):
         ``iter_roi`` synchronized (lesion, slice_index, in_file)
         iterables.
 
-        :param opts: the following workflow creation options:
-        :keyword base_dir: the workflow execution directory
-            (default a new temp directory)
+        :param opts: the workflow creation options:
         :return: the execution workflow
         """
-        if not dest:
-            raise PipelineError('The ROI workflow is missing the destination directory')
         self._logger.debug("Creating the ROI execution workflow...")
 
         # The execution workflow.
-        exec_wf = pe.Workflow(name='roi_exec', **opts)
+        exec_wf = pe.Workflow(name='roi_exec', base_dir=self.base_dir)
 
         # The ROI workflow input.
         input_fields = ['subject', 'session', 'scan', 'time_series', 'resource']
@@ -181,23 +175,22 @@ class ROIWorkflow(WorkflowBase):
         # The input ROI tuples are iterable.
         iter_roi_fields = ['lesion', 'slice_index', 'in_file']
         iter_roi = pe.Node(IdentityInterface(fields=iter_roi_fields),
-                                 name='iter_roi')
+                           name='iter_roi')
 
         # The output file base name.
         basename_xfc = Function(input_names=['lesion', 'slice_index'],
                                 output_names=['basename'],
                                 function=base_name)
-        basename = pe.Node(basename_xfc, run_without_submitting=True)
+        basename = pe.Node(basename_xfc, run_without_submitting=True,
+                           name='basename')
         exec_wf.connect(iter_roi, 'lesion', basename, 'lesion')
         exec_wf.connect(iter_roi, 'slice_index', basename, 'slice_index')
         
         # Convert the input file.
         convert = pe.Node(ConvertBoleroMask(), name='convert')
-        exec_wf.connect(iter_roi, 'lesion',
-                        self.workflow, 'input_spec.lesion')
-        exec_wf.connect(iter_roi, 'slice_index',
-                        self.workflow, 'input_spec.slice_index')
         exec_wf.connect(iter_roi, 'in_file', convert, 'in_file')
+        exec_wf.connect(iter_roi, 'slice_index', convert, 'slice_index')
+        exec_wf.connect(input_spec, 'time_series', convert, 'time_series')
         exec_wf.connect(basename, 'basename', convert, 'out_base')
 
         # Upload the ROI results into the XNAT ROI resource.

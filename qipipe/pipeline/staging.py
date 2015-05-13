@@ -176,6 +176,41 @@ class StagingWorkflow(WorkflowBase):
 
     - *image*: the 3D volume stack NiFTI image file
 
+    Note: Concurrent XNAT upload fails unpredictably, possibly
+        arising from one of the following causes:
+        * the pyxnat config in $HOME/.xnat/xnat.cfg specifies a temp
+          directory that *is not* shared by all concurrent jobs,
+          resulting in inconsistent cache content
+        * the pyxnat config in $HOME/.xnat/xnat.cfg specifies a temp
+          directory that *is* shared by some concurrent jobs,
+          resulting in unsynchronized pyxnat write conflicts across
+          jobs
+        * the non-reentrant pyxnat's custom non-http2lib cache is
+          corrupted
+        * an XNAT archive directory access race condition
+    
+        The cause cannot be isolated for the following reasons:
+        * there is no useful Nipype error or log message
+        * the error is sporadic and unreproducible
+        * Nipype swallows non-nipype Python log messages, causing the
+          upload and pyxnat log messages to disappear
+    
+        Update 05/12/2015 - there are three potential failure points:
+        * Concurrent pyxnat cache access corrupts the cache resulting in
+          unpredictable errors, e.g. attempt to create an existing XNAT
+          object
+        * Concurrent XNAT resource file upload corrupts the archive such
+          that the files are stored in the archive but are not recognized
+          by XNAT
+        * XNAT upload SGE cluster tasks exceed time or memory limits
+    
+        These errors are addressed by the following measures:
+        * setting an isolated pyxnat cache_dir for each execution node
+        * serializing the XNAT access points with JoinNodes
+        * increasing the SGE submission resource parameters. The following
+          setting is adequate:
+             h_rt=02:00:00,mf=32M
+
     .. _CTP: https://wiki.cancerimagingarchive.net/display/Public/Image+Submitter+Site+User%27s+Guide
     .. _DcmStack: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.dcmstack.html
     """
@@ -188,14 +223,11 @@ class StagingWorkflow(WorkflowBase):
         :param project: the XNAT project name
         :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
             initializer options, as well as the following options:
-        :keyword base_dir: the workflow execution directory
-            (default a new temp directory)
         """
         super(StagingWorkflow, self).__init__(project, logger(__name__), **opts)
 
         # Make the workflow.
-        base_dir = opts.get('base_dir')
-        self.workflow = self._create_workflow(base_dir=base_dir)
+        self.workflow = self._create_workflow()
         """
         The staging workflow sequence described in
         :class:`qipipe.pipeline.staging.StagingWorkflow`.
@@ -216,19 +248,16 @@ class StagingWorkflow(WorkflowBase):
         """Executes the staging workflow."""
         self._run_workflow(self.workflow)
 
-    def _create_workflow(self, base_dir=None):
+    def _create_workflow(self):
         """
         Makes the staging workflow described in
         :class:`qipipe.pipeline.staging.StagingWorkflow`.
-
-        :param base_dir: the workflow execution directory
-            (default is a new temp directory)
         :return: the new workflow
         """
         self._logger.debug('Creating the DICOM processing workflow...')
 
         # The Nipype workflow object.
-        workflow = pe.Workflow(name='staging', base_dir=base_dir)
+        workflow = pe.Workflow(name='staging')
 
         # The workflow input.
         in_fields = ['collection', 'subject', 'session', 'scan']
@@ -283,7 +312,7 @@ class StagingWorkflow(WorkflowBase):
         workflow.connect(fix_dicom, 'out_file', compress_dicom, 'in_file')
         workflow.connect(iter_volume, 'dest', compress_dicom, 'dest')
 
-        # Collect the compressed DICOM files, as follows:
+        # Collect the compressed session DICOM files as follows:
         # * The volume DICOM files are collected into a list.
         # * The volume DICOM file lists are merged into a scan
         #   DICOM file list.
@@ -292,15 +321,16 @@ class StagingWorkflow(WorkflowBase):
         # The collection involves a two-step JoinNode, first on
         # the volume, then on the scan. The second scan JoinNode
         # calls a merge function to merge the lists from all of
-        # the first JoinNodes. All of this is necessary for the
-        # following reasons:
-        # * XNAT concurrent file upload tasks to the same resource
-        #   results in a pyxnat.core.errors.DatabaseError with the
-        #   useless message:
-        #   'The server encountered an unexpected condition'
-        # * Nipype Merge is inflexible (see the merge function
-        #   comment below)
-        # Since concurrent upload is not supported, all of the
+        # the first JoinNodes.
+        #
+        # The session files must be uploaded in a single task to
+        # work around the following XNAT error: 
+        #
+        # * Concurrent upload to a given XNAT resource corrupts the
+        #   XNAT file object. The files are copied in the archive
+        #   location, but the file objects are not created.
+        #
+        # Since concurrent XNAT upload is not supported, all of the
         # compressed DICOM files must be collected into a single
         # list which is uploaded in a single upload task when
         # deployed in a clustered environment such as SGE.
@@ -322,7 +352,7 @@ class StagingWorkflow(WorkflowBase):
         workflow.connect(collect_vol_dicom, 'dicom_files',
                          collect_scan_dicom, 'lists')
 
-        # Upload the compressed DICOM files.
+        # Upload all of the compressed scan DICOM files.
         upload_dicom_xfc = XNATUpload(project=self.project, resource='DICOM',
                                       skip_existing=True)
         upload_dicom = pe.Node(upload_dicom_xfc, name='upload_dicom')
@@ -347,27 +377,8 @@ class StagingWorkflow(WorkflowBase):
         workflow.connect(fix_dicom, 'out_file', stack, 'dicom_files')
         workflow.connect(vol_fmt, 'format', stack, 'out_format')
 
-        # Force the T1 3D upload to follow DICOM upload.
-        # Note: XNAT fails app. 80% into the scan upload. It appears to be
-        # a concurrency conflict, possibly arising from one of the following
-        # causes:
-        # * the pyxnat config in $HOME/.xnat/xnat.cfg specifies a temp
-        #   directory that *is not* shared by all concurrent jobs,
-        #   resulting in inconsistent cache content
-        # * the pyxnat config in $HOME/.xnat/xnat.cfg specifies a temp
-        #   directory that *is* shared by some concurrent jobs,
-        #   resulting in unsynchronized pyxnat write conflicts across
-        #   jobs
-        # * the non-reentrant pyxnat's custom non-http2lib cache is
-        #   corrupted
-        # * an XNAT archive directory access race condition
-        #
-        # The cause cannot be isolated for the following reasons:
-        # * there is no useful Nipype error or log message
-        # * the error is sporadic and unreproducible
-        # * Nipype swallows non-nipype Python log messages, causing the
-        #   upload and pyxnat log messages to disappear
-        #
+        # Force the T1 3D upload to follow DICOM upload to avoid the
+        # concurrency conflict described in :class:`StagingWorkflow`.
         # This gate task serializes upload to prevent potential XNAT access
         # conflicts.
         upload_3d_gate_xfc = Gate(fields=['out_file', 'xnat_files'])
@@ -378,21 +389,30 @@ class StagingWorkflow(WorkflowBase):
         # Upload the 3D NiFTI stack files to XNAT.
         upload_3d_xfc = XNATUpload(project=self.project, resource='NIFTI',
                                    skip_existing=True)
-        upload_3d = pe.Node(upload_3d_xfc, name='upload_3d')
+        upload_3d = pe.JoinNode(upload_3d_xfc, joinsource='iter_volume',
+                                joinfield='in_files', name='upload_3d')
         workflow.connect(input_spec, 'subject', upload_3d, 'subject')
         workflow.connect(input_spec, 'session', upload_3d, 'session')
         workflow.connect(scan_gate, 'scan', upload_3d, 'scan')
         # 3D upload is gated by DICOM upload.
         workflow.connect(upload_3d_gate, 'out_file', upload_3d, 'in_files')
 
-        # The output is the 3D NiFTI stack file. Make the output a Gate node
-        # rather than an IdentityInterface in order to prevent nipype from
-        # overzealously pruning it as extraneous.
-        output_spec_xfc = Gate(fields=['image', 'xnat_files'])
+        # The output is the 3D NiFTI stack file. Make an intermediate Gate
+        # node to ensure that upload is completed before setting the output
+        # field.
+        output_gate_xfc = Gate(fields=['image', 'xnat_files'])
+        output_gate = pe.Node(output_gate_xfc, run_without_submitting=True,
+                              name='output_gate')
+        workflow.connect(stack, 'out_file', output_gate, 'image')
+        workflow.connect(upload_3d, 'xnat_files', output_gate, 'xnat_files')
+
+        # The output is the 3D NiFTI stack file. Make an intermediate
+        # Gate node to prevent Nipype from overzealously pruning it as
+        # extraneous.
+        output_spec_xfc = Gate(fields=['image'])
         output_spec = pe.Node(output_spec_xfc, run_without_submitting=True,
                               name='output_spec')
-        workflow.connect(stack, 'out_file', output_spec, 'image')
-        workflow.connect(upload_3d, 'xnat_files', output_spec, 'xnat_files')
+        workflow.connect(output_gate, 'image', output_spec, 'image')
 
         # Instrument the nodes for cluster submission, if necessary.
         self._configure_nodes(workflow)
