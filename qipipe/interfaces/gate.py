@@ -24,6 +24,10 @@ class Gate(IOBase):
     ``upstream2`` finish. Consequently, the ``downstream`` node starts only
     after ``upstream2`` finishes. This execution precedence constraint does
     not hold if gate were an IdentityInterface.
+    
+    :Note: a better solution is to set a *preserve* flag on
+        IdentityInterface. If this solution is implemented by Nipype,
+        then this :class:`Gate` class will be deprecated.
     """
     input_spec = IdentityInterface.input_spec
     output_spec = IdentityInterface.output_spec
