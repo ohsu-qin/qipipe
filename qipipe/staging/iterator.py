@@ -284,9 +284,9 @@ class VisitIterator(object):
                             self.logger.debug("No %s %s scans were discovered"
                                               " in %s" %  (sbj, sess, sess_dir))
 
-    def _scan_iterators(self, patterns, base_dir):
+    def _scan_iterators(self, patterns, input_dir):
         # The DICOM glob pattern.
-        dcm_pat = os.path.join(base_dir, patterns.dicom)
+        dcm_pat = os.path.join(input_dir, patterns.dicom)
         # The DICOM file generator.
         dcm_gen = _scan_dicom_generator(dcm_pat,
                                         self.collection.patterns.volume)
@@ -294,7 +294,7 @@ class VisitIterator(object):
         roi_pats = patterns.roi
         # Make the ROI generator, if necessary.
         if roi_pats:
-            roi_gen = iter_roi(roi_pats.glob, roi_pats.regex, base_dir)
+            roi_gen = iter_roi(roi_pats.glob, roi_pats.regex, input_dir)
         else:
             roi_gen = None 
         
