@@ -10,30 +10,6 @@ from .workflow_base import WorkflowBase
 from qiutil.logging import logger
 from ..staging import iterator
 
-
-def set_workflow_inputs(exec_wf, scan_input, dest=None):
-    """
-    Sets the given execution workflow inputs.
-    The execution workflow must have the same input and iterable
-    node names and fields as the :class:`StagingWorkflow` workflow.
-
-    :param exec_wf: the workflow to execute
-    :param scan_input: the :class:`qipipe.staging.iterator.ScanInput`
-        object
-    :param dest: the TCIA staging destination directory (default is
-        the current working directory)
-    """
-    # Set the top-level inputs.
-    input_spec = exec_wf.get_node('input_spec')
-    input_spec.inputs.collection = scan_input.collection
-    input_spec.inputs.subject = scan_input.subject
-    input_spec.inputs.session = scan_input.session
-    input_spec.inputs.scan = scan_input.scan
-
-    # Set the iterables.
-    set_workflow_iterables(exec_wf, scan_input, dest)
-
-
 def set_workflow_iterables(exec_wf, scan_input, dest=None):
     """
     Sets the given execution workflow iterables.
@@ -50,7 +26,7 @@ def set_workflow_iterables(exec_wf, scan_input, dest=None):
     volumes = scan_input.iterators.dicom.keys()
     # Make a staging area subdirectory for each volumes.
     stg_dict = _create_staging_area(scan_input.subject, scan_input.session,
-                                    volumes, dest)
+                                    scan_input.scan, volumes, dest)
     # The staging destination directories are pair-wise synchronized
     # with the input volumes.
     dests = [stg_dict[volume] for volume in volumes]
@@ -68,10 +44,11 @@ def set_workflow_iterables(exec_wf, scan_input, dest=None):
     iter_dicom.iterables = ('dicom_file', scan_input.iterators.dicom)
 
 
-def _create_staging_area(subject, session, volumes, dest=None):
+def _create_staging_area(subject, session, scan, volumes, dest=None):
     """
     :param subject: the subject name
     :param session: the session name
+    :param scan: the scan number
     :param volumes: the input volumes
     :param dest: the TCIA staging destination directory (default is
         the current working directory)
@@ -80,11 +57,12 @@ def _create_staging_area(subject, session, volumes, dest=None):
     # The staging location.
     dest = os.path.abspath(dest) if dest else os.getcwd()
     # Collect the {volume: destination} dictionary.
-    return {volume: _make_volume_staging_directory(dest, subject, session, volume)
+    return {volume: _make_volume_staging_directory(dest, subject, session,
+                                                   scan, volume)
             for volume in volumes}
 
 
-def _make_volume_staging_directory(dest, subject, session, volume):
+def _make_volume_staging_directory(dest, subject, session, scan, volume):
     """
     Returns the dest/subject/session/volume directory path in which to
     place DICOM files for TCIA upload. Creates the directory, if
@@ -92,7 +70,8 @@ def _make_volume_staging_directory(dest, subject, session, volume):
 
     :return: the target volume directory path
     """
-    path = os.path.join(dest, subject, session, str(volume))
+    path = os.path.join(dest, subject, session, 'scan', str(scan), 'volume',
+                        str(volume))
     if not os.path.exists(path):
         os.makedirs(path)
 
@@ -235,14 +214,23 @@ class StagingWorkflow(WorkflowBase):
 
     def set_inputs(self, scan_input, dest=None):
         """
-        Sets the staging workflow inputs.
+        Sets the staging workflow inputs for the *input_spec* node
+        and the iterables.
 
         :param scan_input: the :class:`qipipe.staging.iterator.ScanInput`
             object
         :param dest: the TCIA staging destination directory (default is
             the current working directory)
         """
-        set_workflow_inputs(self.workflow, scan_input, dest)
+        # Set the top-level inputs.
+        input_spec = self.workflow.get_node('input_spec')
+        input_spec.inputs.collection = scan_input.collection
+        input_spec.inputs.subject = scan_input.subject
+        input_spec.inputs.session = scan_input.session
+        input_spec.inputs.scan = scan_input.scan
+
+        # Set the iterables.
+        set_workflow_iterables(self.workflow, scan_input, dest)
 
     def run(self):
         """Executes the staging workflow."""
