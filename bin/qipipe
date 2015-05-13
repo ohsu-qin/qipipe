@@ -82,18 +82,21 @@ def _parse_arguments():
                         const='register', help='register the scans')
     parser.add_argument('--model', dest='actions', action='append_const',
                         const='model', help='model the realigned images')
+
+    # Prepare but don't run the pipeline.
     parser.add_argument('--dry-run', action='store_true',
                         help='prepare but do not run the pipeline')
     
     # The staging options.
     parser.add_argument('-p', '--project',
-                        help='the QIN project name (required for staging only)')
+                        help='the QIN project name, required for staging')
     parser.add_argument('-c', '--collection',
-                        help='the collection to stage (required for staging only)')
-    parser.add_argument('--scan', help='the staging scan number', type=int,
-                        metavar='SCAN')
+                        help='the collection to stage, required for staging')
+    parser.add_argument('--scan', help='the optional staging scan number',
+                        type=int, metavar='SCAN')
     parser.add_argument('--resume', action='store_true',
-                        help='resume staging on existing sessions (default false)')
+                        help='resume staging on existing sessions'
+                             ' (default False)')
 
     # The output and work options.
     parser.add_argument('-o', '--output',
@@ -106,25 +109,22 @@ def _parse_arguments():
                         metavar='DIR', dest='base_dir')
     
     # The registration options.
-    parser.add_argument('--registration',
-                        help='the XNAT registration resource label',
-                        metavar='RESOURCE')
-    technique_grp = parser.add_mutually_exclusive_group()
-    technique_grp.add_argument('--ants',
-                               help="ANTS registration (the default)",
-                               dest='technique', action='store_const',
-                               const='ants')
-    technique_grp.add_argument('--fnirt', help="FNIRT registration",
-                               dest='technique', action='store_const',
-                               const='fnirt')
-    technique_grp.add_argument('--mock', help="Mock registration",
-                               dest='technique', action='store_const',
-                               const='mock')
+    reg_grp = parser.add_mutually_exclusive_group()
+    reg_grp.add_argument('--registration-resource',
+                         help='the XNAT registration resource label',
+                         metavar='RESOURCE')
+    reg_grp.add_argument('--registration-technique',
+                         help="the XNAT registration technique, e.g. 'ants'",
+                         metavar='TECHNIQUE')
 
     # The modeling options.
-    parser.add_argument('--modeling',
-                        help='the XNAT modeling resource name',
-                        metavar='RESOURCE')
+    mdl_grp = parser.add_mutually_exclusive_group()
+    mdl_grp.add_argument('--modeling-resource',
+                         help='the XNAT modeling resource name',
+                         metavar='RESOURCE')
+    mdl_grp.add_argument('--modeling-technique',
+                         help='the XNAT modeling technique',
+                         metavar='TECHNIQUE')
 
     # The input directories or XNAT labels to process.
     parser.add_argument('input', nargs='+',
