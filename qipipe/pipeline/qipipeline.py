@@ -337,7 +337,13 @@ class QIPipelineWorkflow(WorkflowBase):
         if 'roi' in actions and scan_input.iterators.roi:
             self._set_roi_inputs(*scan_input.iterators.roi)
         # Execute the workflow.
+        self._logger.debug("Running the pipeline on %s %s scan %d." %
+                           (scan_input.subject, scan_input.session,
+                            scan_input.scan))
         self._run_workflow(self.workflow)
+        self._logger.debug("Completed pipeline execution on %s %s scan %d." %
+                           (scan_input.subject, scan_input.session,
+                            scan_input.scan))
 
 
     def run_with_scan_download(self, xnat, project, subject, session, scan):
