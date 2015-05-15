@@ -117,7 +117,7 @@ def _run_with_dicom_input(actions, *inputs, **opts):
     # The set of input subjects is used to build the CTP mapping file
     # after the workflow is completed, if staging is enabled.
     subjects = set()
-    # Run the workflow on each session and scan type.
+    # Run the workflow on each session and scan.
     for scan_input in iter_stage(project, collection, *inputs, **opts):
         # Only multi-volume scans can have post-staging downstream actions.
         if 'stage' in actions and len(scan_input.iterators.dicom) == 1:
@@ -128,7 +128,7 @@ def _run_with_dicom_input(actions, *inputs, **opts):
         subjects.add(scan_input.subject)
         # Create a new workflow.
         wf_gen = QIPipelineWorkflow(project, wf_actions, **opts)
-        # Run the workflow on each {volume: [DICOM files]} item.
+        # Run the workflow on the scan.
         wf_gen.run_with_dicom_input(wf_actions, scan_input, dest)
 
     # If staging is enabled, then make the TCIA subject map.
@@ -345,7 +345,6 @@ class QIPipelineWorkflow(WorkflowBase):
                            (scan_input.subject, scan_input.session,
                             scan_input.scan))
 
-
     def run_with_scan_download(self, xnat, project, subject, session, scan):
         """
         Runs the execution workflow on downloaded scan image files.
@@ -491,8 +490,9 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # The registration workflow node.
         if 'register' in actions:
-            reg_inputs = ['subject', 'session', 'scan', 'bolus_arrival_index',
-                          'in_files', 'mask', 'opts']
+            reg_inputs = ['project', 'subject', 'session', 'scan',
+                          'bolus_arrival_index', 'in_files', 'mask',
+                          'opts']
 
             # The registration function keyword options.
             reg_opts = dict(base_dir=self.base_dir)
@@ -511,6 +511,7 @@ class QIPipelineWorkflow(WorkflowBase):
                                output_names=['out_files'],
                                function=register)
             reg_node = pe.Node(reg_xfc, name='register')
+            reg_node.inputs.project = self.project
             reg_node.inputs.opts = reg_opts
             self._logger.info("Enabled registration.")
         else:
