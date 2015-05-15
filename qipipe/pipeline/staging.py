@@ -340,7 +340,7 @@ class StagingWorkflow(WorkflowBase):
         workflow.connect(collect_vol_dicom, 'dicom_files',
                          collect_scan_dicom, 'lists')
 
-        # Upload all of the compressed scan DICOM files.
+        # Upload the compressed scan DICOM files.
         upload_dicom_xfc = XNATUpload(project=self.project, resource='DICOM',
                                       skip_existing=True)
         upload_dicom = pe.Node(upload_dicom_xfc, name='upload_dicom')
