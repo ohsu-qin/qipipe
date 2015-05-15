@@ -253,12 +253,10 @@ class WorkflowBase(object):
         :param workflow: the workflow to run
         :return: the workflow execution arguments
         """
-        # The workflow submission arguments:
-
         # The execution setting.
         if 'Execution' in self.configuration:
             workflow.config['execution'] = self.configuration['Execution']
-            self._logger.debug("Workflow %s execution parameter: %s." %
+            self._logger.debug("Workflow %s execution parameters: %s." %
                              (workflow.name, workflow.config['execution']))
 
         # The Grid Engine setting.
