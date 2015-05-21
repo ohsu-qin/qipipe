@@ -109,6 +109,7 @@ def _infer_range_parameters(lut_file):
 
 LABEL_REGEX = re.compile('\d+')
 
+
 def _labels(content):
     """Label generator for the given colormap LUT content."""
     for line in content:
