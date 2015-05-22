@@ -22,7 +22,7 @@ def with_name(name):
     """
     coll = extent.get(name, None)
     if not coll:
-        raise StagingError("The AIRC collection name is not recognized: %s" %
+        raise StagingError("The collection name is not recognized: %s" %
                            name)
 
     return coll
