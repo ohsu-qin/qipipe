@@ -14,8 +14,8 @@ class WorkflowBase(object):
     wrapper classes.
 
     If the :mod:`qipipe.pipeline.distributable' ``DISTRIBUTABLE`` flag
-    is set, then the execution is distributed using the
-    `AIRC Grid Engine`_.
+    is set, then the execution is distributed using the Nipype plug-in
+    specified in the configuration *plug_in* parameter.
 
     The workflow plug-in arguments and node inputs can be specified in a
     :class:`qiutil.ast_config.ASTConfig` file. The standard
@@ -36,8 +36,6 @@ class WorkflowBase(object):
        variable directory
 
     5. the *config* initialization parameter
-
-    .. _AIRC Grid Engine: https://everett.ohsu.edu/wiki/GridEngine
     """
 
     CLASS_NAME_PAT = re.compile("^(\w+)Workflow$")
@@ -247,7 +245,7 @@ class WorkflowBase(object):
 
     def _configure_plugin(self, workflow):
         """
-        Sets the *execution* and *SGE* parameters for the given workflow.
+        Sets the *execution* and plug-in parameters for the given workflow.
         See the ``conf`` directory files for examples.
 
         :param workflow: the workflow to run
@@ -255,15 +253,20 @@ class WorkflowBase(object):
         """
         # The execution setting.
         if 'Execution' in self.configuration:
+            exec_opts = self.configuration['Execution']
+            self.plug_in = exec_opts.pop('plug-in', None)
             workflow.config['execution'] = self.configuration['Execution']
             self._logger.debug("Workflow %s execution parameters: %s." %
                              (workflow.name, workflow.config['execution']))
+        else:
+            self.plug_in = None
 
-        # The Grid Engine setting.
-        if 'SGE' in self.configuration:
-            opts = dict(plugin='SGE', **self.configuration['SGE'])
-            self._logger.debug("Workflow %s plug-in parameters: %s." %
-                             (workflow.name, opts))
+        # The Nipype plug-in parameters.
+        if self.plug_in and self.plug_in in self.configuration:
+            plug_in_opts = self.configuration[self.plug_in]
+            opts = dict(plugin=self.plug_in, plug_in_opts**)
+            self._logger.debug("Workflow %s  %s plug-in parameters: %s." %
+                             (workflow.name, self.plug_in, opts))
         else:
             opts = {}
 
@@ -283,9 +286,9 @@ class WorkflowBase(object):
 
         :param workflow: the workflow containing the nodes
         """
-        # The default Grid Engine setting.
-        if DISTRIBUTABLE and 'SGE' in self.configuration:
-            def_plugin_args = self.configuration['SGE'].get('plugin_args')
+        # The default plug-in setting.
+        if DISTRIBUTABLE and self.plug_in and self.plug_in in self.configuration:
+            def_plugin_args = self.configuration[self.plug_in].get('plugin_args')
             if def_plugin_args and 'qsub_args' in def_plugin_args:
                 # Retain this workflow's default even if a node defined
                 # in this workflow is included in a parent workflow.
