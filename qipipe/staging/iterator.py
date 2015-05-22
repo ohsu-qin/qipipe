@@ -88,7 +88,7 @@ class ScanIterators(object):
 
 def iter_stage(project, collection, *inputs, **opts):
     """
-    Iterates over the the new AIRC visits in the given input directories.
+    Iterates over the the new sessions in the given input directories.
     This method is a staging generator which yields a tuple consisting
     of the subject, session, scan number and :class:`ScanIterators`
     object, e.g.::
@@ -137,7 +137,7 @@ def iter_stage(project, collection, *inputs, **opts):
     """
     # Validate that there is a collection
     if not collection:
-        raise StagingError('Staging is missing the AIRC collection name')
+        raise StagingError('Staging is missing the image collection name')
     
     # Group the new DICOM files into a
     # {subject: {session: {scan: scan iterators}} dictionary.
@@ -161,12 +161,12 @@ def iter_stage(project, collection, *inputs, **opts):
 
 def _collect_visits(project, collection, *inputs, **opts):
     """
-    Collects the AIRC visits in the given input directories.
-    The visit DICOM files are grouped by volume.
+    Collects the sessions in the given input directories. The session
+    DICOM files are grouped by volume.
 
     :param project: the XNAT project name
-    :param collection: the AIRC image collection name
-    :param inputs: the AIRC source subject directories
+    :param collection: the TCIA image collection name
+    :param inputs: the source DICOM subject directories
     :param opts: the :meth:`iter_stage` options
     :return: the {subject: {session: {scan: :class:`ScanIterators`}}}
         dictionary
@@ -184,12 +184,12 @@ def _collect_visits(project, collection, *inputs, **opts):
 
 
 class VisitIterator(object):
-    """Generator class for AIRC visits."""
+    """Scan DICOM generator class ."""
 
     def __init__(self, project, collection, *subject_dirs, **opts):
         """
         :param project: the XNAT project name
-        :param collection: the AIRC image collection name
+        :param collection: the TCIA image collection name
         :param subject_dirs: the subject directories over which
             to iterate
         :param opts: the :meth:`iter_stage` options
@@ -216,7 +216,7 @@ class VisitIterator(object):
 
     def next(self):
         """
-        Iterates over the visits in the subject directories.
+        Iterates over the scans in the subject directories.
         
         :yield: the next (subject, session, scan_dict) tuple
         :yieldparam subject: the subject name
