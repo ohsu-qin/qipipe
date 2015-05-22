@@ -14,7 +14,7 @@ from qiutil.logging import logger
 from .helpers import trailing_number
 
 IDENTITY = lambda v: v
-"""A lambda returning the parameter."""
+"""A function returning the parameter."""
 
 
 class CSVError(Exception):
@@ -80,6 +80,7 @@ class Reader(object):
         :param subject: the XNAT subject name
         :param session: the XNAT session name (required only if the
             session field is in the file)
+        :yield: the :meth:`next` row
         """
         if not subject:
             raise CSVError("The CSV reader subject is missing")
