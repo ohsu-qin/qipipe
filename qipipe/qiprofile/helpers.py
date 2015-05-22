@@ -28,7 +28,7 @@ def default_parser(attribute):
     * If the attribute ends in ``date``, then a MM/DD/YYYY datetime parser
     
     :param attribute: the row attribute
-    :return: the function or lambda value parser, or None if none
+    :return: the value parser function, or None if none
     """
     if attribute.endswith('date'):
         return _parse_date
