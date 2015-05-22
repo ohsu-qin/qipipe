@@ -8,7 +8,7 @@ from qiutil.logging import logger
 
 def fix_dicom_headers(collection, subject, *dicom_files, **opts):
     """
-    Fix the given input OHSU QIN AIRC DICOM files as follows:
+    Fix the given input DICOM files as follows:
 
     - Replace the ``Patient ID`` value with the subject number, e.g.
         ``Sarcoma001``
@@ -17,7 +17,7 @@ def fix_dicom_headers(collection, subject, *dicom_files, **opts):
 
     - Standardize the file name
 
-    The ``Body Part Examined`` tag is set as follows:
+    OHSU - The ``Body Part Examined`` tag is set as follows:
 
     - If the collection is ``Sarcoma``, then the body part is the
         :meth:`qipipe.staging.sarcoma_config.sarcoma_location`.
