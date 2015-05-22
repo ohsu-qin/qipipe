@@ -1,6 +1,6 @@
-qipipe - OHSU QIN pipeline
-==========================
+qipipe - Quantitative Imaging pipeline
+======================================
 
-OHSU QIN Quantitative Imaging pipeline. See the
+Quantitative Imaging pipeline. See the
 `documentation <http://qipipe.readthedocs.org/en/latest/>`_
 for more information.

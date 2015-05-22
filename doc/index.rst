@@ -1,13 +1,13 @@
 .. _index:
 
-==========================
-qipipe - OHSU QIN pipeline
-==========================
+======================================
+qipipe - Quantitative Imaging pipeline
+======================================
 
 ********
 Synopsis
 ********
-qipipe processes the OHSU QIN study images.
+qipipe processes DICOM study images.
 
 :API: http://qipipe.readthedocs.org/en/latest/api/index.html
 
@@ -17,7 +17,7 @@ qipipe processes the OHSU QIN study images.
 ************
 Feature List
 ************
-1. Recognizes new AIRC QIN study images.
+1. Recognizes new study images.
 
 2. Stages images for submission to 
    `The Cancer Imaging Archive`_ (TCIA) `QIN collection`_.
