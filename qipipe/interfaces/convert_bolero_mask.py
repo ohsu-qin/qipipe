@@ -1,5 +1,5 @@
 """
-This module wraps the proprietary OHSU AIRC ``bolero_mask_conv``
+OHSU - This module wraps the proprietary OHSU AIRC ``bolero_mask_conv``
 utility. ``bolero_mask_conv`` converts a proprietary OHSU format
 mask file into a NiFTI mask file.
 """
