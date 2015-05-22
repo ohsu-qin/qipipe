@@ -39,7 +39,7 @@ class TestStagingWorkflow(object):
         uploaded image file content. These features should be verified
         manually.
         
-        :param collection: the AIRC collection name
+        :param collection: the image collection name
         """
         fixture = os.path.join(FIXTURES, collection.lower())
         logger(__name__).debug("Testing the staging workflow on %s..." %

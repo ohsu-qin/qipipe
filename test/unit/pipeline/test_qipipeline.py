@@ -24,10 +24,10 @@ FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
 
 class TestQIPipeline(object):
     """
-    QIN Pipeline unit tests.
+    OHSU - QIN Pipeline unit tests.
     
     Note:: a precondition for running this test is that the environment
-        variable ``QIN_DATA`` is set to the AIRC ``HUANG_LAB`` mount point.
+        variable ``QIN_DATA`` is set to the DICOM source directory.
         If ``QIN_DATA`` is not set, then no test cases are run and a
         log message is issued.
     
@@ -83,7 +83,7 @@ class TestQIPipeline(object):
         Run the pipeline on the given collection and verify that scans are
         created in XNAT.
         
-        :param collection: the AIRC collection name
+        :param collection: the image collection name
         :param fixture: the test input
         """
         logger(__name__).debug("Testing the QIN pipeline on %s..." % fixture)

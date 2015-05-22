@@ -13,7 +13,7 @@ def subject_sources(collection, source):
     :attr:`qipipe.staging.collection.Patterns.subject`
     regular expression for the given collection.
 
-    :param collection: the AIRC collection name
+    :param collection: the image collection name
     :param source: the input parent directory
     :return: the subject {*name*: *directory*} dictionary
     """

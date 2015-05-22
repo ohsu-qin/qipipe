@@ -92,7 +92,7 @@ class TestStagingIterator(object):
         """
         Iterate on the given collection fixture subdirectory.
         
-        :param collection: the AIRC collection name
+        :param collection: the image collection name
         """
         fixture = os.path.join(FIXTURES, collection.lower())
         # The test {subject: directory} dictionary.
