@@ -6,6 +6,6 @@ for import into XNAT, submission to the TCIA QIN collections and pipeline
 processing.
 """
 
-# The ohsu module creates the OHSU QIN collections.
+# OHSU - The ohsu module creates the OHSU QIN collections.
 # TODO - this should be a config item.
 from . import ohsu
