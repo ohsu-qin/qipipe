@@ -1,4 +1,4 @@
-"""ROI utility functions."""
+"""OHSU - ROI utility functions."""
 
 import os
 import re
@@ -43,7 +43,7 @@ def iter_roi(glob, regex, input_dir):
 
     :param glob_pat: the glob match pattern
     :;param regex: the file name match regular expression
-    :param input_dir: the AIRC source visit directory to search
+    :param input_dir: the source session directory to search
     :yield: the :class:`LesionROI` objects
     """
     finder = qiutil.file.Finder(glob, regex)
