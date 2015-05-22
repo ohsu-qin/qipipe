@@ -9,18 +9,22 @@ from .ctp_config import ctp_collection_for_name
 from qiutil.logging import logger
 from .staging_error import StagingError
 
+# OHSU - this is OHSU-specific.
+# TODO - make the format a config item.
 PROP_FMT = 'QIN-%s-OHSU.ID-LOOKUP.properties'
-"""The format for the Patient ID map file name specified by CTP."""
+"""
+The format for the Patient ID map file name specified by CTP.
+"""
 
 
 def map_ctp(collection, *subjects, **opts):
     """
-    Creates the AIRC-NCIA patient id map. The map is written to a
+    Creates the TCIA patient id map. The map is written to a
     property file in the destination directory. The property file
     name is given by :meth:`property_filename`.
     
-    :param collection: the AIRC collection
-    :param subjects: the AIRC subject names
+    :param collection: the image collection
+    :param subjects: the subject names
     :param opts: the following keyword option:
     :keyword dest: the destination directory
     :return: the subject map file path
@@ -64,14 +68,14 @@ class CTPPatientIdMap(dict):
     print the CTP map properties.
     """
 
-    AIRC_PAT = re.compile("""
+    SOURCE_PAT = re.compile("""
         ([a-zA-Z]+)     # The study name
         _?              # An optional underscore delimiter
         (\d+)$          # The patient number
     """, re.VERBOSE)
     """
     The input Patient ID pattern is the study name followed by a number,
-    e.g. ``Breast010``.
+    e.g. ``Breast10``.
     """
 
     CTP_FMT = '%s-%04d'
@@ -96,14 +100,14 @@ class CTPPatientIdMap(dict):
         Adds the input => CTP Patient ID association for the given input
         DICOM patient ids.
 
-        :param collection: the AIRC collection name 
+        :param collection: the image collection name 
         :param patient_ids: the DICOM Patient IDs to map
         :raise StagingError: if an input patient id format is not the study
             followed by the patient number
         """
         ctp_coll = ctp_collection_for_name(collection)
         for in_pt_id in patient_ids:
-            match = CTPPatientIdMap.AIRC_PAT.match(in_pt_id)
+            match = CTPPatientIdMap.SOURCE_PAT.match(in_pt_id)
             if not match:
                 raise StagingError("Unsupported input QIN patient id format:"
                                    " %s" % in_pt_id)
