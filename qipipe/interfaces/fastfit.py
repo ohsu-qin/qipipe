@@ -14,6 +14,7 @@ OHSU - This module wraps the proprietary OHSU AIRC ``fastfit`` software.
 # than this interface of the same name.
 from __future__ import absolute_import
 
+
 import os
 from os import path
 from glob import glob
@@ -25,6 +26,7 @@ from nipype.interfaces.base import (DynamicTraitedSpec,
 from nipype.interfaces.traits_extension import Undefined
 from fastfit.fastfit_cli import get_available_models
 from .interface_error import InterfaceError
+
 
 class FastfitError(Exception):
     pass

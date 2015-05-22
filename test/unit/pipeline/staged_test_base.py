@@ -7,6 +7,7 @@ import qixnat
 from qiutil.collections import nested_defaultdict
 from ... import PROJECT
 
+
 class StagedTestBase(object):
     """
     Base class for testing workflows on a test fixture directory in the

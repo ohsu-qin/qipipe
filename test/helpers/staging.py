@@ -4,6 +4,7 @@ from qipipe.staging import collections
 from qipipe.staging.iterator import SUBJECT_FMT
 from .logging import logger
 
+
 def subject_sources(collection, source):
     """
     Infers the XNAT subject names from the given source directory.

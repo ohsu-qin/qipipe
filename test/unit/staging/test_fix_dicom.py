@@ -2,7 +2,6 @@ import os
 import glob
 import shutil
 from nose.tools import assert_equal
-
 from qipipe.staging.fix_dicom import fix_dicom_headers
 from qidicom import reader
 from ... import ROOT

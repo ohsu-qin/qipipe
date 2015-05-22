@@ -10,6 +10,7 @@ from .workflow_base import WorkflowBase
 from qiutil.logging import logger
 from ..staging import iterator
 
+
 def set_workflow_iterables(exec_wf, scan_input, dest=None):
     """
     Sets the given execution workflow iterables.

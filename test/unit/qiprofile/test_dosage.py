@@ -8,6 +8,7 @@ from qipipe.qiprofile import dosage
 from ...helpers.logging import logger
 from . import (BREAST_FIXTURES, BREAST_SUBJECT, SESSION)
 
+
 class TestDosage(object):
     """
     Dosage update tests.

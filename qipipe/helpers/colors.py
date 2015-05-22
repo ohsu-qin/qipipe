@@ -5,6 +5,7 @@ import nibabel as nib
 from qiutil.file_helper import splitexts
 from . import image
 
+
 def create_lookup_table(ncolors, colormap='jet', out_file=None):
     """
     Generates a colormap lookup table with the given number of colors.

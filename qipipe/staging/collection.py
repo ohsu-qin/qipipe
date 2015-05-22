@@ -2,6 +2,7 @@ import re
 from .staging_error import StagingError
 from . import collections
 
+
 class ROIPatterns(object):
     """The ROI file name matching patterns."""
 

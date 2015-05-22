@@ -10,6 +10,7 @@ import imp
 import argparse
 from qipipe.helpers import (colors, command)
 
+
 def main(argv=sys.argv):
     # Parse the command line arguments.
     lut_file, opts = _parse_arguments()

@@ -4,6 +4,7 @@ import numpy as np
 import nibabel as nib
 from qiutil.logging import logger
 
+
 def normalize(value, vmin, vspan):
     """
     Maps the given input value to [0, 1].

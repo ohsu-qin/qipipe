@@ -1,5 +1,6 @@
 from .staging_error import StagingError
 
+
 extent = {}
 """The {name: collection} dictionary."""
 

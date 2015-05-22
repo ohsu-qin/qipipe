@@ -1,9 +1,8 @@
 import os
 import re
+from qiutil.logging import logger
 from qidicom import meta
 from .sarcoma_config import sarcoma_location
-
-from qiutil.logging import logger
 
 
 def fix_dicom_headers(collection, subject, *dicom_files, **opts):

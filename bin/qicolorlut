@@ -9,6 +9,7 @@ import imp
 import argparse
 from qipipe.helpers import (command, colors)
 
+
 def main(argv=sys.argv):
     # Parse the command line arguments.
     opts = _parse_arguments()

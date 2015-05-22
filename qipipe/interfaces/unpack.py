@@ -2,6 +2,7 @@ from nipype.interfaces.base import (traits, DynamicTraitedSpec, isdefined)
 from nipype.interfaces.io import (IOBase, add_traits)
 from .interface_error import InterfaceError
 
+
 class Unpack(IOBase):
     """
     The Unpack Interface converts a list input field to one output field per list item.
