@@ -52,7 +52,7 @@ def run(*inputs, **opts):
         and :class:`QIPipelineWorkflow` initializer options,
         as well as the following keyword options:
     :keyword project: the XNAT project name
-    :keyword collection: the AIRC collection name
+    :keyword collection: the image collection name
     :keyword actions: the workflow actions to perform
     :keyword resume: flag indicating whether to resume processing on
         existing sessions (default False)
@@ -101,7 +101,7 @@ def _run_with_dicom_input(actions, *inputs, **opts):
     project = opts.pop('project', None)
     if not project:
         raise ArgumentError('The staging pipeline project option is missing.')
-    # The required AIRC collection name.
+    # The required image collection name.
     collection_opt = opts.pop('collection', None)
     if not collection_opt:
         raise ArgumentError('The staging pipeline collection option is missing.')
@@ -119,9 +119,13 @@ def _run_with_dicom_input(actions, *inputs, **opts):
     subjects = set()
     # Run the workflow on each session and scan.
     for scan_input in iter_stage(project, collection, *inputs, **opts):
-        # Only multi-volume scans can have post-staging downstream actions.
-        if 'stage' in actions and len(scan_input.iterators.dicom) == 1:
-            wf_actions = ['stage']
+        # OHSU - Only multi-volume scans can have post-staging downstream
+        # actions.
+        if len(scan_input.iterators.dicom) == 1:
+            if 'stage' in actions:
+                wf_actions = ['stage']
+            else:
+                continue
         else:
             wf_actions = actions
         # Capture the subject.
@@ -216,11 +220,11 @@ class NotFoundError(Exception):
 
 class QIPipelineWorkflow(WorkflowBase):
     """
-    QIPipeline builds and executes the OHSU QIN workflows.
-    The pipeline builds a composite workflow which stitches together
-    the following constituent workflows:
+    QIPipeline builds and executes the imaging workflows. The pipeline
+    builds a composite workflow which stitches together the following
+    constituent workflows:
 
-    - staging: Prepare the new AIRC DICOM visits, as described in
+    - staging: Prepare the new DICOM visits, as described in
       :class:`qipipe.pipeline.staging.StagingWorkflow`
 
     - mask: Create the mask from the staged images,
@@ -387,7 +391,7 @@ class QIPipelineWorkflow(WorkflowBase):
 
     def _set_roi_inputs(self, *inputs):
         """
-        :param collection: the AIRC collection name
+        :param collection: the image collection name
         :param subject: the subject name
         :param session: the session name
         :param scan: the scan number

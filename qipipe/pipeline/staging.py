@@ -167,13 +167,13 @@ class StagingWorkflow(WorkflowBase):
         * the non-reentrant pyxnat's custom non-http2lib cache is
           corrupted
         * an XNAT archive directory access race condition
-    
+
         The cause cannot be isolated for the following reasons:
         * there is no useful Nipype error or log message
         * the error is sporadic and unreproducible
         * Nipype swallows non-nipype Python log messages, causing the
           upload and pyxnat log messages to disappear
-    
+
         Update 05/12/2015 - there are three potential failure points:
         * Concurrent pyxnat cache access corrupts the cache resulting in
           unpredictable errors, e.g. attempt to create an existing XNAT
@@ -181,8 +181,8 @@ class StagingWorkflow(WorkflowBase):
         * Concurrent XNAT resource file upload corrupts the archive such
           that the files are stored in the archive but are not recognized
           by XNAT
-        * XNAT upload SGE cluster tasks exceed time or memory limits
-    
+        * XNAT upload SGE plug-in cluster tasks exceed time or memory limits
+
         These errors are addressed by the following measures:
         * setting an isolated pyxnat cache_dir for each execution node
         * serializing the XNAT access points with JoinNodes
@@ -286,7 +286,7 @@ class StagingWorkflow(WorkflowBase):
                            'dicom_file', 'volume', 'DICOM files'))
         workflow.connect(iter_volume, 'volume', iter_dicom, 'volume')
 
-        # Fix the AIRC DICOM tags.
+        # Fix the DICOM tags.
         fix_dicom = pe.Node(FixDicom(), name='fix_dicom')
         workflow.connect(input_spec, 'collection', fix_dicom, 'collection')
         workflow.connect(input_spec, 'subject', fix_dicom, 'subject')
@@ -312,7 +312,7 @@ class StagingWorkflow(WorkflowBase):
         # the first JoinNodes.
         #
         # The session files must be uploaded in a single task to
-        # work around the following XNAT error: 
+        # work around the following XNAT error:
         #
         # * Concurrent upload to a given XNAT resource corrupts the
         #   XNAT file object. The files are copied in the archive

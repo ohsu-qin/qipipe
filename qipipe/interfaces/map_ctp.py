@@ -1,5 +1,5 @@
 """
-Maps the OHSU DICOM Patient IDs to the CTP Patient IDs.
+Maps the DICOM Patient IDs to the CTP Patient IDs.
 """
 
 import os
