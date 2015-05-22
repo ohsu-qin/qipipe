@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
+5.3.1 / 2015-05-22
+------------------
+* Add qiprofile update module.
+
 5.2.2 / 2015-05-05
 ------------------
 * Detect and stage DWI images.
