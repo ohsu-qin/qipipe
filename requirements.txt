@@ -10,7 +10,7 @@ dipy==0.7.1
 traits==4.4.0
 networkx==1.8.1
 qiutil==2.2.1
-qidicom==2.2.6
+qidicom==2.2.7
 qixnat==3.4.2
 qiprofile-rest-client==5.2.1
 git+git://github.com/moloney/dcmstack.git#egg=dcmstack
