@@ -1,7 +1,7 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
-5.3.1 / 2015-05-22
+5.3.1 / 2015-05-27
 ------------------
 * Add qiprofile update module.
 
