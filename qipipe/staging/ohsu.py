@@ -131,6 +131,7 @@ sequential integers starting at 1. The Acquisition Number tag is
 selected as the volume number identifier.
 """
 
+
 class BreastCollection(Collection):
     """The OHSU AIRC Breast collection."""
 

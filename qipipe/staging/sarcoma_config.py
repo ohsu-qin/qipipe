@@ -14,6 +14,7 @@ properties that associat the subject name to the location, e.g.::
 The value is the SNOMED anatomy term.
 """
 
+
 class ConfigError(Exception):
     pass
 

@@ -213,17 +213,15 @@ class VisitIterator(object):
         self.logger = logger(__name__)
 
     def __iter__(self):
-        return self.next()
-
-    def next(self):
         """
-        Iterates over the scans in the subject directories.
-        
-        :yield: the next (subject, session, scan_dict) tuple
-        :yieldparam subject: the subject name
-        :yieldparam session: the session name
-        :yieldparam scan_dict: the {scan number: :class:`ScanIterators`}
+        Returns the next (subject, session, scan_dict) tuple for the
+        scans in the subject directories, where:
+        * *subject* is the subject name
+        * *session* is the session name
+        * *scan_dict* is the {scan number: :class:`ScanIterators`}
             dictionary
+        
+        :return: the next (subject, session, scan_dict) tuple
         """
         # The visit subdirectory matcher.
         vpat = self.collection.patterns.session

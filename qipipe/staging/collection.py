@@ -30,6 +30,7 @@ class ScanPatterns(object):
     def __repr__(self):
         return str(dict(dicom=self.dicom, roi=self.roi))
 
+
 class Patterns(object):
     """The collection file name and DICOM tag patterns."""
     

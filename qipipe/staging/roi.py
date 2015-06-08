@@ -5,6 +5,7 @@ import re
 import glob
 import qiutil
 
+
 class ROIError(Exception):
     pass
 
