@@ -4,6 +4,7 @@ from .staging_error import StagingError
 extent = {}
 """The {name: collection} dictionary."""
 
+
 def add(*collections):
     """
     Adds the given :class:`qipipe.staging.collection.Collection`s to the

@@ -9,6 +9,7 @@ The pattern for detecting a VCS requirement spec, e.g.
 ``git+git://...``.
 """
 
+
 def version(package):
     """
     Return package version as listed in the `__init.py__` `__version__`

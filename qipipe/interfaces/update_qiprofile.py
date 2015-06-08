@@ -11,6 +11,7 @@ class UpdateQIProfileInputSpec(BaseInterfaceInputSpec):
 
     session = traits.Str(mandatory=True, desc='The XNAT session name')
 
+
 class UpdateQIProfile(BaseInterface):
     """
     The ``UpdateQIProfile`` Nipype interface updates the Imaging Profile

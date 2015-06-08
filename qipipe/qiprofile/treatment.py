@@ -44,6 +44,7 @@ def update(subject, rows):
     for row in rows:
         _update(subject, row)
 
+
 def _update(subject, row):
     """
     Updates the given subject data object from the treatment input.

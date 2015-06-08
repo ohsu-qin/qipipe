@@ -346,6 +346,7 @@ class VisitIterator(object):
                                    (subject, session, scan))
         return not exists
 
+
 def _scan_dicom_generator(pattern, tag):
     """
     :param pattern: the DICOM file glob pattern
