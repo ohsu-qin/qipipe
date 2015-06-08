@@ -84,7 +84,6 @@ class TestStagingIterator(object):
                          (scan_input.subject, scan_input.session,
                           scan_input.scan, slices))
 
-
     def test_sarcoma(self):
         self._test_collection('Sarcoma')
 

@@ -4,8 +4,8 @@ from nose.tools import (assert_equal, assert_in, assert_true)
 from qipipe.interfaces import XNATUpload
 import qixnat
 from ... import (ROOT, PROJECT)
-from test.helpers.logging import logger
-from test.helpers.name_generator import generate_unique_name
+from ...helpers.logging import logger
+from ...helpers.name_generator import generate_unique_name
 
 SUBJECT = generate_unique_name(__name__)
 """The test subject name."""

@@ -2,9 +2,9 @@ import os
 from nose.tools import (assert_equal, assert_is_not_none)
 from collections import defaultdict
 from ... import ROOT
-from ...helpers.logging import logger
 from qipipe.staging import collections
 from qipipe.staging.roi import iter_roi
+from ...helpers.logging import logger
 
 COLLECTION = 'Breast'
 """The test collection."""
