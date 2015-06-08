@@ -8,7 +8,7 @@ from nose.tools import (assert_true, assert_equal, assert_in,
 from qiprofile_rest_client.model.subject import Subject
 from qipipe.qiprofile import demographics
 from ...helpers.logging import logger
-from . import (PROJECT, BREAST_FIXTURES, BREAST_SUBJECT, SESSION)
+from . import (PROJECT, BREAST_FIXTURE, BREAST_SUBJECT, SESSION)
 
 COLLECTION = 'Breast'
 """The test collection."""
@@ -23,18 +23,19 @@ class TestSync(object):
         connect(db='qiprofile_test')
         self.db = get_db()
         self.db.connection.drop_database('qiprofile_test')
-    
+
     def tearDown(self):
       self.db.connection.drop_database('qiprofile_test')
 
     def test_sync(self):
-        # Simulate a row bunch read from a demographics CSV file.
+        # Simulate a row bunch read from a demographics Excel workbook file.
         row = Bunch(subject='Breast001',
                     birth_date=datetime(1976, 04, 15),
                     races=['White', 'Asian'],
                     ethnicity='Non-Hispanic')
         # Create the database object.
-        subject = demographics.prepare(PROJECT, COLLECTION, row)
+        subject = Subject(project=PROJECT, collection=COLLECTION, number=1)
+        subject = demographics.update(subject, row)
         # Validate the saved subject.
         assert_equal(Subject.objects.count(), 1, "The saved subjects count is"
                                                  " incorrect: %d." %
