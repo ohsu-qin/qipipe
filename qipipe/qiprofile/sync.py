@@ -1,5 +1,5 @@
 # import re
-# import csv
+# import xls
 # from datetime import datetime
 # from bunch import Bunch
 # from qiprofile_rest_client.model.subject import Subject
@@ -26,11 +26,11 @@ def sync_session(project, collection, subject, session, **opts):
     :param subject: the XNAT subject name
     :param session: the XNAT session name, without subject prefix
     :param opts: the following options:
-    :keyword demographics: the demographics CSV input file
-    :keyword pathology: the pathology CSV input file
-    :keyword treatment: the treatment CSV input file
-    :keyword dosage: the dosage CSV input file
-    :keyword visit: the visit CSV input file
+    :keyword demographics: the demographics XLS input file
+    :keyword pathology: the pathology XLS input file
+    :keyword treatment: the treatment XLS input file
+    :keyword dosage: the dosage XLS input file
+    :keyword visit: the visit XLS input file
     """
     # Get or create the database subject.
     subject = Subject.objects.get_or_create(project=project,
@@ -39,11 +39,10 @@ def sync_session(project, collection, subject, session, **opts):
     # Set the subject demographics, if it is available.
     demog_file = opts.get('demographics')
     if demog_file:
-        demog_row = demographics.read(demog_file, subject)
+        demog_row = demographics.filter(demog_file, subject)
         if demog_row:
             for attr, val in demog_row:
-                if attr != 'subject':
-                    setattr(subject, attr, val)
+                setattr(subject, attr, val)
 
     # Add the subject encounters, if available.
     enc_file = opts.get('encounters')
