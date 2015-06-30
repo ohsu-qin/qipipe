@@ -8,7 +8,6 @@ import os
 import re
 import glob
 from collections import defaultdict
-from functools import partial
 from qiutil.logging import logger
 import qixnat
 import qidicom.hierarchy
