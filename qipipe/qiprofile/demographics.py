@@ -1,51 +1,68 @@
 """
-This module provides helper methods for updating the qiprofile
-REST database.
+This module updates the qiprofile database Subject demographics
+information from the demographics Excel workbook file.
 """
 
 import re
-from bunch import Bunch
-from mongoengine import connect
 from qiprofile_rest_client.model.subject import Subject
-from . import csv
-from .helpers import (trailing_number, default_parser)
+from .xls import Worksheet
+from . import parse
+
+SHEET = 'Demographics'
+"""The input XLS sheet name."""
+
+COL_ATTRS = {'Race': 'races'}
+"""
+The following non-standard column-attribute associations:
+* The Race column is the races attribute.
+"""
 
 
 class DemographicsError(Exception):
     pass
 
-def read(filename, subject):
+
+def read(workbook, **condition):
     """
-    :param filename: the CSV file location
-    :param subject: the XNAT subject name
-    :return: the subject demographics row
-    :rtype: Bunch
-    :raise DemographicsError: if more than one CSV row matches
-        the subject
+    Reads the demographics XLS row which matches the given subject.
+
+    :param condition: the row selection filter
+    :return: the Demographics sheet
+        :meth:`qipipe.qiprofile.xls.Worksheet.read`
+        row bundle which matches the given subject, or None if no
+        match was found
     """
-    with csv.read(filename, parser=_demographics_parser) as reader:
-        rows = list(reader.filter(subject))
-    if len(rows) > 1:
-        sbj_nbr = trailing_number(self.subject)
-        raise DemographicsError("Subject number %d has more than one row in"
-                                " the CSV file %s" % (sbj_nbr, filename))
-
-    return rows[0] if rows else None
-
-
-def _demographics_parser(attribute):
-    demog_parsers = dict(races=_parse_races)
+    # Wrap the worksheet to read Subject attributes.
+    reader = Worksheet(workbook, SHEET, Subject, column_attributes=COL_ATTRS)
     
-    return demog_parsers.get(attribute, default_parser(attribute))
+    # The filtered worksheet rows.
+    return reader.read(**condition)
 
 
-def _parse_races(value):
+def update(subject, rows):
     """
-    Example:
-    >> _parse_races('White, Asian')
-    ['White', 'Asian']
+    Updates the given subject data object from the given Demographics
+    sheet rows.
     
-    :param value: the CSV input races value
-    :return: the list of races
+    There can be no more than one Demographics update input row for
+    the given subject. The *rows* parameter is an iterable in order to
+    conform to other sheet facade modules.
+
+    :param subject: the ``Subject`` Mongo Engine database object
+        to update
+    :param rows: the input Demographics :meth:`read` rows
+    :raise DemographicsError: if there is more than one input row
     """
-    return [w.strip() for w in value.split(',\w*')]
+    row_list = list(rows)
+    # An empty row is valid and is a no-op.
+    # More than one row is an error.
+    if not row_list:
+        return
+    elif len(row_list) > 1:
+        raise DemographicsError("Subject number %d has more than one row" %
+                                 subject.number)
+    # Use the single row.
+    row = row_list[0]
+    for attr, val in row.iteritems():
+        if hasattr(subject, attr):
+            setattr(subject, attr, val)

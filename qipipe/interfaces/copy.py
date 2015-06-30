@@ -16,6 +16,7 @@ class CopyInputSpec(BaseInterfaceInputSpec):
                               desc='The destination file name'
                                    ' (default is the input file name)')
 
+
 class CopyOutputSpec(TraitedSpec):
     out_file = traits.Either(File, Directory, exists=True,
                              desc='The copied file or directory')

@@ -1,11 +1,18 @@
 import os
 import re
+from datetime import datetime
+import functools
+import dicom
 from qiutil.logging import logger
-from qidicom import meta
+from qiutil import dates
+from qidicom import (meta, writer)
 from .sarcoma_config import sarcoma_location
 
+DATE_FMT = '%Y%m%d'
+"""The DICOM date format is YYYYMMDD."""
 
-def fix_dicom_headers(collection, subject, *dicom_files, **opts):
+
+def fix_dicom_headers(collection, subject, *in_files, **opts):
     """
     Fix the given input DICOM files as follows:
 
@@ -13,6 +20,8 @@ def fix_dicom_headers(collection, subject, *dicom_files, **opts):
         ``Sarcoma001``
 
     - Add the ``Body Part Examined`` tag
+
+    - Anonymize the ``Patient's Birth Date`` tag
 
     - Standardize the file name
 
@@ -40,43 +49,61 @@ def fix_dicom_headers(collection, subject, *dicom_files, **opts):
     :return: the files which were created
     :raise StagingError: if the collection is not supported
     """
-
     # Make the tag name => value dictionary.
     if collection == 'Sarcoma':
         site = sarcoma_location(subject)
     else:
         site = collection.upper()
-    tnv = dict(PatientID=subject, BodyPartExamined=site)
+    # The tag editor.
+    editor = meta.Editor(PatientID=subject, BodyPartExamined=site,
+                                 PatientsBirthDate=_anonymize_date)
+    # The destination directory.
+    dest = opts.get('dest', os.getcwd())
+    # The destination file namer.
+    file_namer = functools.partial(_dest_file_name, dest=dest)
+    logger(__name__).info("Replacing the following DICOM tags: %s" %
+                          editor.edits.keys())
+    # An array to collect the edited files.
+    dcm_files = []
+    # Edit the DICOM files.
+    for ds in writer.edit(*in_files, dest=file_namer):
+        editor.edit(ds)
+        dcm_files.append(ds.filename)
+    logger(__name__).info("Changed the DICOM tag values.")
 
-    # Set the tags in each image file.
-    if 'dest' in opts:
-        dest = opts['dest']
-    else:
-        dest = os.getcwd()
-    edited = meta.edit(dest, *dicom_files, **tnv)
-
-    # Rename the edited files as necessary.
-    out_files = []
-    for f in edited:
-        std_name = _standardize_dicom_file_name(f)
-        if f != std_name:
-            os.rename(f, std_name)
-            out_files.append(std_name)
-        logger(__name__).debug(
-            "The DICOM headers in %s were fixed and saved as %s." % (f, std_name))
-
-    return out_files
+    # Return the output file names.
+    return [file_namer(f) for f in dcm_files]
 
 
-def _standardize_dicom_file_name(path):
+def _anonymize_date(date):
+    """
+    :param date: the input date string
+    :return: the anonymized date
+    :rtype: str
+    """
+    # The unanonymized PHI date.
+    phi = datetime.strptime(date, DATE_FMT)
+    # The anonymized date.
+    anon = dates.anonymize(phi)
+    
+    # Return the anonymized date as a string.
+    return anon.strftime(DATE_FMT)
+
+
+def _dest_file_name(in_file, dest):
     """
     Standardizes the given input file name.
+    
+    :param in_file: the input file name
+    :param dest: the destination directory
+    :return: the target output file name 
     """
-    fdir, fname = os.path.split(path)
+    _, fname = os.path.split(in_file)
     # Replace non-word characters.
     fname = re.sub('\W', '_', fname.lower())
     # Add a .dcm extension, if necessary.
     _, ext = os.path.splitext(fname)
     if not ext:
         fname = fname + '.dcm'
-    return os.path.join(fdir, fname)
+    
+    return os.path.join(dest, fname)

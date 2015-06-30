@@ -18,6 +18,7 @@ TARGET = os.path.join(RESULTS, 'target')
 """The test target area where the work data is copied."""
 
 
+
 class TestCopy(object):
     """Copy interface unit tests."""
 

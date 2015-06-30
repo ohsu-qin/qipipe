@@ -264,7 +264,7 @@ class WorkflowBase(object):
         # The Nipype plug-in parameters.
         if self.plug_in and self.plug_in in self.configuration:
             plug_in_opts = self.configuration[self.plug_in]
-            opts = dict(plugin=self.plug_in, plug_in_opts**)
+            opts = dict(plugin=self.plug_in, **plug_in_opts)
             self._logger.debug("Workflow %s  %s plug-in parameters: %s." %
                              (workflow.name, self.plug_in, opts))
         else:

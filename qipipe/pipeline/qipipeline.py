@@ -33,6 +33,7 @@ VOLUME_FILE_PAT = re.compile("volume(\d{3}).nii.gz$")
 ACTIONS = ['stage', 'roi', 'register', 'model']
 """The list of all available actions."""
 
+
 def run(*inputs, **opts):
     """
     Creates a :class:`qipipe.pipeline.qipipeline.QIPipelineWorkflow`

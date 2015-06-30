@@ -82,12 +82,14 @@ def colorize(lut_file, *inputs, **opts):
     for in_file in inputs:
         _colorize(in_file, dest, **opts)
 
+
 def _normalize(value, vmin, vspan):
     # Zero always maps to the translucence in the first colormap LUT entry.
     if value == 0:
         return 0
     else:
         return image.normalize(value, vmin, vspan)
+
 
 def _colorize(in_file, dest, **opts):
     # Split up the input file path.

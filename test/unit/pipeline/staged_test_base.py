@@ -6,6 +6,7 @@ from nose.tools import (assert_equal, assert_not_equal)
 import qixnat
 from qiutil.collections import nested_defaultdict
 from ... import PROJECT
+from ...helpers.logging import logger
 
 
 class StagedTestBase(object):

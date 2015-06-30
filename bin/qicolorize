@@ -18,7 +18,7 @@ def main(argv=sys.argv):
     # Break out the logging options.
     log_opts = {k: opts.pop(k) for k in ['log', 'log_level'] if k in opts}
     # Configure the logger.
-    command.configure_log('qicolorize', log_opts)
+    command.configure_log('qicolorize', **log_opts)
     
     # Colorize the input files.
     inputs = opts.pop('inputs')

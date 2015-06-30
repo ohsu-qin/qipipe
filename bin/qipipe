@@ -13,6 +13,7 @@ from qipipe.helpers import command
 NIPYPE_LOG_DIR_ENV_VAR = 'NIPYPE_LOG_DIR'
 """The environment variable used by Nipype to set the log directory."""
 
+
 def main(argv=sys.argv):
     # Parse the command line arguments.
     inputs, opts = _parse_arguments()

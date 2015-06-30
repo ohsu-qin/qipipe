@@ -8,7 +8,6 @@ import os
 import re
 import glob
 from collections import defaultdict
-from functools import partial
 from qiutil.logging import logger
 import qixnat
 import qidicom.hierarchy
@@ -213,17 +212,15 @@ class VisitIterator(object):
         self.logger = logger(__name__)
 
     def __iter__(self):
-        return self.next()
-
-    def next(self):
         """
-        Iterates over the scans in the subject directories.
-        
-        :yield: the next (subject, session, scan_dict) tuple
-        :yieldparam subject: the subject name
-        :yieldparam session: the session name
-        :yieldparam scan_dict: the {scan number: :class:`ScanIterators`}
+        Returns the next (subject, session, scan_dict) tuple for the
+        scans in the subject directories, where:
+        * *subject* is the subject name
+        * *session* is the session name
+        * *scan_dict* is the {scan number: :class:`ScanIterators`}
             dictionary
+        
+        :return: the next (subject, session, scan_dict) tuple
         """
         # The visit subdirectory matcher.
         vpat = self.collection.patterns.session
@@ -347,6 +344,7 @@ class VisitIterator(object):
                                    " already been loaded to XNAT." %
                                    (subject, session, scan))
         return not exists
+
 
 def _scan_dicom_generator(pattern, tag):
     """

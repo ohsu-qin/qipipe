@@ -191,12 +191,14 @@ class MaskWorkflow(WorkflowBase):
 def _gen_mask_filename(subject, session):
     return "%s_%s_mask.nii.gz" % (subject.lower(), session.lower())
 
+
 def _gen_crop_op_string(cog):
     """
     :param cog: the center of gravity
     :return: the crop -roi option
     """
     return "-roi 0 -1 %d -1 0 -1 0 -1" % cog[1]
+
 
 def _crop_posterior(image, cog):
     from nipype.interfaces import fsl
