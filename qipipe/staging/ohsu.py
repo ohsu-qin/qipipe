@@ -71,6 +71,9 @@ BREAST_DWI_PAT = '*sorted/*Diffusion/*'
 SARCOMA_DWI_PAT = '*Diffusion/*'
 """The Sarcoma DWI DICOM file match pattern."""
 
+BREAST_PD_PAT = '*sorted/*PD*/*'
+"""The Breast pseudo-proton density DICOM file match pattern."""
+
 BREAST_ROI_PAT = 'processing/R10_0.[456]*/slice*/*.bqf'
 """
 The Breast ROI glob filter. The ``.bqf`` ROI files are in the
@@ -140,7 +143,8 @@ class BreastCollection(Collection):
         t1 = ScanPatterns(dicom=T1_PAT, roi=roi)
         t2 = ScanPatterns(dicom=BREAST_T2_PAT)
         dwi = ScanPatterns(dicom=BREAST_DWI_PAT)
-        scan = {1: t1, 2: t2, 4: dwi}
+        pd = ScanPatterns(dicom=BREAST_PD_PAT)
+        scan = {1: t1, 2: t2, 4: dwi, 6: pd}
         opts = dict(subject=BREAST_SUBJECT_REGEX,
                     session=BREAST_SESSION_REGEX,
                     scan=scan, volume=VOLUME_TAG)
