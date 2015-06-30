@@ -5,43 +5,64 @@ information from the demographics Excel workbook file.
 
 import re
 from qiprofile_rest_client.model.subject import Subject
-from . import xls
-from . import parsers
+from .xls import Worksheet
+from . import parse
+
+SHEET = 'Demographics'
+"""The input XLS sheet name."""
+
+COL_ATTRS = {'Race': 'races'}
+"""
+The following non-standard column-attribute associations:
+* The Race column is the races attribute.
+"""
 
 
 class DemographicsError(Exception):
     pass
 
 
-def filter(filename, subject):
+def read(workbook, **condition):
     """
-    Finds the demographics XLS row which matches the given subject.
+    Reads the demographics XLS row which matches the given subject.
+
+    :param condition: the row selection filter
+    :return: the Demographics sheet
+        :meth:`qipipe.qiprofile.xls.Worksheet.read`
+        row bundle which matches the given subject, or None if no
+        match was found
+    """
+    # Wrap the worksheet to read Subject attributes.
+    reader = Worksheet(workbook, SHEET, Subject, column_attributes=COL_ATTRS)
     
-    :param filename: the Excel workbook file location
-    :param subject: the XNAT subject name
-    :return: the :meth:`qipipe.qiprofile.xls.filter` subject
-        demographics row, or None if no match was found
-    :raise DemographicsError: if more than one XLS row matches
-        the subject
+    # The filtered worksheet rows.
+    return reader.read(**condition)
+
+
+def update(subject, rows):
     """
-    opts = parsers.default_parsers(Subject)
-    reader = xls.Reader(filename, 'Demographics', **opts)
-    rows = list(reader.filter(subject))
-    if len(rows) > 1:
-        sbj_nbr = parsers.parse_trailing_number(self.subject)
-        raise DemographicsError("Subject number %d has more than one row in"
-                                " the Excel workbook file %s" %
-                                (sbj_nbr, filename))
+    Updates the given subject data object from the given Demographics
+    sheet rows.
+    
+    There can be no more than one Demographics update input row for
+    the given subject. The *rows* parameter is an iterable in order to
+    conform to other sheet facade modules.
 
-    return rows[0] if rows else None
-
-
-def update(subject, row):
+    :param subject: the ``Subject`` Mongo Engine database object
+        to update
+    :param rows: the input Demographics :meth:`read` rows
+    :raise DemographicsError: if there is more than one input row
     """
-    Updates the given subject data object from the demographics XLS row.
-
-    :param subject: the ``Subject`` database object to update
-    :param row: the input demographics {attribute: value} dictionary
-    """
+    row_list = list(rows)
+    # An empty row is valid and is a no-op.
+    # More than one row is an error.
+    if not row_list:
+        return
+    elif len(row_list) > 1:
+        raise DemographicsError("Subject number %d has more than one row" %
+                                 subject.number)
+    # Use the single row.
+    row = row_list[0]
     for attr, val in row.iteritems():
-        setattr(subject, attr, val)
+        if hasattr(subject, attr):
+            setattr(subject, attr, val)

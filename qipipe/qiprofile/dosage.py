@@ -1,108 +1,113 @@
 """
-This module updates the qiprofile database Subject dosage information
-from the dosage Excel workbook file.
+This module updates the qiprofile database Subject drug dosage
+information from a Chemotherapy Excel worksheet.
 """
-
-from qiprofile_rest_client.model.uom import (Measurement, Weight)
-from qiprofile_rest_client.model.clinical import (Dosage, Drug, Radiation)
-from . import xls
-from . import parsers
-
-PARSERS = dict(agent=lambda s: s.lower())
-"""The agent is lower case."""
+import datetime
+from qiprofile_rest_client.model.clinical import (Treatment, Dosage)
+from .xls import Worksheet
+from . import parse
 
 
-class DosageError(Exception):
-    pass
-
-
-def filter(filename, subject):
-    """
-    Finds the dosage XLS row which matches the given subject.
-
-    :param filename: the Excel workbook file location
-    :param subject: the XNAT subject name
-    :return: the dosage :meth:`qipipe.qiprofile.xls.filter` rows list
-    """
-    opts = parsers.default_parsers(Dosage)
-    opts.update(PARSERS)
-    reader = xls.Reader(filename, 'Dosage', **opts)
-
-    return list(reader.filter(subject))
-
-
-def update(subject, rows):
-    """
-    Updates the given subject data object from the dosage XLS rows.
-
-    :param subject: the ``Subject`` Mongo Engine database object
-        to update
-    :param rows: the dosage :meth:`filter` rows list 
+class DosageWorksheet(Worksheet):
+    """The dosage worksheet facade."""
     
-    """
-    for row in rows:
-        _update(subject, row)
+    def __init__(self, workbook, sheet, agent_class, **opts):
+        """
+        :param workbook: the :class:`qipipe.qiprofile.xls.Workbook` object
+        :param sheet: the sheet name
+        :param agent_class: the agent class
+        :param opts: the additional :class:`qipipe.qiprofile.xls.Worksheet`
+            initializer options
+        """
+        # Delegate to the superclass with the Treatment, Dosage and agent
+        # classes.
+        super(DosageWorksheet, self).__init__(
+            workbook, sheet, Treatment, Dosage, agent_class, **opts
+        )
 
 
-def _update(subject, row):
-    """
-    Updates the given subject data object from the dosage input.
+class DosageUpdate(object):
+    """The dosage update abstract class."""
+    
+    DEFAULTS = dict(duration=1)
+    """The default duration is 1 day."""
+    
+    def __init__(self, subject, **defaults):
+        """
+        :param subject: the ``Subject`` Mongo Engine database object
+            to update
+        :param defaults: the {attribute: value} row defaults
+        """
+        self._subject = subject
+        for attr, val in DosageUpdate.DEFAULTS.iteritems():
+            if attr not in defaults:
+                defaults[attr] = val
+        self._defaults = defaults
+    
+    def update(self, rows):
+        """
+        Updates the subject data object from the given dosage XLS rows.
 
-    :param subject: the ``Subject`` Mongo Engine database object
-        to update
-    :param row: the input dosage :meth:`update` row
-    :raise DosageError: if the row dates are not contained within
-        exactly one treatment
-    """
-    # Find the spanning treatment object.
-    tgt_trt = _treatment_spanning(subject, row.start_date)
-    # Find or make the target dosage object.
-    target = _dosage_for(tgt_trt, row.agent)
-    # Collect the update attributes.
-    attrs = (attr for attr in Dosage._fields if attr in row)
-    # Update the target dosage database object.
-    for attr in attrs:
-        setattr(target, attr, row[attr])
+        :param rows: the input dosage
+            :meth:`qipipe.qiprofile.xls.Worksheet.read` rows list 
+        """
+        for row in rows:
+            self._update(row)
 
+    def _update(self, row):
+        """
+        :param row: the input dosage
+            :meth:`qipipe.qiprofile.xls.Worksheet.read` row
+        """
+        # Apply the defaults.
+        for attr, val in self._defaults.iteritems():
+            if getattr(row, attr) == None:
+                setattr(row, attr, val)
 
-def _dosage_for(treatment, agent):
-    """
-    :param treatment: the target treatment
-    :param agent: the input agent
-    :return: the dosage database object which matches the agent,
-        or a new dosage database object if there is no match
-    """
-    # Find the matching dosage by agent, if any.
-    # If no match, then make a new dosage database object.
-    target = next((d for d in treatment.dosages if d.agent == agent),
-                  None)
-    # If no match, then make a new dosage database object.
-    if not target:
-        tgt_type = Radiation if agent in Radiation.FORMS else Drug
-        target = tgt_type(agent=agent)
-        treatment.dosages.append(target)
+        # The treatment object for the input treatment type.
+        trt = self._treatment_for(row.treatment_type)
+        # Extend the treatment span, if necessary.
+        if not trt.start_date or trt.start_date > row.start_date:
+            trt.start_date = row.start_date
+        delta = datetime.timedelta(row.duration)
+        end_date = row.start_date + delta
+        if not trt.end_date or trt.end_date < end_date:
+            trt.end_date = end_date
 
-    return target
+        # If there is no amount, then we can only store the
+        # treatment without dosages.
+        if not row.amount:
+            return
+        # Find or make the target dosage object.
+        dosage = self.dosage_for(trt, row)
+        # Collect the update attributes.
+        attrs = (attr for attr in Dosage._fields if attr in row)
+        # Update the target dosage database object.
+        for attr in attrs:
+            setattr(dosage, attr, row[attr])
 
+    def _treatment_for(self, treatment_type):
+        """
+        :param treatment_type: the treatment type, e.g. ``adjuvant``
+        :return: the existing or new treatment object
+        """
+        # Find the matching treatment, if it exists.
+        trt_iter = (trt for trt in self._subject.treatments
+                    if trt.treatment_type == treatment_type)
+        target = next(trt_iter, None)
+        if not target:
+            target = Treatment(treatment_type=treatment_type)
+            self._subject.treatments.append(target)
 
-def _treatment_spanning(subject, start_date):
-    """
-    :param subject: the subject database object
-    :param start_date: the dosage start date
-    :raise DosageError: if the row date is not contained within
-        exactly one treatment
-    """
-    # Find the candidate treatments.
-    trts = [trt for trt in subject.treatments
-            if trt.start_date <= start_date
-            and start_date <= trt.end_date]
-    # There must be a unique candidate.
-    if not trts:
-        raise DosageError("No treatment was found which spans the dosage"
-                          " start date %s" % start_date.date)
-    if len(trts) > 1:
-        raise DosageError("More than one treatment was found which spans"
-                          " the dosage start date %s" % start_date.date)
+        # Return the target treatment.
+        return target
 
-    # Return the target treatment.
-    return trts[0]
+    def dosage_for(self, treatment, row):
+        """
+        :param treatment: the target treatment
+        :param row: the input row
+        :return: the matching or new dosage database object
+        :raise NotImplementedError: always in this abstract class, since
+            this is a subclass responsibility
+        """
+        raise NotImplementedError("Subclass responsibility")

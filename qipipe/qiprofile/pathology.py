@@ -2,317 +2,210 @@
 This module updates the qiprofile database Subject pathology information
 from the pathology Excel workbook file.
 """
-
-from functools import partial
-import six
 from qiprofile_rest_client.model.clinical import (
-    Biopsy, TNM, BreastPathology, ModifiedBloomRichardsonGrade,
-    HormoneReceptorStatus, BreastGeneticExpression, BreastNormalizedAssay,
-    SarcomaPathology, FNCLCCGrade, NecrosisPercentValue, NecrosisPercentRange,
-    necrosis_percent_as_score
+    Encounter, Biopsy, Surgery, Pathology, TNM
 )
-from . import xls
-from . import parsers
+from . import parse
+from .xls import Worksheet
+
+ENCOUNTER_TYPES = {klass.__name__: klass for klass in (Biopsy, Surgery)}
+"""The encounter {name: class} dictionary."""
+
+COL_ATTRS = {'Patient Weight': 'weight', 'Tumor Size': 'size'}
+"""
+The following non-standard column-attribute associations:
+* The ``Patient Weight`` column is the ``Encounter.weight`` attribute
+* The ``Tumor Size`` column is the ``TNM.size`` attribute
+"""
+
+PARSERS = dict(
+    subject_number=int,
+    # Wrap the functions below with a lambda as a convenience to allow
+    # a forward reference to the parse functions defined below.
+    intervention_type=lambda v: _parse_intervention_type(v),
+    size=lambda v: _parse_tumor_size(v)
+)
+"""
+The following parser associations:
+* subject_number is an int
+* intervention_type converts the string to an Encounter subclass
+* size is a :class:`qiprofile_rest_client.clinical.TNM.Size` object
+"""
+
+SHEET = 'Pathology'
+"""The worksheet name."""
 
 
 class PathologyError(Exception):
     pass
 
 
-def filter(filename, subject, collection):
+def _parse_intervention_type(value):
     """
-    Finds the pathology XLS row which matches the given subject.
-
-    :param filename: the Excel workbook file location
-    :param subject: the XNAT subject name
-    :param collection: the image collection name
-    :return: the pathology :meth:`qipipe.qiprofile.xls.filter` rows list
+    :param value: the input string
+    :return: the encounter class
     """
-    factory = Factory.for_collection(collection)
-    reader = xls.Reader(filename, 'Pathology', **factory.parsers)
-    return list(reader.filter(subject))
-
-
-def update(subject, rows):
-    """
-    Updates the given subject data object from the pathology XLS rows.
-    Each pathology XLS row subsumes both a biopsy encounter data object
-    and its embedded pathology data object. The only biopsy attribute is
-    the date. The date is used to match, or, if necessary, create
-    a Biopsy object for that date. The factory creates a new pathology
-    object. For an existing biopsy, this new pathology object replaces
-    the biopsy pathology. For a new biopsy, the biopsy pathology attribute
-    is set to the new pathology object.
-
-    :param subject: the ``Subject`` Mongo Engine database object
-        to update
-    :param rows: the pathology :meth:`filter` rows list
-
-    """
-    # The pathology object factory.
-    factory = Factory.for_collection(subject.collection)
-    for row in rows:
-        # The existing or new biopsy encounter object.
-        biopsy = _biopsy_for(row.date)
-        # Set the biopsy pathology to a new pathology object.
-        biopsy.pathology = factory.create(row)
-
-
-def _biopsy_for(subject, date):
-    """
-    :param subject: the target `subject database object
-    :param date: the biopsy date
-    :return: the matching biopsy, or a new biopsy object if no match
-        was found
-    """
-    # Look for an existing biopsy.
-    target = next((enc for enc in subject.encounters
-                   if isinstance(enc, Biopsy) and enc.date == date),
-                  None)
-    # If no match, then make a new biopsy database object.
-    if not target:
-        target = Biopsy(date=date)
-        subject.encounters.append(target)
-
-    # Return the existing or new biopsy object.
-    return target
-
-
-def _update(subject, row):
-    """
-    Updates the given subject data object from the pathology input.
-
-    :param subject: the ``Subject`` Mongo Engine database object
-        to update
-    :param row: the input pathology :meth:`update` row
-    :raise PathologyError: if the row dates are not contained within
-        exactly one biopsy
-    """
-    # The pathology XLS row subsumes the Biopsy encounter and the
-    # the biopsy pathology reference. The only Biopsy attribute is
-    # the date. The date is used to match, or, if necessary, create
-    # a Biopsy object with that date.
-    tgt_date = row.date
-    # Look for an existing biopsy.
-    target = next((enc for enc in subject.encounters
-                   if isinstance(enc, Biopsy) and enc.date == tgt_date),
-                  None)
-    # If no match, then make a new biopsy database object.
-    if not target:
-        biopsy = Biopsy(date=tgt_date)
-        subject.encounters.append(biopsy)
-
-    # Make the pathology object.
-    biopsy.pathology = factory.create_pathology()
+    value = value.capitalize()
+    klass = ENCOUNTER_TYPES.get(value, None)
+    if not klass:
+        raise PathologyError("The pathology row intervention type is not"
+                             " recognized: %s" % value)
+    
+    return klass
 
 
 def _parse_tumor_size(value):
-    """
-    :param value: the input string or integer value
-    :return: the TNM tumor size database object
-    """
-    if isinstance(value, six.string_types):
-        return TNM.Size.parse(value)
-    elif isinstance(value, int):
-        return TNM.Size(tumor_size=value)
-    else:
-        raise PathologyError("The TNM Size value type is not supported:"
-                              " %s %s" % (value, value.__class__))
+    return TNM.Size.parse(str(value))
 
 
-class Factory(object):
-    """Pathology data object factory."""
-
-    PARSERS = dict(
-        tumor_size=_parse_tumor_size
-    )
-    """The TNM XLS value parsers common to all tumor types."""
-
-    @classmethod
-    def for_collection(klass, collection):
-        """
-        :param klass: this :class:`Factory` class
-        :param collection: the target image collection name
-        :return: the factory class
-        :raise PathologyError: if there is no factory class for the given
-            collection
-        """
-        # The factory is the subclass with the same name as the collection.
-        factory = next((k for k in klass.__subclasses__()
-                        if k.__name__ == collection),
-                       None)
-        if not factory:
-            raise PathologyError("Collection not supported: %s" % collection)
-
-        return factory()
-
-    def __init__(self, **opts):
-        """
-        :param opts: the Factory subclass-specific parsers
-        """
-        popts = parsers.default_parsers(TNM)
-        popts.update(Factory.PARSERS)
-        popts.update(opts)
-        self.parsers = popts
-        """The XLS attribute value parsers."""
-
-    def tumor_type(self):
-        """
-        The required tumor type is a TNM attribute.
-
-        :raise PathologyError: always, since tumor_type is a subclass
-            responsibility
-        """
-        raise PathologyError("The tumor_type class method is a subclass"
-                             " responsibility")
-
-    def create(self, row):
-        """
-        :param row: the input XLS row
-        :return: the new pathology data object
-        :raise PathologyError: always, since this is a subclass
-            responsibility
-        """
-        raise PathologyError("Pathology object creation is a subclass"
-                             " responsibility")
-
-
-    def create_tnm(self, row, grade):
-        """
-        :param row: the input XLS row
-        :param grade: the tumor type-specific TNM grade
-        :return: the new TNM database object
-        """
-        # The TNM {attribute: value} dictionary.
-        raw = dict(grade=grade)
-        raw_row = (row[attr] for attr in TNM._fields if attr in row)
-        raw.update(raw_row)
-        values = {k: v for k, v in raw.iteritems() if v != None}
-
-        # Make the new TNM database object.
-        return TNM(**values) if values else None
-
-
-class Breast(Factory):
-    """Breast pathology data object factory."""
-
-    PARSERS = dict(
+class PathologyWorksheet(Worksheet):
+    """The Pathology worksheet facade."""
     
-    
-    
-        ## TODO - the prefixed XLS hormone attributes, e.g. estrogen_positive,
-        ## correspond to the respective data model HormoneReceptorStatus
-        ## attributes. Handle this in both parsing and update.
-    
-    
-    
-    )
-    """The non-default breast pathology XLS value parsers."""
+    def __init__(self, workbook, *classes, **opts):
+        """
+        :param workbook: the :class:`qipipe.qiprofile.xls.Workbook` object
+        :param classes: the subclass-specific classes, including the
+            Pathology subclass and the Grade subclass
+        :param opts: the following options:
+        :option parsers: the non-standard parsers {attribute: function}
+            dictionary
+        :option column_attributes: the non-standard {column name: attribute}
+            dictionary
+        """
+        # The special parsers.
+        parsers = PARSERS.copy()
+        # Add the subclass special parsers.
+        parsers_opt = opts.get('parsers', None)
+        if parsers_opt:
+            parsers.update(parsers_opt)
+        # The special column-attribute associations.
+        col_attrs = COL_ATTRS.copy()
+        # Add the subclass special associations.
+        col_attrs_opt = opts.get('column_attributes', None)
+        if col_attrs_opt:
+            col_attrs.update(col_attrs_opt)
+        # Initialize the worksheet.
+        super(PathologyWorksheet, self).__init__(
+            workbook, SHEET, Encounter, TNM, *classes, parsers=parsers,
+            column_attributes=col_attrs
+        )
 
-    def __init__(self):
 
+class PathologyUpdate(object):
+    """The pathology update abstract class."""
+    
+    def __init__(self, subject, tumor_type, pathology_class, grade_class):
+        """
+        :param subject: the ``Subject`` Mongo Engine database object
+            to update
+        :param tumor_type: the subclass tumor type
+        :param pathology_class: the Pathology subclass 
+        :param grade_class: the Grade subclass 
+        """
+        self._subject = subject
+        self._tumor_type = tumor_type
+        self._pathology_class = pathology_class
+        self._grade_class = grade_class
 
+    def update(self, rows):
+        """
+        Updates the subject data object from the given pathology XLS rows.
+
+        :param rows: the input pathology :meth:`read` rows list 
+        """
+        for row in rows:
+            self._update(row)
+
+    def _update(self, row):
+        """
+        :param row: the input pathology :meth:`read` row
+        """
+        # There must be an intervention type.
+        if not row.intervention_type:
+            raise PathologyError("The pathology input row is missing the"
+                                 "intervention type")
+        if not row.date:
+            raise PathologyError("The pathology input row is missing the"
+                                 "date")
+        # The encounter object for the input encounter type.
+        enc_type = self.encounter_type(row)
+        enc = self._encounter_for(enc_type, row.date)
+        # Update the encounter.
+        self.update_encounter(enc, row)
+
+    def update_encounter(self, encounter, row):
+        """
+        Update the encounter object from the given input row.
+        This base implementation sets the encounter attribute values
+        from the matching input row attribute value and calls
+        :meth:`update_pathology` to update the pathology.
+        Other updates are a subclass responsibility.
         
-        ## TODO - add the default parsers for BreastGeneticExpression and HormoneReceptorStatus.
-        ## TODO - add all CVs, incl. Sarcoma histology, to the spreadsheet column drop-downs.
+        :param encounter: the encounter object
+        :param row: the input row
+        """
+        for attr in encounter.__class__._fields:
+            if attr in row:
+                setattr(encounter, attr, row[attr])
+        # Delegate to the possibly overridden update_pathology
+        # method to collect the pathology content.
+        path_content = self.pathology_content(row)
+        if path_content:
+            encounter.pathology = self._pathology_class(**path_content)
+        else:
+            encounter.pathology = None
 
-
+    def pathology_content(self, row):
+        """
+        Collects the pathology object from the given input row.
+        This base implementation collects the pathology attribute values
+        from the matching input row attribute value. Other updates
+        are a subclass responsibility.
         
-        super(Breast, self).__init__()
-
-    def tumor_type(self):
+        :param row: the input row
+        :return: the {attribute: value} content dictionary
         """
-        The required :meth:`Factory.tumor_type` tumor type.
-
-        :return: ``Breast``
-        """
-        return 'Breast'
-
-    def create(self, row):
-        """
-        :param row: the input XLS row
-        :return: the ``BreastPathology`` data object
-        """
-        grade = self._create_grade(row)
-        tnm = self.create_tnm(row, grade)
-        # Make the hormone receptor status.
-        hormone_receptors = self._create_hormone_receptors(row)
-        # Make the genetic expression results.
-        genetic_expression = self._create_genetic_expression(row)
-        raw = dict(tnm=tnm, hormone_receptors=hormone_receptors,
-                      genetic_expression=genetic_expression)
-        values = {k: v for k, v in raw.iteritems() if v != None}
+        grade_content = {attr: row[attr] for attr in self._grade_class._fields
+                         if attr in row and row[attr] != None}
+        tnm_content = {attr: row[attr] for attr in TNM._fields
+                       if attr in row and row[attr] != None}
+        if grade_content:
+            tnm_content['grade'] = self._grade_class(**grade_content)
+        path_content = {attr: row[attr] for attr in self._pathology_class._fields
+                        if attr in row and row[attr] != None}
+        if tnm_content:
+            path_content['tnm'] = TNM(tumor_type=self._tumor_type, **tnm_content)
         
-        # Return the new pathlogy database object.
-        return BreastPathology(**values) if values else None
+        return path_content
 
-    def _create_grade(self, row):
-        pass
-
-    def _create_hormone_receptors(self, row):
-        pass
-
-    def _create_genetic_expression(self, row):
-        pass
-
-
-def _parse_necrosis_percent(s):
-    """
-    :param s: the input XLS string value
-    :return: the necrosis percent database object
-    """
-    if not s:
-        return None
-    values = [int(s) for v in s.split('-')]
-    if len(values) == 1:
-        return NecrosisPercentValue(value=values[0])
-    else:
-        start_val, stop_val = values
-        start_bnd = NecrosisPercentRange.LowerBound(value=start_val)
-        stop_bnd = NecrosisPercentRange.UpperBound(value=stop_val)
-        return NecrosisPercentRange(start=start_bnd, stop=stop_bnd)
-
-
-class Sarcoma(Factory):
-    """Sarcoma pathology data object factory."""
-
-    PARSERS = dict(
-        necrosis_percent=_parse_necrosis_percent
-    )
-    """The XLS value parsers specific to sarcoma tumors."""
-
-    def __init__(self):
-        super(Sarcoma, self).__init__(**Sarcoma.PARSERS)
-
-    def tumor_type(self):
+    def _encounter_for(self, klass, date):
         """
-        The required :meth:`Factory.tumor_type` tumor type.
-
-        :return: ``Sarcoma``
+        :param klass: the encounter class
+        :param date: the encounter date
+        :return: the existing or new encounter object
         """
-        return 'Sarcoma'
+        # The encounter list
+        encs = self._subject.encounters
+        # Find the matching encounter, if it exists.
+        enc_iter = (enc for enc in encs
+                    if isinstance(enc, klass) and enc.date == date)
+        target = next(enc_iter, None)
+        if not target:
+            # Make the new encounter.
+            target = klass(date=date)
+            # Add the new encounter to the subject encounters list.
+            self._subject.add_encounter(target)
 
-    def create(self, row):
+        # Return the target encounter.
+        return target
+
+    def encounter_type(self, row):
         """
-        :param row: the input XLS row
-        :return: the ``SarcomaPathology`` database object
+        Infers the encounter type from the given row. This base
+        implementation returns the parsed row *intervention_type*
+        value.
+
+        :param row: the input row
+        :return: the REST data model Encounter subclass
         """
-        grade = self._create_grade(row)
-        tnm = self.create_tnm(row, grade)
-        raw = dict(tnm=tnm, location=row.location,
-                      necrosis_percent=row.necrosis_percent,
-                      histology=row.histology)
-        values = {k: v for k, v in raw.iteritems() if v != None}
-
-        # Make the new pathlogy database object.
-        return SarcomaPathology(**values) if values else None
-
-    def _create_grade(self, row):
-        # Calculate the necrosis score from the necrosis percent.
-        necrosis_score = necrosis_percent_as_score(row.necrosis_percent)
-        raw = dict(differentiation=row.differentiation,
-                   mitotic_count=row.mitotic_count,
-                   necrosis=necrosis_score)
-        values = {k: v for k, v in raw.iteritems() if v != None}
-        
-        return FNCLCCGrade(**values) if values else None
+        return row.intervention_type
