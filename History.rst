@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
+5.3.3 / 2015-07-01
+------------------
+* Prepare for Python 3 config.
+
 5.3.2 / 2015-05-27
 ------------------
 * Scrub Image Comments PHI.
