@@ -12,6 +12,10 @@ DATE_FMT = '%Y%m%d'
 """The DICOM date format is YYYYMMDD."""
 
 
+COMMENT_PREFIX = re.compile('^TTC \d+(\/.\d*)? sec')
+"""OHSU - the Image Comments tag value prefix."""
+
+
 def fix_dicom_headers(collection, subject, *in_files, **opts):
     """
     Fix the given input DICOM files as follows:
@@ -32,6 +36,9 @@ def fix_dicom_headers(collection, subject, *in_files, **opts):
     
     - Otherwise, the body part is the capitalized collection name, e.g.
         ``BREAST``.
+
+    OHSU - Remove extraneous ``Image Comments`` tag value content
+    which might contain PHI.
         
     The output file name is standardized as follows:
 
@@ -56,7 +63,8 @@ def fix_dicom_headers(collection, subject, *in_files, **opts):
         site = collection.upper()
     # The tag editor.
     editor = meta.Editor(PatientID=subject, BodyPartExamined=site,
-                                 PatientsBirthDate=_anonymize_date)
+                         PatientsBirthDate=_anonymize_date,
+                         ImageComments=_scrub_comment)
     # The destination directory.
     dest = opts.get('dest', os.getcwd())
     # The destination file namer.
@@ -88,6 +96,16 @@ def _anonymize_date(date):
     
     # Return the anonymized date as a string.
     return anon.strftime(DATE_FMT)
+
+
+def _scrub_comment(comment):
+    """
+    :param comment: the comment tag value
+    :return: the scrubbed comment
+    """
+    match = COMMENT_PREFIX.match(comment)
+    
+    return match.group(0) if match else comment
 
 
 def _dest_file_name(in_file, dest):
