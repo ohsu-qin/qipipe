@@ -1,6 +1,6 @@
 import os
-from ConfigParser import ConfigParser as Config
-from ConfigParser import NoOptionError
+from six.moves.configparser import ConfigParser as Config
+from six.moves.configparser import NoOptionError
 
 CFG_FILE = os.path.abspath(
     os.path.join( os.path.dirname(__file__), '..', '..', 'conf', 'sarcoma.cfg')

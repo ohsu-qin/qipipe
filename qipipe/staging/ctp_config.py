@@ -1,5 +1,5 @@
 import os
-from ConfigParser import ConfigParser as Config
+from six.moves.configparser import ConfigParser as Config
 
 _CFG_FILE = os.path.join(
     os.path.dirname(__file__), '..', '..', 'conf', 'ctp.cfg')
