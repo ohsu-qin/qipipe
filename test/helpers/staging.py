@@ -1,7 +1,7 @@
 import os
 import re
 from qipipe.staging import collections
-from qipipe.staging.iterator import SUBJECT_FMT
+from qipipe.helpers.constants import SUBJECT_FMT
 from .logging import logger
 
 
