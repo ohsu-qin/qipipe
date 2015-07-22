@@ -1,6 +1,7 @@
 import os
 import glob
 from nose.tools import (assert_equal, assert_not_equal, assert_is_not_none)
+from qiutil.collections import concat
 import qixnat
 from qipipe.staging.iterator import iter_stage
 from ... import (ROOT, PROJECT)
@@ -13,6 +14,7 @@ FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
 
 class TestStagingIterator(object):
     """iter_stage unit tests."""
+
     def test_breast(self):
         discovered = self._test_collection('Breast')
         # The first visit has a T1, T2 and DWI scan with numbers
@@ -37,8 +39,7 @@ class TestStagingIterator(object):
                 expected_dcm_cnt = 2
             dicom = scan_input.iterators.dicom
             volumes = dicom.keys()
-            concat = lambda x,y: x + y
-            dcm_files = reduce(concat, dicom.values())
+            dcm_files = concat(*dicom.values())
             assert_equal(len(volumes), expected_vol_cnt,
                          "%s %s scan %d input volume count is"
                          " incorrect: %d" %
@@ -103,7 +104,8 @@ class TestStagingIterator(object):
         # Delete the existing test subjects, since staging only detects
         # new visits.
         with qixnat.connect() as xnat:
-            xnat.delete_subjects(PROJECT, *subjects)
+            for sbj in subjects:
+                xnat.delete(PROJECT, sbj)
         
         # Iterate over the scans.
         discovered = list(iter_stage(PROJECT, collection, *inputs))

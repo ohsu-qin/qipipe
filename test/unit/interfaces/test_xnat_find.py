@@ -36,11 +36,11 @@ class TestXNATFind(object):
 
     def setUp(self):
         with qixnat.connect() as xnat:
-            xnat.delete_subjects(PROJECT, SUBJECT)
+            xnat.delete(PROJECT, SUBJECT)
         
     def tearDown(self):
         with qixnat.connect() as xnat:
-            xnat.delete_subjects(PROJECT, SUBJECT)
+            xnat.delete(PROJECT, SUBJECT)
         shutil.rmtree(RESULTS, True)
     
     def test_find_subject(self):

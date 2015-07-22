@@ -113,12 +113,15 @@ class PathologyUpdate(object):
 
         :param rows: the input pathology :meth:`read` rows list 
         """
+        prev_row = None
         for row in rows:
-            self._update(row)
+            self._update(row, prev_row)
+            prev_row = row
 
-    def _update(self, row):
+    def _update(self, row, previous_row):
         """
         :param row: the input pathology :meth:`read` row
+        :param previous_row: the preceding 
         """
         # There must be an intervention type.
         if not row.intervention_type:
