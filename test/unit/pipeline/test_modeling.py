@@ -10,18 +10,18 @@ except ImportError:
     modeling = None
 from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
-from ...unit.pipeline.staged_test_base import StagedTestBase
+from ...unit.pipeline.volume_test_base import VolumeTestBase
 
 MODELING_CONF = os.path.join(ROOT, 'conf', 'modeling.cfg')
 """The test registration configuration."""
 
-FIXTURES = os.path.join(ROOT, 'fixtures', 'pipeline', 'modeling')
+FIXTURES = os.path.join(ROOT, 'fixtures', 'staged')
 
 RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'modeling')
 """The test results directory."""
 
 
-class TestModelingWorkflow(StagedTestBase):
+class TestModelingWorkflow(VolumeTestBase):
     """
     Modeling workflow unit tests.
     This test exercises the modeling workflow on the QIN Breast and Sarcoma
@@ -57,19 +57,24 @@ class TestModelingWorkflow(StagedTestBase):
 
     def test_breast(self):
         if modeling:
-            self._test_breast()
+            for xnat, args, opts in self.stage('Breast'):
+                self._test_workflow(xnat, *args, **opts)
         else:
             logger(__name__).debug('Skipping modeling test since fastfit'
                                    ' is unavailable.')
 
     def test_sarcoma(self):
         if modeling:
-            self._test_sarcoma()
+            for xnat, args, opts in self.stage('Sarcoma'):
+                self._test_workflow(xnat, *args, **opts)
 
-    def _run_workflow(self, subject, session, scan, *images, **opts):
+    def _test_workflow(self, xnat, project, subject, session, scan,
+                       *images, **opts):
         """
-        Executes :meth:`qipipe.pipeline.modeling.run` on the input session scans.
+        Executes :meth:`qipipe.pipeline.modeling.run` on the input scans.
         
+        :param xnat: the XNAT facade instance
+        :param project: the input project name
         :param subject: the input subject
         :param session: the input session
         :param scan: the input scan number
@@ -78,13 +83,13 @@ class TestModelingWorkflow(StagedTestBase):
         :return: the :meth:`qipipe.pipeline.modeling.run` result
         """
         # Run the workflow.
-        return modeling.run(PROJECT, subject, session, scan, *images, **opts)
-
-    def _verify_result(self, xnat, subject, session, scan, result):
-        anl_obj = xnat.get_analysis(PROJECT, sbj, sess,scan, result)
-        assert_true(anl_obj.exists(),
-                    "The %s %s %s XNAT analysis object was not created" %
-                    (sbj, sess, result))
+        result = modeling.run(project, subject, session, scan, *images,
+                              **opts)
+        # Find the modeling resource.
+        rsc = xnat.find_one(project, subject, session, scan=scan,
+                            resource=result)
+        assert_is_not_none(rsc, "The %s %s %s XNAT modeling resource was not"
+                                " created" % (sbj, sess, result))
 
 
 if __name__ == "__main__":

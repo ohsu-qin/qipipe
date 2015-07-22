@@ -109,8 +109,8 @@ class TestQIPipeline(object):
 
         with qixnat.connect() as xnat:
             # Delete any existing test subjects.
-            xnat.delete_subjects(PROJECT, *subjects)
-
+            for sbj in subjects:
+                xnat.delete(PROJECT, sbj)
             # Run the staging, mask and registration workflows, but not
             # the modeling.
             logger(__name__).debug("Executing the QIN pipeline...")
@@ -144,7 +144,8 @@ class TestQIPipeline(object):
                                     " created in XNAT" % (sbj, sess, rsc))
 
             # Delete the test subjects.
-            xnat.delete_subjects(PROJECT, *subjects)
+            for sbj in subjects:
+                xnat.delete(PROJECT, sbj)
 
 
 if __name__ == "__main__":
