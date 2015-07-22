@@ -42,41 +42,5 @@ def update(subject, rows):
     :param rows: the input chemotherapy :meth:`read` rows list 
     
     """
-    ChemotherapyUpdate(subject).update(rows)
-
-
-class ChemotherapyError(Exception):
-    pass
-
-
-class ChemotherapyUpdate(DosageUpdate):
-    """The subject chemotherapy update facade class."""
-    
-    def __init__(self, subject):
-        """
-        :param subject: the ``Subject`` Mongo Engine database object
-            to update
-        """
-        super(ChemotherapyUpdate, self).__init__(subject)
-
-    def dosage_for(self, treatment, row):
-        """
-        :param treatment: the target treatment
-        :param row: the input row
-        :return: the dosage database object which matches the agent
-            name and start date, or a new dosage database object if
-            there is no match
-        """
-        # Find the matching dosage by agent, if any.
-        # If no match, then make a new dosage database object.
-        dosage_iter = (dosage for dosage in treatment.dosages
-                       if dosage.agent.name == row.name and
-                          dosage.start_date == row.start_date)
-        target = next(dosage_iter, None)
-        # If no match, then make a new dosage database object.
-        if not target:
-            agent = Drug(name=row.name)
-            target = Dosage(agent=agent)
-            treatment.dosages.append(target)
-
-        return target
+    updater = DosageUpdate(subject, Drug)
+    updater.update(rows)
