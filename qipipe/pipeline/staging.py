@@ -156,37 +156,13 @@ class StagingWorkflow(WorkflowBase):
 
     - *image*: the 3D volume stack NiFTI image file
 
-    Note: Concurrent XNAT upload fails unpredictably, possibly
-        arising from one of the following causes:
-        * the pyxnat config in $HOME/.xnat/xnat.cfg specifies a temp
-          directory that *is not* shared by all concurrent jobs,
-          resulting in inconsistent cache content
-        * the pyxnat config in $HOME/.xnat/xnat.cfg specifies a temp
-          directory that *is* shared by some concurrent jobs,
-          resulting in unsynchronized pyxnat write conflicts across
-          jobs
-        * the non-reentrant pyxnat's custom non-http2lib cache is
-          corrupted
-        * an XNAT archive directory access race condition
+    Note: Concurrent XNAT upload fails unpredictably due to one of
+        the causes described in the ``qixnat.facade.XNAT.find`` method
+        documentation.
 
-        The cause cannot be isolated for the following reasons:
-        * there is no useful Nipype error or log message
-        * the error is sporadic and unreproducible
-        * Nipype swallows non-nipype Python log messages, causing the
-          upload and pyxnat log messages to disappear
-
-        Update 05/12/2015 - there are three potential failure points:
-        * Concurrent pyxnat cache access corrupts the cache resulting in
-          unpredictable errors, e.g. attempt to create an existing XNAT
-          object
-        * Concurrent XNAT resource file upload corrupts the archive such
-          that the files are stored in the archive but are not recognized
-          by XNAT
-        * XNAT upload SGE plug-in cluster tasks exceed time or memory limits
-
-        These errors are addressed by the following measures:
+        The errors are addressed by the following measures:
         * setting an isolated pyxnat cache_dir for each execution node
-        * serializing the XNAT access points with JoinNodes
+        * serializing the XNAT find-or-create access points with JoinNodes
         * increasing the SGE submission resource parameters. The following
           setting is adequate:
              h_rt=02:00:00,mf=32M
