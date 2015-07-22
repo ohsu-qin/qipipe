@@ -78,9 +78,9 @@ class XNATFind(BaseInterface):
 
         # Delegate to the XNAT helper.
         with qixnat.connect() as xnat:
-            obj = xnat.find(self.inputs.project, self.inputs.subject,
-                            session, **opts)
-            if obj and obj.exists():
+            obj = xnat.find_one(self.inputs.project, self.inputs.subject,
+                                session, **opts)
+            if obj:
                 self._xnat_id = obj.id()
             else:
                 self._xnat_id = None

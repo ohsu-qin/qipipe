@@ -17,6 +17,9 @@ The following non-standard column-attribute associations:
 * The Cumulative Amount column is the amount attribute.
 """
 
+AGENT_DEFAULTS = dict(beam_type='photon')
+"""The default beam type is ``photon``."""
+
 
 def read(workbook, **condition):
     """
@@ -43,43 +46,5 @@ def update(subject, rows):
     :param rows: the input radiotherapy :meth:`read` rows list 
     
     """
-    RadiotherapyUpdate(subject).update(rows)
-
-
-class RadiotherapyError(Exception):
-    pass
-
-
-class RadiotherapyUpdate(DosageUpdate):
-    """The subject radiotherapy update facade class."""
-    
-    DEFAULTS = dict(beam_type='photon')
-    
-    def __init__(self, subject):
-        """
-        :param subject: the ``Subject`` Mongo Engine database object
-            to update
-        """
-        super(RadiotherapyUpdate, self).__init__(
-            subject, **RadiotherapyUpdate.DEFAULTS
-        )
-
-    def dosage_for(self, treatment, row):
-        """
-        :param treatment: the target treatment
-        :param row: the input row
-        :return: the dosage database object which matches the agent beam type,
-            or a new dosage database object if there is no match
-        """
-        # Find the matching dosage by agent, if any.
-        # If no match, then make a new dosage database object.
-        dosage_iter = (dosage for dosage in treatment.dosages
-                       if dosage.agent.beam_type == row.beam_type)
-        target = next(dosage_iter, None)
-        # If no match, then make a new dosage database object.
-        if not target:
-            agent = Radiation(beam_type=row.beam_type)
-            target = Dosage(agent=agent)
-            treatment.dosages.append(target)
-
-        return target
+    updater = DosageUpdate(subject, Radiation, **AGENT_DEFAULTS)
+    updater.update(rows)

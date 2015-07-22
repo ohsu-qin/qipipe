@@ -8,6 +8,10 @@ from .xls import Worksheet
 from . import parse
 
 
+class DosageError(Exception):
+    pass
+
+
 class DosageWorksheet(Worksheet):
     """The dosage worksheet facade."""
     
@@ -32,16 +36,18 @@ class DosageUpdate(object):
     DEFAULTS = dict(duration=1)
     """The default duration is 1 day."""
     
-    def __init__(self, subject, **defaults):
+    def __init__(self, subject, agent_class, **defaults):
         """
         :param subject: the ``Subject`` Mongo Engine database object
             to update
+        :param agent_class: the dosage agent class
         :param defaults: the {attribute: value} row defaults
         """
         self._subject = subject
         for attr, val in DosageUpdate.DEFAULTS.iteritems():
             if attr not in defaults:
                 defaults[attr] = val
+        self._agent_class = agent_class
         self._defaults = defaults
     
     def update(self, rows):
@@ -52,9 +58,9 @@ class DosageUpdate(object):
             :meth:`qipipe.qiprofile.xls.Worksheet.read` rows list 
         """
         for row in rows:
-            self._update(row)
+            self._update_for(row)
 
-    def _update(self, row):
+    def _update_for(self, row):
         """
         :param row: the input dosage
             :meth:`qipipe.qiprofile.xls.Worksheet.read` row
@@ -79,7 +85,7 @@ class DosageUpdate(object):
         if not row.amount:
             return
         # Find or make the target dosage object.
-        dosage = self.dosage_for(trt, row)
+        dosage = self._dosage_for(trt, row)
         # Collect the update attributes.
         attrs = (attr for attr in Dosage._fields if attr in row)
         # Update the target dosage database object.
@@ -102,12 +108,48 @@ class DosageUpdate(object):
         # Return the target treatment.
         return target
 
-    def dosage_for(self, treatment, row):
+    def _dosage_for(self, treatment, row):
         """
         :param treatment: the target treatment
         :param row: the input row
-        :return: the matching or new dosage database object
-        :raise NotImplementedError: always in this abstract class, since
-            this is a subclass responsibility
+        :return: the dosage database object which matches the start
+            date and agent attribute, or a new dosage database 
+            object if there is no match
+        :raise DosageError: if the key does not include the *start_date*
         """
-        raise NotImplementedError("Subclass responsibility")
+        # Find the matching treatment dosage by start date and agent
+        # content.
+        dosage_iter = (dosage for dosage in treatment.dosages
+                       if self._is_dosage_match(dosage, row))
+        target = next(dosage_iter, None)
+        # If no match, then make a new dosage database object.
+        if not target:
+            # The dosages are in date order. Insert the new dosage
+            # directly before other dosages with a later date, or
+            # the end of the list is there is no later dosage.
+            index_iter = (i for i, dosage in enumerate(treatment.dosages)
+                          if dosage.start_date > row.start_date)
+            # The dosage insertion point.
+            index = next(index_iter, len(treatment.dosages))
+            # The new agent {attribute: value} content.
+            agent_content = {attr: getattr(row, attr)
+                             for attr in self._agent_class._fields
+                             if hasattr(row, attr)}
+            # The new agent object.
+            agent = self._agent_class(**agent_content)
+            # The new dosage object.
+            target = Dosage(agent=agent, start_date=row.start_date)
+            # Add the new dosage.
+            treatment.dosages.insert(index, target)
+
+        return target
+
+    def _is_dosage_match(self, dosage, row):
+        return (dosage.start_date == row.start_date
+                and self._is_agent_match(dosage.agent, row))
+
+    def _is_agent_match(self, agent, row):
+        return all(getattr(agent, attr) == getattr(row, attr)
+                   for attr in agent.__class__._fields
+                   if hasattr(row, attr))
+        

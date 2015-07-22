@@ -20,6 +20,9 @@ from .collection import (Collection, ScanPatterns, ROIPatterns)
 from . import collections
 from .staging_error import StagingError
 
+MULTI_VOLUME_SCAN_NUMBERS = [1]
+"""Only T1 scans can have more than one volume."""
+
 BREAST_SUBJECT_REGEX = re.compile('BreastChemo(\d+)')
 """The Breast subject directory match pattern."""
 
@@ -100,19 +103,18 @@ BREAST_ROI_REGEX = re.compile("""
 The Breast ROI .bqf ROI file match pattern.
 """
 
-SARCOMA_ROI_PAT = '*processing*/R10_0.[3456]*/slice*/*.bqf'
+SARCOMA_ROI_PAT = 'results/ROI_ave*/taui_d001/slice*/*.bqf'
 """
 The Sarcoma ROI glob filter. The ``.bqf`` ROI files are in the
 session subdirectory:
 
-    processing/<R10 directory>/slice<slice index>/
-
-where <R10 directory> can be qualified by a lesion number.
+    results/<ROI directory>/slice<slice index>/
 """
 
 SARCOMA_ROI_REGEX = re.compile("""
-    .*processing.*/             # The visit processing subdirectory
-    R10_0\.[3456].*/            # The R10 series subdirectory
+    results/                    # The visit processing subdirectory
+    ROI_ave(rage)?/             # The ROI subdirectory
+    taui_d001/                  # An intermediate sudirectory
     slice(?P<slice_index>\d+)/  # The slice subdirectory
     (?P<fname>.*\.bqf)          # The ROI file base name
 """, re.VERBOSE)
@@ -120,7 +122,7 @@ SARCOMA_ROI_REGEX = re.compile("""
 The Sarcoma ROI .bqf ROI file match pattern.
 
 TODO - clarify which of the myriad Sarcoma ROI naming variations should
-be used. Until then, the SarcomaCollection ROI is disabled below.
+be used.
 """
 
 VOLUME_TAG = 'AcquisitionNumber'
@@ -156,10 +158,7 @@ class SarcomaCollection(Collection):
 
     def __init__(self):
         roi = ROIPatterns(glob=SARCOMA_ROI_PAT, regex=SARCOMA_ROI_REGEX)
-        # TODO - add the Sarcoma ROI pattern after the clarification cited
-        # in the SARCOMA_ROI_REGEX TODO item.
-        #t1 = ScanPatterns(dicom=T1_PAT, roi=roi)
-        t1 = ScanPatterns(dicom=T1_PAT)
+        t1 = ScanPatterns(dicom=T1_PAT, roi=roi)
         t2 = ScanPatterns(dicom=SARCOMA_T2_PAT)
         dwi = ScanPatterns(dicom=SARCOMA_DWI_PAT)
         scan = {1: t1, 2: t2, 4: dwi}

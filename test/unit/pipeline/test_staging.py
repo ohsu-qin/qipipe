@@ -58,7 +58,8 @@ class TestStagingWorkflow(object):
 
         with qixnat.connect() as xnat:
             # Delete any existing test subjects.
-            xnat.delete_subjects(PROJECT, *subjects)
+            for sbj in subjects:
+                xnat.delete(PROJECT, sbj)
             # Run the workflow on each session fixture.
             for scan_input in iter_stage(PROJECT, collection, *inputs, dest=dest):
                 work_dir = os.path.join(work, 'scan', str(scan_input.scan))
@@ -67,7 +68,7 @@ class TestStagingWorkflow(object):
                 stg_wf.set_inputs(scan_input, dest=dest)
                 stg_wf.run()
                 # Verify the result.
-                sess_obj = xnat.get_session(PROJECT, scan_input.subject,
+                sess_obj = xnat.find_one(PROJECT, scan_input.subject,
                                             scan_input.session)
                 assert_true(sess_obj.exists(),
                             "The %s %s session was not created in XNAT" %
@@ -96,7 +97,8 @@ class TestStagingWorkflow(object):
                                  scan_input.scan, fname))
 
             # Delete the test subjects.
-            xnat.delete_subjects(PROJECT, *subjects)
+            for sbj in subjects:
+                xnat.delete(PROJECT, sbj)
 
 
 if __name__ == "__main__":

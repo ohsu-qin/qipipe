@@ -34,24 +34,21 @@ class TestXNATDownload(object):
 
     def setUp(self):
         with qixnat.connect() as xnat:
-            xnat.delete_subjects(PROJECT, SUBJECT)
+            xnat.delete(PROJECT, SUBJECT)
         shutil.rmtree(RESULTS, True)
 
         with qixnat.connect() as xnat:
-            # Make the XNAT scan object.
-            scan_obj = xnat.get_scan(PROJECT, SUBJECT, SESSION, SCAN)
-            rsc_obj = scan_obj.resource(RESOURCE)
-            _, fname = os.path.split(FIXTURE)
-            file_obj = rsc_obj.file(fname)
-            # Upload the NiFTI file.
-            file_obj.insert(FIXTURE)
+            # Make the XNAT scan resource object.
+            rsc = xnat.find_or_create(PROJECT, SUBJECT, SESSION, scan=SCAN,
+                                      resource=RESOURCE, modality='MR')
+            # Upload the file.
+            xnat.upload(rsc, FIXTURE)
         logger(__name__).debug("Uploaded the test %s %s scan %d file %s." %
                                (SUBJECT, SESSION, SCAN, FIXTURE))
 
-
     def tearDown(self):
         with qixnat.connect() as xnat:
-            xnat.delete_subjects(PROJECT, SUBJECT)
+            xnat.delete(PROJECT, SUBJECT)
         shutil.rmtree(RESULTS, True)
 
     def test_download_scan(self):

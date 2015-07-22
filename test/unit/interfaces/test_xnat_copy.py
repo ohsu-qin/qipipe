@@ -1,6 +1,6 @@
 import os
 import shutil
-from nose.tools import (assert_equal, assert_in, assert_true)
+from nose.tools import (assert_equal, assert_is_not_none, assert_in, assert_true)
 from nipype.pipeline import engine as pe
 import qixnat
 from qipipe.interfaces import XNATCopy
@@ -41,7 +41,7 @@ class TestXNATCopy(object):
 
     def tearDown(self):
         with qixnat.connect() as xnat:
-            xnat.delete_subjects(PROJECT, SUBJECT)
+            xnat.delete(PROJECT, SUBJECT)
         shutil.rmtree(RESULTS, True)
 
     def test_scan(self):
@@ -55,10 +55,9 @@ class TestXNATCopy(object):
         # Verify the result.
         xnat_files = set(result.outputs.xnat_files)
         with qixnat.connect() as xnat:
-            scan_obj = xnat.get_scan(PROJECT, SUBJECT, SESSION, SCAN)
-            assert_true(scan_obj.exists(),
-                        "Upload did not create the %s %s scan: %s" %
-                        (SUBJECT, SESSION, SCAN))
+            scan_obj = xnat.find_one(PROJECT, SUBJECT, SESSION, scan=SCAN)
+            assert_not_none(scan_obj, "Upload did not create the %s %s scan:"
+                                      " %s" % (SUBJECT, SESSION, SCAN))
             _, fname = os.path.split(FIXTURE)
             assert_in(fname, xnat_files,
                       "The XNATCopy result does not include the %s %s scan"
@@ -67,7 +66,6 @@ class TestXNATCopy(object):
             assert_true(file_obj.exists(),
                         "XNATCopy did not create the %s %s scan %d file: %s" %
                         (SUBJECT, SESSION, SCAN, fname))
-    
     
     def test_registration(self):
         logger(__name__).debug("Testing the XNATCopy interface on %s %s"
@@ -80,7 +78,7 @@ class TestXNATCopy(object):
     
         # Verify the result.
         with qixnat.connect() as xnat:
-            exp_obj = xnat.get_experiment(PROJECT, SUBJECT, SESSION)
+            exp_obj = xnat.find_one(PROJECT, SUBJECT, SESSION)
             assert_true(exp_obj.exists(),
                         "Upload did not create the %s %s experiment" %
                         (SUBJECT, SESSION))
@@ -106,9 +104,9 @@ class TestXNATCopy(object):
     
         # Verify the result.
         with qixnat.connect() as xnat:
-            recon_obj = xnat.get_reconstruction(PROJECT, SUBJECT, SESSION,
-                                                RECON)
-            assert_true(recon_obj.exists(),
+            recon_obj = xnat.find_one(PROJECT, SUBJECT, SESSION,
+                                      reconstruction=RECON)
+            assert_is_not_none(recon_obj,
                         "Upload did not create the %s %s reconstruction: %s" %
                         (SUBJECT, SESSION, RECON))
             _, fname = os.path.split(FIXTURE)
@@ -128,19 +126,18 @@ class TestXNATCopy(object):
     
         # Verify the result.
         with qixnat.connect() as xnat:
-            exp_obj = xnat.get_experiment(PROJECT, SUBJECT, SESSION)
-            assert_true(exp_obj.exists(),
-                        "XNATCopy did not create the %s %s experiment" %
-                        (SUBJECT, SESSION))
-            anl_obj = xnat.get_assessor(PROJECT, SUBJECT, SESSION, ANALYSIS)
-            assert_true(anl_obj.exists(),
-                        "XNATCopy did not create the %s %s analysis: %s" %
-                        (SUBJECT, SESSION, ANALYSIS))
+            exp_obj = xnat.find_one(PROJECT, SUBJECT, SESSION)
+            assert_true(exp_obj.exists(), "XNATCopy did not create the %s %s"
+                                          " experiment" % (SUBJECT, SESSION))
+            anl_obj = xnat.find_one(PROJECT, SUBJECT, SESSION, assessor=ANALYSIS)
+            assert_is_not_none(anl_obj, "XNATCopy did not create the %s %s"
+                                        " analysis: %s" %
+                                        (SUBJECT, SESSION, ANALYSIS))
             _, fname = os.path.split(FIXTURE)
             file_obj = anl_obj.out_resource('params').file(fname)
-            assert_true(file_obj.exists(),
-                        "XNATCopy did not create the %s %s %s file: %s" %
-                        (SUBJECT, SESSION, ANALYSIS, fname))
+            assert_true(file_obj.exists(), "XNATCopy did not create the %s %s"
+                                           " %s file: %s" %
+                                           (SUBJECT, SESSION, ANALYSIS, fname))
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ from qipipe.pipeline import registration
 from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
 from ...helpers.name_generator import generate_unique_name
-from ...unit.pipeline.staged_test_base import StagedTestBase
+from ...unit.pipeline.volume_test_base import VolumeTestBase
 
 REG_CONF = os.path.join(ROOT, 'conf', 'registration.cfg')
 """The test registration configuration."""
@@ -23,7 +23,7 @@ RESOURCE = generate_unique_name(__name__)
 """The XNAT registration resource name."""
 
 
-class TestRegistrationWorkflow(StagedTestBase):
+class TestRegistrationWorkflow(VolumeTestBase):
     """
     Registration workflow unit tests.
 
@@ -77,7 +77,7 @@ class TestRegistrationWorkflow(StagedTestBase):
             output file paths
         """
         # Verify that the XNAT resource object was created.
-        rsc_obj = xnat.find(PROJECT, subject, session, scan=scan, resource=RESOURCE)
+        rsc_obj = xnat.find_one(PROJECT, subject, session, scan=scan, resource=RESOURCE)
         assert_is_not_none(rsc_obj,
                            "The %s %s %s XNAT registration resource object was"
                            " not created" % (subject, session, RESOURCE))

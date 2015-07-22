@@ -20,6 +20,8 @@ from ..interfaces import (XNATDownload, XNATUpload)
 from ..staging.iterator import iter_stage
 from ..staging.map_ctp import map_ctp
 from ..staging.roi import iter_roi
+# OHSU - multi-volume scans.
+from ..staging.ohsu import MULTI_VOLUME_SCAN_NUMBERS
 
 SCAN_TS_RSC = 'scan_ts'
 """The XNAT scan time series resource name."""
@@ -47,7 +49,7 @@ def run(*inputs, **opts):
       :meth:`QIPipelineWorkflow.run_with_scan_download` XNAT session
       labels input.
 
-    :param inputs: the DICOM directories or XNAT session labels to
+    :param inputs: the input directories or XNAT session labels to
         process
     :param opts: the :meth:`qipipe.staging.iterator.iter_stage`
         and :class:`QIPipelineWorkflow` initializer options,
@@ -122,7 +124,7 @@ def _run_with_dicom_input(actions, *inputs, **opts):
     for scan_input in iter_stage(project, collection, *inputs, **opts):
         # OHSU - Only multi-volume scans can have post-staging downstream
         # actions.
-        if len(scan_input.iterators.dicom) == 1:
+        if len(scan_input.iterators.dicom) == MULTI_VOLUME_SCAN_NUMBERS:
             if 'stage' in actions:
                 wf_actions = ['stage']
             else:
@@ -150,7 +152,6 @@ def _run_with_xnat_input(actions, *inputs, **opts):
     :param inputs: the XNAT scan resource paths
     :param opts: the :class:`QIPipelineWorkflow` initializer options
     """
-
     with qixnat.connect() as xnat:
         for path in inputs:
             hierarchy = dict(path_hierarchy(path))
@@ -168,8 +169,8 @@ def _run_with_xnat_input(actions, *inputs, **opts):
                 raise ArgumentError("The XNAT path is missing a scan: %s" % path)
             scan = int(scan_s)
             # The XNAT scan object must exist.
-            scan_obj = xnat.find(prj, sbj, sess, scan=scan)
-            if not scan_obj or not scan_obj.exists():
+            scan_obj = xnat.find_one(prj, sbj, sess, scan=scan)
+            if not scan_obj:
                 raise ArgumentError("The XNAT scan object does not exist: %s" % path)
             
             # The workflow options are augmented from the base options.
@@ -201,7 +202,7 @@ def _scan_resource_exists(project, subject, session, scan, resource):
     :return: whether the given XNAT scan resource exists
     """
     with qixnat.connect() as xnat:
-        rsc_obj = xnat.find(project, subject, session, scan=scan,
+        rsc_obj = xnat.find_one(project, subject, session, scan=scan,
                             resource=resource)
     exists = rsc_obj and rsc_obj.files().get()
     status = 'found' if exists else 'not found'
@@ -358,7 +359,7 @@ class QIPipelineWorkflow(WorkflowBase):
                            (project, subject, session, scan))
 
         # Get the volume numbers.
-        scan_obj = xnat.get_scan(project, subject, session, scan)
+        scan_obj = xnat.find_one(project, subject, session, scan=scan)
         if not scan_obj:
             raise NotFoundError("The QIN pipeline did not find a %s %s %s"
                                 " scan %d." %
@@ -413,13 +414,13 @@ class QIPipelineWorkflow(WorkflowBase):
         """
         # The XNAT registration object.
         if self.registration_resource:
-            reg_obj = xnat.get_scan_resource(project, subject, session, scan,
-                                             self.registration_resource)
+            reg_obj = xnat.find_one(project, subject, session, scan=scan,
+                                    resource=self.registration_resource)
         else:
             reg_obj = None
         # If the registration has not yet been performed, then
         # download all of the volumes.
-        if not (reg_obj and reg_obj.exists()):
+        if not reg_obj:
             return [], files
 
         # The realigned files.

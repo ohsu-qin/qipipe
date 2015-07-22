@@ -13,7 +13,7 @@ class XNATUploadInputSpec(BaseInterfaceInputSpec):
 
     session = traits.Str(mandatory=True, desc='The XNAT session name')
 
-    resource = traits.Str(desc='The XNAT resource name (scan default is NIFTI)')
+    resource = traits.Str(desc='The XNAT resource name')
 
     scan = traits.Either(traits.Int, traits.Str, desc='The XNAT scan name')
 
@@ -62,29 +62,29 @@ class XNATUpload(BaseInterface):
 
     def _run_interface(self, runtime):
         # The upload options.
-        opts = {}
+        find_opts = {}
         if self.inputs.resource:
-            opts['resource'] = self.inputs.resource
-        if self.inputs.force:
-            opts['force'] = True
-        if self.inputs.skip_existing:
-            opts['skip_existing'] = True
+            find_opts['resource'] = self.inputs.resource
         if self.inputs.modality:
-            opts['modality'] = self.inputs.modality
-
-        # The resource parent.
+            find_opts['modality'] = self.inputs.modality
         if self.inputs.scan:
-            opts['scan'] = self.inputs.scan
+            find_opts['scan'] = self.inputs.scan
         elif self.inputs.reconstruction:
-            opts['reconstruction'] = self.inputs.reconstruction
+            find_opts['reconstruction'] = self.inputs.reconstruction
         elif self.inputs.assessor:
-            opts['assessor'] = self.inputs.assessor
+            find_opts['assessor'] = self.inputs.assessor
+        upload_opts = {}
+        if self.inputs.force:
+            upload_opts['force'] = True
+        if self.inputs.skip_existing:
+            upload_opts['skip_existing'] = True
 
         # Upload the files.
         with qixnat.connect() as xnat:
-            self._xnat_files = xnat.upload(
-                self.inputs.project, self.inputs.subject, self.inputs.session,
-                *self.inputs.in_files, **opts)
+            # The XNAT scan resource object.
+            rsc = xnat.find_or_create(self.inputs.project, self.inputs.subject,
+                                      self.inputs.session, **find_opts)
+            self._xnat_files = xnat.upload(rsc, *self.inputs.in_files, **upload_opts)
 
         return runtime
 

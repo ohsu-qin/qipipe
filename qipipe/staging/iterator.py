@@ -2,8 +2,6 @@
 # the collections import as the standard Python collections module
 # rather than the staging collections module.
 from __future__ import absolute_import
-
-
 import os
 import re
 import glob
@@ -12,15 +10,9 @@ from qiutil.logging import logger
 import qixnat
 import qidicom.hierarchy
 from . import collections
+from ..helpers.constants import (SUBJECT_FMT, SESSION_FMT)
 from .roi import iter_roi
 from .staging_error import StagingError
-
-
-SUBJECT_FMT = '%s%03d'
-"""The QIN subject name format with argument subject number."""
-
-SESSION_FMT = 'Session%02d'
-"""The QIN session name format with argument session number."""
 
 
 class ScanInput(object):
@@ -329,21 +321,20 @@ class VisitIterator(object):
     
     def _is_new_session(self, subject, session):
         with qixnat.connect() as xnat:
-            exists = xnat.get_session(self.project, subject, session).exists()
-        if exists:
+            sess = xnat.find_one(self.project, subject, session)
+        if sess:
             logger(__name__).debug("Skipping %s %s since it has already been"
                                    " loaded to XNAT." % (subject, session))
-        return not exists
-
+        return not sess
 
     def _is_new_scan(self, subject, session, scan):
         with qixnat.connect() as xnat:
-            exists = xnat.get_scan(self.project, subject, session, scan).exists()
-        if exists:
+            scan_obj = xnat.find_one(self.project, subject, session, scan=scan)
+        if scan_obj:
             logger(__name__).debug("Skipping %s %s scan %d since it has"
                                    " already been loaded to XNAT." %
                                    (subject, session, scan))
-        return not exists
+        return not scan_obj
 
 
 def _scan_dicom_generator(pattern, tag):

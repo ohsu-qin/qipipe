@@ -54,7 +54,8 @@ class TestChemotherapy(object):
         assert_equal(len(trts), 2, "The treatment count is incorrect: %d" %
                                    len(trts))
         # Focus on neoadjuvant.
-        trt = next((trt for trt in trts if trt.treatment_type == 'Neoadjuvant'), None)
+        trt_iter = (trt for trt in trts if trt.treatment_type == 'Neoadjuvant')
+        trt = next(trt_iter, None)
         assert_is_not_none(trt, "The neoadjuvant treatment was not found")
         assert_equal(len(trt.dosages), 2, "The neoadjuvant treatment dosages count is"
                                           " incorrect: %d" % len(trt.dosages))
@@ -80,8 +81,8 @@ class TestChemotherapy(object):
                                                      " not recognized: %s" % attr)
                 continue
              # Validate the attribute values.
-            assert_equal(actual, expected, "The chemotherapy %s value is incorrect:"
-                                           " %s" % (attr, actual))
+            assert_equal(actual, expected, "The dosage %s value is incorrect:"
+                                           " %s vs %s" % (attr, actual, expected))
 
 
 if __name__ == "__main__":

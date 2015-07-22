@@ -1,6 +1,7 @@
 import os
 import shutil
-from nose.tools import (assert_equal, assert_in, assert_true)
+from nose.tools import (assert_equal, assert_is_not_none, assert_in,
+                        assert_true)
 from qipipe.interfaces import XNATUpload
 import qixnat
 from ... import (ROOT, PROJECT)
@@ -39,11 +40,11 @@ class TestXNATUpload(object):
 
     def setUp(self):
         with qixnat.connect() as xnat:
-            xnat.delete_subjects(PROJECT, SUBJECT)
+            xnat.delete(PROJECT, SUBJECT)
 
     def tearDown(self):
         with qixnat.connect() as xnat:
-            xnat.delete_subjects(PROJECT, SUBJECT)
+            xnat.delete(PROJECT, SUBJECT)
         shutil.rmtree(RESULTS, True)
 
     def test_upload_scan(self):
@@ -57,15 +58,15 @@ class TestXNATUpload(object):
         # Verify the result.
         xnat_files = set(result.outputs.xnat_files)
         with qixnat.connect() as xnat:
-            scan_obj = xnat.get_scan(PROJECT, SUBJECT, SESSION, SCAN)
-            assert_true(scan_obj.exists(),
+            scan = xnat.find_one(PROJECT, SUBJECT, SESSION, scan=SCAN)
+            assert_is_not_none(scan.exists(),
                         "Upload did not create the %s %s scan: %s" %
                         (SUBJECT, SESSION, SCAN))
             _, fname = os.path.split(FIXTURE)
             assert_in(fname, xnat_files,
                       "The XNATUpload result does not include the %s %s scan"
                       " %d file %s" % (SUBJECT, SESSION, SCAN, fname))
-            file_obj = scan_obj.resource('NIFTI').file(fname)
+            file_obj = scan.resource('NIFTI').file(fname)
             assert_true(file_obj.exists(),
                         "XNATUpload did not create the %s %s scan %d file: %s" %
                         (SUBJECT, SESSION, SCAN, fname))
@@ -81,7 +82,7 @@ class TestXNATUpload(object):
 
         # Verify the result.
         with qixnat.connect() as xnat:
-            exp_obj = xnat.get_experiment(PROJECT, SUBJECT, SESSION)
+            exp_obj = xnat.find_one(PROJECT, SUBJECT, SESSION)
             assert_true(exp_obj.exists(),
                         "Upload did not create the %s %s experiment" %
                         (SUBJECT, SESSION))
@@ -129,7 +130,7 @@ class TestXNATUpload(object):
 
         # Verify the result.
         with qixnat.connect() as xnat:
-            exp_obj = xnat.get_experiment(PROJECT, SUBJECT, SESSION)
+            exp_obj = xnat.find_one(PROJECT, SUBJECT, SESSION)
             assert_true(exp_obj.exists(),
                         "XNATUpload did not create the %s %s experiment" %
                         (SUBJECT, SESSION))
