@@ -35,10 +35,11 @@ class XNATFindOutputSpec(TraitedSpec):
 
 class XNATFind(BaseInterface):
     """
-    The ``XNATFind`` Nipype interface wraps the
-    :meth:`qixnat.facade.XNAT.find` method.
-    
-    :Note: only one XNAT operation can run at a time.
+    The ``XNATFind`` Nipype interface wraps the ``qixnat.facade.XNAT``
+    ``find_one`` and ``find_or_create`` methods.
+
+    :Note: concurrent XNAT operations can fail. See the
+        :class:`qipipe.pipeline.staging.StagingWorkflow` note.
     """
 
     input_spec = XNATFindInputSpec
@@ -50,7 +51,7 @@ class XNATFind(BaseInterface):
 
     def _run_interface(self, runtime):
         # The find options.
-        opts = dict(create=self.inputs.create)
+        opts = {}
         if self.inputs.modality:
             opts['modality'] = self.inputs.modality
 
@@ -77,9 +78,15 @@ class XNATFind(BaseInterface):
             opts['file'] = self.inputs.file
 
         # Delegate to the XNAT helper.
+        create = isdefined(self.inputs.create) and self.inputs.create
         with qixnat.connect() as xnat:
-            obj = xnat.find_one(self.inputs.project, self.inputs.subject,
-                                session, **opts)
+            if create:
+                obj = xnat.find_or_create(self.inputs.project,
+                                          self.inputs.subject, session,
+                                          **opts)
+            else:
+                obj = xnat.find_one(self.inputs.project, self.inputs.subject,
+                                    session, **opts)
             if obj:
                 self._xnat_id = obj.id()
             else:
