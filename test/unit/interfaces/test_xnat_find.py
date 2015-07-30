@@ -1,16 +1,14 @@
 import os, glob, re, shutil
-from nose.tools import (assert_equal, assert_false, assert_true)
+from nose.tools import (assert_equal, assert_false, assert_true, assert_is_none,
+                        assert_raises)
 from nipype.interfaces.traits_extension import isdefined
 from qipipe.interfaces import XNATFind
 import qixnat
+from qixnat.facade import XNATError
+
 from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
 from ...helpers.name_generator import generate_unique_name
-
-FIXTURE = os.path.join(ROOT, 'fixtures', 'interfaces', 'xnat', 'Sarcoma001',
-                      'Session01', 'scans', '1', 'resources', 'NIFTI',
-                      'volume001.nii.gz')
-"""The test fixtures directory."""
 
 RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'xnat')
 """The test results directory."""
@@ -37,7 +35,7 @@ class TestXNATFind(object):
     def setUp(self):
         with qixnat.connect() as xnat:
             xnat.delete(PROJECT, SUBJECT)
-        
+
     def tearDown(self):
         with qixnat.connect() as xnat:
             xnat.delete(PROJECT, SUBJECT)
@@ -58,10 +56,20 @@ class TestXNATFind(object):
     def test_find_scan_resource(self):
         self._test_find(SUBJECT, SESSION, scan=SCAN, resource='NIFTI')
     
-    def test_find_scan_file(self):
-        self._test_find(SUBJECT, SESSION, scan=SCAN, resource='NIFTI',
-                        file=FIXTURE)
-    
+    def test_create_file_exception(self):
+        # Create file is not supported.
+        finder = XNATFind(project=PROJECT, subject=SUBJECT, session=SESSION,
+                          scan=SCAN, resource='NIFTI', file='bogus',
+                          modality='MR', create=True)
+        with assert_raises(XNATError):
+            finder.run()
+        # No ancestor should be inadvertently created.
+        finder = XNATFind(project=PROJECT, subject=SUBJECT)
+        result = finder.run()
+        assert_false(isdefined(result.outputs.xnat_id),
+                     "Unsupported file create inadvertently created the"
+                     " ancestor %s" % SUBJECT)
+
     def test_find_reconstruction(self):
         self._test_find(SUBJECT, SESSION, reconstruction=RECONSTRUCTION)
     
@@ -71,35 +79,35 @@ class TestXNATFind(object):
     def _test_find(self, *args, **opts):
         logger(__name__).debug("Testing the XNATFind interface on %s %s..." %
                                (args, opts))        
-        
         # Add the arguments to the inputs.
         inputs = opts
         args = list(args)
         inputs['subject'] = args[0]
         if len(args) > 1:
             inputs['session'] = args[1]
-        
+
         # Try to find the object.
         find = XNATFind(project=PROJECT, **inputs)
         result = find.run()
         assert_false(isdefined(result.outputs.xnat_id),
             "Find %s incorrectly returned an id: %s." %
             (inputs, result.outputs.xnat_id))
-        
+
         # Create the object.
         find = XNATFind(project=PROJECT, modality='MR', create=True, **inputs)
         result = find.run()
         assert_true(isdefined(result.outputs.xnat_id),
             "Find %s with create did not return an id." % inputs)
         xnat_id = result.outputs.xnat_id
-        
+
         # Refind the object.
         find = XNATFind(project=PROJECT, **inputs)
         result = find.run()
         assert_equal(result.outputs.xnat_id, xnat_id,
             "Find %s returned the wrong id: %s." %
             (inputs, result.outputs.xnat_id))
-        
+
+
 
 if __name__ == "__main__":
     import nose
