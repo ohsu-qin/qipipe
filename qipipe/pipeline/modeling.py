@@ -16,7 +16,6 @@ PK_PREFIX = 'pk'
 """The XNAT modeling resource object label prefix."""
 
 
-
 class ModelingError(Exception):
     pass
 
@@ -199,15 +198,15 @@ class ModelingWorkflow(WorkflowBase):
         :param mask: the XNAT mask resource
         :return: the modeling result XNAT resource name
         """
-        self._logger.debug("Modeling the %s %s %s time series..." %
-            (sbj, sess, time_series))
+        self._logger.debug("Modeling the %s %s Scan %d %s time series..." %
+            (subject, session, scan, time_series))
 
         # Determine the bolus uptake. If it could not be determined,
         # then take the first volume as the uptake.
         try:
-            bolus_arrival_index = bolus_arrival_index(time_series)
+            bolus_arv_ndx = bolus_arrival_index(time_series)
         except BolusArrivalError:
-            bolus_arrival_index = 0
+            bolus_arv_ndx = 0
 
         # Set the workflow input.
         input_spec = self.workflow.get_node('input_spec')
@@ -215,8 +214,9 @@ class ModelingWorkflow(WorkflowBase):
         input_spec.inputs.session = session
         input_spec.inputs.scan = scan
         input_spec.inputs.time_series = time_series
-        input_spec.inputs.bolus_arrival_index = bolus_arrival_index
-        input_spec.inputs.mask = mask
+        input_spec.inputs.bolus_arrival_index = bolus_arv_ndx
+        if mask:
+            input_spec.inputs.mask = mask
 
         # Execute the modeling workflow.
         self._logger.debug("Executing the %s workflow on the %s %s scan %d"
@@ -285,7 +285,8 @@ class ModelingWorkflow(WorkflowBase):
         for i, field in enumerate(out_fields):
             base_field = 'output_spec.' + field
             mdl_wf.connect(base_wf, base_field, merge_outputs, "in%d" % (i + 1))
-        upload_xfc = XNATUpload(project=self.project, resource=self.resource)
+        upload_xfc = XNATUpload(project=self.project, resource=self.resource,
+                                modality='MR')
         upload_node = pe.Node(upload_xfc, name='upload_outputs')
         mdl_wf.connect(input_spec, 'subject', upload_node, 'subject')
         mdl_wf.connect(input_spec, 'session', upload_node, 'session')
@@ -360,26 +361,26 @@ class ModelingWorkflow(WorkflowBase):
 
             # Create the R1_0 map.
             get_r1_0_func = Function(
-                input_names=['pdw_image', 't1w_image', 'max_r1_0',
-                             'mask_file'],
+                input_names=['pdw_image', 't1w_image', 'max_r1_0', 'mask'],
                 output_names=['r1_0_map'],
                 function=make_r1_0),
             get_r1_0 = pe.Node(get_r1_0_func, name='get_r1_0')
             base_wf.connect(input_spec, 'pd_nii', get_r1_0, 'pdw_image')
             base_wf.connect(make_base, 'baseline', get_r1_0, 't1w_image')
             base_wf.connect(input_spec, 'max_r1_0', get_r1_0, 'max_r1_0')
-            base_wf.connect(input_spec, 'mask', get_r1_0, 'mask_file')
+            base_wf.connect(input_spec, 'mask', get_r1_0, 'mask')
 
         # Convert the DCE time series to R1 maps.
         get_r1_series_func = Function(
-            input_names=['time_series', 'r1_0', 'baseline_end', 'mask_file'],
+            input_names=['time_series', 'r1_0', 'baseline_end', 'mask'],
             output_names=['r1_series'], function=make_r1_series)
         get_r1_series = pe.Node(get_r1_series_func, name='get_r1_series')
         base_wf.connect(input_spec, 'time_series',
                         get_r1_series, 'time_series')
         base_wf.connect(input_spec, 'baseline_end_idx',
                         get_r1_series, 'baseline_end')
-        base_wf.connect(input_spec, 'mask', get_r1_series, 'mask_file')
+        base_wf.connect(input_spec, 'mask',
+                        get_r1_series, 'mask')
         if use_fixed_r1_0:
             base_wf.connect(input_spec, 'r1_0_val', get_r1_series, 'r1_0')
         else:
@@ -578,6 +579,7 @@ class ModelingWorkflow(WorkflowBase):
 
 ### Utility functions called by workflow nodes. ###
 
+
 def make_baseline(time_series, baseline_end_idx):
     """
     Makes the R1_0 computation baseline NiFTI file.
@@ -612,7 +614,7 @@ def make_baseline(time_series, baseline_end_idx):
     return baseline_path
 
 
-def make_r1_0(pdw_image, t1w_image, max_r1_0, mask_file, **kwargs):
+def make_r1_0(pdw_image, t1w_image, max_r1_0, **kwargs):
     """
     Returns the R1_0 map NiFTI file from the given proton density
     and T1-weighted images. The R1_0 map is computed using the
@@ -622,7 +624,6 @@ def make_r1_0(pdw_image, t1w_image, max_r1_0, mask_file, **kwargs):
     :param pdw_image: the proton density NiFTI image file path
     :param t1w_image: the T1-weighted image file path
     :param max_r1_0: the R1_0 range maximum
-    :param mask_file: the modeling mask file path
     :param kwargs: the ``pdw_t1w_to_r1`` function keyword arguments
     :return: the R1_0 map NiFTI image file name
     """
@@ -635,9 +636,18 @@ def make_r1_0(pdw_image, t1w_image, max_r1_0, mask_file, **kwargs):
     pdw_nw = NiftiWrapper(nb.load(pdw_image), make_empty=True)
     t1w_nw = NiftiWrapper(nb.load(t1w_image), make_empty=True)
     r1_space = np.arange(0.01, max_r1_0, 0.01)
-    mask = nb.load(mask_file).get_data()
-    r1_0 = pdw_t1w_to_r1(pdw_nw, t1w_nw, r1_space=r1_space, mask=mask,
-                         **kwargs)
+    mask_opt = kwargs.pop('mask', None)
+    if mask_opt:
+        
+        
+        
+        
+        raise ValueError("Bogus: %s (%s)" % (mask_opt, mask_opt.__class_))
+        
+        
+        
+        kwargs['mask'] = nb.load(mask_opt).get_data()
+    r1_0 = pdw_t1w_to_r1(pdw_nw, t1w_nw, r1_space=r1_space, **kwargs)
 
     cwd = os.getcwd()
     out_nii = nb.Nifti1Image(r1_0, pdw_nw.nii_img.get_affine())
@@ -647,13 +657,13 @@ def make_r1_0(pdw_image, t1w_image, max_r1_0, mask_file, **kwargs):
     return out_fn
 
 
-def make_r1_series(time_series, r1_0, mask_file, **kwargs):
+def make_r1_series(time_series, r1_0, **kwargs):
     """
     Makes the R1_0 series NiFTI file.
 
     :param time_series: the modeling input 4D NiFTI image
     :param r1_0: the R1_0 image file path
-    :param mask_file: the modeling mask file path
+    :param kwargs: the ``dce_to_r1`` keyword options
     :return: the R1_0 series NiFTI image file name
     """
     import os
@@ -664,8 +674,10 @@ def make_r1_series(time_series, r1_0, mask_file, **kwargs):
     dce_nw = NiftiWrapper(nb.load(time_series), make_empty=True)
     if not isinstance(r1_0, float):
         r1_0 = nb.load(r1_0).get_data()
-    mask = nb.load(mask_file).get_data()
-    r1_series = dce_to_r1(dce_nw, r1_0, mask=mask, **kwargs)
+    mask_opt = kwargs.pop('mask', None)
+    if mask_opt:
+        kwargs['mask'] = nb.load(mask_opt).get_data()
+    r1_series = dce_to_r1(dce_nw, r1_0, **kwargs)
 
     cwd = os.getcwd()
     out_nii = nb.Nifti1Image(r1_series, dce_nw.nii_img.get_affine())
