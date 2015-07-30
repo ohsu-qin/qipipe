@@ -11,8 +11,8 @@ traits==4.4.0
 networkx==1.8.1
 qiutil==2.2.7
 qidicom==2.3.7
-qixnat==4.1.1
-qiprofile-rest-client==5.5.4
+qixnat==4.1.2
+qiprofile-rest-client==5.6.1
 six==1.9.0
 git+git://github.com/moloney/dcmstack.git#egg=dcmstack
 git+git://github.com/FredLoney/nipype.git#egg=nipype-master
