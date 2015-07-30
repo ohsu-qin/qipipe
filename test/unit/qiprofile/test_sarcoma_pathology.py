@@ -6,7 +6,8 @@ from datetime import datetime
 from nose.tools import (assert_equal, assert_is_not_none, assert_is_instance)
 from qiprofile_rest_client.model.subject import Subject
 from qiprofile_rest_client.model.clinical import (
-    Biopsy, SarcomaPathology, NecrosisPercentValue, TNM, FNCLCCGrade
+    Biopsy, TumorExtent, SarcomaPathology, NecrosisPercentValue, TNM,
+    FNCLCCGrade
 )
 from qipipe.qiprofile import (xls, sarcoma_pathology)
 from ...helpers.logging import logger
@@ -18,15 +19,28 @@ SUBJECT = 1
 COLLECTION = 'Sarcoma'
 """The test collection."""
 
-ROW_FIXTURE = Bunch(
-    subject_number=1, date=datetime(2014, 7, 3), intervention_type=Biopsy,
-    weight=48, location='THIGH', histology='Carcinosarcoma',
-    size=TNM.Size.parse('1'), differentiation=1,
-    necrosis_percent=NecrosisPercentValue(value=12),
-    mitotic_count=2, lymph_status=0, metastasis=False, serum_tumor_markers=1,
-    resection_boundaries=0, lymphatic_vessel_invasion=False, vein_invasion=0
-)
-"""The test row."""
+ROW_FIXTURE = [
+    Bunch(
+        subject_number=1, lesion_number=1, date=datetime(2014, 7, 3),
+        intervention_type=Biopsy, weight=48, location='THIGH',
+        histology='Carcinosarcoma', length=24, width=16, depth=11,
+        size=TNM.Size.parse('1'), differentiation=1, mitotic_count=2,
+        lymph_status=0, metastasis=False, serum_tumor_markers=1,
+        resection_boundaries=0, lymphatic_vessel_invasion=False,
+        vein_invasion=0,
+        necrosis_percent=NecrosisPercentValue(value=12)
+    ),
+    Bunch(
+        subject_number=None, lesion_number=2, date=None,
+        intervention_type=None, weight=None, location=None,
+        histology=None, length=17, width=11, depth=9,
+        size=None, differentiation=None, mitotic_count=None,
+        lymph_status=None, metastasis=None, serum_tumor_markers=None,
+        resection_boundaries=None, lymphatic_vessel_invasion=None,
+        vein_invasion=None, necrosis_percent=None
+    )
+]
+"""The test rows."""
 
 
 class TestSarcomaPathology(object):
@@ -36,10 +50,10 @@ class TestSarcomaPathology(object):
         wb = xls.load_workbook(SARCOMA_FIXTURE)
         row_iter = sarcoma_pathology.read(wb, subject_number=SUBJECT)
         rows = list(row_iter)
-        assert_equal(len(rows), 2, "Sarcoma Pathology row count for subject %s"
+        assert_equal(len(rows), 4, "Sarcoma Pathology row count for Subject %s"
                                    " is incorrect: %d" % (SUBJECT, len(rows)))
         # The expected row attributes.
-        expected_attrs = sorted(ROW_FIXTURE.keys())
+        expected_attrs = sorted(ROW_FIXTURE[0].keys())
         # The actual row attributes.
         row = rows[0]
         actual_attrs = sorted(row.keys())
@@ -51,28 +65,44 @@ class TestSarcomaPathology(object):
         # A test subject database object.
         subject = Subject(project=PROJECT, collection=COLLECTION,
                           number=SUBJECT)
-        # Simulate the parsed pathology rows.
-        row = ROW_FIXTURE
-        rows = [row]
         # Update the database object.
-        sarcoma_pathology.update(subject, rows)
+        sarcoma_pathology.update(subject, ROW_FIXTURE)
         # Validate the result.
         encs = subject.encounters
         assert_equal(len(encs), 1, "The encounter count is incorrect: %d" %
                                    len(encs))
         # Validate the biopsy.
+        master_row = ROW_FIXTURE[0]
         biopsy = encs[0]
         assert_is_instance(biopsy, Biopsy, "Encounter type is incorrect: %s" %
                                         biopsy.__class__)
         assert_is_not_none(biopsy.date, "Biopsy is missing the date")
-        assert_equal(biopsy.date, row.date, "Biopsy date is incorrect: %s" %
-                                            biopsy.date)
+        assert_equal(biopsy.date, master_row.date,
+                     "Biopsy date is incorrect: %s" % biopsy.date)
         assert_is_not_none(biopsy.weight, "Biopsy is missing the weight")
-        assert_equal(biopsy.weight, row.weight, "Biopsy weight is incorrect: %s" %
-                                                biopsy.weight)
+        assert_equal(biopsy.weight, master_row.weight,
+                    "Biopsy weight is incorrect: %s" % biopsy.weight)
+        # There are two lesions.
+        tumor_cnt = len(biopsy.pathology.tumors)
+        assert_equal(tumor_cnt, 2, "Pathology tumor count is incorrect: %d" %
+                                   tumor_cnt)
+
+        # Validate the tumor extent.
+        for i, row in enumerate(ROW_FIXTURE):
+            pathology = biopsy.pathology.tumors[i]
+            extent = pathology.extent
+            assert_is_not_none(extent, "The pathology is missing a tumor extent")
+            extent_attrs = (attr for attr in TumorExtent._fields if attr in row)
+            for attr in extent_attrs:
+                expected = getattr(row, attr)
+                actual = getattr(extent, attr)
+                assert_equal(actual, expected, "The tumor %s is incorrect: %d" %
+                                               (attr, actual))
+
         # Validate the TNM.
-        assert_is_not_none(biopsy.pathology, "Biopsy is missing a pathology")
-        tnm = biopsy.pathology.tnm
+        row = ROW_FIXTURE[0]
+        pathology = biopsy.pathology.tumors[0]
+        tnm = pathology.tnm
         assert_is_not_none(tnm, "Pathology is missing a TNM")
         # Validate the TNM fields set from the row.
         row_tnm_attrs = (attr for attr in TNM._fields if attr in row)
