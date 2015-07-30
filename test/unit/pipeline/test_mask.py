@@ -39,7 +39,7 @@ class TestMaskWorkflow(VolumeTestBase):
 
     def _test_workflow(self, project, subject, session, scan, *images):
         """
-        Executes :meth:`qipipe.pipeline.roi.run` on the input scans.
+        Executes :meth:`qipipe.pipeline.mask.run` on the input scans.
         
         :param xnat: the XNAT facade instance
         :param project: the input project name
@@ -47,7 +47,6 @@ class TestMaskWorkflow(VolumeTestBase):
         :param session: the input session name
         :param scan: the input scan number
         :param images: the input 3D NiFTI images to model
-        :return: the :meth:`qipipe.pipeline.modeling.run` result
         """
         # Make the 4D time series from the test fixture inputs.
         merge = MergeNifti(in_files=list(images),
@@ -61,12 +60,13 @@ class TestMaskWorkflow(VolumeTestBase):
             xnat.delete(project, subject)
             result = mask.run(project, subject, session, scan, time_series, 
                               base_dir=self.base_dir, config=MASK_CONF)
-            # Find the ROI resource.
+            # Find the mask resource.
             rsc = xnat.find_one(project, subject, session, scan=scan,
                                 resource=result)
             try:
                 assert_is_not_none(rsc, "The %s %s Scan %d %s resource was not"
-                                        " created")
+                                        " created" %
+                                        (subject, session, scan, result))
             finally:
                 xnat.delete(project, subject)
 

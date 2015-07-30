@@ -1,6 +1,6 @@
 import os
 import shutil
-from nose.tools import assert_true
+from nose.tools import (assert_true, assert_is_not_none)
 from qipipe.pipeline import staging
 import qixnat
 from qipipe.staging.iterator import iter_stage
@@ -70,18 +70,18 @@ class TestStagingWorkflow(object):
                 # Verify the result.
                 sess_obj = xnat.find_one(PROJECT, scan_input.subject,
                                             scan_input.session)
-                assert_true(sess_obj.exists(),
-                            "The %s %s session was not created in XNAT" %
-                            (scan_input.subject, scan_input.session))
+                assert_is_not_none(sess_obj.exists(),
+                                   "The %s %s session was not created in XNAT" %
+                                   (scan_input.subject, scan_input.session))
                 sess_dest = os.path.join(dest, scan_input.subject, scan_input.session)
                 assert_true(os.path.exists(sess_dest), "The staging area"
                             " was not created: %s" % sess_dest)
                 # The XNAT scan object.
-                scan_obj = xnat.get_scan(PROJECT, scan_input.subject,
-                                         scan_input.session, scan_input.scan)
-                assert_true(scan_obj.exists(),
-                            "The %s %s scan %s was not created in XNAT" %
-                            (scan_input.subject, scan_input.session, scan_input.scan))
+                scan_obj = xnat.find_one(PROJECT, scan_input.subject,
+                                         scan_input.session, scan=scan_input.scan)
+                assert_is_not_none(scan_obj,
+                                   "The %s %s scan %s was not created in XNAT" %
+                                   (scan_input.subject, scan_input.session, scan_input.scan))
                 # The XNAT NiFTI resource object.
                 rsc_obj = scan_obj.resource('NIFTI')
                 assert_true(rsc_obj.exists(),
