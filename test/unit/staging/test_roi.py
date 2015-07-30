@@ -31,15 +31,15 @@ class TestROI(object):
                                    " incorrect: %d" % len(rois))
         roi_grps = defaultdict(dict)
         for roi in rois:
-            roi_grps[roi.lesion][roi.slice] = roi.path
+            roi_grps[roi.lesion][roi.slice] = roi.location
         expected_lesions = {1, 2}
-        expected_slice_indexes = {12, 13}
+        expected_slice_seq_nbrs = {12, 13}
         lesions = set(roi_grps.iterkeys())
         assert_equal(lesions, expected_lesions, "The multi-lesion ROI lesion"
                                                 " numbers are incorrect: %s" %
                                                 lesions)
         for lesion, slice_dict in roi_grps.iteritems():
-            assert_equal(set(slice_dict.iterkeys()), expected_slice_indexes,
+            assert_equal(set(slice_dict.iterkeys()), expected_slice_seq_nbrs,
                          "The multi-lesion ROI slice indexes are incorrect")
             for path in slice_dict.itervalues():
                 _, fname = os.path.split(path)
@@ -54,19 +54,19 @@ class TestROI(object):
                                    " incorrect: %d" % len(rois))
         roi_grps = defaultdict(dict)
         for roi in rois:
-            roi_grps[roi.lesion][roi.slice] = roi.path
+            roi_grps[roi.lesion][roi.slice] = roi.location
         expected_lesions = {1}
-        expected_slice_indexes = {12, 13}
+        expected_slice_seq_nbrs = {12, 13}
         lesions = set(roi_grps.iterkeys())
         assert_equal(lesions, expected_lesions, "The single lesion ROI lesion"
                                                 " numbers are incorrect: %s" %
                                                 lesions)
         for lesion, slice_dict in roi_grps.iteritems():
             
-            slice_indexes = set(slice_dict.iterkeys())
-            assert_equal(slice_indexes, expected_slice_indexes,
+            slice_seq_nbrs = set(slice_dict.iterkeys())
+            assert_equal(slice_seq_nbrs, expected_slice_seq_nbrs,
                          "The single lesion ROI slice indexes are incorrect: %s" %
-                         slice_indexes)
+                         slice_seq_nbrs)
             for path in slice_dict.itervalues():
                 _, fname = os.path.split(path)
                 assert_equal(fname, 'roi.bqf', "The single lesion ROI file name"
