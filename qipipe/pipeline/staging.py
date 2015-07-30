@@ -319,7 +319,7 @@ class StagingWorkflow(WorkflowBase):
 
         # Upload the compressed scan DICOM files.
         upload_dicom_xfc = XNATUpload(project=self.project, resource='DICOM',
-                                      skip_existing=True)
+                                      skip_existing=True, modality='MR')
         upload_dicom = pe.Node(upload_dicom_xfc, name='upload_dicom')
         workflow.connect(input_spec, 'subject', upload_dicom, 'subject')
         workflow.connect(input_spec, 'session', upload_dicom, 'session')
@@ -353,7 +353,7 @@ class StagingWorkflow(WorkflowBase):
 
         # Upload the 3D NiFTI stack files to XNAT.
         upload_3d_xfc = XNATUpload(project=self.project, resource='NIFTI',
-                                   skip_existing=True)
+                                   skip_existing=True, modality='MR')
         upload_3d = pe.JoinNode(upload_3d_xfc, joinsource='iter_volume',
                                 joinfield='in_files', name='upload_3d')
         workflow.connect(input_spec, 'subject', upload_3d, 'subject')
