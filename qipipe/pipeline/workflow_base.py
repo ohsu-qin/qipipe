@@ -102,6 +102,13 @@ class WorkflowBase(object):
             config = cfg_opt
         self.configuration = config
         """The workflow node inputs configuration."""
+        
+        # The execution plug-in.
+        if 'Execution' in self.configuration:
+            exec_opts = self.configuration['Execution']
+            self.plug_in = exec_opts.pop('plug-in', None)
+        else:
+            self.plug_in = None
 
         self.dry_run = opts.get('dry_run', False)
         """Flag indicating whether to prepare but not run the workflow."""
@@ -253,13 +260,9 @@ class WorkflowBase(object):
         """
         # The execution setting.
         if 'Execution' in self.configuration:
-            exec_opts = self.configuration['Execution']
-            self.plug_in = exec_opts.pop('plug-in', None)
             workflow.config['execution'] = self.configuration['Execution']
             self._logger.debug("Workflow %s execution parameters: %s." %
                              (workflow.name, workflow.config['execution']))
-        else:
-            self.plug_in = None
 
         # The Nipype plug-in parameters.
         if self.plug_in and self.plug_in in self.configuration:

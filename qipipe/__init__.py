@@ -1,6 +1,6 @@
 """The top-level Quantitative Imaging Pipeline module."""
 
-__version__ = '5.4.10'
+__version__ = '5.4.11'
 """
 The one-based major.minor.patch version based on the
 `Fast and Loose Versioning <https://gist.github.com/FredLoney/6d946112e0b0f2fc4b57>`_
