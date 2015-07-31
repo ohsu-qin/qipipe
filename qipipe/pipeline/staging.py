@@ -233,7 +233,8 @@ class StagingWorkflow(WorkflowBase):
 
         # Create the scan, if necessary. The gate blocks upload until the
         # scan is created.
-        find_scan_xfc = XNATFind(project=self.project, modality='MR', create=True)
+        find_scan_xfc = XNATFind(project=self.project, modality='MR',
+                                 create=True)
         find_scan = pe.Node(find_scan_xfc, name='find_scan')
         workflow.connect(input_spec, 'subject', find_scan, 'subject')
         workflow.connect(input_spec, 'session', find_scan, 'session')
