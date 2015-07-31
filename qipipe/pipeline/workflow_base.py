@@ -203,6 +203,10 @@ class WorkflowBase(object):
         """
         # If the workflow can be distributed, then get the plugin
         # arguments.
+        is_dist_clause = 'is' if DISTRIBUTABLE else 'is not'
+        self._logger.debug("The %s workflow %s distributable in a"
+                           " cluster environment." %
+                           (is_dist_clause, workflow.name))
         if DISTRIBUTABLE:
             opts = self._configure_plugin(workflow)
         else:
