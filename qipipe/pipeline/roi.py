@@ -23,10 +23,10 @@ def run(project, subject, session, scan, time_series, *inputs, **opts):
     :param session: the session name
     :param scan: the scan number
     :param time_series: the 4D scan time series
-    :param inputs: the input (lesion, slice index, in_file) tuples
-        to convert
+    :param inputs: the :meth:`ROIWorkflow.run`
+        (lesion number, slice sequence number, in_file) inputs
     :param opts: the :class:`ROIWorkflow` initializer options
-    :return: the ROI resource name
+    :return: the :meth:`ROIWorkflow.run` result
     """
     # Make the workflow.
     roi_wf = ROIWorkflow(project, **opts)
@@ -52,7 +52,7 @@ class ROIWorkflow(WorkflowBase):
 
     - *lesion*: the lesion number
 
-    - *slice_index*: the one-based slice index
+    - *slice_sequence_number*: the one-based slice sequence number
 
     - *in_file*: the BOLERO mask file to convert
 
@@ -89,13 +89,17 @@ class ROIWorkflow(WorkflowBase):
         :param session: the session name
         :param scan: the scan number
         :param time_series: the 4D scan time series file path
-        :param inputs: the input (lesion, slice index, in_file) tuples
-            to convert
-        :return: the XNAT converted ROI resource name
+        :param inputs: the input
+            (lesion number, slice sequence number, in_file)
+            tuples to convert
+        :return: the XNAT converted ROI resource name, or None if
+            there were no inputs
         """
         if not inputs:
-            return []
-
+            self._logger.debug("Skipping the %s workflow on %s %s scan %d,"
+                               "since there are no inputs to convert." %
+                               (self.workflow.name, subject, session, scan))
+            return None
         # Set the inputs.
         self._set_inputs(subject, session, scan, time_series, *inputs)
         # Execute the workflow.
@@ -107,7 +111,7 @@ class ROIWorkflow(WorkflowBase):
 
         # Return the resource name.
         return ROI_RESOURCE
-    
+
     def _set_inputs(self, subject, session, scan, time_series, *inputs):
         """
         Sets the workflow inputs.
@@ -116,8 +120,8 @@ class ROIWorkflow(WorkflowBase):
         :param session: the session name
         :param scan: the scan number
         :param time_series: the 4D scan time series
-        :param inputs: the input (lesion, slice index, in_file) tuples
-            to convert
+        :param inputs: the input (lesion, slice, in_file) tuples to
+            convert
         """
         # Set the execution workflow inputs.
         input_spec = self.workflow.get_node('input_spec')
@@ -128,10 +132,10 @@ class ROIWorkflow(WorkflowBase):
 
         # Unpack and roll up the ROI inputs into separate iterable
         # lists.
-        lesions = [lesion for lesion, _, _ in inputs]
-        slice_indexes = [idx for _, idx, _ in inputs]
-        in_files = [in_file for _, _, in_file in inputs]
-        iter_dict = dict(lesion=lesions, slice_index=slice_indexes,
+        lesions = [roi.lesion for roi in inputs]
+        slice_seq_nbrs = [roi.slice for roi in inputs]
+        in_files = [roi.location for roi in inputs]
+        iter_dict = dict(lesion=lesions, slice_sequence_number=slice_seq_nbrs,
                          in_file=in_files)
         iterables = iter_dict.items()
         iter_roi = self.workflow.get_node('iter_roi')
@@ -155,7 +159,7 @@ class ROIWorkflow(WorkflowBase):
         - *time_series*: the 4D scan time series
         
         In addition, the workflow runner has the responsibility of setting the
-        ``iter_roi`` synchronized (lesion, slice_index, in_file)
+        ``iter_roi`` synchronized (lesion, slice_sequence_number, in_file)
         iterables.
 
         :param opts: the workflow creation options:
@@ -173,28 +177,31 @@ class ROIWorkflow(WorkflowBase):
         input_spec.inputs.resource = ROI_RESOURCE
 
         # The input ROI tuples are iterable.
-        iter_roi_fields = ['lesion', 'slice_index', 'in_file']
+        iter_roi_fields = ['lesion', 'slice_sequence_number', 'in_file']
         iter_roi = pe.Node(IdentityInterface(fields=iter_roi_fields),
                            name='iter_roi')
 
         # The output file base name.
-        basename_xfc = Function(input_names=['lesion', 'slice_index'],
+        basename_xfc = Function(input_names=['lesion', 'slice_sequence_number'],
                                 output_names=['basename'],
                                 function=base_name)
         basename = pe.Node(basename_xfc, run_without_submitting=True,
                            name='basename')
         exec_wf.connect(iter_roi, 'lesion', basename, 'lesion')
-        exec_wf.connect(iter_roi, 'slice_index', basename, 'slice_index')
+        exec_wf.connect(iter_roi, 'slice_sequence_number',
+                        basename, 'slice_sequence_number')
         
         # Convert the input file.
         convert = pe.Node(ConvertBoleroMask(), name='convert')
         exec_wf.connect(iter_roi, 'in_file', convert, 'in_file')
-        exec_wf.connect(iter_roi, 'slice_index', convert, 'slice_index')
+        exec_wf.connect(iter_roi, 'slice_sequence_number',
+                        convert, 'slice_sequence_number')
         exec_wf.connect(input_spec, 'time_series', convert, 'time_series')
         exec_wf.connect(basename, 'basename', convert, 'out_base')
 
         # Upload the ROI results into the XNAT ROI resource.
-        upload_roi_xfc = XNATUpload(project=self.project, resource=ROI_RESOURCE)
+        upload_roi_xfc = XNATUpload(project=self.project,
+                                    resource=ROI_RESOURCE, modality='MR')
         upload_roi = pe.JoinNode(upload_roi_xfc, joinsource='iter_roi',
                                  joinfield='in_files', name='upload_roi')
         exec_wf.connect(input_spec, 'subject', upload_roi, 'subject')
@@ -212,10 +219,11 @@ class ROIWorkflow(WorkflowBase):
 
 ### Utility functions called by the workflow nodes. ###
 
-def base_name(lesion, slice_index):
+def base_name(lesion, slice_sequence_number):
     """
     :param lesion: the lesion number
-    :param slice_index: the one-based slice index
+    :param slice_sequence_number: the
+        :class:`qipipe.interfaces.ConvertBoleroMask` *slice_sequence_number*
     :return: the base name to use
     """
-    return "lesion%d_slice%02d" % (lesion, slice_index)
+    return "lesion%d_slice%02d" % (lesion, slice_sequence_number)

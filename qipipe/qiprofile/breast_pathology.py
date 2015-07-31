@@ -46,7 +46,7 @@ def update(subject, rows):
 
 class BreastPathologyUpdate(PathologyUpdate):
     """The Breast pathology update facade."""
-    
+
     def __init__(self, subject):
         """
         :param subject: the ``Subject`` Mongo Engine database object
@@ -54,7 +54,7 @@ class BreastPathologyUpdate(PathologyUpdate):
         """
         super(BreastPathologyUpdate, self).__init__(
             subject, tumor_type='Breast', pathology_class=BreastPathology,
-            grade_class=ModifiedBloomRichardsonGrade,
+            grade_class=ModifiedBloomRichardsonGrade
         )
 
     def encounter_type(self, row):

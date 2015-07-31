@@ -2,8 +2,9 @@
 This module updates the qiprofile database Subject pathology information
 from the pathology Excel workbook file.
 """
+import bunch
 from qiprofile_rest_client.model.clinical import (
-    Encounter, Biopsy, Surgery, Pathology, TNM
+    Encounter, Biopsy, Surgery, PathologyReport, TNM, TumorExtent
 )
 from . import parse
 from .xls import Worksheet
@@ -11,15 +12,25 @@ from .xls import Worksheet
 ENCOUNTER_TYPES = {klass.__name__: klass for klass in (Biopsy, Surgery)}
 """The encounter {name: class} dictionary."""
 
-COL_ATTRS = {'Patient Weight': 'weight', 'Tumor Size': 'size'}
+COL_ATTRS = {
+    'Patient Weight (kg)': 'weight',
+    'Tumor Size Score': 'size',
+    'Tumor Length (mm)': 'length',
+    'Tumor Width (mm)': 'width',
+    'Tumor Depth (mm)': 'depth'
+}
 """
 The following non-standard column-attribute associations:
-* The ``Patient Weight`` column is the ``Encounter.weight`` attribute
-* The ``Tumor Size`` column is the ``TNM.size`` attribute
+* ``Patient Weight``: ``Encounter.weight`` attribute
+* ``Tumor Size Score``: ``TNM.size`` attribute
+* ``Tumor Length``: ``TumorExtent.length`` attribute
+* ``Tumor Width``: ``TumorExtent.width`` attribute
+* ``Tumor Depth``: ``TumorExtent.depth`` attribute
 """
 
 PARSERS = dict(
     subject_number=int,
+    lesion_number=int,
     # Wrap the functions below with a lambda as a convenience to allow
     # a forward reference to the parse functions defined below.
     intervention_type=lambda v: _parse_intervention_type(v),
@@ -64,8 +75,7 @@ class PathologyWorksheet(Worksheet):
     def __init__(self, workbook, *classes, **opts):
         """
         :param workbook: the :class:`qipipe.qiprofile.xls.Workbook` object
-        :param classes: the subclass-specific classes, including the
-            Pathology subclass and the Grade subclass
+        :param classes: the subclass-specific REST data model subclasses
         :param opts: the following options:
         :option parsers: the non-standard parsers {attribute: function}
             dictionary
@@ -86,57 +96,76 @@ class PathologyWorksheet(Worksheet):
             col_attrs.update(col_attrs_opt)
         # Initialize the worksheet.
         super(PathologyWorksheet, self).__init__(
-            workbook, SHEET, Encounter, TNM, *classes, parsers=parsers,
-            column_attributes=col_attrs
+            workbook, SHEET, Encounter, TNM, TumorExtent, *classes,
+            parsers=parsers, column_attributes=col_attrs
         )
 
 
 class PathologyUpdate(object):
     """The pathology update abstract class."""
-    
-    def __init__(self, subject, tumor_type, pathology_class, grade_class):
+
+    def __init__(self, subject, tumor_type, grade_class, pathology_class):
         """
         :param subject: the ``Subject`` Mongo Engine database object
             to update
         :param tumor_type: the subclass tumor type
-        :param pathology_class: the Pathology subclass 
-        :param grade_class: the Grade subclass 
+        :option pathology_class: the REST data model TumorPathology
+            subclass
+        :option grade_class: the REST data model Grade subclass
         """
         self._subject = subject
         self._tumor_type = tumor_type
-        self._pathology_class = pathology_class
-        self._grade_class = grade_class
+        data_model_dict = dict(grade=grade_class, pathology=pathology_class)
+        self._data_models = bunch.bunchify(data_model_dict)
 
     def update(self, rows):
         """
-        Updates the subject data object from the given pathology XLS rows.
+        Updates the subject data object from the given pathology XLS
+        rows.
 
         :param rows: the input pathology :meth:`read` rows list 
         """
-        prev_row = None
+        # Update the encounter rows.
+        for vist_rows in self._encounter_rows(rows):
+            self._update_encounter(vist_rows)
+    
+    def _encounter_rows(self, rows):
+        """
+        Partition the rows by encounter.
+        
+        :param rows: the input rows
+        :yield: each encounter's lesion rows 
+        """
+        enc_rows = []
         for row in rows:
-            self._update(row, prev_row)
-            prev_row = row
+            if row.lesion_number == 1 and enc_rows:
+                yield enc_rows
+                enc_rows = []
+            enc_rows.append(row)
+        if enc_rows:
+            yield enc_rows
 
-    def _update(self, row, previous_row):
+    def _update_encounter(self, rows):
         """
-        :param row: the input pathology :meth:`read` row
-        :param previous_row: the preceding 
+        :param rows: the input pathology :meth:`read` rows for the
+            encounter
         """
+        # The lesion 1 row has the encounter information.
+        master_row = rows[0]
         # There must be an intervention type.
-        if not row.intervention_type:
+        if not master_row.intervention_type:
             raise PathologyError("The pathology input row is missing the"
                                  "intervention type")
-        if not row.date:
+        if not master_row.date:
             raise PathologyError("The pathology input row is missing the"
                                  "date")
         # The encounter object for the input encounter type.
-        enc_type = self.encounter_type(row)
-        enc = self._encounter_for(enc_type, row.date)
+        enc_type = self.encounter_type(master_row)
+        enc = self._encounter_for(enc_type, master_row.date)
         # Update the encounter.
-        self.update_encounter(enc, row)
+        self.update_encounter(enc, rows)
 
-    def update_encounter(self, encounter, row):
+    def update_encounter(self, encounter, rows):
         """
         Update the encounter object from the given input row.
         This base implementation sets the encounter attribute values
@@ -145,40 +174,56 @@ class PathologyUpdate(object):
         Other updates are a subclass responsibility.
         
         :param encounter: the encounter object
-        :param row: the input row
+        :param rows: the input pathology :meth:`read` rows for the
+            encounter
         """
+        # The lesion 1 row has the encounter information.
+        master_row = rows[0]
         for attr in encounter.__class__._fields:
-            if attr in row:
-                setattr(encounter, attr, row[attr])
-        # Delegate to the possibly overridden update_pathology
+            if attr in master_row:
+                setattr(encounter, attr, master_row[attr])
+        # Delegate to the possibly overridden pathology_content
         # method to collect the pathology content.
-        path_content = self.pathology_content(row)
-        if path_content:
-            encounter.pathology = self._pathology_class(**path_content)
-        else:
-            encounter.pathology = None
+        path_content = (self.pathology_content(row) for row in rows)
+        tumors = [self._data_models.pathology(**content)
+                  for content in path_content if path_content]
+        if tumors:
+            encounter.pathology = PathologyReport(tumors=tumors)
 
     def pathology_content(self, row):
         """
-        Collects the pathology object from the given input row.
-        This base implementation collects the pathology attribute values
-        from the matching input row attribute value. Other updates
-        are a subclass responsibility.
+        Collects the TumorPathology content from the given input row.
+        This base implementation collects the pathology attribute
+        values from the matching input row attribute value. Other
+        updates are a subclass responsibility.
         
         :param row: the input row
         :return: the {attribute: value} content dictionary
         """
-        grade_content = {attr: row[attr] for attr in self._grade_class._fields
-                         if attr in row and row[attr] != None}
+        # The TumorPathology subclass.
+        path_cls = self._data_models.pathology
+        # The non-embedded content.
+        path_content = {attr: row[attr] for attr in path_cls._fields
+                        if attr in row and row[attr] != None}
+        # The TNM non-embedded content.
         tnm_content = {attr: row[attr] for attr in TNM._fields
                        if attr in row and row[attr] != None}
+        # THe TNM grade.
+        grade_cls = self._data_models.grade
+        grade_content = {attr: row[attr] for attr in grade_cls._fields
+                         if attr in row and row[attr] != None}
         if grade_content:
-            tnm_content['grade'] = self._grade_class(**grade_content)
-        path_content = {attr: row[attr] for attr in self._pathology_class._fields
-                        if attr in row and row[attr] != None}
+            tnm_content['grade'] = grade_cls(**grade_content)
+        # The TNM.
         if tnm_content:
-            path_content['tnm'] = TNM(tumor_type=self._tumor_type, **tnm_content)
-        
+            path_content['tnm'] = TNM(tumor_type=self._tumor_type,
+                                      **tnm_content)
+        # The tumor extent. Ignore zero and None values.
+        extent_content = {attr: row[attr] for attr in TumorExtent._fields
+                          if row.get(attr)}
+        if extent_content:
+            path_content['extent'] = TumorExtent(**extent_content)
+
         return path_content
 
     def _encounter_for(self, klass, date):

@@ -49,14 +49,15 @@ class TestXNATCopy(object):
                                " scan %d..." % (SUBJECT, SESSION, SCAN))
         # Upload the file.
         copy = XNATCopy(project=PROJECT, subject=SUBJECT, session=SESSION,
-                        scan=SCAN, modality='MR', in_files=FIXTURE)
+                        scan=SCAN, resource='NIFTI', modality='MR',
+                        in_files=FIXTURE)
         result = copy.run()
     
         # Verify the result.
         xnat_files = set(result.outputs.xnat_files)
         with qixnat.connect() as xnat:
             scan_obj = xnat.find_one(PROJECT, SUBJECT, SESSION, scan=SCAN)
-            assert_not_none(scan_obj, "Upload did not create the %s %s scan:"
+            assert_is_not_none(scan_obj, "Upload did not create the %s %s scan:"
                                       " %s" % (SUBJECT, SESSION, SCAN))
             _, fname = os.path.split(FIXTURE)
             assert_in(fname, xnat_files,
@@ -99,7 +100,7 @@ class TestXNATCopy(object):
         # Upload the file.
         copy = XNATCopy(project=PROJECT, subject=SUBJECT, session=SESSION,
                         reconstruction=RECON, resource='NIFTI', modality='MR',
-                        in_files=FIXTURE)
+                        inout='out', in_files=FIXTURE)
         result = copy.run()
     
         # Verify the result.
@@ -115,15 +116,15 @@ class TestXNATCopy(object):
                         "XNATCopy did not create the %s %s %s file: %s" %
                         (SUBJECT, SESSION, REGISTRATION, fname))
     
-    def test_analysis(self):
+    def test_assessor(self):
         logger(__name__).debug("Testing the XNATCopy interface on %s %s"
                                " analysis %s..." % (SUBJECT, SESSION, ANALYSIS))
         # Upload the file.
         copy = XNATCopy(project=PROJECT, subject=SUBJECT, session=SESSION,
                         assessor=ANALYSIS, resource='params', modality='MR',
-                        in_files=FIXTURE)
+                        inout='out', in_files=FIXTURE)
         result = copy.run()
-    
+
         # Verify the result.
         with qixnat.connect() as xnat:
             exp_obj = xnat.find_one(PROJECT, SUBJECT, SESSION)

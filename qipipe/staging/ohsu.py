@@ -93,7 +93,7 @@ BREAST_ROI_REGEX = re.compile("""
      )?                         # End of the lesion modifier
      /                          # End of the R10 subdirectory 
     slice                       # The slice subdirectory
-     (?P<slice_index>\d+)       # The slice index
+     (?P<slice_sequence_number>\d+)       # The slice index
      /                          # End of the slice subdirectory
     (?P<fname>                  # The ROI file base name
      .*\.bqf                    # The ROI file extension
@@ -115,14 +115,21 @@ SARCOMA_ROI_REGEX = re.compile("""
     results/                    # The visit processing subdirectory
     ROI_ave(rage)?/             # The ROI subdirectory
     taui_d001/                  # An intermediate sudirectory
-    slice(?P<slice_index>\d+)/  # The slice subdirectory
+    slice(?P<slice_sequence_number>\d+)/  # The slice subdirectory
     (?P<fname>.*\.bqf)          # The ROI file base name
 """, re.VERBOSE)
 """
 The Sarcoma ROI .bqf ROI file match pattern.
 
-TODO - clarify which of the myriad Sarcoma ROI naming variations should
-be used.
+:Note: The Sarcoma ROI directories are inconsistently named, with several
+    alternatives and duplicates.
+
+    TODO - clarify which of the Sarcoma ROI naming variations should be used.
+
+:Note: There are no apparent lesion number indicators in the Sarcoma ROI
+    input.
+
+    TODO - confirm that there is no Sarcoma lesion indicator.
 """
 
 VOLUME_TAG = 'AcquisitionNumber'

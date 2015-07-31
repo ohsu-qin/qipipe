@@ -33,8 +33,9 @@ class ScanInput(object):
         """The :class:`ScanIterators` object."""
 
     def __repr__(self):
-        return str(dict(collection=self.collection, subject=self.subject,
-                        scan=self.scan, iterators=self.iterators))
+        return (self.__class__.__name__ +
+                str(dict(collection=self.collection, subject=self.subject,
+                         scan=self.scan, iterators=self.iterators)))
 
 
 class ScanIterators(object):
@@ -53,7 +54,6 @@ class ScanIterators(object):
         self._dicom = None
         self._roi_gen = roi_gen
         self._roi = None
-    
     
     @property
     def dicom(self):
@@ -75,7 +75,8 @@ class ScanIterators(object):
         return self._roi
 
     def __repr__(self):
-        return str(dict(dicom=self.dicom, roi=self.roi))
+        return (self.__class__.__name__ +
+                str(dict(dicom=self.dicom, roi=self.roi)))
 
 
 def iter_stage(project, collection, *inputs, **opts):
@@ -99,7 +100,7 @@ def iter_stage(project, collection, *inputs, **opts):
 
     The input directories conform to the
     :attr:`qipipe.staging.collection.Collection.patterns`
-    :attr:`qipipe.staging.collection.Patterns,subject`
+    :attr:`qipipe.staging.collection.Patterns.subject`
     regular expression.
 
     Each iteration *(subject, session, scan, scan_iters)* tuple is

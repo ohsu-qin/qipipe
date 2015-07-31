@@ -13,8 +13,6 @@ OHSU - This module wraps the proprietary OHSU AIRC ``fastfit`` software.
 # the fastfit import as the installed fastfit Python module rather
 # than this interface of the same name.
 from __future__ import absolute_import
-
-
 import os
 from os import path
 from glob import glob

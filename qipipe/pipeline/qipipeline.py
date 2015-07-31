@@ -650,7 +650,8 @@ class QIPipelineWorkflow(WorkflowBase):
                 self._logger.debug('Connected staging to scan time series merge.')
                 # Upload the time series.
                 ul_scan_ts_xfc = XNATUpload(project=self.project,
-                                            resource=SCAN_TS_RSC)
+                                            resource=SCAN_TS_RSC,
+                                            modality='MR')
                 ul_scan_ts = pe.Node(ul_scan_ts_xfc,
                                      name='upload_scan_time_series')
                 exec_wf.connect(input_spec, 'subject', ul_scan_ts, 'subject')
@@ -697,7 +698,7 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(input_spec, 'session', roi_node, 'session')
             exec_wf.connect(input_spec, 'scan', roi_node, 'scan')
             exec_wf.connect(scan_ts, 'out_file', roi_node, 'time_series')
-            self._logger.debug('Connected scan time series to ROI.')
+            self._logger.debug('Connected the scan time series to ROI.')
 
         # If registration is enabled, then register the staged images.
         if reg_node:
@@ -807,7 +808,8 @@ class QIPipelineWorkflow(WorkflowBase):
 
                 # Upload the realigned time series to XNAT.
                 upload_reg_ts_xfc = XNATUpload(project=self.project,
-                                               resource=reg_ts_rsc)
+                                               resource=reg_ts_rsc,
+                                               modality='MR')
                 upload_reg_ts = pe.Node(upload_reg_ts_xfc,
                                         name='upload_reg_time_series')
                 exec_wf.connect(input_spec, 'subject',

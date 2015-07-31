@@ -11,18 +11,8 @@ from ...helpers.logging import logger
 class VolumeTestBase(object):
     """
     Base class for testing image volume workflows. The test fixture is
-    a directory in the standard staging subject/session/images hierarchy,
-    e.g.::
-        
-        Breast003/
-          Session01/
-            scan/
-              1/
-                volume001.nii.gz
-                volume002.nii.gz
-                ...
-            resource/
-              breast003_session01_mask.nii.gz
+    a directory in the standard staging input subject/session/images
+    hierarchy found in the ``test/fixtures/staging`` directory.
     """
 
     def __init__(self, logger, fixtures, results, use_mask=False):
@@ -48,7 +38,7 @@ class VolumeTestBase(object):
     def stage(self, collection):
         """
         Acquires the test fixture inputs to run the workflow. This
-        generator method yields the  workflow input arguments,
+        generator method yields the workflow input arguments,
         consisting of the subject, session and scan names followed
         by the image file names.
 
@@ -58,8 +48,7 @@ class VolumeTestBase(object):
         """
         # The fixture is the collection subdirectory.
         fixture = os.path.join(self._fixtures, collection.lower())
-        # The {subject: {session: {scan: {images: [files], mask: file}}}}
-        # inputs.
+        # The staging inputs.
         inputs = self._group_files(fixture)
         # The test subjects.
         subjects = inputs.keys()
@@ -70,26 +59,23 @@ class VolumeTestBase(object):
         os.chdir(work_dir)
         # Iterate over the inputs.
         try:
-            return self._stage(inputs)
+            return self._stage_inputs(inputs)
         finally:
             os.chdir(cwd)
 
-    def _stage(self, inputs):
+    def _stage_inputs(self, inputs):
         """
-        :param inputs: the
-            {subject: {session: {scan: {images: [files], mask: file}}}}
-            input dictionary
-        :param opts: the additional workflow options
+        :param inputs: the :meth:`_group_files` result dictionary
         :yield: the workflow inputs list
         """
         # Iterate over the sessions within subjects.
         for sbj, sess_dict in inputs.iteritems():
             for sess, scan_dict in sess_dict.iteritems():
-                for scan, wf_opts in scan_dict.iteritems():
+                for scan, opts in scan_dict.iteritems():
                     # The input images.
-                    images = wf_opts.pop('images')
-                    wf_args = [PROJECT, sbj, sess, scan] + images
-                    yield wf_args
+                    images = opts.pop('images')
+                    args = [PROJECT, sbj, sess, scan] + images
+                    yield args
 
     def _group_files(self, fixture):
         """
@@ -98,9 +84,10 @@ class VolumeTestBase(object):
         
         :param fixture: the input data parent directory
         :return: the input *{subject: {session: {scan: [images]}}}* or
-            input *{subject: {session: {scan: ([images], mask)}}}* dictionary
+            *{subject: {session: {scan: ([images], mask: file)}}}*
+            dictionary
         """
-        # The {subject: {session: {scan: [files]}}} dictionary return value.
+        # The inputs dictionary return value described above.
         inputs = nested_defaultdict(dict, 2)
         # Group the files in each subject subdirectory.
         for sbj_dir in glob.glob(fixture + '/*'):
@@ -112,6 +99,7 @@ class VolumeTestBase(object):
                 for scan_dir in glob.glob(sess_dir + '/scans/*'):
                     _, scan_s = os.path.split(scan_dir)
                     scan = int(scan_s)
+                    # The input NIFTI volume images.
                     images = glob.glob(scan_dir + '/resources/NIFTI/*')
                     assert_not_equal(len(images), 0,
                                      "No images found for %s %s %d test input in %s" %
@@ -119,6 +107,7 @@ class VolumeTestBase(object):
                     self._logger.debug("Discovered %d %s %s %d test input images in %s" %
                                        (len(images), sbj, sess, scan, scan_dir))
                     inputs[sbj][sess][scan]['images'] = images
+                    # The input mask.
                     if self._use_mask:
                         masks = glob.glob(sess_dir + '/resources/*mask.*')
                         assert_not_equal(len(masks), 0, "Mask not found in %s" % sess_dir)

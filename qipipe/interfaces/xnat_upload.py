@@ -11,15 +11,18 @@ class XNATUploadInputSpec(BaseInterfaceInputSpec):
 
     subject = traits.Str(mandatory=True, desc='The XNAT subject name')
 
-    session = traits.Str(mandatory=True, desc='The XNAT session name')
-
-    resource = traits.Str(desc='The XNAT resource name')
+    session = traits.Str(desc='The XNAT session name')
 
     scan = traits.Either(traits.Int, traits.Str, desc='The XNAT scan name')
 
     reconstruction = traits.Str(desc='The XNAT reconstruction name')
 
     assessor = traits.Str(desc='The XNAT assessor name')
+
+    resource = traits.Str(mandatory=True, desc='The XNAT resource name')
+
+    inout = traits.Str(desc='The XNAT reconstruction or assessor resource'
+                            ' in/out qualifier')
 
     force = traits.Bool(desc='Flag indicating whether to replace an existing'
                              ' XNAT file')
@@ -41,19 +44,6 @@ class XNATUpload(BaseInterface):
     """
     The ``XNATUpload`` Nipype interface wraps the
     :meth:`qixnat.facade.XNAT.upload` method.
-    
-    :Note: This XNATUpload interface is deprecated due to the following
-        XNAT bug:
-
-        * XNAT or pyxnat concurrent file insert sporadically fails
-          with error that the experiment already exists. Some files
-          are inserted, but insert fails unpredictably.
-
-        The work-around is to use the :class:`qipipe.interfaces.XNATCopy`
-        interface instead.
-
-    TODO - retry this XNATUpload interface in late 2015 when pyxnat
-    hopefully matures.
     """
 
     input_spec = XNATUploadInputSpec
@@ -65,6 +55,8 @@ class XNATUpload(BaseInterface):
         find_opts = {}
         if self.inputs.resource:
             find_opts['resource'] = self.inputs.resource
+        if self.inputs.inout:
+            find_opts['inout'] = self.inputs.inout
         if self.inputs.modality:
             find_opts['modality'] = self.inputs.modality
         if self.inputs.scan:
@@ -84,7 +76,8 @@ class XNATUpload(BaseInterface):
             # The XNAT scan resource object.
             rsc = xnat.find_or_create(self.inputs.project, self.inputs.subject,
                                       self.inputs.session, **find_opts)
-            self._xnat_files = xnat.upload(rsc, *self.inputs.in_files, **upload_opts)
+            self._xnat_files = xnat.upload(rsc, *self.inputs.in_files,
+                                           **upload_opts)
 
         return runtime
 

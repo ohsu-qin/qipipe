@@ -24,13 +24,16 @@ class XNATCopyInputSpec(CommandLineInputSpec):
     session = traits.Str(mandatory=True, argstr='%s', position=-2,
                          desc='The XNAT session name')
 
-    resource = traits.Str(desc='The XNAT resource name (scan default is NIFTI)')
-
-    scan = traits.Either(traits.Int, traits.Str, desc='The XNAT scan name')
-
     reconstruction = traits.Str(desc='The XNAT reconstruction name')
 
     assessor = traits.Str(desc='The XNAT assessor name')
+
+    resource = traits.Str(desc='The XNAT resource name (scan default is NIFTI)')
+
+    inout = traits.Str(desc='The XNAT reconstruction or assessor resource'
+                            ' in/out qualifier')
+
+    scan = traits.Either(traits.Int, traits.Str, desc='The XNAT scan name')
 
     # The input files to upload precede the XNAT path.
     # The input file arguments follow the options and precede the target
@@ -88,11 +91,12 @@ class XNATCopy(CommandLine):
 
         # The resource.
         if isdefined(self.inputs.resource):
-            path.append('resource')
+            if isdefined(self.inputs.inout):
+                rsc_type = "%s_resource" % self.inputs.inout
+            else:
+                rsc_type = 'resource'
+            path.append(rsc_type)
             path.append(self.inputs.resource)
-
-        # The path is terminated with 'files'.
-        path.append('files')
 
         # Make the path string prefixed by xnat:.
         return 'xnat:/' + '/'.join(path)

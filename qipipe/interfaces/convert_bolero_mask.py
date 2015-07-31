@@ -16,10 +16,12 @@ class ConvertBoleroMaskInputSpec(CommandLineInputSpec):
     time_series = traits.File(desc='Input 4D DCE series NiFTI file',
                               mandatory=True, exists=True, position=1,
                               argstr='%s')
-    slice_index = traits.Int(desc='One-based slice index', mandatory=True,
-                             position=2, argstr='%d')
-    in_file = traits.Int(desc='BOLERO .bqf mask file', mandatory=True,
-                         position=3, argstr='%d')
+    slice_sequence_number = traits.Int(
+        desc='One-based sequential slice number', mandatory=True, position=2,
+        argstr='%d'
+    )
+    in_file = traits.Str(desc='BOLERO .bqf mask file', mandatory=True,
+                         position=3, argstr='\"%s\"')
     out_base = traits.Str(desc='Output file base name without extension',
                           argstr='-o %s')
 
@@ -44,7 +46,8 @@ class ConvertBoleroMask(CommandLine):
         outputs = self._outputs().get()
 
         # The default output base name is slice_<slice>_lesion.
-        out_base = self.inputs.out_base or "slice_%d_lesion" % self.inputs.slice_index
+        out_base = (self.inputs.out_base or
+                    "slice_%d_lesion" % self.inputs.slice_sequence_number)
         # The output is compressed.
         out_file = out_base + '.nii.gz'
         # Expand the output path.

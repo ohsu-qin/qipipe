@@ -41,7 +41,6 @@ class TestClinical(object):
         # Spot-check the first subject.
         subject = Subject.objects.get(project=PROJECT, collection='Breast',
                                       number=1)
-        
         # All of the first subject demographics values are set.
         for attr in ['birth_date', 'gender', 'races', 'ethnicity']:
             assert_is_not_none(getattr(subject, attr),
