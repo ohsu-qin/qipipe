@@ -3,7 +3,7 @@ from six.moves.configparser import ConfigParser as Config
 from six.moves.configparser import NoOptionError
 
 CFG_FILE = os.path.abspath(
-    os.path.join( os.path.dirname(__file__), '..', '..', 'conf', 'sarcoma.cfg')
+    os.path.join( os.path.dirname(__file__), '..', 'conf', 'sarcoma.cfg')
 )
 """
 The Sarcoma Tumor Location configuration file. This file contains
