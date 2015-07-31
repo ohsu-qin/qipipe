@@ -48,7 +48,7 @@ setup(
     license = 'MIT',
     keywords = 'Imaging QIN OHSU DCE MR XNAT Nipype',
     packages = find_packages(exclude=['test**']),
-    package_data = dict(qipipe=['conf/*.cfg']),
+    package_data = dict(qipipe=['*.cfg']),
     scripts = glob.glob('bin/*'),
     url = 'http://qipipe.readthedocs.org/en/latest/',
     description = 'Quantitative Imaging Profile pipeline',
