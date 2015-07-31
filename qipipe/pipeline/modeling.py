@@ -164,7 +164,8 @@ class ModelingWorkflow(WorkflowBase):
         :keyword baseline_end_idx: the number of volumes to merge into a R1
             series baseline image (default is 1)
         """
-        super(ModelingWorkflow, self).__init__(project, logger(__name__), **opts)
+        super(ModelingWorkflow, self).__init__(project, logger(__name__),
+                                               **opts)
 
         self.resource = opts.pop('resource', self._generate_resource_name())
         """
@@ -251,7 +252,28 @@ class ModelingWorkflow(WorkflowBase):
         # The supervisory workflow.
         mdl_wf = pe.Workflow(name='modeling', base_dir=self.base_dir)
 
-        # The base workflow.
+        # The default modeling technique is the OHSU proprietary bolero.
+        #
+        # TODO - generalize here and staging , e.g.:
+        #
+        # package ohsu-qipipe provides module ohsu requires qipipe
+        #
+        #   $ qipipe --shim ohsu ...
+        #   import importlib
+        #   include_opt = opts.get('include'))
+        #   if include_opt:
+        #     custom = importlib.import(include_opt)
+        #   else:
+        #     custom = importlib.import('default', qipipe)
+        #
+        # In modeling:
+        #   shims = importlib.import('modeling', custom)
+        #   base_wf = shims.create_workflow(**opts)
+        #
+        # In staging:
+        #   staging = importlib.import('staging', custom)
+        #   ...
+        #
         technique = opts.get('technique', 'bolero')
         if technique == 'bolero':
             base_wf = self._create_bolero_workflow(**opts)
@@ -328,12 +350,12 @@ class ModelingWorkflow(WorkflowBase):
         :param opts: the PK modeling parameters
         :return: the pyxnat Workflow
         """
-        base_wf = pe.Workflow(name='modeling_base', base_dir=self.base_dir)
+        base_wf = pe.Workflow(name='bolero', base_dir=self.base_dir)
 
         # The PK modeling parameters.
         opts = self._pk_parameters(**opts)
         # Set the use_fixed_r1_0 flag.
-        use_fixed_r1_0 = not not opts.get('r1_0_val')
+        use_fixed_r1_0 = opts.get('r1_0_val') != None
 
         # Set up the input node.
         non_pk_flds = ['time_series', 'mask', 'bolus_arrival_index']
@@ -345,8 +367,9 @@ class ModelingWorkflow(WorkflowBase):
             if field in opts:
                 setattr(input_spec.inputs, field, opts[field])
 
-        # If we are not using a fixed r1_0 value, then compute a map from a
-        # proton density weighted scan and the baseline of the DCE series.
+        # If we are not using a fixed r1_0 value, then compute a map
+        # from a proton density weighted scan and the baseline of the
+        # DCE series.
         if not use_fixed_r1_0:
             # Create the DCE baseline image.
             make_base_func = Function(
@@ -432,10 +455,12 @@ class ModelingWorkflow(WorkflowBase):
         outputs = ['r1_series', 'pk_params', 'fxr_k_trans', 'fxr_v_e',
                    'fxr_tau_i', 'fxr_chisq', 'fxl_k_trans', 'fxl_v_e',
                    'fxl_chisq', 'delta_k_trans']
+        # IF R1_0 is infered, then add the R1_0 outputs.
         if not use_fixed_r1_0:
             outputs += ['dce_baseline', 'r1_0']
         output_spec = pe.Node(IdentityInterface(fields=outputs),
                               name='output_spec')
+        # Run the PK model.
         base_wf.connect(copy_meta, 'dest_file', output_spec, 'r1_series')
         base_wf.connect(get_params, 'params_csv', output_spec, 'pk_params')
         base_wf.connect(pk_map, 'k_trans', output_spec, 'fxr_k_trans')
@@ -448,7 +473,7 @@ class ModelingWorkflow(WorkflowBase):
         base_wf.connect(pk_map, 'guess_model.chisq', output_spec, 'fxl_chisq')
         base_wf.connect(delta_k_trans, 'out_file',
                         output_spec, 'delta_k_trans')
-
+        # If we are inferring R1_0, then make the DCE baseline.
         if not use_fixed_r1_0:
             base_wf.connect(make_base, 'baseline',
                             output_spec, 'dce_baseline')
@@ -467,7 +492,7 @@ class ModelingWorkflow(WorkflowBase):
         :param opts: the PK modeling parameters
         :return: the pyxnat Workflow
         """
-        base_wf = pe.Workflow(name='modeling_base', base_dir=self.base_dir)
+        base_wf = pe.Workflow(name='mock', base_dir=self.base_dir)
 
         # The PK modeling parameters.
         opts = self._pk_parameters(**opts)
