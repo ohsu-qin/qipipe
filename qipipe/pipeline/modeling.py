@@ -8,8 +8,8 @@ import qiutil
 from qiutil.logging import logger
 from ..interfaces import XNATUpload
 from ..helpers.bolus_arrival import bolus_arrival_index, BolusArrivalError
+from ..helpers.distributable import DISTRIBUTABLE
 from .workflow_base import WorkflowBase
-from .distributable import DISTRIBUTABLE
 from .pipeline_error import PipelineError
 
 PK_PREFIX = 'pk'

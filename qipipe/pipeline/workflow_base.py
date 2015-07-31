@@ -5,7 +5,7 @@ import networkx as nx
 import qixnat
 from qiutil.collections import EMPTY_DICT
 from qiutil.ast_config import read_config
-from .distributable import DISTRIBUTABLE
+from ..helpers.distributable import DISTRIBUTABLE
 
 
 class WorkflowBase(object):
