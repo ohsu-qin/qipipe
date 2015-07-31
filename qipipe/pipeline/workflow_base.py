@@ -129,7 +129,6 @@ class WorkflowBase(object):
         """
         # The configuration files to load.
         cfg_files = []
-
         # The default configuration file.
         def_cfg_file = os.path.join(WorkflowBase.DEF_CONF_DIR, 'default.cfg')
         if os.path.exists(def_cfg_file):
