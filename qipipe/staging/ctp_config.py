@@ -1,8 +1,8 @@
 import os
 from six.moves.configparser import ConfigParser as Config
 
-_CFG_FILE = os.path.join(
-    os.path.dirname(__file__), '..', '..', 'conf', 'ctp.cfg')
+CFG_FILE = os.path.join(
+    os.path.dirname(__file__), '..', 'conf', 'ctp.cfg')
 
 
 def ctp_collection_for_name(name):
@@ -16,5 +16,5 @@ def ctp_collection_for_name(name):
 def ctp_config():
     if not hasattr(ctp_config, 'instance'):
         ctp_config.instance = Config()
-        ctp_config.instance.read(_CFG_FILE)
+        ctp_config.instance.read(CFG_FILE)
     return ctp_config.instance
