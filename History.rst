@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
+5.4.10 / 2015-07-31
+------------------
+* Add recursive config files to manifest.
+
 5.4.9 / 2015-07-31
 ------------------
 * Add conf/*.cfg to package_data.
