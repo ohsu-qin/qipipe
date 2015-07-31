@@ -1,2 +1,2 @@
 include *.rst *.txt
-recursive-include conf *
+recursive-include conf *.cfg

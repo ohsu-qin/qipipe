@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
+5.4.3 / 2015-07-30
+------------------
+* Include the config files in the manifest.
+
 5.4.2 / 2015-07-30
 ------------------
 * Include the config files in the package.
