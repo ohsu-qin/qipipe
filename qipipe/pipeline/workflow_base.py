@@ -41,7 +41,7 @@ class WorkflowBase(object):
     CLASS_NAME_PAT = re.compile("^(\w+)Workflow$")
     """The workflow wrapper class name matcher."""
 
-    DEF_CONF_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'conf')
+    DEF_CONF_DIR = os.path.join(os.path.dirname(__file__), '..', 'conf')
     """The default configuration directory."""
 
     CFG_ENV_VAR='QIN_CONF'
