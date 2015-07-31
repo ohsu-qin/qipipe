@@ -1,6 +1,14 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
+5.4.9 / 2015-07-31
+------------------
+* Add conf/*.cfg to package_data.
+
+5.4.8 / 2015-07-30
+------------------
+* conf must be a module.
+
 5.4.7 / 2015-07-30
 ------------------
 * Add *.cfg to manifest.
