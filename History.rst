@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
+5.4.6 / 2015-07-30
+------------------
+* Try conf as a module.
+
 5.4.5 / 2015-07-30
 ------------------
 * Yet another config files variation.
