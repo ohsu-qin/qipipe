@@ -49,6 +49,7 @@ setup(
     keywords = 'Imaging QIN OHSU DCE MR XNAT Nipype',
     packages = find_packages(exclude=['test**']),
     include_package_data = True,
+    data_files = [('conf', glob.glob('conf/*.cfg'))],
     scripts = glob.glob('bin/*'),
     url = 'http://qipipe.readthedocs.org/en/latest/',
     description = 'Quantitative Imaging Profile pipeline',
