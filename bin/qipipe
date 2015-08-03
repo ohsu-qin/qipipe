@@ -115,7 +115,8 @@ def _parse_arguments():
                          help='the XNAT registration resource label',
                          metavar='RESOURCE')
     reg_grp.add_argument('--registration-technique',
-                         help="the XNAT registration technique, e.g. 'ants'",
+                         help="the XNAT registration technique"
+                              " (default ants)",
                          metavar='TECHNIQUE')
 
     # The modeling options.
