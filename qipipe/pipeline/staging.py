@@ -299,6 +299,7 @@ class StagingWorkflow(WorkflowBase):
         # deployed in a clustered environment such as SGE.
         collect_vol_dicom_xfc = IdentityInterface(fields=['dicom_files'])
         collect_vol_dicom = pe.JoinNode(collect_vol_dicom_xfc,
+                                        run_without_submitting=True,
                                         joinsource='iter_dicom',
                                         joinfield='dicom_files',
                                         name='collect_vol_dicom')
