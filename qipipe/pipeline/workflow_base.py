@@ -206,7 +206,7 @@ class WorkflowBase(object):
         is_dist_clause = 'is' if DISTRIBUTABLE else 'is not'
         self._logger.debug("The %s workflow %s distributable in a"
                            " cluster environment." %
-                           (is_dist_clause, workflow.name))
+                           (workflow.name, is_dist_clause))
         if DISTRIBUTABLE:
             opts = self._configure_plugin(workflow)
         else:
@@ -272,7 +272,7 @@ class WorkflowBase(object):
         if self.plug_in and self.plug_in in self.configuration:
             plug_in_opts = self.configuration[self.plug_in]
             opts = dict(plugin=self.plug_in, **plug_in_opts)
-            self._logger.debug("Workflow %s  %s plug-in parameters: %s." %
+            self._logger.debug("Workflow %s %s plug-in parameters: %s." %
                              (workflow.name, self.plug_in, opts))
         else:
             opts = {}
