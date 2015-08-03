@@ -172,7 +172,7 @@ def _run_with_xnat_input(actions, *inputs, **opts):
             scan_obj = xnat.find_one(prj, sbj, sess, scan=scan)
             if not scan_obj:
                 raise ArgumentError("The XNAT scan object does not exist: %s" % path)
-            
+
             # The workflow options are augmented from the base options.
             wf_opts = dict(opts)
             # Check for an existing mask.
