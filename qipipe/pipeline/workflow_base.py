@@ -1,6 +1,7 @@
 import os
 import re
 import tempfile
+from pprint import pprint
 import networkx as nx
 import qixnat
 from qiutil.collections import EMPTY_DICT
@@ -44,7 +45,7 @@ class WorkflowBase(object):
     DEF_CONF_DIR = os.path.join(os.path.dirname(__file__), '..', 'conf')
     """The default configuration directory."""
 
-    CFG_ENV_VAR='QIN_CONF'
+    CFG_ENV_VAR = 'QIN_CONF'
     """The configuration directory environment variable."""
 
     INTERFACE_PREFIX_PAT = re.compile('(\w+\.)+interfaces?\.?')
@@ -87,22 +88,26 @@ class WorkflowBase(object):
         """
         self.project = project
         """The XNAT project name."""
-        
+
         self._logger = logger
         """This workflow's logger."""
 
         self.base_dir = opts.get('base_dir',
                                  tempfile.mkdtemp(prefix='qipipe_'))
         "The workflow execution directory (default a new temp directory)."
-        
+
         cfg_opt = opts.get('config', None)
         if cfg_opt == None or isinstance(cfg_opt, str):
             config = self._load_configuration(cfg_opt)
         else:
             config = cfg_opt
+        config_s = pprint(config, width=1)
+        self._logger.debug("Pipeline configuration:")
+        for line in config_s.split():
+            self._logger.debug(line)
         self.configuration = config
         """The workflow node inputs configuration."""
-        
+
         # The execution plug-in.
         if 'Execution' in self.configuration:
             exec_opts = self.configuration['Execution']
@@ -150,7 +155,7 @@ class WorkflowBase(object):
                             self.__class__.__name__)
         name = match.group(1)
         fname = "%s.cfg" % name.lower()
-        
+
         # The workflow-specific configuration file is in the conf directory.
         base_cfg_file = os.path.join(WorkflowBase.DEF_CONF_DIR, fname)
         if os.path.exists(base_cfg_file):
@@ -295,7 +300,8 @@ class WorkflowBase(object):
         """
         # The default plug-in setting.
         if DISTRIBUTABLE and self.plug_in and self.plug_in in self.configuration:
-            def_plugin_args = self.configuration[self.plug_in].get('plugin_args')
+            plugin_cfg = self.configuration[self.plug_in]
+            def_plugin_args = plugin_conf.get('plugin_args')
             if def_plugin_args and 'qsub_args' in def_plugin_args:
                 # Retain this workflow's default even if a node defined
                 # in this workflow is included in a parent workflow.
@@ -342,7 +348,7 @@ class WorkflowBase(object):
                     # The config value differs from the default value.
                     # Capture the config entry for update.
                     input_dict[attr] = value
-            
+
             # If:
             # 1) the configuration specifies a default,
             # 2) the node itself is not configured with plug-in arguments, and
