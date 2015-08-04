@@ -280,7 +280,6 @@ class ModelingWorkflow(WorkflowBase):
         base_output = base_wf.get_node('output_spec')
         out_fields = base_output.outputs.copyable_trait_names()
         merge_outputs = pe.Node(Merge(len(out_fields)),
-                                run_without_submitting=True,
                                 name='merge_outputs')
         for i, field in enumerate(out_fields):
             base_field = 'output_spec.' + field

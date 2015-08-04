@@ -153,8 +153,7 @@ class MaskWorkflow(WorkflowBase):
         mask_name_func = Function(input_names=['subject', 'session'],
                                   output_names=['out_file'],
                                   function=_gen_mask_filename)
-        mask_name = pe.Node(mask_name_func, run_without_submitting=True,
-                            name='mask_name')
+        mask_name = pe.Node(mask_name_func, name='mask_name')
         workflow.connect(input_spec, 'subject', mask_name, 'subject')
         workflow.connect(input_spec, 'session', mask_name, 'session')
         

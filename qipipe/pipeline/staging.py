@@ -240,8 +240,7 @@ class StagingWorkflow(WorkflowBase):
         workflow.connect(input_spec, 'session', find_scan, 'session')
         workflow.connect(input_spec, 'scan', find_scan, 'scan')
         scan_gate_xfc = Gate(fields=['scan', 'xnat_id'])
-        scan_gate = pe.Node(scan_gate_xfc, run_without_submitting=True,
-                            name='scan_gate')
+        scan_gate = pe.Node(scan_gate_xfc, name='scan_gate')
         workflow.connect(input_spec, 'scan', scan_gate, 'scan')
         workflow.connect(find_scan, 'xnat_id', scan_gate, 'xnat_id')
 
@@ -299,7 +298,6 @@ class StagingWorkflow(WorkflowBase):
         # deployed in a clustered environment such as SGE.
         collect_vol_dicom_xfc = IdentityInterface(fields=['dicom_files'])
         collect_vol_dicom = pe.JoinNode(collect_vol_dicom_xfc,
-                                        run_without_submitting=True,
                                         joinsource='iter_dicom',
                                         joinfield='dicom_files',
                                         name='collect_vol_dicom')
@@ -309,7 +307,6 @@ class StagingWorkflow(WorkflowBase):
                                           output_names=['out_list'],
                                           function=merge)
         collect_scan_dicom = pe.JoinNode(collect_scan_dicom_xfc,
-                                         run_without_submitting=True,
                                          joinsource='iter_volume',
                                          joinfield='lists',
                                          name='collect_scan_dicom')
@@ -330,8 +327,7 @@ class StagingWorkflow(WorkflowBase):
         vol_fmt_xfc = Function(input_names=['collection'],
                                output_names=['format'],
                                function=volume_format)
-        vol_fmt = pe.Node(vol_fmt_xfc, run_without_submitting=True,
-                          name='volume_format')
+        vol_fmt = pe.Node(vol_fmt_xfc, name='volume_format')
         workflow.connect(input_spec, 'collection', vol_fmt, 'collection')
 
         # Stack the scan volume into a 3D NiFTI file.
@@ -365,8 +361,7 @@ class StagingWorkflow(WorkflowBase):
         # node to ensure that upload is completed before setting the output
         # field.
         output_gate_xfc = Gate(fields=['image', 'xnat_files'])
-        output_gate = pe.Node(output_gate_xfc, run_without_submitting=True,
-                              name='output_gate')
+        output_gate = pe.Node(output_gate_xfc, name='output_gate')
         workflow.connect(stack, 'out_file', output_gate, 'image')
         workflow.connect(upload_3d, 'xnat_files', output_gate, 'xnat_files')
 
@@ -374,8 +369,7 @@ class StagingWorkflow(WorkflowBase):
         # Gate node to prevent Nipype from overzealously pruning it as
         # extraneous.
         output_spec_xfc = Gate(fields=['image'])
-        output_spec = pe.Node(output_spec_xfc, run_without_submitting=True,
-                              name='output_spec')
+        output_spec = pe.Node(output_spec_xfc, name='output_spec')
         workflow.connect(output_gate, 'image', output_spec, 'image')
 
         # Instrument the nodes for cluster submission, if necessary.

@@ -344,10 +344,20 @@ class WorkflowBase(object):
                         self._logger.debug("%s workflow node %s plugin"
                                           " arguments: %s" %
                                           (workflow.name, node, value))
-                elif value != getattr(node.inputs, attr):
-                    # The config value differs from the default value.
-                    # Capture the config entry for update.
-                    input_dict[attr] = value
+                else:
+                    # The current attribute value.
+                    if hasattr(node.inputs, attr):
+                        current = getattr(node.inputs, attr)
+                    elif hasattr(node, attr):
+                        current = getattr(node, attr)
+                    else:
+                        raise WorkflowError("The node %s does not have an"
+                                            " attribute or input field %s" %
+                                            (node, attr))
+                    # If the config value differs from the default
+                    # value, then capture the config entry for update.
+                    if value != current:
+                        input_dict[attr] = value
 
             # If:
             # 1) the configuration specifies a default,
@@ -362,21 +372,24 @@ class WorkflowBase(object):
             # If a field was set to a config value, then print the config
             # setting to the log.
             if input_dict:
-                self._set_inputs(node, input_dict)
+                self._set_node_inputs(node, **input_dict)
                 self._logger.debug("The following %s workflow node %s inputs"
                                    " were set from the configuration: %s" %
                                    (workflow.name, node, input_dict))
 
-    def _set_inputs(self, node, input_dict):
+    def _set_node_inputs(self, node, **kwargs):
         """
-        Sets the node configuration attributes.
+        Sets the given node attributes. The input attributes can be
+        either a node input interface field, e.g. the
+        :class:`qipipe.interfaces.copy` *dest* field, or a setting
+        on the node itself, e.g. *run_without_submitting*.
         
-        :param node: the node to set
-        :param input_dict: the node {attribute: value} dictionary
+        :param node: the target node
+        :param kwargs: the input {attribute: value} dictionary
         """
         # Sort the input config fields by the requires dependency.
         traits = node.inputs.traits()
-        attrs = set(input_dict)
+        input_dict = {attr: kwargs[attr] for attr in kwargs if attr in traits}
         req_dict = {attr: set(traits[attr].requires).intersection(attrs)
                     for attr in input_dict
                     if traits[attr].requires}
@@ -386,9 +399,13 @@ class WorkflowBase(object):
             for req in reqs:
                 req_grf.add_edge(req, attr)
         sorted_attrs = nx.topological_sort(req_grf)
-        # Set the input config fields.
+        # Set the input fields.
         for attr in sorted_attrs:
             setattr(node.inputs, attr, input_dict[attr])
+        # Set the node attributes.
+        node_attrs = (attr for attr in kwargs if not attr in input_dict)
+        for attr in node_attrs:
+            setattr(node, attr, kwargs[attr])
 
     def _node_configuration(self, workflow, node):
         """

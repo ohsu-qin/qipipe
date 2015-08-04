@@ -185,8 +185,7 @@ class ROIWorkflow(WorkflowBase):
         basename_xfc = Function(input_names=['lesion', 'slice_sequence_number'],
                                 output_names=['basename'],
                                 function=base_name)
-        basename = pe.Node(basename_xfc, run_without_submitting=True,
-                           name='basename')
+        basename = pe.Node(basename_xfc, name='basename')
         exec_wf.connect(iter_roi, 'lesion', basename, 'lesion')
         exec_wf.connect(iter_roi, 'slice_sequence_number',
                         basename, 'slice_sequence_number')
