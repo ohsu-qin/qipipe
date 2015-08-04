@@ -80,7 +80,7 @@ class WorkflowBase(object):
 
         :param project: the :attr:`project`
         :param logger: the logger to use
-        :parameter opts: the following keword options:
+        :parameter opts: the following keyword options:
         :keyword base_dir: the :attr:`base_dir`
         :keyword config: the optional :attr:`configuration` dictionary
             or file
