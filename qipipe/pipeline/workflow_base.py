@@ -302,7 +302,7 @@ class WorkflowBase(object):
         # The default plug-in setting.
         if DISTRIBUTABLE and self.plug_in and self.plug_in in self.configuration:
             plugin_cfg = self.configuration[self.plug_in]
-            def_plugin_args = plugin_conf.get('plugin_args')
+            def_plugin_args = plugin_cfg.get('plugin_args')
             if def_plugin_args and 'qsub_args' in def_plugin_args:
                 # Retain this workflow's default even if a node defined
                 # in this workflow is included in a parent workflow.
@@ -321,10 +321,9 @@ class WorkflowBase(object):
             # An input {field: value} dictionary to format a debug log message.
             input_dict = {}
             # The node configuration.
-            cfg = self._node_configuration(workflow, node)
-
+            node_cfg = self._node_configuration(workflow, node)
             # Set the node inputs or plug-in argument.
-            for attr, value in cfg.iteritems():
+            for attr, value in node_cfg.iteritems():
                 if attr == 'plugin_args':
                     # If the workflow is on a cluster and the node plug-in
                     # arguments do not overwrite the default plug-in arguments,
@@ -356,8 +355,8 @@ class WorkflowBase(object):
             # 3) the node is defined in this workflow as opposed to a child
             #    workflow (i.e., the node name prefix is this workflow name),
             # then set the node plug-in arguments to the default.
-            if (def_plugin_args and 'plugin_args' not in cfg and
-                    str(node).startswith(prefix)):
+            delegatable = def_plugin_args and 'plugin_args' not in node_cfg
+            if delegatable and str(node).startswith(prefix):
                 node.plugin_args = def_plugin_args
 
             # If a field was set to a config value, then print the config
@@ -369,6 +368,12 @@ class WorkflowBase(object):
                                    (workflow.name, node, input_dict))
 
     def _set_inputs(self, node, input_dict):
+        """
+        Sets the node configuration attributes.
+        
+        :param node: the node to set
+        :param input_dict: the node {attribute: value} dictionary
+        """
         # Sort the input config fields by the requires dependency.
         traits = node.inputs.traits()
         attrs = set(input_dict)
