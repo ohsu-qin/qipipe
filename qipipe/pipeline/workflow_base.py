@@ -1,7 +1,7 @@
 import os
 import re
 import tempfile
-from pprint import pprint
+import pprint
 import networkx as nx
 import qixnat
 from qiutil.collections import EMPTY_DICT
@@ -101,9 +101,10 @@ class WorkflowBase(object):
             config = self._load_configuration(cfg_opt)
         else:
             config = cfg_opt
-        config_s = pprint(config, width=1)
+        config_s = pprint.pformat(config)
+            
         self._logger.debug("Pipeline configuration:")
-        for line in config_s.split():
+        for line in config_s.split("\n"):
             self._logger.debug(line)
         self.configuration = config
         """The workflow node inputs configuration."""
