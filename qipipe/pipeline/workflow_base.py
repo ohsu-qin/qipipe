@@ -387,22 +387,30 @@ class WorkflowBase(object):
         :param node: the target node
         :param kwargs: the input {attribute: value} dictionary
         """
-        # Sort the input config fields by the requires dependency.
+        # The node interface input traits.
         traits = node.inputs.traits()
+        # The input interface {attribute: value} dictionary.
         input_dict = {attr: kwargs[attr] for attr in kwargs if attr in traits}
-        req_dict = {attr: set(traits[attr].requires).intersection(attrs)
+        # The input interface attributes.
+        input_attrs = set(input_dict.iterkeys())
+        # The {attribute: dependencies} requirement dictionary.
+        req_dict = {attr: set(traits[attr].requires).intersection(input_attrs)
                     for attr in input_dict
                     if traits[attr].requires}
+        # The dependency graph.
         req_grf = nx.DiGraph()
+        # The dependency graph nodes.
         req_grf.add_nodes_from(input_dict)
+        # The dependency graph edges.
         for attr, reqs in req_dict.iteritems():
             for req in reqs:
                 req_grf.add_edge(req, attr)
+        # Sort the input interface attributes by dependency.
         sorted_attrs = nx.topological_sort(req_grf)
-        # Set the input fields.
+        # Se the node input field values.
         for attr in sorted_attrs:
             setattr(node.inputs, attr, input_dict[attr])
-        # Set the node attributes.
+        # Set the node attribute values.
         node_attrs = (attr for attr in kwargs if not attr in input_dict)
         for attr in node_attrs:
             setattr(node, attr, kwargs[attr])
