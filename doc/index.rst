@@ -74,14 +74,14 @@ customary Python_ pip_ command ``pip install qixnat`` alone. Install
 
 6. Install the ``qipipe`` dependencies hosted by Anaconda::
 
-      wget -O - https://raw.githubusercontent.com/ohsu-qin/qipipe/master/requirements.txt | xargs -n 1 conda install -y
+      wget --no-check-certificate -O - https://raw.githubusercontent.com/ohsu-qin/qipipe/master/requirements.txt | xargs -n 1 conda install -y
 
   Ignore ``No packages found`` messages for non-Anaconda packages. These
   packages will be installed in the next step.
 
 7. Install the ``qipipe`` dependencies hosted by pip::
 
-      wget -O - https://raw.githubusercontent.com/ohsu-qin/qipipe/master/requirements.txt | xargs -n 1 pip install
+      wget --no-check-certificate -O - https://raw.githubusercontent.com/ohsu-qin/qipipe/master/requirements.txt | xargs -n 1 pip install
 
   The dependencies must be installed in succession one at a time because some
   requirements, e.g. ``nipy``, have implicit dependencies that necessitate this
