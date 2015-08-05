@@ -128,6 +128,10 @@ def _parse_arguments():
                          help='the XNAT modeling technique',
                          metavar='TECHNIQUE')
 
+    # The application extention option.
+    parser.add_argument('--shim', help='the application extension',
+                        metavar='MODULE')
+ 
     # The input directories or XNAT labels to process.
     parser.add_argument('input', nargs='+',
                         help='the input subject directory or XNAT object path'
