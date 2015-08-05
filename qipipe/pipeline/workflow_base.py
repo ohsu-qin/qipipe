@@ -134,8 +134,8 @@ class WorkflowBase(object):
 
     def _load_configuration(self, cfg_file=None):
         """
-        Loads the workflow configuration, as defined in
-        :class:`qipipe.pipeline.workflow_base.WorkflowBase`.
+        Loads the workflow configuration, as described in
+        :class:`WorkflowBase`.
 
         :param cfg_file: the optional configuration file path
         :return: the configuration dictionary
