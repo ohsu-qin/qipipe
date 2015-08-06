@@ -194,7 +194,7 @@ def _run_with_xnat_input(actions, *inputs, **opts):
 
             # Execute the workflow.
             wf_gen = QIPipelineWorkflow(prj, actions, **wf_opts)
-            wf_gen.run_with_scan_download(xnat, prj, sbj, sess, scan)
+            wf_gen.run_with_scan_download(xnat, prj, sbj, sess, scan, actions)
 
 
 def _scan_resource_exists(project, subject, session, scan, resource):
@@ -335,7 +335,8 @@ class QIPipelineWorkflow(WorkflowBase):
         input_spec.inputs.subject = scan_input.subject
         input_spec.inputs.session = scan_input.session
         input_spec.inputs.scan = scan_input.scan
-        
+        input_spec.inputs.registered = []
+
         # If staging is enabled, then set the staging iterables.
         if 'stage' in actions:
             staging.set_workflow_iterables(self.workflow, scan_input, dest)
@@ -351,11 +352,12 @@ class QIPipelineWorkflow(WorkflowBase):
                            (scan_input.subject, scan_input.session,
                             scan_input.scan))
 
-    def run_with_scan_download(self, xnat, project, subject, session, scan):
+    def run_with_scan_download(self, xnat, project, subject, session, scan,
+                               actions):
         """
         Runs the execution workflow on downloaded scan image files.
         """
-        self._logger.debug("Processing the %s %s %s scan %d scan..." %
+        self._logger.debug("Processing the %s %s %s Scan %d volumes..." %
                            (project, subject, session, scan))
 
         # Get the volume numbers.
@@ -372,24 +374,62 @@ class QIPipelineWorkflow(WorkflowBase):
                                 (project, subject, session, scan))
         # The volume files.
         files = rsc_obj.files().get()
+        if not files:
+            raise ArgumentError("There are no QIN pipeline %s %s %s Scan %d"
+                                " NIFTI volumes" %
+                                (project, subject, session, scan))
 
-        # Partition the scan image files into those which are already
-        # registered and those which need to be registered.
-        reg_files, unreg_files = self._partition_registered(xnat, project,
-                                                            subject, session,
-                                                            scan, files)
+        # Partition the scan image file names into those which are
+        # already registered and those which need to be registered.
+        registered, unregistered = self._partition_registered(
+            xnat, project, subject, session, scan, files
+        )
+        if 'register' in actions:
+            if unregistered:
+                if registered:
+                    self._logger.debug("Skipping registration of %d previously"
+                                       " registered %s %s %s Scan %d volumes:" %
+                                       (len(registered), project, subject,
+                                        session, scan))
+                    self._logger.debug("%s" % registered)
+                self._logger.debug("Registering %d %s %s %s Scan %d volumes:" %
+                                   (len(unregistered), project, subject, session,
+                                    scan))
+                self._logger.debug("%s" % unregistered)
+            else:
+                self._logger.debug("Skipping %s %s %s Scan %d registration,"
+                                   " since all volumes are already registered." %
+                                   (project, subject, session, scan))
+        elif unregistered:
+            self._logger.error("The QIN pipeline %s %s %s Scan %d register"
+                                " action is not specified but there are"
+                                "  %d unregistered volumes:" %
+                                (project, subject, session, scan,
+                                 len(unregistered)))
+            self._logger.error("%s" % unregistered)
+            raise ArgumentError("The QIN pipeline %s %s %s Scan %d register"
+                                " action is not specified but there are"
+                                " unregistered volumes" %
+                                (project, subject, session, scan))
+        else:
+            self._logger.debug("Processing %d %s %s %s Scan %d volumes:" %
+                               (len(unregistered), project, subject, session,
+                                scan))
+            self._logger.debug("%s" % unregistered)
 
         # Set the workflow input.
         input_spec = self.workflow.get_node('input_spec')
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
         input_spec.inputs.scan = scan
-        input_spec.inputs.in_files = unreg_files
+        input_spec.inputs.registered = registered
 
         # Execute the workflow.
         self._run_workflow(self.workflow)
-        self._logger.debug("Processed %d %s %s %s scan %d volumes." %
-                           (len(volumes), project, subject, session, scan))
+        self._logger.debug("Registered %d %s %s %s Scan %d volumes:" %
+                           (len(unregistered), project, subject, session,
+                            scan))
+        self._logger.debug("%s" % unregistered)
 
     def _set_roi_inputs(self, *inputs):
         """
@@ -404,11 +444,11 @@ class QIPipelineWorkflow(WorkflowBase):
         roi_node.inputs.in_rois = inputs
         roi_node.inputs.opts = dict(base_dir=self.workflow.base_dir)
 
-    def _partition_registered(self, xnat, project, subject, session, scan, files):
+    def _partition_registered(self, xnat, project, subject, session, scan,
+                              files):
         """
         Partitions the given volume file names into those which have a
-        corresponding registration resource file and those which
-        don't.
+        corresponding registration resource file and those which don't.
 
         :return: the (registered, unregistered) file names
         """
@@ -424,15 +464,15 @@ class QIPipelineWorkflow(WorkflowBase):
             return [], files
 
         # The realigned files.
-        reg_files = set(reg_obj.files().get())
+        registered = set(reg_obj.files().get())
         # The unregistered volume numbers.
-        unreg_files = set(files) - reg_files
+        unregistered = set(files) - registered
         self._logger.debug("The %s %s %s resource has %d registered volumes"
                            " and %d unregistered volumes." %
-                           (project, subject, session, len(reg_files),
-                            len(unreg_files)))
+                           (project, subject, session, len(registered),
+                            len(unregistered)))
 
-        return reg_files, unreg_files
+        return registered, unregistered
 
     def _create_workflow(self, actions, **opts):
         """
@@ -443,7 +483,6 @@ class QIPipelineWorkflow(WorkflowBase):
         :param opts: the constituent workflow initializer options
         :return: the Nipype workflow
         """
-
         # This is a long method body with the following stages:
         #
         # 1. Gather the options.
@@ -459,7 +498,6 @@ class QIPipelineWorkflow(WorkflowBase):
         #
         # By contrast, the workflows are tied together in front-to-back
         # order.
-
         self._logger.debug("Building the QIN pipeline execution workflow"
                             " for the actions %s..." % actions)
         # The execution workflow.
@@ -478,9 +516,9 @@ class QIPipelineWorkflow(WorkflowBase):
         if reg_rsc:
             self.registration_resource = reg_rsc
 
-        # The modeling workflow. Since the proprietary fastfit module might
-        # not be available, only import the ModelingWorkflow on demand if
-        # modeling is required.
+        # The modeling workflow. Since the proprietary fastfit module
+        # might not be available, only import the ModelingWorkflow on
+        # demand if modeling is required.
         if 'model' in actions:
             from .modeling import ModelingWorkflow
             mdl_opts = dict(project=self.project, base_dir=self.base_dir)
@@ -497,8 +535,7 @@ class QIPipelineWorkflow(WorkflowBase):
         # The registration workflow node.
         if 'register' in actions:
             reg_inputs = ['project', 'subject', 'session', 'scan',
-                          'bolus_arrival_index', 'in_files', 'mask',
-                          'opts']
+                          'bolus_arrival_index', 'in_files', 'mask', 'opts']
 
             # The registration function keyword options.
             reg_opts = dict(base_dir=self.base_dir)
@@ -569,7 +606,7 @@ class QIPipelineWorkflow(WorkflowBase):
             input_fields.append('collection')
             iter_volume_fields.append('dest')
         elif reg_node and reg_rsc:
-            input_fields.append('in_files')
+            input_fields.append('registered')
 
         # The workflow input node.
         input_spec_xfc = IdentityInterface(fields=input_fields)
@@ -614,6 +651,7 @@ class QIPipelineWorkflow(WorkflowBase):
         # in a node named 'staged' with output 'images', which is used
         # later in the pipeline.
         # Otherwise, there is no staged node.
+        staged = None
         if reg_node or roi_node or mask_wf or (mdl_wf and not model_reg):
             if stg_wf:
                 staged = pe.JoinNode(IdentityInterface(fields=['out_files']),
@@ -700,20 +738,34 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(scan_ts, 'out_file', roi_node, 'time_series')
             self._logger.debug('Connected the scan time series to ROI.')
 
-        # If registration is enabled, then register the staged images.
+        # If registration is enabled, then register the unregistered
+        # staged images.
         if reg_node:
+            # There must be staged files.
+            if not staged:
+                raise NotFoundError('Registration requires scan input')
             exec_wf.connect(input_spec, 'subject', reg_node, 'subject')
             exec_wf.connect(input_spec, 'session', reg_node, 'session')
             exec_wf.connect(input_spec, 'scan', reg_node, 'scan')
-            # The staged input.
-            if stg_wf or not reg_rsc:
-                # Register all staged files.
+
+            # If the registration input files were downloaded from
+            # XNAT, then select only the unregistered files.
+            if stg_wf:
                 exec_wf.connect(staged, 'out_files', reg_node, 'in_files')
-                self._logger.debug('Connected staging to registration.')
             else:
-                # Register only the unregistered files.
-                exec_wf.connect(input_spec, 'in_files',
+                exc_regd_xfc = Function(input_names=['in_files', 'exclusions'],
+                                         output_names=['out_files'],
+                                         function=exclude_files)
+                exclude_registered = pe.Node(exc_regd_xfc,
+                                             name='exclude_registered')
+                exec_wf.connect(staged, 'out_files',
+                                exclude_registered, 'in_files')
+                exec_wf.connect(input_spec, 'registered',
+                                exclude_registered, 'exclusions')
+                exec_wf.connect(exclude_registered, 'out_files',
                                 reg_node, 'in_files')
+            self._logger.debug('Connected staging to registration.')
+
             # The mask input.
             if mask_wf:
                 exec_wf.connect(mask_wf, 'output_spec.mask', reg_node, 'mask')
@@ -865,7 +917,28 @@ class QIPipelineWorkflow(WorkflowBase):
                 os.remove(path)
 
 
+def exclude_files(in_files, exclusions):
+    """
+    :param in_files: the input file paths
+    :param exclusions: the file names to exclude
+    :return: the filtered input file paths
+    """
+    import os
+
+    # Make the exclusions a set.
+    exclusions = set(exclusions)
+
+    # Filter the input files.
+    return [location for location in in_files
+            if os.path.split(location)[1] not in exclusions]
+
+
 def bolus_arrival_index_or_zero(time_series):
+    """
+    :param time_series: the 4D time series image
+    :return: the bolus arrival index, or zero if the arrival
+        cannot be calculated
+    """
     from qipipe.helpers.bolus_arrival import (bolus_arrival_index,
                                               BolusArrivalError)
 
@@ -887,7 +960,7 @@ def register(project, subject, session, scan, bolus_arrival_index,
       ``**opts``). The Nipype ``Function`` interface does not support
       method aggregates. Similarly, the in_files parameter is a
       required list rather than a splat argument (i.e., *in_files).
-    
+
     :param project: the project name
     :param subject: the subject name
     :param session: the session name
@@ -906,8 +979,8 @@ def register(project, subject, session, scan, bolus_arrival_index,
     # optional in the registration run function. Therefore, the
     # the registration run options include the mask.
     run_opts = dict(mask=mask)
-    run_opts.update(opts) 
-    
+    run_opts.update(opts)
+
     return registration.run(project, subject, session, scan,
                             bolus_arrival_index, *in_files, **run_opts)
 
