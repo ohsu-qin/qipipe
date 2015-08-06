@@ -256,8 +256,8 @@ class RegistrationWorkflow(WorkflowBase):
         exec_wf = pe.Workflow(name='reg_exec', base_dir=self.workflow.base_dir)
 
         # The registration workflow input.
-        input_fields = ['subject', 'session', 'scan', 'pre_arrival', 'mask', 'ref_0',
-                        'resource']
+        input_fields = ['subject', 'session', 'scan', 'pre_arrival', 'mask',
+                        'ref_0', 'resource']
         input_spec = pe.Node(IdentityInterface(fields=input_fields),
                              name='input_spec')
         input_spec.inputs.ref_0 = ref_0_image
