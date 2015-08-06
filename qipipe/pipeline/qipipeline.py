@@ -152,22 +152,23 @@ def _run_with_xnat_input(actions, *inputs, **opts):
     :param inputs: the XNAT scan resource paths
     :param opts: the :class:`QIPipelineWorkflow` initializer options
     """
-    with qixnat.connect() as xnat:
-        for path in inputs:
-            hierarchy = dict(path_hierarchy(path))
-            prj = hierarchy.pop('project', None)
-            if not prj:
-                raise ArgumentError("The XNAT path is missing a project: %s" % path)
-            sbj = hierarchy.pop('subject', None)
-            if not sbj:
-                raise ArgumentError("The XNAT path is missing a subject: %s" % path)
-            sess = hierarchy.pop('experiment', None)
-            if not sess:
-                raise ArgumentError("The XNAT path is missing a session: %s" % path)
-            scan_s = hierarchy.pop('scan', None)
-            if not scan_s:
-                raise ArgumentError("The XNAT path is missing a scan: %s" % path)
-            scan = int(scan_s)
+    for path in inputs:
+        hierarchy = dict(path_hierarchy(path))
+        prj = hierarchy.pop('project', None)
+        if not prj:
+            raise ArgumentError("The XNAT path is missing a project: %s" % path)
+        sbj = hierarchy.pop('subject', None)
+        if not sbj:
+            raise ArgumentError("The XNAT path is missing a subject: %s" % path)
+        sess = hierarchy.pop('experiment', None)
+        if not sess:
+            raise ArgumentError("The XNAT path is missing a session: %s" % path)
+        scan_s = hierarchy.pop('scan', None)
+        if not scan_s:
+            raise ArgumentError("The XNAT path is missing a scan: %s" % path)
+        scan = int(scan_s)
+        # The XNAT connection is open while the input scan is processed.
+        with qixnat.connect() as xnat:
             # The XNAT scan object must exist.
             scan_obj = xnat.find_one(prj, sbj, sess, scan=scan)
             if not scan_obj:
@@ -176,38 +177,45 @@ def _run_with_xnat_input(actions, *inputs, **opts):
             # The workflow options are augmented from the base options.
             wf_opts = dict(opts)
             # Check for an existing mask.
-            if _scan_resource_exists(prj, sbj, sess, scan, MASK_RSC):
+            if _scan_resource_exists(xnat, prj, sbj, sess, scan, MASK_RSC):
                 wf_opts['mask'] = MASK_RSC
 
             # Every post-stage action requires a 4D scan time series.
             ts_actions = (action for action in actions if action != 'stage')
             if any(ts_actions):
-                if _scan_resource_exists(prj, sbj, sess, scan, SCAN_TS_RSC):
+                if _scan_resource_exists(xnat, prj, sbj, sess, scan,
+                                         SCAN_TS_RSC):
                     wf_opts['scan_time_series'] = SCAN_TS_RSC
 
             # If modeling will be performed on a specified registration
-            # resource, then check for an existing 4D registration time series.
+            # resource, then check for an existing 4D registration time
+            # series.
             if 'model' in actions and 'registration' in opts:
                 reg_ts_rsc = opts['registration'] + '_ts'
-                if _scan_resource_exists(prj, sbj, sess, scan, reg_ts_rsc):
+                if _scan_resource_exists(xnat, prj, sbj, sess, scan,
+                                         reg_ts_rsc):
                     wf_opts['realigned_time_series'] = reg_ts_rsc
 
             # Execute the workflow.
             wf_gen = QIPipelineWorkflow(prj, actions, **wf_opts)
-            wf_gen.run_with_scan_download(xnat, prj, sbj, sess, scan, actions)
+            # If a registration resource was specified, then set the flag
+            # to check for registered scans.
+            check_reg = opts.get('registration_resource') != None
+            wf_gen.run_with_scan_download(xnat, prj, sbj, sess, scan, actions,
+                                          check_reg)
 
 
-def _scan_resource_exists(project, subject, session, scan, resource):
+def _scan_resource_exists(xnat, project, subject, session, scan, resource):
     """
     :return: whether the given XNAT scan resource exists
     """
-    with qixnat.connect() as xnat:
-        rsc_obj = xnat.find_one(project, subject, session, scan=scan,
-                            resource=resource)
+    rsc_obj = xnat.find_one(project, subject, session, scan=scan,
+                        resource=resource)
     exists = rsc_obj and rsc_obj.files().get()
     status = 'found' if exists else 'not found'
     logger(__name__).debug("The %s %s %s scan %d resource %s was %s." %
-                           (project, subject, session, scan, resource, status))
+                           (project, subject, session, scan, resource,
+                            status))
 
     return exists
 
@@ -250,13 +258,14 @@ class QIPipelineWorkflow(WorkflowBase):
       In that case, if registration is enabled as described below, then
       the previously staged volume scan stack images are downloaded.
 
-    - If registration is performed and the ``registration`` resource option
-      is set, then the previously realigned images with the given resource
-      name are downloaded. The remaining volumes are registered.
+    - If registration is performed and the ``registration`` resource
+      option is set, then the previously realigned images with the
+      given resource name are downloaded. The remaining volumes are
+      registered.
 
     - If registration or modeling is performed and the XNAT ``mask``
-      resource is found, then that resource file is downloaded. Otherwise,
-      the mask is created from the staged images.
+      resource is found, then that resource file is downloaded.
+      Otherwise, the mask is created from the staged images.
 
     The QIN workflow input node is *input_spec* with the following
     fields:
@@ -298,7 +307,8 @@ class QIPipelineWorkflow(WorkflowBase):
         :param opts: the :class:`qipipe.staging.WorkflowBase`
             initialization options as well as the following options:
         :keyword mask: the XNAT mask resource name
-        :keyword registration_resource: the XNAT registration resource name
+        :keyword registration_resource: the XNAT registration resource
+            name
         :keyword registration_technique: the
             class:`qipipe.pipeline.registration.RegistrationWorkflow`
             technique
@@ -306,12 +316,13 @@ class QIPipelineWorkflow(WorkflowBase):
         :keyword modeling_technique: the
             class:`qipipe.pipeline.modeling.ModelingWorkflow` technique
         """
-        super(QIPipelineWorkflow, self).__init__(project, logger(__name__), **opts)
+        super(QIPipelineWorkflow, self).__init__(project, logger(__name__),
+                                                 **opts)
 
-        self.registration_resource = None
+        self.registration_resource = opts.pop('registration_resource', None)
         """The registration XNAT resource name."""
 
-        self.modeling_resource = None
+        self.modeling_resource = opts.pop('modeling_resource', None)
         """The modeling XNAT resource name."""
 
         self.workflow = self._create_workflow(actions, **opts)
@@ -353,13 +364,21 @@ class QIPipelineWorkflow(WorkflowBase):
                             scan_input.scan))
 
     def run_with_scan_download(self, xnat, project, subject, session, scan,
-                               actions):
+                               actions, is_existing_registration_resource):
         """
         Runs the execution workflow on downloaded scan image files.
+
+        :param project: the project name
+        :param subject: the subject name
+        :param session: the session name
+        :param scan: the scan number
+        :param actions: the workflow actions
+        :param is_existing_registration_resource: flag indicating
+            whether an existing registration resource name was
+            specfied
         """
         self._logger.debug("Processing the %s %s %s Scan %d volumes..." %
                            (project, subject, session, scan))
-
         # Get the volume numbers.
         scan_obj = xnat.find_one(project, subject, session, scan=scan)
         if not scan_obj:
@@ -379,27 +398,37 @@ class QIPipelineWorkflow(WorkflowBase):
                                 " NIFTI volumes" %
                                 (project, subject, session, scan))
 
-        # Partition the scan image file names into those which are
+        # If the registration resource already exists in XNAT, then
+        # partition the scan image file names into those which are
         # already registered and those which need to be registered.
-        registered, unregistered = self._partition_registered(
-            xnat, project, subject, session, scan, files
-        )
+        if is_existing_registration_resource:
+            registered, unregistered = self._partition_registered(
+                xnat, project, subject, session, scan, files
+            )
+        else:
+            registered = []
+            unregistered = files
+        # Validate and log the partition.
         if 'register' in actions:
-            if unregistered:
-                if registered:
-                    self._logger.debug("Skipping registration of %d previously"
-                                       " registered %s %s %s Scan %d volumes:" %
+            if registered:
+                if unregistered:
+                    self._logger.debug("Skipping registration of %d"
+                                       " previously registered %s %s %s"
+                                       " Scan %d volumes:" %
                                        (len(registered), project, subject,
                                         session, scan))
                     self._logger.debug("%s" % registered)
-                self._logger.debug("Registering %d %s %s %s Scan %d volumes:" %
-                                   (len(unregistered), project, subject, session,
-                                    scan))
+                else:
+                    self._logger.debug("Skipping %s %s %s Scan %d"
+                                       " registration, since all volumes"
+                                       " are already registered." %
+                                       (project, subject, session, scan))
+            if unregistered:
+                self._logger.debug("Registering %d %s %s %s Scan %d"
+                                   " volumes:" %
+                                   (len(unregistered), project, subject,
+                                    session, scan))
                 self._logger.debug("%s" % unregistered)
-            else:
-                self._logger.debug("Skipping %s %s %s Scan %d registration,"
-                                   " since all volumes are already registered." %
-                                   (project, subject, session, scan))
         elif unregistered:
             self._logger.error("The QIN pipeline %s %s %s Scan %d register"
                                 " action is not specified but there are"
@@ -453,15 +482,13 @@ class QIPipelineWorkflow(WorkflowBase):
         :return: the (registered, unregistered) file names
         """
         # The XNAT registration object.
-        if self.registration_resource:
-            reg_obj = xnat.find_one(project, subject, session, scan=scan,
-                                    resource=self.registration_resource)
-        else:
-            reg_obj = None
-        # If the registration has not yet been performed, then
-        # download all of the volumes.
+        if not self.registration_resource:
+            raise ArgumentError("The registration resource is missing")
+        reg_obj = xnat.find_one(project, subject, session, scan=scan,
+                                resource=self.registration_resource)
         if not reg_obj:
-            return [], files
+            raise ArgumentError("The registration resource %s does not exist"
+                                " in XNAT: %s" % self.registration_resource)
 
         # The realigned files.
         registered = set(reg_obj.files().get())
@@ -503,18 +530,16 @@ class QIPipelineWorkflow(WorkflowBase):
         # The execution workflow.
         exec_wf = pe.Workflow(name='qipipeline', base_dir=self.base_dir)
 
-        # The workflow options.
+        # The resource names.
+        reg_rsc = self.registration_resource
+        mdl_rsc = self.modeling_resource
         mask_rsc = opts.get('mask')
         scan_ts_rsc = opts.get('scan_time_series')
         reg_ts_rsc = opts.get('realigned_time_series')
-        reg_rsc = opts.get('registration_resource')
-        reg_technique = opts.get('registration_technique')
-        mdl_rsc = opts.get('modeling_resource')
-        mdl_technique = opts.get('modeling_technique')
 
-        # Set the registration resource instance variable.
-        if reg_rsc:
-            self.registration_resource = reg_rsc
+        # The technique options.
+        reg_technique = opts.get('registration_technique')
+        mdl_technique = opts.get('modeling_technique')
 
         # The modeling workflow. Since the proprietary fastfit module
         # might not be available, only import the ModelingWorkflow on
@@ -544,7 +569,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # If the resource was not specified, then make a new
             # resource name.
             if not reg_rsc:
-                new_reg_rsc = registration.generate_resource_name()
+                new_reg_rsc = registration.generate_resource_name(reg_technique)
                 self.registration_resource = new_reg_rsc
             # Add the resource name to the registration options.
             reg_opts['resource'] = self.registration_resource
