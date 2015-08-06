@@ -605,7 +605,7 @@ class QIPipelineWorkflow(WorkflowBase):
         if stg_wf:
             input_fields.append('collection')
             iter_volume_fields.append('dest')
-        elif reg_node and reg_rsc:
+        elif reg_node:
             input_fields.append('registered')
 
         # The workflow input node.
