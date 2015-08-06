@@ -18,6 +18,9 @@ from .pipeline_error import PipelineError
 REG_PREFIX = 'reg'
 """The XNAT registration resource name prefix."""
 
+DEF_TECHNIQUE = 'ants'
+"""The default registration technique is ANTS."""
+
 
 def run(project, subject, session, scan, bolus_arrival_index, *images, **opts):
     """
@@ -42,14 +45,20 @@ def run(project, subject, session, scan, bolus_arrival_index, *images, **opts):
                       **run_opts)
 
 
-def generate_resource_name():
+def generate_resource_name(technique=None):
     """
-    Makes a unique registration resource name. Uniqueness permits more than
-    one registration to be stored for a given session without a name conflict.
+    Makes a unique registration resource name. Uniqueness permits more
+    than one registration to be stored for a given session without a
+    name conflict.
 
+    :param technique: the registration technique
+        (default :const:`DEF_TECHNIQUE`)
     :return: a unique XNAT registration resource name
     """
-    return "%s_%s" % (REG_PREFIX, qiutil.file.generate_file_name())
+    if not technique:
+        technique = DEF_TECHNIQUE
+    return "%s_%s_%s" % (REG_PREFIX, technique,
+                         qiutil.file.generate_file_name())
 
 
 class RegistrationWorkflow(WorkflowBase):
@@ -135,12 +144,21 @@ class RegistrationWorkflow(WorkflowBase):
         super(RegistrationWorkflow, self).__init__(project, logger(__name__),
                                                    **opts)
 
+        technique_opt = opts.pop('technique', None)
+        self.technique = (
+            technique_opt.lower() if technique_opt else DEF_TECHNIQUE
+        )
+        """
+        The lower-case XNAT registration technique (``ants``, `fnirt``
+        or ``mock``, default :const:`DEF_TECHNIQUE`).
+        """
+
         rsc = opts.pop('resource', None)
         if not rsc:
-            rsc = generate_resource_name()
+            rsc = generate_resource_name(technique)
         self.resource = rsc
-        """The XNAT resource name used for all runs against this workflow
-        instance."""
+        """The XNAT resource name used for all runs against this
+        workflow instance."""
 
         self.workflow = self._create_realignment_workflow(**opts)
         """The registration realignment workflow."""
@@ -354,8 +372,8 @@ class RegistrationWorkflow(WorkflowBase):
         - Upload the realign outputs to XNAT
         
         :param opts: the following workflow options:
-        :keyword technique: the registration technique
-            (``ants``, `fnirt`` or ``mock``, default ``ants``)
+        :keyword base_dir: the workflow directory
+            (default a new temp directory)
         :return: the Workflow object
         """
         self._logger.debug('Creating the registration realignment workflow...')
@@ -369,11 +387,6 @@ class RegistrationWorkflow(WorkflowBase):
                      'mask', 'resource']
         input_spec = pe.Node(IdentityInterface(fields=in_fields),
                              name='input_spec')
-
-        # The realign workflow.
-        technique = opts.get('technique')
-        if not technique:
-            technique = 'ants'
         input_spec.inputs.resource = self.resource
 
         # Copy the DICOM meta-data. The copy target is set by the technique
@@ -381,7 +394,7 @@ class RegistrationWorkflow(WorkflowBase):
         copy_meta = pe.Node(CopyMeta(), name='copy_meta')
         realign_wf.connect(input_spec, 'moving_image', copy_meta, 'src_file')
 
-        if technique.lower() == 'ants':
+        if self.technique.lower() == 'ants':
             # Nipype bug work-around:
             # Setting the registration metric and metric_weight inputs
             # after the node is created results in a Nipype input trait
@@ -422,7 +435,7 @@ class RegistrationWorkflow(WorkflowBase):
             # Copy the meta-data.
             realign_wf.connect(apply_xfm, 'output_image',
                                copy_meta, 'dest_file')
-        elif technique.lower() == 'fnirt':
+        elif self.technique.lower() == 'fnirt':
             # Copy the input to a work directory, since FNIRT adds
             # temporary files to the input image location.
             fnirt_copy_moving = pe.Node(Copy(), name='fnirt_copy_moving')
@@ -441,7 +454,7 @@ class RegistrationWorkflow(WorkflowBase):
             realign_wf.connect(input_spec, 'mask', fnirt, 'refmask_file')
             # Copy the meta-data.
             realign_wf.connect(fnirt, 'warped_file', copy_meta, 'dest_file')
-        elif technique.lower() == 'mock':
+        elif self.technique.lower() == 'mock':
             # Copy the input scan file to an output file.
             mock_copy = pe.Node(Copy(), name='mock_copy')
             realign_wf.connect(input_spec, 'moving_image',
@@ -449,7 +462,7 @@ class RegistrationWorkflow(WorkflowBase):
             realign_wf.connect(mock_copy, 'out_file', copy_meta, 'dest_file')
         else:
             raise PipelineError("Registration technique not recognized: %s" %
-                             technique)
+                                self.technique)
 
         # The output is the realigned image.
         output_spec = pe.Node(IdentityInterface(fields=['out_file']),
