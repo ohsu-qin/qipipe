@@ -194,7 +194,7 @@ def _run_with_xnat_input(actions, *inputs, **opts):
 
             # Execute the workflow.
             wf_gen = QIPipelineWorkflow(prj, actions, **wf_opts)
-            wf_gen.run_with_scan_download(xnat, prj, sbj, sess, scan)
+            wf_gen.run_with_scan_download(xnat, prj, sbj, sess, scan, actions)
 
 
 def _scan_resource_exists(project, subject, session, scan, resource):
@@ -351,11 +351,12 @@ class QIPipelineWorkflow(WorkflowBase):
                            (scan_input.subject, scan_input.session,
                             scan_input.scan))
 
-    def run_with_scan_download(self, xnat, project, subject, session, scan):
+    def run_with_scan_download(self, xnat, project, subject, session, scan,
+                               actions):
         """
         Runs the execution workflow on downloaded scan image files.
         """
-        self._logger.debug("Processing the %s %s %s scan %d scan..." %
+        self._logger.debug("Processing the %s %s %s Scan %d volumes..." %
                            (project, subject, session, scan))
 
         # Get the volume numbers.
@@ -372,12 +373,50 @@ class QIPipelineWorkflow(WorkflowBase):
                                 (project, subject, session, scan))
         # The volume files.
         files = rsc_obj.files().get()
+        if not files:
+            raise ArgumentError("There are no QIN pipeline %s %s %s Scan %d"
+                                " NIFTI volumes" %
+                                (project, subject, session, scan))
 
         # Partition the scan image files into those which are already
         # registered and those which need to be registered.
         reg_files, unreg_files = self._partition_registered(xnat, project,
                                                             subject, session,
                                                             scan, files)
+        reg_fnames = [os.path.split(location)[1] for location in reg_files]
+        unreg_fnames = [os.path.split(location)[1] for location in unreg_files]
+        if 'register' in actions:
+            if unreg_files:
+                if reg_files:
+                    self._logger.debug("Skipping registration of %d previously"
+                                       " registered %s %s %s Scan %d volumes:" %
+                                       (len(reg_fnames), project, subject,
+                                        session, scan))
+                    self._logger.debug("%s" % reg_fnames)
+                self._logger.debug("Registering %d %s %s %s Scan %d volumes: %s" %
+                                   (len(unreg_fnames), project, subject, session,
+                                    scan)
+                self._logger.debug("%s" % unreg_fnames)
+            else:
+                self._logger.debug("Skipping %s %s %s Scan %d registration,"
+                                   " since all volumes are already registered" %
+                                   (project, subject, session, scan))
+        elif unreg_files:
+            self._logger.error("The QIN pipeline %s %s %s Scan %d register"
+                                " action is not specified but there are"
+                                "  %d unregistered volumes:" %
+                                (project, subject, session, scan,
+                                 len(unreg_fnames)))
+            self._logger.error("%s" % unreg_fnames)
+            raise ArgumentError("The QIN pipeline %s %s %s Scan %d register"
+                                " action is not specified but there are"
+                                " unregistered volumes" %
+                                (project, subject, session, scan))
+        else:
+            self._logger.debug("Processing %d %s %s %s Scan %d volumes:" %
+                               (len(unreg_fnames), project, subject, session,
+                                scan))
+            self._logger.debug("%s" % unreg_fnames)
 
         # Set the workflow input.
         input_spec = self.workflow.get_node('input_spec')
@@ -387,9 +426,12 @@ class QIPipelineWorkflow(WorkflowBase):
         input_spec.inputs.in_files = unreg_files
 
         # Execute the workflow.
+        self._logger.debug(unreg_fnames)
         self._run_workflow(self.workflow)
-        self._logger.debug("Processed %d %s %s %s scan %d volumes." %
-                           (len(volumes), project, subject, session, scan))
+        self._logger.debug("REgistered %d %s %s %s scan %d volumes: %s." %
+                           (len(unreg_files), project, subject, session, scan,
+                           unreg_files))
+        self._logger.debug(unreg_fnames)
 
     def _set_roi_inputs(self, *inputs):
         """
