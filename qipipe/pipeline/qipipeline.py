@@ -348,7 +348,7 @@ class QIPipelineWorkflow(WorkflowBase):
             mdl_tech = modeling.DEF_TECHNIQUE
         else:
             mdl_tech = None
-        self.modeling_resource = mdl_tech
+        self.modeling_technique = mdl_tech
         """The modeling technique name."""
 
         mdl_rsc_opt = opts.get('modeling_resource')
