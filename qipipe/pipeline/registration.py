@@ -289,7 +289,7 @@ class RegistrationWorkflow(WorkflowBase):
         # The input images are iterable. The reference is set by the
         # connect_reference method below.
         iter_reg_input = pe.Node(IdentityInterface(fields=['image', 'reference']),
-                             name='iter_reg_input')
+                                 name='iter_reg_input')
         exec_wf.connect(iter_reg_input, 'image',
                         self.workflow, 'input_spec.moving_image')
         exec_wf.connect(iter_reg_input, 'reference',
