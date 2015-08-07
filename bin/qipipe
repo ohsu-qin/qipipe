@@ -110,23 +110,21 @@ def _parse_arguments():
                         metavar='DIR', dest='base_dir')
     
     # The registration options.
-    reg_grp = parser.add_mutually_exclusive_group()
-    reg_grp.add_argument('--registration-resource',
-                         help='the XNAT registration resource label',
-                         metavar='RESOURCE')
-    reg_grp.add_argument('--registration-technique',
-                         help="the XNAT registration technique"
-                              " (default ants)",
-                         metavar='TECHNIQUE')
+    parser.add_argument('--registration-resource',
+                        help='the XNAT registration resource label',
+                        metavar='RESOURCE')
+    parser.add_argument('--registration-technique',
+                        help="the XNAT registration technique"
+                             " (default ants)",
+                        metavar='TECHNIQUE')
 
     # The modeling options.
-    mdl_grp = parser.add_mutually_exclusive_group()
-    mdl_grp.add_argument('--modeling-resource',
-                         help='the XNAT modeling resource name',
-                         metavar='RESOURCE')
-    mdl_grp.add_argument('--modeling-technique',
-                         help='the XNAT modeling technique',
-                         metavar='TECHNIQUE')
+    parser.add_argument('--modeling-resource',
+                        help='the XNAT modeling resource name',
+                        metavar='RESOURCE')
+    parser.add_argument('--modeling-technique',
+                        help='the XNAT modeling technique',
+                        metavar='TECHNIQUE')
 
     # The application extention option.
     parser.add_argument('--shim', help='the application extension',
