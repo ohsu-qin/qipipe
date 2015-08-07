@@ -15,6 +15,8 @@ from .pipeline_error import PipelineError
 PK_PREFIX = 'pk'
 """The XNAT modeling resource object label prefix."""
 
+DEF_TECHNIQUE = 'bolero'
+"""The default modeling technique is the OHSU proprietary ``bolero``."""
 
 class ModelingError(Exception):
     pass
@@ -39,6 +41,18 @@ def run(project, subject, session, scan, time_series, **opts):
     wf = ModelingWorkflow(project, **opts)
     
     return wf.run(subject, session, scan, time_series, mask=mask)
+
+
+def generate_resource_name(technique):
+    """
+    Makes a unique modeling resource name. Uniqueness permits more than
+    one resource to be stored for a given session without a name conflict.
+
+    :param technique: the modeling technique
+    :return: a unique XNAT modeling resource name
+    """
+    return "%s_%s_%s" % (PK_PREFIX, technique,
+                         qiutil.file.generate_file_name())
 
 
 class ModelingWorkflow(WorkflowBase):
@@ -167,12 +181,17 @@ class ModelingWorkflow(WorkflowBase):
         super(ModelingWorkflow, self).__init__(project, logger(__name__),
                                                **opts)
 
-        self.resource = opts.pop('resource', self._generate_resource_name())
+        tech_opt = opts.pop('technique', None)
+        self.technique = tech_opt.lower() if tech_opt else DEF_TECHNIQUE
+        """The modeling technique (default :const:`DEF_TECHNIQUE`)."""
+
+        rsc_opt = opts.pop('resource', None)
+        self.resource = rsc_opt or generate_resource_name(self.technique)
         """
         The XNAT resource name for all executions of this
-        :class:`qipipe.pipeline.modeling.ModelingWorkflow` instance. The
-        name is unique, which permits more than one model to be stored for
-        each input volume without a name conflict.
+        :class:`qipipe.pipeline.modeling.ModelingWorkflow` instance.
+        The name is unique, which permits more than one model to be
+        stored for each input volume without a name conflict.
         """
 
         self.workflow = self._create_workflow(**opts)
@@ -231,15 +250,6 @@ class ModelingWorkflow(WorkflowBase):
         # Return the resource name.
         return self.resource
 
-    def _generate_resource_name(self):
-        """
-        Makes a unique modeling resource name. Uniqueness permits more than
-        one resource to be stored for a given session without a name conflict.
-
-        :return: a unique XNAT modeling resource name
-        """
-        return '_'.join((PK_PREFIX, qiutil.file.generate_file_name()))
-
     def _create_workflow(self, **opts):
         """
         Builds the modeling workflow.
@@ -274,14 +284,16 @@ class ModelingWorkflow(WorkflowBase):
         #   staging = importlib.import('staging', custom)
         #   ...
         #
-        technique = opts.get('technique', 'bolero')
-        if technique == 'bolero':
+        technique = opts.get('technique', DEF_TECHNIQUE)
+        if self.technique == 'bolero':
             base_wf = self._create_bolero_workflow(**opts)
-        elif technique == 'mock':
+        elif self.technique == 'mock':
             base_wf = self._create_mock_workflow(**opts)
+        elif self.technique:
+            raise ModelingError("The modeling technique is unsupported:"
+                                " %s" % self.technique)
         else:
-            raise ModelingError("The modeling technique is unsupported: %s" %
-                                technique)
+            raise ModelingError("The modeling technique is missing")
 
         # The workflow input fields.
         in_fields = ['subject', 'session', 'scan', 'time_series', 'mask',
@@ -305,7 +317,8 @@ class ModelingWorkflow(WorkflowBase):
                                 name='merge_outputs')
         for i, field in enumerate(out_fields):
             base_field = 'output_spec.' + field
-            mdl_wf.connect(base_wf, base_field, merge_outputs, "in%d" % (i + 1))
+            mdl_wf.connect(base_wf, base_field,
+                           merge_outputs, "in%d" % (i + 1))
         upload_xfc = XNATUpload(project=self.project, resource=self.resource,
                                 modality='MR')
         upload_node = pe.Node(upload_xfc, name='upload_outputs')

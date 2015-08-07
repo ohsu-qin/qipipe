@@ -22,7 +22,8 @@ DEF_TECHNIQUE = 'ants'
 """The default registration technique is ANTS."""
 
 
-def run(project, subject, session, scan, bolus_arrival_index, *images, **opts):
+def run(project, subject, session, scan, bolus_arrival_index, *images,
+        **opts):
     """
     Runs the registration workflow on the given session scan images.
 
@@ -45,18 +46,15 @@ def run(project, subject, session, scan, bolus_arrival_index, *images, **opts):
                       **run_opts)
 
 
-def generate_resource_name(technique=None):
+def generate_resource_name(technique):
     """
     Makes a unique registration resource name. Uniqueness permits more
     than one registration to be stored for a given session without a
     name conflict.
 
     :param technique: the registration technique
-        (default :const:`DEF_TECHNIQUE`)
     :return: a unique XNAT registration resource name
     """
-    if not technique:
-        technique = DEF_TECHNIQUE
     return "%s_%s_%s" % (REG_PREFIX, technique,
                          qiutil.file.generate_file_name())
 
@@ -153,17 +151,16 @@ class RegistrationWorkflow(WorkflowBase):
         or ``mock``, default :const:`DEF_TECHNIQUE`).
         """
 
-        rsc = opts.pop('resource', None)
-        if not rsc:
-            rsc = generate_resource_name(technique)
-        self.resource = rsc
+        rsc_opt = opts.pop('resource', None)
+        self.resource = rsc_opt or generate_resource_name(self.technique)
         """The XNAT resource name used for all runs against this
         workflow instance."""
 
         self.workflow = self._create_realignment_workflow(**opts)
         """The registration realignment workflow."""
 
-    def run(self, subject, session, scan, bolus_arrival_index, *images, **opts):
+    def run(self, subject, session, scan, bolus_arrival_index, *images,
+            **opts):
         """
         Runs the registration workflow on the given session scan images.
 
