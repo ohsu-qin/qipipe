@@ -598,7 +598,8 @@ class QIPipelineWorkflow(WorkflowBase):
         # The registration workflow node.
         if 'register' in actions:
             reg_inputs = ['project', 'subject', 'session', 'scan',
-                          'resource', 'in_files', 'mask', 'opts']
+                          'resource', 'bolus_arrival_index', 
+                          'in_files', 'mask', 'opts']
             # The registration function keyword options.
             if not self.registration_technique:
                 raise ArgumentError("Missing the registration technique")
@@ -1012,8 +1013,8 @@ def bolus_arrival_index_or_zero(time_series):
         return 0
 
 
-def register(project, subject, session, scan, bolus_arrival_index,
-             mask, in_files, opts):
+def register(project, subject, session, scan, resource,
+             bolus_arrival_index, mask, in_files, opts):
     """
     Runs the registration workflow on the given session scan images.
 
@@ -1030,7 +1031,6 @@ def register(project, subject, session, scan, bolus_arrival_index,
     :param resource: the registration resource name
     :param bolus_arrival_index: the bolus uptake volume index
     :param mask: the required scan mask file
-    :param resource: the registration resource name
     :param in_files: the input session scan 3D NiFTI images
     :param opts: the :meth:`qipipe.pipeline.registration.run` keyword
         options
@@ -1042,9 +1042,14 @@ def register(project, subject, session, scan, bolus_arrival_index,
     # specified as an input or built by the workflow. The mask is
     # optional in the registration run function. Therefore, the
     # the registration run options include the mask.
-    reg_opts = dict(mask=mask)
+    if not mask:
+        raise ArgumentError("The register method is missing the mask")
+    if not resource:
+        raise ArgumentError("The register method is missing the"
+                            " XNAT registration resource name")
+    reg_opts = dict(mask=mask, resource=resource)
     reg_opts.update(opts)
-    
+
     # The input files sorted by volume number.
     vol_dict = {}
     for volume in in_files:
