@@ -117,6 +117,10 @@ def _parse_arguments():
                         help="the XNAT registration technique"
                              " (default ants)",
                         metavar='TECHNIQUE')
+    parser.add_argument('--recursive-registration',
+                        help="perform step-wise iterative"
+                             " recursive registration",
+                        action='store_true')
 
     # The modeling options.
     parser.add_argument('--modeling-resource',

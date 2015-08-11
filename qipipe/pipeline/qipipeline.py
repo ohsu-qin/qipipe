@@ -5,7 +5,7 @@ import logging
 from collections import defaultdict
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
-from nipype.interfaces.dcmstack import MergeNifti
+from nipype.interfaces.dcmstack import (LookupMeta, MergeNifti)
 import qixnat
 from qixnat.helpers import path_hierarchy
 from qiutil.logging import logger
@@ -21,7 +21,7 @@ from ..staging.iterator import iter_stage
 from ..staging.map_ctp import map_ctp
 from ..staging.roi import iter_roi
 # OHSU - multi-volume scans.
-from ..staging.ohsu import MULTI_VOLUME_SCAN_NUMBERS
+from ..staging.ohsu import (VOLUME_TAG, MULTI_VOLUME_SCAN_NUMBERS)
 
 SCAN_TS_RSC = 'scan_ts'
 """The XNAT scan time series resource name."""
@@ -312,6 +312,9 @@ class QIPipelineWorkflow(WorkflowBase):
         :keyword registration_technique: the
             class:`qipipe.pipeline.registration.RegistrationWorkflow`
             technique
+        :keyword recursive_registration: the
+            class:`qipipe.pipeline.registration.RegistrationWorkflow`
+            recursive flag
         :keyword modeling_resource: the modeling resource name
         :keyword modeling_technique: the
             class:`qipipe.pipeline.modeling.ModelingWorkflow` technique
@@ -568,6 +571,7 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # The resource names.
         reg_rsc_opt = opts.get('registration_resource')
+        recursive_reg_opt = opts.get('recursive_registration')
         mdl_rsc_opt = opts.get('modeling_resource')
         mask_rsc_opt = opts.get('mask')
         scan_ts_rsc_opt = opts.get('scan_time_series')
@@ -594,7 +598,7 @@ class QIPipelineWorkflow(WorkflowBase):
         # The registration workflow node.
         if 'register' in actions:
             reg_inputs = ['project', 'subject', 'session', 'scan',
-                          'bolus_arrival_index', 'in_files', 'mask', 'opts']
+                          'resource', 'in_files', 'mask', 'opts']
             # The registration function keyword options.
             if not self.registration_technique:
                 raise ArgumentError("Missing the registration technique")
@@ -602,15 +606,17 @@ class QIPipelineWorkflow(WorkflowBase):
                 raise ArgumentError("Missing the registration resource name")
             reg_opts = dict(
                 base_dir=self.base_dir,
-                technique=self.registration_technique,
-                resource=self.registration_resource
+                technique=self.registration_technique
             )
+            if 'recursive_registration' in opts:
+                reg_opts['recursive'] = opts['recursive_registration']
             # The registration function.
             reg_xfc = Function(input_names=reg_inputs,
                                output_names=['out_files'],
                                function=register)
             reg_node = pe.Node(reg_xfc, name='register')
             reg_node.inputs.project = self.project
+            reg_node.inputs.resource = self.registration_resource
             reg_node.inputs.opts = reg_opts
             self._logger.info("Enabled registration.")
         else:
@@ -1021,8 +1027,10 @@ def register(project, subject, session, scan, bolus_arrival_index,
     :param subject: the subject name
     :param session: the session name
     :param scan: the scan number
+    :param resource: the registration resource name
     :param bolus_arrival_index: the bolus uptake volume index
     :param mask: the required scan mask file
+    :param resource: the registration resource name
     :param in_files: the input session scan 3D NiFTI images
     :param opts: the :meth:`qipipe.pipeline.registration.run` keyword
         options
@@ -1036,10 +1044,38 @@ def register(project, subject, session, scan, bolus_arrival_index,
     # the registration run options include the mask.
     reg_opts = dict(mask=mask)
     reg_opts.update(opts)
+    
+    # The input files sorted by volume number.
+    vol_dict = {}
+    for volume in in_files:
+        lookup = LookupMeta()
+        lookup.inputs.in_file = volume
+        lookup.inputs.meta_keys = {VOLUME_TAG: 'volume_number'}
+        result = lookup.run()
+        vol_dict[volume] = result.volume_number
+    volumes = sorted(in_files, key=lambda vol: vol_dict[vol])
 
-    return registration.run(project, subject, session, scan,
-                            bolus_arrival_index, *in_files, **reg_opts)
+    # The files up to and including bolus arrival are not realigned.
+    start = bolus_arrival_index + 1
+    unrealigned = volumes[:start]
+    # The bolus arrival is the initial fixed image.
+    ref_0 = volumes[bolus_arrival_index]
+    # The files to realign.
+    reg_inputs = volumes[start:]
+    # Register the files.
+    realigned = registration.run(project, subject, session, scan,
+                                 ref_0, *reg_inputs, **reg_opts)
+    # Upload the unrealigned images into the XNAT registration
+    # resource.
+    upload_unreg = XNATUpload(project=project, subject=subject,
+                              session=session, scan=scan,
+                              resource=resource, in_files=unrealigned,
+                              modality='MR')
+    upload_unreg = pe.Node(upload_reg_xfc, name='upload_unreg')
+    upload_unreg.run()
 
+    # Return the unregistered and registered result.
+    return unrealigned + realigned
 
 def roi(project, subject, session, scan, time_series, in_rois, opts):
     """
