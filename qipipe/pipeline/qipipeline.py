@@ -5,17 +5,16 @@ import logging
 from collections import defaultdict
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
-from nipype.interfaces.dcmstack import (LookupMeta, MergeNifti)
+from nipype.interfaces.dcmstack import MergeNifti
 import qixnat
 from qixnat.helpers import path_hierarchy
 from qiutil.logging import logger
-import qipipe
 from . import staging
 from .workflow_base import WorkflowBase
 from .staging import StagingWorkflow
 from .mask import MaskWorkflow
 from .roi import ROIWorkflow
-import registration
+from . import registration
 from ..interfaces import (XNATDownload, XNATUpload)
 from ..staging.iterator import iter_stage
 from ..staging.map_ctp import map_ctp
@@ -29,12 +28,16 @@ SCAN_TS_RSC = 'scan_ts'
 MASK_RSC = 'mask'
 """The XNAT mask resouce name."""
 
-VOLUME_FILE_PAT = re.compile("volume(\d{3}).nii.gz$")
-"""The volume image file name pattern."""
-
 ACTIONS = ['stage', 'roi', 'register', 'model']
 """The list of all available actions."""
 
+VOLUME_FILE_PAT = re.compile("volume(\d{3}).nii.gz$")
+"""
+The volume file name pattern. The image file name is
+volume<number>.nii.gz, where <number> is the zero-padded volume
+number, as determined by the
+:meth:`qipipeline.pipeline.staging.volume_format` function.
+"""
 
 def run(*inputs, **opts):
     """
@@ -614,7 +617,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # The registration function.
             reg_xfc = Function(input_names=reg_inputs,
                                output_names=['out_files'],
-                               function=register)
+                               function=_register)
             reg_node = pe.Node(reg_xfc, name='register')
             reg_node.inputs.project = self.project
             reg_node.inputs.resource = self.registration_resource
@@ -1013,16 +1016,26 @@ def bolus_arrival_index_or_zero(time_series):
         return 0
 
 
-def register(project, subject, session, scan, resource,
+def _register(project, subject, session, scan, resource,
              bolus_arrival_index, mask, in_files, opts):
     """
-    Runs the registration workflow on the given session scan images.
+    A stub for the register method.
 
     :Note: contrary to Python convention, the opts method parameter
       is a required dictionary rather than a keyword aggregate (i.e.,
       ``**opts``). The Nipype ``Function`` interface does not support
       method aggregates. Similarly, the in_files parameter is a
       required list rather than a splat argument (i.e., *in_files).
+    """
+    from qipipe.pipeline.qipipeline import register
+
+    return register(project, subject, session, scan, resource,
+                    bolus_arrival_index, mask, *in_files, **opts)
+
+def register(project, subject, session, scan, resource,
+             bolus_arrival_index, mask, *in_files, **opts):
+    """
+    Runs the registration workflow on the given session scan images.
 
     :param project: the project name
     :param subject: the subject name
@@ -1036,12 +1049,13 @@ def register(project, subject, session, scan, resource,
         options
     :return: the realigned image file path array
     """
-    from qipipe.pipeline import registration
 
-    # Note: There is always a mask argument. The mask file is either
-    # specified as an input or built by the workflow. The mask is
-    # optional in the registration run function. Therefore, the
-    # the registration run options include the mask.
+    # Note: There is always a mask and resource argument. The mask
+    # file and resource name are either specified as an input or
+    # built by the workflow. The mask and resource is optional in
+    # the registration run function. Therefore, the registration
+    # run keyword options include the mask and resource, as well
+    # as any other options passed from the Function node.
     if not mask:
         raise ArgumentError("The register method is missing the mask")
     if not resource:
@@ -1050,16 +1064,8 @@ def register(project, subject, session, scan, resource,
     reg_opts = dict(mask=mask, resource=resource)
     reg_opts.update(opts)
 
-    # The input files sorted by volume number.
-    vol_dict = {}
-    for volume in in_files:
-        lookup = LookupMeta()
-        lookup.inputs.in_file = volume
-        lookup.inputs.meta_keys = {VOLUME_TAG: 'volume_number'}
-        result = lookup.run()
-        vol_dict[volume] = result.volume_number
-    volumes = sorted(in_files, key=lambda vol: vol_dict[vol])
-
+    # The input scan files sorted by volume number.
+    volumes = sorted(in_files, _extract_volume_number)
     # The files up to and including bolus arrival are not realigned.
     start = bolus_arrival_index + 1
     unrealigned = volumes[:start]
@@ -1067,6 +1073,7 @@ def register(project, subject, session, scan, resource,
     ref_0 = volumes[bolus_arrival_index]
     # The files to realign.
     reg_inputs = volumes[start:]
+
     # Register the files.
     realigned = registration.run(project, subject, session, scan,
                                  ref_0, *reg_inputs, **reg_opts)
@@ -1081,6 +1088,16 @@ def register(project, subject, session, scan, resource,
 
     # Return the unregistered and registered result.
     return unrealigned + realigned
+
+
+def _extract_volume_number(location):
+    _, fname = os.path.split(location)
+    match = VOLUME_FILE_PAT.match(fname)
+    if not match:
+        raise ArgumentError("The volume file name without directory does"
+                            " not begin with volume<number>: %s" % fname)
+    return int(match.group(1))
+    
 
 def roi(project, subject, session, scan, time_series, in_rois, opts):
     """
