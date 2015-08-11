@@ -4,6 +4,8 @@ import glob
 import shutil
 from nose.tools import (assert_equal, assert_is_not_none)
 import nipype.pipeline.engine as pe
+import qixnat
+
 from qipipe.pipeline import registration
 from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
@@ -13,7 +15,7 @@ from ...unit.pipeline.volume_test_base import VolumeTestBase
 REG_CONF = os.path.join(ROOT, 'conf', 'registration.cfg')
 """The test registration workflow configuration."""
 
-FIXTURES = os.path.join(ROOT, 'fixtures', 'registration')
+FIXTURES = os.path.join(ROOT, 'fixtures', 'staged')
 """The test fixtures directory."""
 
 RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'registration')
@@ -57,21 +59,22 @@ class TestRegistrationWorkflow(VolumeTestBase):
         :param scan: the input scan number
         :param images: the input 3D NiFTI images to register
         """
-        # A reasonable bolus uptake index.
-        bolus_arv_ndx = min(3, len(images) / 3)
+        # Register against the first image.
+        ref_0 = images[0]
+        # Realign the remaining images.
+        moving = images[1:]
         # The target location.
-        dest = os.path.join(RESULTS, subject, session, 'scans', str(scan),
-                            'registration', RESOURCE)
+        self.dest = os.path.join(RESULTS, subject, session, 'scans',
+                                 str(scan), 'registration', RESOURCE)
         logger(__name__).debug("Testing the registration workflow on %s %s"
                                " Scan %d..." %
                                (subject, session, scan))
         with qixnat.connect() as xnat:
             xnat.delete(project, subject)
             result = registration.run(project, subject, session, scan,
-                                      bolus_arv_ndx, *images,
-                                      config=REG_CONF, resource=RESOURCE,
-                                      technique='mock', dest=self.dest,
-                                      base_dir=self.base_dir)
+                                      ref_0, *moving, config=REG_CONF,
+                                      resource=RESOURCE, technique='mock',
+                                      dest=self.dest, base_dir=self.base_dir)
             # Verify the result.
             try:
                 self._verify_result(xnat, subject, session, scan, result)
@@ -97,14 +100,14 @@ class TestRegistrationWorkflow(VolumeTestBase):
         # Verify that the registration result is accurate.
         split = (os.path.split(location) for location in result)
         out_dirs, out_files = (set(files) for files in zip(*split))
-        rsc_files = set(rsc_obj.files().get())
+        rsc_files = set(rsc.files().get())
         assert_equal(out_dirs, set([self.dest]),
                      "The %s %s Scan %d %s XNAT registration result directory"
                       " is incorrect - expected %s, found %s" %
                       (subject, session, scan, RESOURCE, self.dest, out_dirs))
         assert_equal(out_files, rsc_files,
-                     "The %s %s Scan %d %s XNAT registration result file names"
-                     " are incorrect - expected %s, found %s" %
+                     "The %s %s Scan %d %s XNAT registration result file"
+                     " names are incorrect - expected %s, found %s" %
                      (subject, session, scan, RESOURCE, rsc_files, out_files))
 
         # Verify that the output files were created.
