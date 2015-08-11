@@ -1065,7 +1065,7 @@ def register(project, subject, session, scan, resource,
     reg_opts.update(opts)
 
     # The input scan files sorted by volume number.
-    volumes = sorted(in_files, _extract_volume_number)
+    volumes = sorted(in_files, key=_extract_volume_number)
     # The files up to and including bolus arrival are not realigned.
     start = bolus_arrival_index + 1
     unrealigned = volumes[:start]
