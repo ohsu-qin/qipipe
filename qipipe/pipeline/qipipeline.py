@@ -1083,7 +1083,6 @@ def register(project, subject, session, scan, resource,
                               session=session, scan=scan,
                               resource=resource, in_files=unrealigned,
                               modality='MR')
-    upload_unreg = pe.Node(upload_reg_xfc, name='upload_unreg')
     upload_unreg.run()
 
     # Return the unregistered and registered result.
