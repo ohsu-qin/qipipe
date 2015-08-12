@@ -291,10 +291,10 @@ class RegistrationWorkflow(WorkflowBase):
                         copy_realigned, 'in_file')
 
         # If the recursive flag is set, then set the recursive
-        # realigned -> reference connections. Otherwise, the
-        # fixed reference is always the initial ref_0 image.
+        # realigned -> reference connections. Otherwise, the fixed
+        # reference is always the initial ref_0 image.
         if recursive:
-            exec_wf.connect_iterables(copy_realigned, iter_reg_input,
+            exec_wf.connect_iterables(iter_reg_input, copy_realigned, 
                                       recurse, ref_0=ref_0)
         else:
             iter_reg_input.inputs.reference = ref_0
@@ -477,44 +477,23 @@ def copy_files(in_files, dest):
             for in_file in in_files]
 
 
-def recurse(workflow, realigned_nodes, input_nodes, start, ref_0):
+def recurse(workflow, input_nodes, output_nodes, ref_0):
     """
     Connects the reference input for the given reference workflow input
-    nodes as follows:
-
-    * Prior to bolus arrival, the reference is the successor realignment.
-
-    * The reference for the nodes before and after the given initial
-      reference node is that initial reference.
-
-    * The bolus arrival successor node reference is the *initial_reference*.
-
-    The initial reference is the input node for the volume immediately
-    following bolus uptake. This node is not included in the iterable
-    expansion nodes.
+    nodes. The reference for the first input node is the *ref_0* file.
+    The reference for each subsequent node is the prior registration
+    result.
 
     :param workflow: the workflow delegate which connects nodes
-    :param ref_nodes: the iterable expansion reference input nodes
-    :param realigned_nodes: the iterable expansion realignment output nodes
-    :param start: the first volume index to register
+    :param input_nodes: the iterable expansion input scan image nodes
+    :param output_nodes: the iterable expansion registration output
+        nodes
     :param ref_0: the starting reference input node
     """
-    # The number of input and realigned nodes.
-    node_cnt = len(input_nodes)
-    # The reference is the successor realignment up to the bolus arrival.
-    end = min(start - 1, node_cnt - 1)
-    for i in range(0, end):
-        workflow.connect(realigned_nodes[i + 1], 'out_file',
-                         input_nodes[i], 'reference')
-
-    # The reference for the start predecessor and successor is the
-    # initial reference.
-    end = min(start + 1, node_cnt)
-    for i in range(start, end):
-        input_nodes[i].inputs.reference = ref_0
-
-    # The reference is the predecessor realignment for the remaining
-    # nodes.
-    for i in range(start, node_cnt - 1):
-        workflow.connect(realigned_nodes[i], 'out_file',
+    # The reference for the first node is the initial reference.
+    input_nodes[0].inputs.reference = ref_0
+    # The reference for the remaining nodes is the previous registration
+    # result.
+    for i in range(1, node_cnt - 1):
+        workflow.connect(output_nodes[i], 'out_file',
                          input_nodes[i + 1], 'reference')
