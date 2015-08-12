@@ -1032,6 +1032,7 @@ def _register(project, subject, session, scan, resource,
     return register(project, subject, session, scan, resource,
                     bolus_arrival_index, mask, *in_files, **opts)
 
+
 def register(project, subject, session, scan, resource,
              bolus_arrival_index, mask, *in_files, **opts):
     """
