@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
+5.5.1 / 2015-08-12
+------------------
+* Make recursive registration an option.
+
 5.4.11 / 2015-07-31
 ------------------
 * Set workflow base plug_in in constructor.
