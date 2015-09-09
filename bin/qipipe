@@ -70,7 +70,7 @@ def _parse_arguments():
         arguments and options is an {option: value} dictionary
     """
     parser = argparse.ArgumentParser()
-    
+
     # The general options.
     command.add_options(parser)
 
@@ -87,7 +87,7 @@ def _parse_arguments():
     # Prepare but don't run the pipeline.
     parser.add_argument('--dry-run', action='store_true',
                         help='prepare but do not run the pipeline')
-    
+
     # The staging options.
     parser.add_argument('-p', '--project',
                         help='the QIN project name, required for staging')
@@ -108,7 +108,7 @@ def _parse_arguments():
                         help='the work directory'
                              ' (default a new temp directory)',
                         metavar='DIR', dest='base_dir')
-    
+
     # The registration options.
     parser.add_argument('--registration-resource',
                         help='the XNAT registration resource label',
@@ -133,7 +133,7 @@ def _parse_arguments():
     # The application extention option.
     parser.add_argument('--shim', help='the application extension',
                         metavar='MODULE')
- 
+
     # The input directories or XNAT labels to process.
     parser.add_argument('input', nargs='+',
                         help='the input subject directory or XNAT object path'
