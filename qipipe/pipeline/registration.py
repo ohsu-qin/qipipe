@@ -285,11 +285,6 @@ class RegistrationWorkflow(WorkflowBase):
         exec_wf.connect(iter_reg_input, 'reference',
                         self.workflow, 'input_spec.reference')
 
-        # Copy the realigned image to the destination directory.
-        copy_realigned = pe.Node(Copy(dest=dest), name='copy_realigned')
-        exec_wf.connect(self.workflow, 'output_spec.out_file',
-                        copy_realigned, 'in_file')
-
         # If the recursive flag is set, then set the recursive
         # realigned -> reference connections. Otherwise, the fixed
         # reference is always the initial ref_0 image.
@@ -320,6 +315,26 @@ class RegistrationWorkflow(WorkflowBase):
         exec_wf.connect(input_spec, 'session', upload_reg, 'session')
         exec_wf.connect(input_spec, 'scan', upload_reg, 'scan')
         exec_wf.connect(collect_realigned, 'images', upload_reg, 'in_files')
+
+        # Copy the realigned images to the destination directory.
+        #
+        # FIXME: copying the realigned images individually with a Copy
+        # submits a separate SGE job for each copy, contrary to the
+        # defaults.cfg Copy setting. Although the defaults.cfg is
+        # read into the registration workflow config, the defaults
+        # are not applied, as they are for the parent qipipeline
+        # workflow and its directly wired child workflows. The
+        # registration workflow is built indirectly via the master
+        # qipipeline register function for each scan input.
+        # The work-around is to copy all of the realigned files
+        # without a SGE submit in the copy_files function.
+        # TODO: why doesn't registration recognize the default.cfg
+        # Copy run_without_submitting setting?
+        copy_realigned_xfc = Function(input_names=['in_files'],
+                                      output_names=['out_files'],
+                                      function=copy_files)
+        copy_realigned = pe.Node(copy_realigned_xfc, name='copy_realigned')
+        exec_wf.connect(collect_realigned, 'images', copy_realigned, 'in_file')
 
         # The execution output.
         output_spec = pe.Node(IdentityInterface(fields=['images']),
