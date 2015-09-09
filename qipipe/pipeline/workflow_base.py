@@ -292,9 +292,11 @@ class WorkflowBase(object):
         prior to execution.
 
         :Note: nested workflow nodes are not configured, e.g. if the
-        ``registration`` workflow connects a `realign`` workflow
-        node ``fnirt``, then the nested ``realign.fnirt`` node in
-        ``registration`` is not configured.
+            ``registration`` workflow connects a `realign`` workflow
+            node ``fnirt``, then the nested ``realign.fnirt`` node in
+            ``registration`` is not configured by the parent workflow.
+            The nested workflow is configured separately when the nested
+            WorkflowBase subclass object is created.
 
         :param workflow: the workflow containing the nodes
         """
@@ -380,8 +382,8 @@ class WorkflowBase(object):
         """
         Sets the given node attributes. The input attributes can be
         either a node input interface field, e.g. the
-        :class:`qipipe.interfaces.copy` *dest* field, or a setting
-        on the node itself, e.g. *run_without_submitting*.
+        :class:`qipipe.interfaces.copy` *dest* field, or an attribute
+        of the node itself, e.g. *run_without_submitting*.
         
         :param node: the target node
         :param kwargs: the input {attribute: value} dictionary
@@ -406,7 +408,7 @@ class WorkflowBase(object):
                 req_grf.add_edge(req, attr)
         # Sort the input interface attributes by dependency.
         sorted_attrs = nx.topological_sort(req_grf)
-        # Se the node input field values.
+        # Set the node input field values.
         for attr in sorted_attrs:
             setattr(node.inputs, attr, input_dict[attr])
         # Set the node attribute values.
@@ -425,6 +427,7 @@ class WorkflowBase(object):
         * the node name, qualified by the node hierarchy if the node is
           defined in a child workflow
 
+        :param workflow: the parent or nested workflow object
         :param node: the interface class to check
         :return: the corresponding {field: value} dictionary
         """
@@ -457,13 +460,12 @@ class WorkflowBase(object):
             [nipype.interfaces.ants.AverageImages]
             [ants.AverageImages]
 
-        both refer to the ANTS AverageImages interface.
+        both refer to the Nipype ANTS AverageImages wrapper interface.
 
         :param node: the interface class to check
         :return: the corresponding {field: value} dictionary
         """
-        topic = "%s.%s" % (klass.__module__,
-                           klass.__name__)
+        topic = "%s.%s" % (klass.__module__, klass.__name__)
         if topic in self.configuration:
             return self.configuration[topic]
         elif WorkflowBase.INTERFACE_PREFIX_PAT.match(topic):
