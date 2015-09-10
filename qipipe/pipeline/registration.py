@@ -303,7 +303,8 @@ class RegistrationWorkflow(WorkflowBase):
                                         joinsource='iter_reg_input',
                                         joinfield='images',
                                         name='collect_realigned')
-        exec_wf.connect(copy_realigned, 'out_file', collect_realigned, 'images')
+        exec_wf.connect(self.workflow, 'output_spec.out_file',
+                        collect_realigned, 'images')
 
         # Upload the registration result into the XNAT registration
         # resource.
@@ -334,7 +335,7 @@ class RegistrationWorkflow(WorkflowBase):
                                       output_names=['out_files'],
                                       function=copy_files)
         copy_realigned = pe.Node(copy_realigned_xfc, name='copy_realigned')
-        exec_wf.connect(collect_realigned, 'images', copy_realigned, 'in_file')
+        exec_wf.connect(collect_realigned, 'images', copy_realigned, 'in_files')
 
         # The execution output.
         output_spec = pe.Node(IdentityInterface(fields=['images']),
