@@ -69,15 +69,15 @@ def fix_dicom_headers(collection, subject, *in_files, **opts):
     dest = opts.get('dest', os.getcwd())
     # The destination file namer.
     file_namer = functools.partial(_dest_file_name, dest=dest)
-    logger(__name__).info("Replacing the following DICOM tags: %s" %
-                          editor.edits.keys())
+    logger(__name__).debug("Replacing the following DICOM tags: %s" %
+                           editor.edits.keys())
     # An array to collect the edited files.
     dcm_files = []
     # Edit the DICOM files.
     for ds in writer.edit(*in_files, dest=file_namer):
         editor.edit(ds)
         dcm_files.append(ds.filename)
-    logger(__name__).info("Changed the DICOM tag values.")
+    logger(__name__).debug("Changed the DICOM tag values.")
 
     # Return the output file names.
     return [file_namer(f) for f in dcm_files]
