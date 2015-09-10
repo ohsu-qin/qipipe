@@ -3,8 +3,9 @@ This module updates the qiprofile database Subject pathology information
 from the pathology Excel workbook file.
 """
 import bunch
+from qiprofile_rest_client.model.common import (Encounter, TumorExtent)
 from qiprofile_rest_client.model.clinical import (
-    Encounter, Biopsy, Surgery, PathologyReport, TNM, TumorExtent
+    Biopsy, Surgery, PathologyReport, TNM, TumorLocation
 )
 from . import parse
 from .xls import Worksheet
@@ -21,25 +22,27 @@ COL_ATTRS = {
 }
 """
 The following non-standard column-attribute associations:
-* ``Patient Weight``: ``Encounter.weight`` attribute
+* ``Patient Weight (kg)``: ``Encounter.weight`` attribute
 * ``Tumor Size Score``: ``TNM.size`` attribute
-* ``Tumor Length``: ``TumorExtent.length`` attribute
-* ``Tumor Width``: ``TumorExtent.width`` attribute
-* ``Tumor Depth``: ``TumorExtent.depth`` attribute
+* ``Tumor Length (mm)``: ``TumorExtent.length`` attribute
+* ``Tumor Width (mm)``: ``TumorExtent.width`` attribute
+* ``Tumor Depth (mm)``: ``TumorExtent.depth`` attribute
 """
 
 PARSERS = dict(
     subject_number=int,
     lesion_number=int,
+    body_part=lambda value: value.lower().capitalize(),
     # Wrap the functions below with a lambda as a convenience to allow
-    # a forward reference to the parse functions defined below.
-    intervention_type=lambda v: _parse_intervention_type(v),
-    size=lambda v: _parse_tumor_size(v)
+    # a forward reference to the parse functions defined later.
+    intervention_type=lambda value: _parse_intervention_type(value),
+    size=lambda value: _parse_tumor_size(value)
 )
 """
 The following parser associations:
 * subject_number is an int
 * intervention_type converts the string to an Encounter subclass
+* body_part is capitalized
 * size is a :class:`qiprofile_rest_client.clinical.TNM.Size` object
 """
 
@@ -96,8 +99,8 @@ class PathologyWorksheet(Worksheet):
             col_attrs.update(col_attrs_opt)
         # Initialize the worksheet.
         super(PathologyWorksheet, self).__init__(
-            workbook, SHEET, Encounter, TNM, TumorExtent, *classes,
-            parsers=parsers, column_attributes=col_attrs
+            workbook, SHEET, Encounter, TumorLocation, TumorExtent, TNM,
+            *classes, parsers=parsers, column_attributes=col_attrs
         )
 
 
@@ -126,9 +129,9 @@ class PathologyUpdate(object):
         :param rows: the input pathology :meth:`read` rows list 
         """
         # Update the encounter rows.
-        for vist_rows in self._encounter_rows(rows):
-            self._update_encounter(vist_rows)
-    
+        for enc_rows in self._encounter_rows(rows):
+            self._update_encounter(enc_rows)
+
     def _encounter_rows(self, rows):
         """
         Partition the rows by encounter.
@@ -218,7 +221,13 @@ class PathologyUpdate(object):
         if tnm_content:
             path_content['tnm'] = TNM(tumor_type=self._tumor_type,
                                       **tnm_content)
-        # The tumor extent. Ignore zero and None values.
+        # The tumor location.
+        location_content = {attr: row[attr] for attr in TumorLocation._fields
+                            if row.get(attr) != None}
+        if location_content:
+            path_content['location'] = TumorLocation(**location_content)
+        # The tumor extent. The row.get condition ignores both zero
+        # and None values.
         extent_content = {attr: row[attr] for attr in TumorExtent._fields
                           if row.get(attr)}
         if extent_content:

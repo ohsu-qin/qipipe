@@ -4,13 +4,14 @@ from the pathology Excel workbook file.
 """
 from qiprofile_rest_client.model.clinical import (
     Surgery, BreastSurgery, BreastPathology, ModifiedBloomRichardsonGrade,
-    HormoneReceptorStatus, BreastGeneticExpression
+    ResidualCancerBurden, HormoneReceptorStatus, BreastGeneticExpression
 )
 from . import parse
 from .pathology import (PathologyError, PathologyWorksheet, PathologyUpdate)
 
 HORMONES = ['estrogen', 'progesterone']
 """The receptor status hormones."""
+
 
 
 def read(workbook, **condition):
@@ -25,6 +26,7 @@ def read(workbook, **condition):
     """
     reader = PathologyWorksheet(workbook, BreastSurgery, BreastPathology,
                                 ModifiedBloomRichardsonGrade,
+                                ResidualCancerBurden,
                                 BreastGeneticExpression,
                                 parsers=_receptor_parsers())
 
@@ -84,6 +86,11 @@ class BreastPathologyUpdate(PathologyUpdate):
         rcptrs = _collect_hormone_receptors(row)
         if rcptrs:
             content['hormone_receptors'] = rcptrs
+        # The RCB {attribute: value} content.
+        rcb_content = _rcb_content(row)
+        if rcb_content:
+            rcb = ResidualCancerBurden(**rcb_content)
+            content['rcb'] = rcb
         # The genetic expression {attribute: value} content.
         ge_content = _gene_expression_content(row)
         if ge_content:
@@ -128,6 +135,15 @@ def _hormone_receptor_content(hormone, row):
             content[field] = val
 
     return content
+
+
+def _rcb_content(row):
+    """
+    :param row: the input row
+    :return: the {attribute: value} dictionary for non-None row values
+    """
+    return {attr: row[attr] for attr in ResidualCancerBurden._fields
+            if attr in row and row[attr] != None}
 
 
 def _gene_expression_content(row):

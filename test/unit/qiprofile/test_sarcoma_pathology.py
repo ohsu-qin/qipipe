@@ -5,8 +5,9 @@ from bunch import Bunch
 from datetime import datetime
 from nose.tools import (assert_equal, assert_is_not_none, assert_is_instance)
 from qiprofile_rest_client.model.subject import Subject
+from qiprofile_rest_client.model.common import TumorExtent
 from qiprofile_rest_client.model.clinical import (
-    Biopsy, TumorExtent, SarcomaPathology, NecrosisPercentValue, TNM,
+    Biopsy, SarcomaPathology, NecrosisPercentValue, TNM, TumorLocation,
     FNCLCCGrade
 )
 from qipipe.qiprofile import (xls, sarcoma_pathology)
@@ -22,7 +23,8 @@ COLLECTION = 'Sarcoma'
 ROW_FIXTURE = [
     Bunch(
         subject_number=1, lesion_number=1, date=datetime(2014, 7, 3),
-        intervention_type=Biopsy, weight=48, location='THIGH',
+        intervention_type=Biopsy, weight=48, body_part='Thigh',
+        sagittal_location='Left', coronal_location='Anterior',
         histology='Carcinosarcoma', length=24, width=16, depth=11,
         size=TNM.Size.parse('1'), differentiation=1, mitotic_count=2,
         lymph_status=0, metastasis=False, serum_tumor_markers=1,
@@ -32,7 +34,8 @@ ROW_FIXTURE = [
     ),
     Bunch(
         subject_number=None, lesion_number=2, date=None,
-        intervention_type=None, weight=None, location=None,
+        intervention_type=None, weight=None, body_part=None,
+        sagittal_location=None, coronal_location=None,
         histology=None, length=17, width=11, depth=9,
         size=None, differentiation=None, mitotic_count=None,
         lymph_status=None, metastasis=None, serum_tumor_markers=None,
@@ -87,6 +90,18 @@ class TestSarcomaPathology(object):
         assert_equal(tumor_cnt, 2, "Pathology tumor count is incorrect: %d" %
                                    tumor_cnt)
 
+        # Validate the tumor location.
+        row = ROW_FIXTURE[0]
+        pathology = biopsy.pathology.tumors[0]
+        location = pathology.location
+        assert_is_not_none(location, "The pathology is missing a tumor location")
+        location_attrs = (attr for attr in TumorLocation._fields if attr in row)
+        for attr in location_attrs:
+            expected = getattr(row, attr)
+            actual = getattr(location, attr)
+            assert_equal(actual, expected, "The tumor %s is incorrect: %s" %
+                                           (attr, actual))
+
         # Validate the tumor extent.
         for i, row in enumerate(ROW_FIXTURE):
             pathology = biopsy.pathology.tumors[i]
@@ -111,6 +126,7 @@ class TestSarcomaPathology(object):
             actual = getattr(tnm, attr)
             assert_equal(actual, expected, "TNM %s is incorrect: %s" %
                                            (attr, actual))
+
         # Validate the TNM grade.
         assert_is_not_none(tnm.grade, "The TNM grade is missing")
         assert_is_instance(tnm.grade, FNCLCCGrade,
@@ -122,6 +138,7 @@ class TestSarcomaPathology(object):
             actual = getattr(tnm.grade, attr)
             assert_equal(actual, expected, "TNM grade %s is incorrect: %s" %
                                            (attr, actual))
+
         # Validate the full object.
         subject.validate()
 
