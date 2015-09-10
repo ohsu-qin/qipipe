@@ -5,7 +5,8 @@ from nose.tools import (assert_equal, assert_in, assert_true,
 from qiprofile_rest_client.model.subject import Subject
 from qiprofile_rest_client.model.clinical import (Treatment, Radiation, Dosage)
 from qipipe.qiprofile import (xls, radiotherapy)
-from . import (PROJECT, BREAST_FIXTURE)
+from ... import PROJECT
+from . import BREAST_FIXTURE
 
 SUBJECT = 2
 """The radiotherapy patient is Subject 2."""

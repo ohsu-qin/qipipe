@@ -6,10 +6,7 @@ The qiprofile update tests.
 """
 
 import os
-from ... import (ROOT, PROJECT)
-
-PROJECT = 'QIN_Test'
-"""The test project."""
+from ... import ROOT
 
 FIXTURES = os.path.join(ROOT, 'fixtures', 'qiprofile')
 

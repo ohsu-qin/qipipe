@@ -12,7 +12,8 @@ from qiprofile_rest_client.model.clinical import (
 )
 from qipipe.qiprofile import (xls, sarcoma_pathology)
 from ...helpers.logging import logger
-from . import (PROJECT, SARCOMA_FIXTURE)
+from ... import PROJECT
+from . import SARCOMA_FIXTURE
 
 SUBJECT = 1
 """Focus testing on subject 1."""

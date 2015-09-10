@@ -5,7 +5,8 @@ from nose.tools import (assert_equal, assert_in, assert_true,
 from qiprofile_rest_client.model.subject import Subject
 from qiprofile_rest_client.model.clinical import (Treatment, Drug, Dosage)
 from qipipe.qiprofile import (xls, chemotherapy)
-from . import (PROJECT, BREAST_FIXTURE)
+from ... import PROJECT
+from . import BREAST_FIXTURE
 
 SUBJECT = 1
 """Focus testing on the chemotherapy patient Subject 1."""

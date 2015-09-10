@@ -8,7 +8,8 @@ from nose.tools import (assert_true, assert_equal, assert_in,
 from qiprofile_rest_client.model.subject import Subject
 from qipipe.qiprofile import clinical
 from ...helpers.logging import logger
-from . import (PROJECT, BREAST_FIXTURE, SARCOMA_FIXTURE)
+from ... import PROJECT
+from . import (BREAST_FIXTURE, SARCOMA_FIXTURE)
 
 
 class TestClinical(object):
