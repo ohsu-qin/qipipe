@@ -6,9 +6,10 @@ from datetime import datetime
 from nose.tools import (assert_equal, assert_in, assert_is_none,
                         assert_true, assert_is_not_none, assert_is_instance)
 from qiprofile_rest_client.model.subject import Subject
+from qiprofile_rest_client.model.common import TumorExtent
 from qiprofile_rest_client.model.clinical import (
-    Surgery, BreastSurgery, BreastPathology, TumorExtent, TNM,
-    ModifiedBloomRichardsonGrade
+    Surgery, BreastSurgery, BreastPathology, TumorLocation, TNM,
+    ModifiedBloomRichardsonGrade, ResidualCancerBurden
 )
 from qipipe.qiprofile import (xls, breast_pathology)
 from ...helpers.logging import logger
@@ -22,10 +23,13 @@ COLLECTION = 'Breast'
 
 ROW_FIXTURE = Bunch(
     subject_number=1, lesion_number=1, date=datetime(2014, 3, 1), weight=52,
-    intervention_type=Surgery, surgery_type='Partial Mastectomy',
-    size=TNM.Size.parse('3a'), tubular_formation=2, nuclear_pleomorphism=1,
-    mitotic_count=2, lymph_status=2, metastasis=True, serum_tumor_markers=2,
+    sagittal_location='Left', intervention_type=Surgery,
+    surgery_type='Partial Mastectomy', size=TNM.Size.parse('3a'),
+    tubular_formation=2, nuclear_pleomorphism=1, mitotic_count=2,
+    lymph_status=2, metastasis=True, serum_tumor_markers=2,
     resection_boundaries=2, lymphatic_vessel_invasion=True, vein_invasion=1,
+    tumor_cell_density=20, dcis_cell_density=10, positive_node_count=3,
+    total_node_count=7, largest_nodal_metastasis_length = 8,
     length=24, width=16, depth=11, estrogen_positive=True,
     estrogen_quick_score=5, estrogen_intensity=80, progesterone_positive=True,
     progesterone_quick_score=5, progesterone_intensity=80, her2_neu_ihc=2,
@@ -88,6 +92,16 @@ class TestBreastPathology(object):
                                    tumor_cnt)
         pathology = surgery.pathology.tumors[0]
 
+        # Validate the tumor location.
+        location = pathology.location
+        assert_is_not_none(location, "The pathology is missing a tumor location")
+        location_attrs = (attr for attr in TumorLocation._fields if attr in row)
+        for attr in location_attrs:
+            expected = getattr(row, attr)
+            actual = getattr(location, attr)
+            assert_equal(actual, expected, "The tumor %s is incorrect: %s" %
+                                           (attr, actual))
+
         # Validate the tumor extent.
         extent = pathology.extent
         assert_is_not_none(extent, "The pathology is missing a tumor extent")
@@ -108,6 +122,7 @@ class TestBreastPathology(object):
             actual = getattr(tnm, attr)
             assert_equal(actual, expected, "The TNM %s is incorrect: %s" %
                                            (attr, actual))
+
         # Validate the TNM grade.
         assert_is_not_none(tnm.grade, "The TNM grade is missing")
         assert_is_instance(tnm.grade, ModifiedBloomRichardsonGrade,
@@ -121,6 +136,19 @@ class TestBreastPathology(object):
             actual = getattr(tnm.grade, attr)
             assert_equal(actual, expected, "The TNM grade %s is incorrect: %s" %
                                            (attr, actual))
+
+        # Validate the RCB.
+        rcb = pathology.rcb
+        assert_is_not_none(rcb, "The RCB is missing")
+        rcb_attrs = (
+            attr for attr in ResidualCancerBurden._fields if attr in row
+        )
+        for attr in rcb_attrs:
+            expected = getattr(row, attr)
+            actual = getattr(rcb, attr)
+            assert_equal(actual, expected, "The RCB %s is incorrect: %s" %
+                                           (attr, actual))
+        
         # Validate the full object.
         subject.validate()
 

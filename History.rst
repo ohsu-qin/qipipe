@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
+5.5.2 / 2015-09-09
+------------------
+* Qualify tumor location.
+
 5.5.1 / 2015-08-12
 ------------------
 * Make recursive registration an option.
