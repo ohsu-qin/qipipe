@@ -10,13 +10,10 @@ from qipipe.pipeline import registration
 from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
 from ...helpers.name_generator import generate_unique_name
-from ...unit.pipeline.volume_test_base import VolumeTestBase
+from .volume_test_base import VolumeTestBase
 
 REG_CONF = os.path.join(ROOT, 'conf', 'registration.cfg')
 """The test registration workflow configuration."""
-
-FIXTURES = os.path.join(ROOT, 'fixtures', 'staged')
-"""The test fixtures directory."""
 
 RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'registration')
 """The test results directory."""
@@ -38,8 +35,9 @@ class TestRegistrationWorkflow(VolumeTestBase):
     """
 
     def __init__(self):
-        super(TestRegistrationWorkflow, self).__init__(logger(__name__), FIXTURES,
-                                                       RESULTS, use_mask=True)
+        super(TestRegistrationWorkflow, self).__init__(
+            logger(__name__), RESULTS, use_mask=True
+        )
 
     def test_breast(self):
         for args in self.stage('Breast'):

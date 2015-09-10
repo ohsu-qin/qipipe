@@ -4,27 +4,29 @@ import shutil
 from collections import defaultdict
 from nose.tools import (assert_equal, assert_not_equal)
 from qiutil.collections import nested_defaultdict
-from ... import PROJECT
+from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
+
+FIXTURES = os.path.join(ROOT, 'fixtures', 'staged')
+"""The test fixtures directory."""
 
 
 class VolumeTestBase(object):
     """
     Base class for testing image volume workflows. The test fixture is
-    a directory in the standard staging input subject/session/images
-    hierarchy found in the ``test/fixtures/staging`` directory.
+    a directory in the standard staged result subject/session/images
+    hierarchy found in the ``test/fixtures/staged/``*collection*
+    directory.
     """
 
-    def __init__(self, logger, fixtures, results, use_mask=False):
+    def __init__(self, logger, results, use_mask=False):
         """
         :param logger: this test case's logger
-        :param fixtures: the fixtures parent directory
         :param results: the results parent directory
         :param use_mask: flag indicating whether the inputs include
             a mask with the input images
         """
         self._logger = logger
-        self._fixtures = fixtures
         self._results = results
         self.base_dir = os.path.join(self._results, 'work')
         self._use_mask = use_mask
@@ -38,16 +40,20 @@ class VolumeTestBase(object):
     def stage(self, collection):
         """
         Acquires the test fixture inputs to run the workflow. This
-        generator method yields the workflow input arguments,
-        consisting of the subject, session and scan names followed
-        by the image file names.
+        generator method yields each workflow input arguments list
+        consisting of the following items:
+        * project name
+        * subject name
+        * session name
+        * scan number
+        * image file location list
 
         :param collection: the collection name
         :param opts: additional workflow options
         :yield: the workflow inputs list
         """
         # The fixture is the collection subdirectory.
-        fixture = os.path.join(self._fixtures, collection.lower())
+        fixture = os.path.join(FIXTURES, collection.lower())
         # The staging inputs.
         inputs = self._group_files(fixture)
         # The test subjects.
@@ -79,8 +85,9 @@ class VolumeTestBase(object):
 
     def _group_files(self, fixture):
         """
-        Groups the files in the given test fixture directory. The fixture is a
-        parent directory which contains a subject/session/scans images hierarchy.
+        Groups the files in the given test fixture directory.
+        The fixture is a parent directory which contains a
+        subject/session/scans images hierarchy.
         
         :param fixture: the input data parent directory
         :return: the input *{subject: {session: {scan: [images]}}}* or

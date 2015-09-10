@@ -16,12 +16,10 @@ from qipipe.pipeline import modeling
 from qipipe.pipeline import qipipeline
 from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
-from ...unit.pipeline.volume_test_base import VolumeTestBase
+from .volume_test_base import VolumeTestBase
 
 MODELING_CONF = os.path.join(ROOT, 'conf', 'modeling.cfg')
 """The test registration configuration."""
-
-FIXTURES = os.path.join(ROOT, 'fixtures', 'staged')
 
 RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'modeling')
 """The test results directory."""
@@ -58,8 +56,7 @@ class TestModelingWorkflow(VolumeTestBase):
     """
 
     def __init__(self):
-        super(TestModelingWorkflow, self).__init__(
-            logger(__name__), FIXTURES, RESULTS)
+        super(TestModelingWorkflow, self).__init__(logger(__name__), RESULTS)
 
     def test_breast(self):
         if fastfit:

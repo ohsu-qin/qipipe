@@ -5,10 +5,7 @@ import qixnat
 from qipipe.pipeline import (mask, qipipeline)
 from ... import ROOT
 from ...helpers.logging import logger
-from ...unit.pipeline.volume_test_base import VolumeTestBase
-
-FIXTURES = os.path.join(ROOT, 'fixtures', 'staged')
-"""The test fixtures directory."""
+from .volume_test_base import VolumeTestBase
 
 MASK_CONF = os.path.join(ROOT, 'conf', 'mask.cfg')
 """The test mask configuration."""
@@ -26,8 +23,7 @@ class TestMaskWorkflow(VolumeTestBase):
     """
 
     def __init__(self):
-        super(TestMaskWorkflow, self).__init__(logger(__name__), FIXTURES,
-                                               RESULTS)
+        super(TestMaskWorkflow, self).__init__(logger(__name__), RESULTS)
 
     def test_breast(self):
         for args in self.stage('Breast'):

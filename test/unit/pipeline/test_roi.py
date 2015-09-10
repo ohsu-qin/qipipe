@@ -7,10 +7,7 @@ from qipipe.staging.iterator import iter_stage
 from qipipe.pipeline import (roi, qipipeline)
 from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
-from ...unit.pipeline.volume_test_base import VolumeTestBase
-
-STAGED_FIXTURES = os.path.join(ROOT, 'fixtures', 'staged')
-"""The test staged volume fixtures directory."""
+from .volume_test_base import VolumeTestBase
 
 STAGING_FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
 """The test staging fixtures directory."""
@@ -28,8 +25,7 @@ class TestROIWorkflow(VolumeTestBase):
     """
 
     def __init__(self):
-        super(TestROIWorkflow, self).__init__(logger(__name__), STAGED_FIXTURES,
-                                              RESULTS)
+        super(TestROIWorkflow, self).__init__(logger(__name__), RESULTS)
 
     def test_breast(self):
         if not which('bolero_mask_conv'):
