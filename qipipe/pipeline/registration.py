@@ -335,7 +335,7 @@ class RegistrationWorkflow(WorkflowBase):
                                       output_names=['out_files'],
                                       function=copy_files)
         copy_realigned = pe.Node(copy_realigned_xfc, name='copy_realigned')
-        copy_realign.inputs.dest = dest
+        copy_realigned.inputs.dest = dest
         exec_wf.connect(collect_realigned, 'images', copy_realigned, 'in_files')
 
         # The execution output.

@@ -11,7 +11,7 @@ from . import parse
 SHEET = 'Radiotherapy'
 """The input XLS sheet name."""
 
-COL_ATTRS = {'Cumulative Amount (Gy/kg)': 'amount'}
+COL_ATTRS = {'Cumulative Amount (Gy)': 'amount'}
 """
 The following non-standard column-attribute associations:
 * The Cumulative Amount column is the amount attribute.

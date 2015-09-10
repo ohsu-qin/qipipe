@@ -7,7 +7,7 @@ from qiprofile_rest_client.model.clinical import (Dosage, Drug)
 from .dosage import (DosageWorksheet, DosageUpdate)
 from . import parse
 
-COL_ATTRS = {'Cumulative Amount (mg/kg)': 'amount'}
+COL_ATTRS = {'Cumulative Amount (mg/m2 BSA)': 'amount'}
 """
 The following non-standard column-attribute associations:
 * The Cumulative Amount column is the amount attribute.
