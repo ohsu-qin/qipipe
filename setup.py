@@ -32,7 +32,7 @@ def requires():
     with open('requirements.txt') as f:
         rqmts = f.read().splitlines()
         return [rqmt for rqmt in rqmts if not VCS_RQMT_PAT.match(rqmt)]
-        
+
 
 def readme():
     with open("README.rst") as f:
