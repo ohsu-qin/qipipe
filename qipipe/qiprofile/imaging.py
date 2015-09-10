@@ -27,10 +27,10 @@ def sync(subject, session):
         exp_nm = SESSION_FMT % session
         # Find the XNAT experiment
         exp = xnat.find_one(project=project, subject=sbj_nm,
-                                  experiment=exp_nm)
+                            experiment=exp_nm)
         if not exp.exists():
             raise ImagingError(
-                "%s %s Subject %d Session %d XNAT experiment not found" %
+                "%s %s Subject %d Session %d XNAT experiment was not found" %
                 (subject.project, subject.collection, subject.number,
                  session.number)
             )
@@ -38,7 +38,7 @@ def sync(subject, session):
         if not exp.date:
             raise ImagingError(
                 "%s %s Subject %d Session %d XNAT experiment is missing"
-                " a date" % (subject.project, subject.collection,
+                " the visit date" % (subject.project, subject.collection,
                              subject.number, session.number)
             )
         # If there is a qiprofile session with the same date,
@@ -46,9 +46,9 @@ def sync(subject, session):
         is_dup_session = lambda sess: sess.date == exp.date
         if any(is_dup_session, sbj.sessions):
             raise ImagingError(
-                "qiprofile %s %s Subject %d session with date %s already"
-                " exists" % (subject.project, subject.collection,
-                             subject.number, exp.date)
+                "qiprofile %s %s Subject %d session with visit date %s"
+                " already exists" % (subject.project, subject.collection,
+                                     subject.number, exp.date)
             )
         # Make the qiprofile session database object.
         sess = Session(date=exp.date)
@@ -61,6 +61,7 @@ def sync(subject, session):
         # Save the subject.
         sbj.save()
 
+
 def _update(session, experiment):
     """
     Updates the qiprofile session from the XNAT experiment.
@@ -68,7 +69,7 @@ def _update(session, experiment):
     :param session: the qiprofile session object
     :param experiment: the XNAT experiment object
     """
-    # The modeling resources begin with 'pk+'.
+    # The modeling resources begin with 'pk_'.
     for xrsc in experiment.resources():
         if xrsc.label.startswith('pk_'):
             modeling.update(session, xrsc)
