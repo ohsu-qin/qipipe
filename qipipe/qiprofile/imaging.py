@@ -72,7 +72,7 @@ def _update(session, experiment):
     for xrsc in experiment.resources():
         if xrsc.label.startswith('pk_'):
             modeling.update(session, xrsc)
-    
+
     # Create the session detail database subject to hold the scans.
     session.detail = database.get_or_create(SubjectDetail)
     # The scans are embedded in the SessionDetail document.
