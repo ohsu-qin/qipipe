@@ -331,10 +331,11 @@ class RegistrationWorkflow(WorkflowBase):
         # without a SGE submit in the copy_files function.
         # TODO: why doesn't registration recognize the default.cfg
         # Copy run_without_submitting setting?
-        copy_realigned_xfc = Function(input_names=['in_files'],
+        copy_realigned_xfc = Function(input_names=['in_files', 'dest'],
                                       output_names=['out_files'],
                                       function=copy_files)
         copy_realigned = pe.Node(copy_realigned_xfc, name='copy_realigned')
+        copy_realign.inputs.dest = dest
         exec_wf.connect(collect_realigned, 'images', copy_realigned, 'in_files')
 
         # The execution output.
