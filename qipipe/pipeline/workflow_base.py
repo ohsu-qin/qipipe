@@ -14,9 +14,9 @@ class WorkflowBase(object):
     The WorkflowBase class is the base class for the qipipe workflow
     wrapper classes.
 
-    If the :mod:`qipipe.pipeline.distributable' ``DISTRIBUTABLE`` flag
-    is set, then the execution is distributed using the Nipype plug-in
-    specified in the configuration *plug_in* parameter.
+    If the :attr:`distributable' flag is set, then the execution is
+    distributed using the Nipype plug-in specified in the configuration
+    *plug_in* parameter.
 
     The workflow plug-in arguments and node inputs can be specified in a
     :class:`qiutil.ast_config.ASTConfig` file. The standard
@@ -85,6 +85,7 @@ class WorkflowBase(object):
         :keyword config: the optional :attr:`configuration` dictionary
             or file
         :keyword dry_run: the :attr:`dry_run` flag
+        :keyword distributable: the :attr:`distributable` flag
         """
         self.project = project
         """The XNAT project name."""
@@ -115,6 +116,16 @@ class WorkflowBase(object):
             self.plug_in = exec_opts.pop('plug-in', None)
         else:
             self.plug_in = None
+
+        # The distributable option is only set if the qipipe command
+        # option --no-submit is set. In that case, distributable is
+        # set to False. Otherwise, the distributable option is not
+        # set. Thus, the is_distributable flag is set to False if
+        # either the --no-submit command option was set or there is
+        # no cluster environment. Otherwise, there is a cluster
+        # environment and the is_distributable flag is set to True.
+        self.is_distributable = opts.get('distributable', DISTRIBUTABLE)
+        """Flag indicating whether to submit jobs to a cluster."""
 
         self.dry_run = opts.get('dry_run', False)
         """Flag indicating whether to prepare but not run the workflow."""
@@ -208,11 +219,11 @@ class WorkflowBase(object):
         """
         # If the workflow can be distributed, then get the plugin
         # arguments.
-        is_dist_clause = 'is' if DISTRIBUTABLE else 'is not'
+        is_dist_clause = 'is' if self.is_distributable else 'is not'
         self._logger.debug("The %s workflow %s distributable in a"
                            " cluster environment." %
                            (workflow.name, is_dist_clause))
-        if DISTRIBUTABLE:
+        if self.is_distributable:
             opts = self._configure_plugin(workflow)
         else:
             opts = {}
@@ -301,7 +312,7 @@ class WorkflowBase(object):
         :param workflow: the workflow containing the nodes
         """
         # The default plug-in setting.
-        if DISTRIBUTABLE and self.plug_in and self.plug_in in self.configuration:
+        if self.is_distributable and self.plug_in and self.plug_in in self.configuration:
             plugin_cfg = self.configuration[self.plug_in]
             def_plugin_args = plugin_cfg.get('plugin_args')
             if def_plugin_args and 'qsub_args' in def_plugin_args:
@@ -333,7 +344,7 @@ class WorkflowBase(object):
                     # plug-in arguments take precedence over the defaults and
                     # that the arguments are retained if the node is included
                     # in a parent workflow.
-                    if DISTRIBUTABLE:
+                    if self.is_distributable:
                         if ('qsub_args' in value and
                                 'overwrite' not in value and
                                 'qsub_args' in def_plugin_args):
