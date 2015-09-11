@@ -8,7 +8,6 @@ import qiutil
 from qiutil.logging import logger
 from ..interfaces import XNATUpload
 from ..helpers.bolus_arrival import bolus_arrival_index, BolusArrivalError
-from ..helpers.distributable import DISTRIBUTABLE
 from .workflow_base import WorkflowBase
 from .pipeline_error import PipelineError
 
@@ -454,7 +453,7 @@ class ModelingWorkflow(WorkflowBase):
         base_wf.connect(input_spec, 'mask', pk_map, 'mask')
         base_wf.connect(get_params, 'params_csv', pk_map, 'params_csv')
         # Set the MPI flag.
-        pk_map.inputs.use_mpi = DISTRIBUTABLE
+        pk_map.inputs.use_mpi = self.is_distributable
 
         # Compute the Ktrans difference.
         delta_k_trans = pe.Node(fsl.ImageMaths(), name='delta_k_trans')
