@@ -6,8 +6,8 @@ from . import (clinical, imaging)
 
 def sync_session(project, collection, subject, session, filename):
     """
-    Updates the qiprofile database from the XNAT database content for
-    the given session.
+    Updates the qiprofile database from the clinical spreadsheet and
+    XNAT database for the given session.
 
     :param project: the XNAT project name
     :param collection: the image collection name

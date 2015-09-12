@@ -5,7 +5,8 @@ from nose.tools import assert_equal
 from qiprofile_rest_client.model.subject import Subject
 from qipipe.qiprofile import demographics
 from ...helpers.logging import logger
-from . import (PROJECT, BREAST_FIXTURE, SARCOMA_FIXTURE)
+from ... import PROJECT
+from . import (DATABASE, BREAST_FIXTURE, SARCOMA_FIXTURE)
 
 COLLECTION = 'Breast'
 """The test collection."""
@@ -23,11 +24,11 @@ class TestSync(object):
     """
 
     def setup(self):
-        self._connection = connect(db='qiprofile_test')
-        self._connection.drop_database('qiprofile_test')
+        self._connection = connect(db=DATABASE)
+        self._connection.drop_database(DATABASE)
 
     def tearDown(self):
-      self._connection.drop_database('qiprofile_test')
+      self._connection.drop_database(DATABASE)
 
     def test_breast(self):
         # TODO - make a simpler mash-up of the clinical and imaging test cases.

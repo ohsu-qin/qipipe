@@ -9,7 +9,7 @@ nipy==0.3.0
 dipy==0.7.1
 traits==4.4.0
 networkx==1.8.1
-qiutil==2.2.7
+qiutil==2.2.8
 qidicom==2.3.7
 qixnat==4.1.2
 qiprofile-rest-client==5.6.3

@@ -51,6 +51,10 @@ def main(argv=sys.argv):
     # above, since importing any nipype module writes to the log.
     from qipipe.pipeline import qipipeline as qip
 
+    # Set the distributable flag.
+    if opts.pop('no_submit', None):
+        opts['distributable'] = False
+
     # Run the QIN workflow.
     try:
         qip.run(*inputs, **opts)
@@ -84,9 +88,13 @@ def _parse_arguments():
     parser.add_argument('--model', dest='actions', action='append_const',
                         const='model', help='model the realigned images')
 
-    # Prepare but don't run the pipeline.
+    # Flag indicating whether to prepare but not run the pipeline.
     parser.add_argument('--dry-run', action='store_true',
                         help='prepare but do not run the pipeline')
+
+    # Flag indicating whether to curtail cluster job submission.
+    parser.add_argument('--no-submit', action='store_true',
+                        help="don't submit jobs to a cluster environment")
 
     # The staging options.
     parser.add_argument('-p', '--project',

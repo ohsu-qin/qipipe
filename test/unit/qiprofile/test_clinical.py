@@ -8,7 +8,8 @@ from nose.tools import (assert_true, assert_equal, assert_in,
 from qiprofile_rest_client.model.subject import Subject
 from qipipe.qiprofile import clinical
 from ...helpers.logging import logger
-from . import (PROJECT, BREAST_FIXTURE, SARCOMA_FIXTURE)
+from ... import PROJECT
+from . import (DATABASE, BREAST_FIXTURE, SARCOMA_FIXTURE)
 
 
 class TestClinical(object):
@@ -20,11 +21,11 @@ class TestClinical(object):
     """
 
     def setup(self):
-        self._connection = connect(db='qiprofile_test')
-        self._connection.drop_database('qiprofile_test')
+        self._connection = connect(db=DATABASE)
+        self._connection.drop_database(DATABASE)
 
     def tearDown(self):
-      self._connection.drop_database('qiprofile_test')
+      self._connection.drop_database(DATABASE)
 
     def test_breast(self):
         for n in [1, 2]:

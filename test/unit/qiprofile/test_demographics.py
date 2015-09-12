@@ -6,7 +6,8 @@ from nose.tools import (assert_equal, assert_in, assert_is_not_none,
 from qiprofile_rest_client.model.subject import Subject
 from qipipe.qiprofile import (xls, demographics)
 from ...helpers.logging import logger
-from . import (PROJECT, BREAST_FIXTURE)
+from ... import PROJECT
+from . import BREAST_FIXTURE
 
 COLLECTION = 'Breast'
 """The test collection."""

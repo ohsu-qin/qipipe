@@ -8,9 +8,9 @@ from qiutil.ast_config import read_config
 from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
 from ...helpers.staging import subject_sources
-from ...unit.pipeline.test_mask import MASK_CONF
-from ...unit.pipeline.test_registration import REG_CONF
-from ...unit.pipeline.test_modeling import MODELING_CONF
+from .test_mask import MASK_CONF
+from .test_registration import REG_CONF
+from .test_modeling import MODELING_CONF
 
 REG_CONF = os.path.join(ROOT, 'conf', 'registration.cfg')
 """The test registration configuration."""

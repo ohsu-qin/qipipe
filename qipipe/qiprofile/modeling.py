@@ -15,4 +15,5 @@ def update(session, resource):
     :param session: the target qiprofile Session to update
     :param resource: the XNAT modeling resource object
     """
+    # TODO
     pass

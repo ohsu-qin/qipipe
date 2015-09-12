@@ -589,7 +589,8 @@ class QIPipelineWorkflow(WorkflowBase):
         # demand if modeling is required.
         if 'model' in actions:
             from .modeling import ModelingWorkflow
-            mdl_opts = dict(project=self.project, base_dir=self.base_dir)
+            mdl_opts = dict(project=self.project, base_dir=self.base_dir,
+                            distributable=self.is_distributable)
             mdl_opts['resource'] = self.modeling_resource
             mdl_opts['technique'] = self.modeling_technique
             mdl_wf_gen = ModelingWorkflow(**mdl_opts)
@@ -610,6 +611,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 raise ArgumentError("Missing the registration resource name")
             reg_opts = dict(
                 base_dir=self.base_dir,
+                distributable=self.is_distributable,
                 technique=self.registration_technique
             )
             if 'recursive_registration' in opts:
@@ -635,7 +637,8 @@ class QIPipelineWorkflow(WorkflowBase):
                                function=roi)
             roi_node = pe.Node(roi_xfc, name='roi')
             roi_node.inputs.project = self.project
-            roi_node.opts = dict(base_dir=self.base_dir)
+            roi_node.opts = dict(base_dir=self.base_dir,
+                                 distributable=self.is_distributable)
             self._logger.info("Enabled ROI conversion.")
         else:
             roi_node = None
@@ -643,7 +646,9 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # Registration and modeling require a mask.
         if (reg_node or mdl_wf) and not mask_rsc_opt:
-            mask_wf_gen = MaskWorkflow(project=self.project)
+            mask_wf_gen = MaskWorkflow(project=self.project,
+                                       base_dir=self.base_dir,
+                                       distributable=self.is_distributable)
             mask_wf = mask_wf_gen.workflow
             self._logger.info("Enabled scan mask creation.")
         else:
@@ -652,7 +657,9 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # The staging workflow.
         if 'stage' in actions:
-            stg_wf_gen = StagingWorkflow(project=self.project)
+            stg_wf_gen = StagingWorkflow(project=self.project,
+                                         base_dir=self.base_dir,
+                                         distributable=self.is_distributable)
             stg_wf = stg_wf_gen.workflow
             self._logger.info("Enabled staging.")
         else:

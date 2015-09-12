@@ -38,7 +38,7 @@ Installation
 The following instructions assume that you start in your home directory.
 ``qipipe`` has dependencies with special installation requirements.
 Consequently, ``qipipe`` installation cannot be performed using the
-customary Python_ pip_ command ``pip install qixnat`` alone. Install
+customary Python_ pip_ command ``pip install qipipe`` alone. Install
 ``qipipe`` using the following procedure:
 
 1. Install Git_ on your workstation, if necessary.
