@@ -35,7 +35,8 @@ class TestQIPipeline(object):
     Note:: the modeling workflow is only executed if the ``fastfit``
         executable is found.
     
-    Note:: this test takes app. four days to run serially without modeling.
+    Note:: this test takes app. four hours to run serially without
+    modeling.
     """
 
     def setUp(self):
@@ -47,37 +48,45 @@ class TestQIPipeline(object):
     def test_breast(self):
         data = os.getenv('QIN_DATA')
         if data:
+            # Make the input area to hold a link to the first session.
             fixture = os.path.join(RESULTS, 'data', 'breast')
             parent = os.path.join(fixture, 'BreastChemo3')
             os.makedirs(parent)
+            # The session data location.
             src = os.path.join(data, 'Breast_Chemo_Study', 'BreastChemo3',
                                'Visit1')
             assert_true(os.path.exists(src), "Breast test fixture not found:"
                         " %s" % src)
-            dest = os.path.join(parent, 'Visit1')
-            os.symlink(src, dest)
+            # Link the first visit input to the data.
+            tgt = os.path.join(parent, 'Visit1')
+            os.symlink(src, tgt)
+            # Run the pipeline on the first visit.
             self._test_collection('Breast', fixture)
         else:
-            logger(__name__).info("Skipping the QIN pipeline unit Breast"
-                                  " test, since the QIN_DATA environment"
-                                  " variable is not set.")
+            logger(__name__).info('Skipping the QIN pipeline unit Breast'
+                                  ' test, since the QIN_DATA environment'
+                                  ' variable is not set.')
 
     def test_sarcoma(self):
         data = os.getenv('QIN_DATA')
         if data:
+            # Make the input area to hold a link to the first session.
             fixture = os.path.join(RESULTS, 'data', 'sarcoma')
             parent = os.path.join(fixture, 'Subj_1')
             os.makedirs(parent)
+            # The session data location.
             src = os.path.join(data, 'Sarcoma', 'Subj_1', 'Visit_1')
             assert_true(os.path.exists(src), "Sarcoma test fixture not found:"
                         " %s" % src)
-            dest = os.path.join(parent, 'Visit_1')
-            os.symlink(src, dest)
+            # Link the first visit input to the data.
+            tgt = os.path.join(parent, 'Visit_1')
+            os.symlink(src, tgt)
+            # Run the pipeline on the first visit.
             self._test_collection('Sarcoma', fixture)
         else:
-            logger(__name__).info("Skipping the QIN pipeline unit Sarcoma"
-                                  " test, since the QIN_DATA environment"
-                                  " variable is not set.")
+            logger(__name__).info('Skipping the QIN pipeline unit Sarcoma'
+                                  ' test, since the QIN_DATA environment'
+                                  ' variable is not set.')
 
     def _test_collection(self, collection, fixture):
         """
@@ -85,7 +94,8 @@ class TestQIPipeline(object):
         created in XNAT.
         
         :param collection: the image collection name
-        :param fixture: the test input
+        :param fixture: the test input directory holding a link to the
+            first visit data
         """
         logger(__name__).debug("Testing the QIN pipeline on %s..." % fixture)
 
@@ -95,35 +105,35 @@ class TestQIPipeline(object):
 
         # The pipeline options.
         opts = dict(base_dir=base_dir, dest=dest, mask=MASK_CONF,
-                    registration=REG_CONF)
+                    collection=collection, registration=REG_CONF)
         # If fastfit is not available, then only execute the staging and
         # registration workflows. Otherwise, execute all workflows.
         if not which('fastfit'):
-            opts['actions'] = ['stage', 'register']
+            actions = opts['actions'] = ['stage', 'register']
 
-        # The test subject => directory dictionary.
+        # The {test subject: input directory} dictionary.
         sbj_dir_dict = subject_sources(collection, fixture)
         # The test subjects.
         subjects = sbj_dir_dict.keys()
-        # The test source directories.
+        # The test subject input directories.
         sources = sbj_dir_dict.values()
 
         with qixnat.connect() as xnat:
             # Delete any existing test subjects.
             for sbj in subjects:
                 xnat.delete(PROJECT, sbj)
-            # Run the staging, mask and registration workflows, but not
-            # the modeling.
-            logger(__name__).debug("Executing the QIN pipeline...")
-            output_dict = qip.run(collection, *sources, **opts)
+            # Run the workflow on the subject input directories.
+            logger(__name__).debug("Executing the QIN pipeline on %s..." %
+                                   sbj_dir_dict)
+            # The {subject: {session: }}
+            output_dict = qip.run(*sources, **opts)
             # Verify the result.
-            recon = qip
             for sbj, sess_dict in output_dict.iteritems():
                 for sess, results in sess_dict.iteritems():
                     # If registration is enabled, then verify the
                     # registration resource.  Otherwise, skip the
                     # remaining stage verification.
-                    if opts['registration'] == False:
+                    if not 'register' in opts['actions']:
                         continue
                     # The XNAT registration resource name.
                     rsc = results['registration']
