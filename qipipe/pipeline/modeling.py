@@ -263,25 +263,33 @@ class ModelingWorkflow(WorkflowBase):
 
         # The default modeling technique is the OHSU proprietary bolero.
         #
-        # TODO - generalize here and staging , e.g.:
+        # TODO - generalize workflow techniques here and in registration
+        # to a module reference, e.g.:
         #
-        # package ohsu-qipipe provides module ohsu requires qipipe
+        # qipipe.cfg:
+        # [Modeling]
+        # technique = ohsu.modeling.bolero
         #
-        #   $ qipipe --shim ohsu ...
-        #   import importlib
-        #   include_opt = opts.get('include'))
-        #   if include_opt:
-        #     custom = importlib.import(include_opt)
-        #   else:
-        #     custom = importlib.import('default', qipipe)
+        # New git project with:
+        # qipipe-ohsu/
+        #   requirements.txt:
+        #     qipipe==x.x.x
+        #   modeling/bolero.py:
+        #     def create_workflow(**opts):
+        #         ...
         #
-        # In modeling:
-        #   shims = importlib.import('modeling', custom)
-        #   base_wf = shims.create_workflow(**opts)
+        # pip install -e git+...
         #
-        # In staging:
-        #   staging = importlib.import('staging', custom)
-        #   ...
+        # Then replace below with:
+        #
+        # modules = technique_opt.split('.')
+        # parent_opt = '.'.join(modules[:-1])
+        # child_opt = modules[-1]
+        # if parent_opt:
+        #     wf_gen = __import__(parent_opt, globals(), locals(), [child_opt])
+        # else:
+        #     wf_gen = __import__(child_opt)
+        # base_wf = wf_gen.create_workflow(**opts)
         #
         technique = opts.get('technique', DEF_TECHNIQUE)
         if self.technique == 'bolero':
