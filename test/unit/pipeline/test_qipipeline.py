@@ -78,7 +78,7 @@ class TestQIPipeline(object):
                                   " test, since the QIN_DATA environment"
                                   " variable is not set.")
 
-    def _test_collection_scans(self, collection, fixture):
+    def _test_test_collection(self, collection, fixture):
         """
         Run the pipeline on the given collection and verify that scans are
         created in XNAT.
