@@ -43,7 +43,7 @@ class TestQIPipeline(object):
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
 
-    def test_breast_scans(self):
+    def test_breast(self):
         data = os.getenv('QIN_DATA')
         if data:
             fixture = os.path.join(RESULTS, 'data', 'breast')
@@ -61,7 +61,7 @@ class TestQIPipeline(object):
                                   " test, since the QIN_DATA environment"
                                   " variable is not set.")
 
-    def test_sarcoma_scans(self):
+    def test_sarcoma(self):
         data = os.getenv('QIN_DATA')
         if data:
             fixture = os.path.join(RESULTS, 'data', 'sarcoma')
@@ -78,7 +78,7 @@ class TestQIPipeline(object):
                                   " test, since the QIN_DATA environment"
                                   " variable is not set.")
 
-    def _test_test_collection(self, collection, fixture):
+    def _test_collection(self, collection, fixture):
         """
         Run the pipeline on the given collection and verify that scans are
         created in XNAT.
