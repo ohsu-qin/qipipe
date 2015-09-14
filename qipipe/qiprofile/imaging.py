@@ -10,7 +10,7 @@ class ImagingError(Exception):
     pass
 
 
-def sync(subject, experiment):
+def update(subject, experiment):
     """
     Updates the imaging content for the given qiprofile REST Subject
     from the given XNAT experiment.

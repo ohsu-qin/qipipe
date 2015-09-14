@@ -21,6 +21,6 @@ class UpdateQIProfile(BaseInterface):
     input_spec = UpdateQIProfileInputSpec
 
     def _run_interface(self, runtime):
-        qiprofile.sync_session(self.inputs.project, self.inputs.subject,
+        qiprofile.update_session(self.inputs.project, self.inputs.subject,
                                self.inputs.session)
         return runtime

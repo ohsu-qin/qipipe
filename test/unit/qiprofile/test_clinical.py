@@ -33,7 +33,7 @@ class TestClinical(object):
             subject = Subject.objects.create(project=PROJECT, collection='Breast',
                                              number=n)
             # Populate the subject from the spreadsheet.
-            clinical.sync(subject, BREAST_FIXTURE)
+            clinical.update(subject, BREAST_FIXTURE)
         
         # Validate the saved subjects.
         assert_equal(Subject.objects.count(), 2, "The saved subjects count is"
@@ -75,7 +75,7 @@ class TestClinical(object):
             subject = Subject.objects.create(project=PROJECT, collection='Sarcoma', 
                                              number=n)
             # Populate the subject from the spreadsheet.
-            clinical.sync(subject, SARCOMA_FIXTURE)
+            clinical.update(subject, SARCOMA_FIXTURE)
         
         # Validate the saved subjects.
         assert_equal(Subject.objects.count(), 2, "The saved subjects count is"

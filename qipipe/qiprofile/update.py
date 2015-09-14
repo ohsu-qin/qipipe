@@ -4,7 +4,7 @@ from qiprofile_rest_client.model.imaging import Session
 from . import (clinical, imaging)
 
 
-def sync_session(project, collection, subject, session, filename):
+def update(project, collection, subject, session, filename):
     """
     Updates the qiprofile database from the clinical spreadsheet and
     XNAT database for the given session.
@@ -19,6 +19,6 @@ def sync_session(project, collection, subject, session, filename):
     key = dict(project=project, collection=collection, number=subject)
     sbj = database.get_or_create(Subject, key)
     # Update the clinical information from the XLS input.
-    clinical.sync(sbj, filename)
+    clinical.update(sbj, filename)
     # Update the imaging information from XNAT.
-    imaging.sync(sbj, session)
+    imaging.update(sbj, session)

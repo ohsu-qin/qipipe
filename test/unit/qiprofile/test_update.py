@@ -18,9 +18,9 @@ SESSION = 1
 """The test session number."""
 
 
-class TestSync(object):
+class TestUpdate(object):
     """
-    Database sync tests.
+    Database update tests.
     """
 
     def setup(self):
