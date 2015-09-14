@@ -304,8 +304,9 @@ class QIPipelineWorkflow(WorkflowBase):
         :keyword modeling_technique: the
             class:`qipipe.pipeline.modeling.ModelingWorkflow` technique
         """
-        super(QIPipelineWorkflow, self).__init__(project, logger(__name__),
-                                                 **opts)
+        super(QIPipelineWorkflow, self).__init__(
+            project=project, logger=logger(__name__), **opts
+        )
 
         reg_tech_opt = opts.get('registration_technique')
         if reg_tech_opt:
@@ -571,11 +572,9 @@ class QIPipelineWorkflow(WorkflowBase):
         # demand if modeling is required.
         if 'model' in actions:
             from .modeling import ModelingWorkflow
-            mdl_opts = dict(project=self.project, base_dir=self.base_dir,
-                            distributable=self.is_distributable)
-            mdl_opts['resource'] = self.modeling_resource
-            mdl_opts['technique'] = self.modeling_technique
-            mdl_wf_gen = ModelingWorkflow(**mdl_opts)
+            mdl_wf_gen = ModelingWorkflow(parent=self, 
+                                          resource=self.modeling_resource,
+                                          technique=self.modeling_technique)
             mdl_wf = mdl_wf_gen.workflow
             self.modeling_resource = mdl_wf_gen.resource
         else:
@@ -628,9 +627,7 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # Registration and modeling require a mask.
         if (reg_node or mdl_wf) and not mask_rsc_opt:
-            mask_wf_gen = MaskWorkflow(project=self.project,
-                                       base_dir=self.base_dir,
-                                       distributable=self.is_distributable)
+            mask_wf_gen = MaskWorkflow(parent=self)
             mask_wf = mask_wf_gen.workflow
             self.logger.info("Enabled scan mask creation.")
         else:
@@ -639,9 +636,7 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # The staging workflow.
         if 'stage' in actions:
-            stg_wf_gen = StagingWorkflow(project=self.project,
-                                         base_dir=self.base_dir,
-                                         distributable=self.is_distributable)
+            stg_wf_gen = StagingWorkflow(parent=self)
             stg_wf = stg_wf_gen.workflow
             self.logger.info("Enabled staging.")
         else:

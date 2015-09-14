@@ -177,7 +177,7 @@ class ModelingWorkflow(WorkflowBase):
         :keyword baseline_end_idx: the number of volumes to merge into a R1
             series baseline image (default is 1)
         """
-        super(ModelingWorkflow, self).__init__(project, logger(__name__),
+        super(ModelingWorkflow, self).__init__(logger=logger(__name__),
                                                **opts)
 
         tech_opt = opts.pop('technique', None)

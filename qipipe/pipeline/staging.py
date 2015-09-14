@@ -180,7 +180,7 @@ class StagingWorkflow(WorkflowBase):
         :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
             initializer options, as well as the following options:
         """
-        super(StagingWorkflow, self).__init__(project, logger(__name__), **opts)
+        super(StagingWorkflow, self).__init__(logger=logger(__name__), **opts)
 
         # Make the workflow.
         self.workflow = self._create_workflow()

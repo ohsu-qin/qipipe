@@ -73,7 +73,7 @@ class MaskWorkflow(WorkflowBase):
         :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
             initializer options, as well as the following options:
         """
-        super(MaskWorkflow, self).__init__(project, logger(__name__), **opts)
+        super(MaskWorkflow, self).__init__(logger=logger(__name__), **opts)
 
         self.workflow = self._create_workflow()
         """The mask creation workflow."""

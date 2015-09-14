@@ -4,10 +4,11 @@ import tempfile
 import pprint
 import networkx as nx
 import qixnat
+from qiutil.logging import logger
 from qiutil.collections import EMPTY_DICT
 from qiutil.ast_config import read_config
 from ..helpers.distributable import DISTRIBUTABLE
-
+from .pipeline_error import PipelineError
 
 class WorkflowBase(object):
     """
@@ -75,8 +76,6 @@ class WorkflowBase(object):
     def __init__(self, **kwargs):
         """
         Initializes this workflow wrapper object.
-        If the optional configuration file is specified, then the
-        workflow settings in that file override the default settings.
 
         :param kwargs: the following keyword arguments:
         :keyword project: the :attr:`project`
@@ -87,32 +86,72 @@ class WorkflowBase(object):
             or file
         :keyword dry_run: the :attr:`dry_run` flag
         :keyword distributable: the :attr:`distributable` flag
+        :raise PipelineError: if there is neither a *project* nor
+            a *parent* argument
         """
-        self.project = opts.get('project')
+        parent = kwargs.get('parent')
+        project_opt = kwargs.get('project')
+        if project_opt:
+            project = project_opt
+        elif parent:
+            project = parent.project
+        else:
+            raise PipelineError('The workflow wrapper must have either a'
+                                ' project or a parent')
+        self.project = project
         """The XNAT project name."""
 
-        self.logger = opts.get('logger')
+        logger_opt = kwargs.get('logger')
+        if logger_opt:
+            _logger = logger_opt
+        elif parent:
+            _logger = parent.logger
+        else:
+            _logger = logger('qiprofile')
+        self.logger = _logger
         """This workflow's logger."""
 
-        self.base_dir = opts.get('base_dir',
-                                 tempfile.mkdtemp(prefix='qipipe_'))
+        base_dir_opt = kwargs.get('base_dir')
+        if base_dir_opt:
+            base_dir = base_dir_opt
+        elif parent:
+            base_dir = parent.base_dir
+        else:
+            base_dir = tempfile.mkdtemp(prefix='qipipe_')
+        self.base_dir = base_dir
         "The workflow execution directory (default a new temp directory)."
 
-        parent = opts.get('parent')
-        if parent:
-            if not self.
-        cfg_opt = opts.get('config', None)
-        if cfg_opt == None or isinstance(cfg_opt, str):
-            config = self._load_configuration(cfg_opt)
+        cfg_opt = kwargs.get('config')
+        if cfg_opt:
+            if isinstance(cfg_opt, str):
+                config = self._load_configuration(cfg_opt)
+            else:
+                config = config_opt
         else:
-            config = cfg_opt
+            config = self._load_configuration()
+        self.configuration = config
+        """The workflow node inputs configuration."""
         config_s = pprint.pformat(config)
-
         self.logger.debug("Pipeline configuration:")
         for line in config_s.split("\n"):
             self.logger.debug(line)
-        self.configuration = config
-        """The workflow node inputs configuration."""
+        
+        # The distributable option is only set if the qipipe command
+        # option --no-submit is set. In that case, distributable is
+        # set to False. Otherwise, the distributable option is not
+        # set. Thus, the is_distributable attribute is set to False if
+        # either the --no-submit command option was set or there is
+        # no cluster environment. Otherwise, there is a cluster
+        # environment and the is_distributable flag is set to True.
+        distributable_opt = kwargs.get('distributable')
+        if distributable_opt:
+            distributable = distributable_opt
+        elif parent:
+            distributable = parent.is_distributable
+        else:
+            distributable = DISTRIBUTABLE
+        self.is_distributable = distributable
+        """Flag indicating whether to submit jobs to a cluster."""
 
         # The execution plug-in.
         if 'Execution' in self.configuration:
@@ -121,17 +160,13 @@ class WorkflowBase(object):
         else:
             self.plug_in = None
 
-        # The distributable option is only set if the qipipe command
-        # option --no-submit is set. In that case, distributable is
-        # set to False. Otherwise, the distributable option is not
-        # set. Thus, the is_distributable flag is set to False if
-        # either the --no-submit command option was set or there is
-        # no cluster environment. Otherwise, there is a cluster
-        # environment and the is_distributable flag is set to True.
-        self.is_distributable = opts.get('distributable', DISTRIBUTABLE)
-        """Flag indicating whether to submit jobs to a cluster."""
-
-        self.dry_run = opts.get('dry_run', False)
+        if 'dry_run' in kwargs:
+            dry_run = kwargs.get('dry_run')
+        elif parent:
+            dry_run = parent.dry_run
+        else
+            dry_run = False
+        self.dry_run = dry_run
         """Flag indicating whether to prepare but not run the workflow."""
 
     def depict_workflow(self, workflow):

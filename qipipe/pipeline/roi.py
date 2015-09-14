@@ -77,7 +77,7 @@ class ROIWorkflow(WorkflowBase):
         :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
             initializer options
         """
-        super(ROIWorkflow, self).__init__(project, logger(__name__), **opts)
+        super(ROIWorkflow, self).__init__(logger=logger(__name__), **opts)
         self.workflow = self._create_workflow(**opts)
         """The ROI workflow."""
 
