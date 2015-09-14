@@ -8,11 +8,11 @@ from .logging import logger
 def subject_sources(collection, source):
     """
     Infers the XNAT subject names from the given source directory.
-    The source directory contains subject subdirectories. The
-    subdirectories are matched against the
-    :attr:`qipipe.staging.collection.Collection.patterns`
-    :attr:`qipipe.staging.collection.Patterns.subject`
-    regular expression for the given collection.
+    The *source* argument directory contains the subject
+    directories. The directories are matched against
+    the :attr:`qipipe.staging.collection.Collection.patterns`
+    :attr:`qipipe.staging.collection.Patterns.subject` regular
+    expression for the given collection.
 
     :param collection: the image collection name
     :param source: the input parent directory
