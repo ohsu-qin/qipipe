@@ -89,12 +89,12 @@ class MaskWorkflow(WorkflowBase):
         :param time_series: the input 3D NiFTI time series to mask
         :return: the mask XNAT resource name
         """
-        self._logger.debug("Creating the mask for the %s %s scan %d time series"
+        self.logger.debug("Creating the mask for the %s %s scan %d time series"
                            " %s..." % (subject, session, scan, time_series))
         self.set_inputs(subject, session, scan, time_series)
         # Execute the workflow.
         self._run_workflow(self.workflow)
-        self._logger.debug("Created the %s %s scan %s time series %s mask XNAT"
+        self.logger.debug("Created the %s %s scan %s time series %s mask XNAT"
                            " resource %s." %
                            (subject, session, scan, time_series, RESOURCE))
 
@@ -115,7 +115,7 @@ class MaskWorkflow(WorkflowBase):
 
         :return: the Workflow object
         """
-        self._logger.debug('Creating the mask reusable workflow...')
+        self.logger.debug('Creating the mask reusable workflow...')
         workflow = pe.Workflow(name='mask', base_dir=self.base_dir)
 
         # The workflow input.
@@ -179,9 +179,9 @@ class MaskWorkflow(WorkflowBase):
 
         self._configure_nodes(workflow)
 
-        self._logger.debug("Created the %s workflow." % workflow.name)
+        self.logger.debug("Created the %s workflow." % workflow.name)
         # If debug is set, then diagram the workflow graph.
-        if self._logger.level <= logging.DEBUG:
+        if self.logger.level <= logging.DEBUG:
             self.depict_workflow(workflow)
 
         return workflow

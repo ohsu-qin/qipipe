@@ -206,10 +206,10 @@ class RegistrationWorkflow(WorkflowBase):
         iter_reg_input.iterables = ('image', images)
 
         # Execute the workflow.
-        self._logger.debug("Executing the %s workflow on %s %s..." %
+        self.logger.debug("Executing the %s workflow on %s %s..." %
                          (self.workflow.name, subject, session))
         self._run_workflow(exec_wf)
-        self._logger.debug("Executed the %s workflow on %s %s." %
+        self.logger.debug("Executed the %s workflow on %s %s." %
                          (self.workflow.name, subject, session))
 
         # Return the output files.
@@ -250,7 +250,7 @@ class RegistrationWorkflow(WorkflowBase):
         if not dest:
             raise PipelineError('Registration workflow is missing the' +
                              ' destination directory')
-        self._logger.debug("Creating the registration execution workflow"
+        self.logger.debug("Creating the registration execution workflow"
                            " with initial reference %s..." % ref_0)
 
         # The execution workflow.
@@ -343,9 +343,9 @@ class RegistrationWorkflow(WorkflowBase):
                               name='output_spec')
         exec_wf.connect(collect_realigned, 'images', output_spec, 'images')
 
-        self._logger.debug("Created the %s workflow." % exec_wf.name)
+        self.logger.debug("Created the %s workflow." % exec_wf.name)
         # If debug is set, then diagram the workflow graph.
-        if self._logger.level <= logging.DEBUG:
+        if self.logger.level <= logging.DEBUG:
             self.depict_workflow(exec_wf)
 
         return exec_wf
@@ -368,7 +368,7 @@ class RegistrationWorkflow(WorkflowBase):
             (default a new temp directory)
         :return: the Workflow object
         """
-        self._logger.debug('Creating the registration realignment workflow...')
+        self.logger.debug('Creating the registration realignment workflow...')
 
         # The workflow.
         base_dir = opts.get('base_dir', tempfile.mkdtemp(prefix='qipipe_'))
@@ -463,9 +463,9 @@ class RegistrationWorkflow(WorkflowBase):
 
         self._configure_nodes(realign_wf)
 
-        self._logger.debug("Created the %s workflow." % realign_wf.name)
+        self.logger.debug("Created the %s workflow." % realign_wf.name)
         # If debug is set, then diagram the workflow graph.
-        if self._logger.level <= logging.DEBUG:
+        if self.logger.level <= logging.DEBUG:
             self.depict_workflow(realign_wf)
         return realign_wf
 

@@ -217,7 +217,7 @@ class ModelingWorkflow(WorkflowBase):
         :param mask: the XNAT mask resource
         :return: the modeling result XNAT resource name
         """
-        self._logger.debug("Modeling the %s %s Scan %d %s time series..." %
+        self.logger.debug("Modeling the %s %s Scan %d %s time series..." %
             (subject, session, scan, time_series))
 
         # Determine the bolus uptake. If it could not be determined,
@@ -238,11 +238,11 @@ class ModelingWorkflow(WorkflowBase):
             input_spec.inputs.mask = mask
 
         # Execute the modeling workflow.
-        self._logger.debug("Executing the %s workflow on the %s %s scan %d"
+        self.logger.debug("Executing the %s workflow on the %s %s scan %d"
                            " %s time series..." %
                            (self.workflow.name, subject, session, scan, time_series))
         self._run_workflow(self.workflow)
-        self._logger.debug("Executed the %s workflow on the %s %s scan %d %s"
+        self.logger.debug("Executed the %s workflow on the %s %s scan %d %s"
                             " time series." %
                            (self.workflow.name, subject, session, scan, time_series))
         
@@ -256,7 +256,7 @@ class ModelingWorkflow(WorkflowBase):
         :param opts: the additional workflow initialization parameters
         :return: the Nipype workflow
         """
-        self._logger.debug("Building the modeling workflow...")
+        self.logger.debug("Building the modeling workflow...")
 
         # The supervisory workflow.
         mdl_wf = pe.Workflow(name='modeling', base_dir=self.base_dir)
@@ -307,7 +307,7 @@ class ModelingWorkflow(WorkflowBase):
                      'bolus_arrival_index']
         input_xfc = IdentityInterface(fields=in_fields)
         input_spec = pe.Node(input_xfc, name='input_spec')
-        self._logger.debug("The modeling workflow input is %s with"
+        self.logger.debug("The modeling workflow input is %s with"
             " fields %s" % (input_spec.name, in_fields))
         mdl_wf.connect(input_spec, 'time_series',
                        base_wf, 'input_spec.time_series')
@@ -342,14 +342,14 @@ class ModelingWorkflow(WorkflowBase):
         for field in out_fields:
             base_field = 'output_spec.' + field
             mdl_wf.connect(base_wf, base_field, output_spec, field)
-        self._logger.debug("The modeling workflow output is %s with"
+        self.logger.debug("The modeling workflow output is %s with"
                            " fields %s" % (output_spec.name, out_fields))
 
         self._configure_nodes(mdl_wf)
 
-        self._logger.debug("Created the %s workflow." % mdl_wf.name)
+        self.logger.debug("Created the %s workflow." % mdl_wf.name)
         # If debug is set, then diagram the workflow graph.
-        if self._logger.level <= logging.DEBUG:
+        if self.logger.level <= logging.DEBUG:
             self.depict_workflow(mdl_wf)
 
         return mdl_wf
@@ -617,7 +617,7 @@ class ModelingWorkflow(WorkflowBase):
             for field in r1_fields:
                 pk_opts.pop(field, None)
 
-        self._logger.debug("The PK modeling parameters: %s" % pk_opts)
+        self.logger.debug("The PK modeling parameters: %s" % pk_opts)
         return pk_opts
 
 

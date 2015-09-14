@@ -96,17 +96,17 @@ class ROIWorkflow(WorkflowBase):
             there were no inputs
         """
         if not inputs:
-            self._logger.debug("Skipping the %s workflow on %s %s scan %d,"
+            self.logger.debug("Skipping the %s workflow on %s %s scan %d,"
                                "since there are no inputs to convert." %
                                (self.workflow.name, subject, session, scan))
             return None
         # Set the inputs.
         self._set_inputs(subject, session, scan, time_series, *inputs)
         # Execute the workflow.
-        self._logger.debug("Executing the %s workflow on %s %s scan %d..." %
+        self.logger.debug("Executing the %s workflow on %s %s scan %d..." %
                          (self.workflow.name, subject, session, scan))
         self._run_workflow(self.workflow)
-        self._logger.debug("Executed the %s workflow on %s %s scan %d." %
+        self.logger.debug("Executed the %s workflow on %s %s scan %d." %
                          (self.workflow.name, subject, session, scan))
 
         # Return the resource name.
@@ -165,7 +165,7 @@ class ROIWorkflow(WorkflowBase):
         :param opts: the workflow creation options:
         :return: the execution workflow
         """
-        self._logger.debug("Creating the ROI execution workflow...")
+        self.logger.debug("Creating the ROI execution workflow...")
 
         # The execution workflow.
         exec_wf = pe.Workflow(name='roi_exec', base_dir=self.base_dir)
@@ -208,9 +208,9 @@ class ROIWorkflow(WorkflowBase):
         exec_wf.connect(input_spec, 'scan', upload_roi, 'scan')
         exec_wf.connect(convert, 'out_file', upload_roi, 'in_files')
 
-        self._logger.debug("Created the %s workflow." % exec_wf.name)
+        self.logger.debug("Created the %s workflow." % exec_wf.name)
         # If debug is set, then diagram the workflow graph.
-        if self._logger.level <= logging.DEBUG:
+        if self.logger.level <= logging.DEBUG:
             self.depict_workflow(exec_wf)
 
         return exec_wf

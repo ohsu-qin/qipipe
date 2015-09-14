@@ -219,7 +219,7 @@ class StagingWorkflow(WorkflowBase):
         :class:`qipipe.pipeline.staging.StagingWorkflow`.
         :return: the new workflow
         """
-        self._logger.debug('Creating the DICOM processing workflow...')
+        self.logger.debug('Creating the DICOM processing workflow...')
 
         # The Nipype workflow object.
         workflow = pe.Workflow(name='staging')
@@ -228,7 +228,7 @@ class StagingWorkflow(WorkflowBase):
         in_fields = ['collection', 'subject', 'session', 'scan']
         input_spec = pe.Node(IdentityInterface(fields=in_fields),
                              name='input_spec')
-        self._logger.debug("The %s workflow input node is %s with fields %s" %
+        self.logger.debug("The %s workflow input node is %s with fields %s" %
                          (workflow.name, input_spec.name, in_fields))
 
         # Create the scan, if necessary. The gate blocks upload until the
@@ -248,7 +248,7 @@ class StagingWorkflow(WorkflowBase):
         iter_volume_fields = ['volume', 'dest']
         iter_volume = pe.Node(IdentityInterface(fields=iter_volume_fields),
                               name='iter_volume')
-        self._logger.debug("The %s workflow volume iterable node is %s with"
+        self.logger.debug("The %s workflow volume iterable node is %s with"
                            " fields %s" % (workflow.name, iter_volume.name,
                                            iter_volume_fields))
 
@@ -256,7 +256,7 @@ class StagingWorkflow(WorkflowBase):
         iter_dicom_fields = ['volume', 'dicom_file']
         iter_dicom = pe.Node(IdentityInterface(fields=iter_dicom_fields),
                              name='iter_dicom')
-        self._logger.debug("The %s workflow DICOM iterable node is %s with"
+        self.logger.debug("The %s workflow DICOM iterable node is %s with"
                            " iterable source %s and iterables"
                            " ('%s', {%s: [%s]})" %
                            (workflow.name, iter_dicom.name, iter_volume.name,
@@ -375,9 +375,9 @@ class StagingWorkflow(WorkflowBase):
         # Instrument the nodes for cluster submission, if necessary.
         self._configure_nodes(workflow)
 
-        self._logger.debug("Created the %s workflow." % workflow.name)
+        self.logger.debug("Created the %s workflow." % workflow.name)
         # If debug is set, then diagram the workflow graph.
-        if self._logger.level <= logging.DEBUG:
+        if self.logger.level <= logging.DEBUG:
             self.depict_workflow(workflow)
 
         return workflow

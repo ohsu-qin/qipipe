@@ -44,7 +44,7 @@ def run(*inputs, **opts):
     Creates a :class:`qipipe.pipeline.qipipeline.QIPipelineWorkflow`
     and runs it on the given inputs, as follows:
 
-    - If the *actions* option includes ``stage`` or ``roi``, then
+    - If the workflow actions includes ``stage`` or ``roi``, then
       the input is the :meth:`QIPipelineWorkflow.run_with_dicom_input`
       DICOM subject directories input.
 
@@ -64,7 +64,7 @@ def run(*inputs, **opts):
         existing sessions (default False)
     """
     # The actions to perform.
-    actions = opts.pop('actions', _default_actions(**opts))
+    actions = opts.pop('actions', [])
     if 'stage' in actions:
         # Run with staging DICOM subject directory input.
         _run_with_dicom_input(actions, *inputs, **opts)
@@ -77,24 +77,6 @@ def run(*inputs, **opts):
     else:
         # Run downstream actions with XNAT session input.
         _run_with_xnat_input(actions, *inputs, **opts)
-
-
-def _default_actions(**opts):
-    """
-    Returns the default actions from the given options, as follows:
-
-    * If the *registration* resource option is set, then the actions
-      consist of ``register`` and ``model``.
-
-    * Otherwise, all of the actions in :const:`ACTIONS` are performed.
-
-    :param opts: the :meth:`run` options
-    :return: the default actions
-    """
-    if 'registration' in opts:
-        return ['register', 'model']
-    else:
-        return ACTIONS
 
 
 def _run_with_dicom_input(actions, *inputs, **opts):
@@ -340,7 +322,7 @@ class QIPipelineWorkflow(WorkflowBase):
             reg_rsc = reg_rsc_opt
         elif 'register' in actions:
             reg_rsc = registration.generate_resource_name(reg_tech)
-            self._logger.debug("Generated registration resource name %s" %
+            self.logger.debug("Generated registration resource name %s" %
                                reg_rsc)
         else:
             reg_rsc = None
@@ -397,11 +379,11 @@ class QIPipelineWorkflow(WorkflowBase):
         if 'roi' in actions and scan_input.iterators.roi:
             self._set_roi_inputs(*scan_input.iterators.roi)
         # Execute the workflow.
-        self._logger.debug("Running the pipeline on %s %s scan %d." %
+        self.logger.debug("Running the pipeline on %s %s scan %d." %
                            (scan_input.subject, scan_input.session,
                             scan_input.scan))
         self._run_workflow(self.workflow)
-        self._logger.debug("Completed pipeline execution on %s %s scan %d." %
+        self.logger.debug("Completed pipeline execution on %s %s scan %d." %
                            (scan_input.subject, scan_input.session,
                             scan_input.scan))
 
@@ -419,7 +401,7 @@ class QIPipelineWorkflow(WorkflowBase):
             whether an existing registration resource name was
             specfied
         """
-        self._logger.debug("Processing the %s %s %s Scan %d volumes..." %
+        self.logger.debug("Processing the %s %s %s Scan %d volumes..." %
                            (project, subject, session, scan))
         # Get the volume numbers.
         scan_obj = xnat.find_one(project, subject, session, scan=scan)
@@ -454,39 +436,39 @@ class QIPipelineWorkflow(WorkflowBase):
         if 'register' in actions:
             if registered:
                 if unregistered:
-                    self._logger.debug("Skipping registration of %d"
+                    self.logger.debug("Skipping registration of %d"
                                        " previously registered %s %s %s"
                                        " Scan %d volumes:" %
                                        (len(registered), project, subject,
                                         session, scan))
-                    self._logger.debug("%s" % registered)
+                    self.logger.debug("%s" % registered)
                 else:
-                    self._logger.debug("Skipping %s %s %s Scan %d"
+                    self.logger.debug("Skipping %s %s %s Scan %d"
                                        " registration, since all volumes"
                                        " are already registered." %
                                        (project, subject, session, scan))
             if unregistered:
-                self._logger.debug("Registering %d %s %s %s Scan %d"
+                self.logger.debug("Registering %d %s %s %s Scan %d"
                                    " volumes:" %
                                    (len(unregistered), project, subject,
                                     session, scan))
-                self._logger.debug("%s" % unregistered)
+                self.logger.debug("%s" % unregistered)
         elif unregistered:
-            self._logger.error("The QIN pipeline %s %s %s Scan %d register"
+            self.logger.error("The QIN pipeline %s %s %s Scan %d register"
                                 " action is not specified but there are"
                                 "  %d unregistered volumes:" %
                                 (project, subject, session, scan,
                                  len(unregistered)))
-            self._logger.error("%s" % unregistered)
+            self.logger.error("%s" % unregistered)
             raise ArgumentError("The QIN pipeline %s %s %s Scan %d register"
                                 " action is not specified but there are"
                                 " unregistered volumes" %
                                 (project, subject, session, scan))
         else:
-            self._logger.debug("Processing %d %s %s %s Scan %d volumes:" %
+            self.logger.debug("Processing %d %s %s %s Scan %d volumes:" %
                                (len(unregistered), project, subject, session,
                                 scan))
-            self._logger.debug("%s" % unregistered)
+            self.logger.debug("%s" % unregistered)
 
         # Set the workflow input.
         input_spec = self.workflow.get_node('input_spec')
@@ -497,10 +479,10 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # Execute the workflow.
         self._run_workflow(self.workflow)
-        self._logger.debug("Registered %d %s %s %s Scan %d volumes:" %
+        self.logger.debug("Registered %d %s %s %s Scan %d volumes:" %
                            (len(unregistered), project, subject, session,
                             scan))
-        self._logger.debug("%s" % unregistered)
+        self.logger.debug("%s" % unregistered)
 
     def _set_roi_inputs(self, *inputs):
         """
@@ -536,7 +518,7 @@ class QIPipelineWorkflow(WorkflowBase):
         registered = set(reg_obj.files().get())
         # The unregistered volume numbers.
         unregistered = set(files) - registered
-        self._logger.debug("The %s %s %s resource has %d registered volumes"
+        self.logger.debug("The %s %s %s resource has %d registered volumes"
                            " and %d unregistered volumes." %
                            (project, subject, session, len(registered),
                             len(unregistered)))
@@ -567,7 +549,7 @@ class QIPipelineWorkflow(WorkflowBase):
         #
         # By contrast, the workflows are tied together in front-to-back
         # order.
-        self._logger.debug("Building the QIN pipeline execution workflow"
+        self.logger.debug("Building the QIN pipeline execution workflow"
                             " for the actions %s..." % actions)
         # The execution workflow.
         exec_wf = pe.Workflow(name='qipipeline', base_dir=self.base_dir)
@@ -624,9 +606,9 @@ class QIPipelineWorkflow(WorkflowBase):
             reg_node.inputs.project = self.project
             reg_node.inputs.resource = self.registration_resource
             reg_node.inputs.opts = reg_opts
-            self._logger.info("Enabled registration.")
+            self.logger.info("Enabled registration.")
         else:
-            self._logger.info("Skipping registration.")
+            self.logger.info("Skipping registration.")
             reg_node = None
 
         # The ROI workflow node.
@@ -639,10 +621,10 @@ class QIPipelineWorkflow(WorkflowBase):
             roi_node.inputs.project = self.project
             roi_node.opts = dict(base_dir=self.base_dir,
                                  distributable=self.is_distributable)
-            self._logger.info("Enabled ROI conversion.")
+            self.logger.info("Enabled ROI conversion.")
         else:
             roi_node = None
-            self._logger.info("Skipping ROI conversion.")
+            self.logger.info("Skipping ROI conversion.")
 
         # Registration and modeling require a mask.
         if (reg_node or mdl_wf) and not mask_rsc_opt:
@@ -650,10 +632,10 @@ class QIPipelineWorkflow(WorkflowBase):
                                        base_dir=self.base_dir,
                                        distributable=self.is_distributable)
             mask_wf = mask_wf_gen.workflow
-            self._logger.info("Enabled scan mask creation.")
+            self.logger.info("Enabled scan mask creation.")
         else:
             mask_wf = None
-            self._logger.info("Skipping scan mask creation.")
+            self.logger.info("Skipping scan mask creation.")
 
         # The staging workflow.
         if 'stage' in actions:
@@ -661,10 +643,10 @@ class QIPipelineWorkflow(WorkflowBase):
                                          base_dir=self.base_dir,
                                          distributable=self.is_distributable)
             stg_wf = stg_wf_gen.workflow
-            self._logger.info("Enabled staging.")
+            self.logger.info("Enabled staging.")
         else:
             stg_wf = None
-            self._logger.info("Skipping staging.")
+            self.logger.info("Skipping staging.")
 
         # Validate that there is at least one constituent workflow.
         if not any([stg_wf, roi_node, reg_node, mdl_wf]):
@@ -758,7 +740,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 scan_ts_xfc = MergeNifti(out_format=SCAN_TS_RSC)
                 scan_ts = pe.Node(scan_ts_xfc, name='merge_volumes')
                 exec_wf.connect(staged, 'out_files', scan_ts, 'in_files')
-                self._logger.debug('Connected staging to scan time series merge.')
+                self.logger.debug('Connected staging to scan time series merge.')
                 # Upload the time series.
                 ul_scan_ts_xfc = XNATUpload(project=self.project,
                                             resource=SCAN_TS_RSC,
@@ -793,7 +775,7 @@ class QIPipelineWorkflow(WorkflowBase):
                                 mask_wf, 'input_spec.scan')
                 exec_wf.connect(scan_ts, 'out_file',
                                 mask_wf, 'input_spec.time_series')
-                self._logger.debug('Connected scan time series to mask.')
+                self.logger.debug('Connected scan time series to mask.')
 
             # Compute the bolus arrival from the scan time series.
             bolus_arv_xfc = Function(input_names=['time_series'],
@@ -801,7 +783,7 @@ class QIPipelineWorkflow(WorkflowBase):
                                      function=bolus_arrival_index_or_zero)
             bolus_arv = pe.Node(bolus_arv_xfc, name='bolus_arrival_index')
             exec_wf.connect(scan_ts, 'out_file', bolus_arv, 'time_series')
-            self._logger.debug('Connected scan time series to bolus arrival.')
+            self.logger.debug('Connected scan time series to bolus arrival.')
 
         # If ROI is enabled, then convert the ROIs.
         if roi_node:
@@ -809,7 +791,7 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(input_spec, 'session', roi_node, 'session')
             exec_wf.connect(input_spec, 'scan', roi_node, 'scan')
             exec_wf.connect(scan_ts, 'out_file', roi_node, 'time_series')
-            self._logger.debug('Connected the scan time series to ROI.')
+            self.logger.debug('Connected the scan time series to ROI.')
 
         # If registration is enabled, then register the unregistered
         # staged images.
@@ -837,18 +819,18 @@ class QIPipelineWorkflow(WorkflowBase):
                                 exclude_registered, 'exclusions')
                 exec_wf.connect(exclude_registered, 'out_files',
                                 reg_node, 'in_files')
-            self._logger.debug('Connected staging to registration.')
+            self.logger.debug('Connected staging to registration.')
 
             # The mask input.
             if mask_wf:
                 exec_wf.connect(mask_wf, 'output_spec.mask', reg_node, 'mask')
-                self._logger.debug('Connected mask to registration.')
+                self.logger.debug('Connected mask to registration.')
             else:
                 exec_wf.connect(download_mask, 'out_file', reg_node, 'mask')
             # The bolus arrival.
             exec_wf.connect(bolus_arv, 'bolus_arrival_index',
                             reg_node, 'bolus_arrival_index')
-            self._logger.debug('Connected bolus arrival to registration.')
+            self.logger.debug('Connected bolus arrival to registration.')
 
         # If the modeling workflow is enabled, then model the scan or realigned
         # images.
@@ -863,14 +845,14 @@ class QIPipelineWorkflow(WorkflowBase):
             if mask_wf:
                 exec_wf.connect(mask_wf, 'output_spec.mask',
                                 mdl_wf, 'input_spec.mask')
-                self._logger.debug('Connected mask to modeling.')
+                self.logger.debug('Connected mask to modeling.')
             else:
                 exec_wf.connect(download_mask, 'out_file',
                                 mdl_wf, 'input_spec.mask')
             # The bolus arrival.
             exec_wf.connect(bolus_arv, 'bolus_arrival_index',
                             mdl_wf, 'input_spec.bolus_arrival_index')
-            self._logger.debug('Connected bolus arrival to modeling.')
+            self.logger.debug('Connected bolus arrival to modeling.')
 
             # If registration is enabled, then the registration 4D
             # time series is created by that workflow, otherwise
@@ -948,7 +930,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 # Pass the realigned time series to modeling.
                 exec_wf.connect(merge_reg, 'out_file',
                                 mdl_wf, 'input_spec.time_series')
-                self._logger.debug('Connected registration to modeling.')
+                self.logger.debug('Connected registration to modeling.')
             else:
                 # Model the scan input.
                 exec_wf.connect(scan_ts, 'out_file',
@@ -957,9 +939,9 @@ class QIPipelineWorkflow(WorkflowBase):
         # Set the configured workflow node inputs and plug-in options.
         self._configure_nodes(exec_wf)
 
-        self._logger.debug("Created the %s workflow." % exec_wf.name)
+        self.logger.debug("Created the %s workflow." % exec_wf.name)
         # If debug is set, then diagram the workflow graph.
-        if self._logger.level <= logging.DEBUG:
+        if self.logger.level <= logging.DEBUG:
             self.depict_workflow(exec_wf)
 
         return exec_wf

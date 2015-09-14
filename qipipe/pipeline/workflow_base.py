@@ -72,41 +72,45 @@ class WorkflowBase(object):
     None
     """
 
-    def __init__(self, project, logger, **opts):
+    def __init__(self, **kwargs):
         """
         Initializes this workflow wrapper object.
         If the optional configuration file is specified, then the
         workflow settings in that file override the default settings.
 
-        :param project: the :attr:`project`
-        :param logger: the logger to use
-        :parameter opts: the following keyword options:
+        :param kwargs: the following keyword arguments:
+        :keyword project: the :attr:`project`
+        :keyword logger: the :attr:`logger` to use
+        :keyword parent: the parent workflow for a child workflow
         :keyword base_dir: the :attr:`base_dir`
         :keyword config: the optional :attr:`configuration` dictionary
             or file
         :keyword dry_run: the :attr:`dry_run` flag
         :keyword distributable: the :attr:`distributable` flag
         """
-        self.project = project
+        self.project = opts.get('project')
         """The XNAT project name."""
 
-        self._logger = logger
+        self.logger = opts.get('logger')
         """This workflow's logger."""
 
         self.base_dir = opts.get('base_dir',
                                  tempfile.mkdtemp(prefix='qipipe_'))
         "The workflow execution directory (default a new temp directory)."
 
+        parent = opts.get('parent')
+        if parent:
+            if not self.
         cfg_opt = opts.get('config', None)
         if cfg_opt == None or isinstance(cfg_opt, str):
             config = self._load_configuration(cfg_opt)
         else:
             config = cfg_opt
         config_s = pprint.pformat(config)
-            
-        self._logger.debug("Pipeline configuration:")
+
+        self.logger.debug("Pipeline configuration:")
         for line in config_s.split("\n"):
-            self._logger.debug(line)
+            self.logger.debug(line)
         self.configuration = config
         """The workflow node inputs configuration."""
 
@@ -140,7 +144,7 @@ class WorkflowBase(object):
         base = workflow.name + '.dot'
         fname = os.path.join(self.base_dir, base)
         workflow.write_graph(dotfilename=fname)
-        self._logger.debug("The %s workflow graph is depicted at %s.png." %
+        self.logger.debug("The %s workflow graph is depicted at %s.png." %
                          (workflow.name, fname))
 
     def _load_configuration(self, cfg_file=None):
@@ -192,7 +196,7 @@ class WorkflowBase(object):
 
         # Load the configuration.
         if cfg_files:
-            self._logger.debug("Loading the %s configuration files %s..." %
+            self.logger.debug("Loading the %s configuration files %s..." %
                              (name, cfg_files))
             cfg = read_config(*cfg_files)
             return dict(cfg)
@@ -220,7 +224,7 @@ class WorkflowBase(object):
         # If the workflow can be distributed, then get the plugin
         # arguments.
         is_dist_clause = 'is' if self.is_distributable else 'is not'
-        self._logger.debug("The %s workflow %s distributable in a"
+        self.logger.debug("The %s workflow %s distributable in a"
                            " cluster environment." %
                            (workflow.name, is_dist_clause))
         if self.is_distributable:
@@ -235,10 +239,10 @@ class WorkflowBase(object):
             workflow.base_dir = self.base_dir
 
         # Run the workflow.
-        self._logger.debug("Executing the %s workflow in %s..." %
+        self.logger.debug("Executing the %s workflow in %s..." %
                            (workflow.name, workflow.base_dir))
         if self.dry_run:
-            self._logger.debug("Skipped workflow %s job submission,"
+            self.logger.debug("Skipped workflow %s job submission,"
                                " since the dry run flag is set." %
                                workflow.name)
         else:
@@ -281,14 +285,14 @@ class WorkflowBase(object):
         # The execution setting.
         if 'Execution' in self.configuration:
             workflow.config['execution'] = self.configuration['Execution']
-            self._logger.debug("Workflow %s execution parameters: %s." %
+            self.logger.debug("Workflow %s execution parameters: %s." %
                              (workflow.name, workflow.config['execution']))
 
         # The Nipype plug-in parameters.
         if self.plug_in and self.plug_in in self.configuration:
             plug_in_opts = self.configuration[self.plug_in]
             opts = dict(plugin=self.plug_in, **plug_in_opts)
-            self._logger.debug("Workflow %s %s plug-in parameters: %s." %
+            self.logger.debug("Workflow %s %s plug-in parameters: %s." %
                              (workflow.name, self.plug_in, opts))
         else:
             opts = {}
@@ -319,7 +323,7 @@ class WorkflowBase(object):
                 # Retain this workflow's default even if a node defined
                 # in this workflow is included in a parent workflow.
                 def_plugin_args['overwrite'] = True
-                self._logger.debug("Workflow %s default node plug-in parameters:"
+                self.logger.debug("Workflow %s default node plug-in parameters:"
                                   " %s." % (workflow.name, def_plugin_args))
         else:
             def_plugin_args = None
@@ -353,7 +357,7 @@ class WorkflowBase(object):
                             value['qsub_args'] = def_qsub_args + ' ' + qsub_args
                             value['overwrite'] = True
                         setattr(node, attr, value)
-                        self._logger.debug("%s workflow node %s plugin"
+                        self.logger.debug("%s workflow node %s plugin"
                                           " arguments: %s" %
                                           (workflow.name, node, value))
                 else:
@@ -385,7 +389,7 @@ class WorkflowBase(object):
             # setting to the log.
             if input_dict:
                 self._set_node_inputs(node, **input_dict)
-                self._logger.debug("The following %s workflow node %s inputs"
+                self.logger.debug("The following %s workflow node %s inputs"
                                    " were set from the configuration: %s" %
                                    (workflow.name, node, input_dict))
 
