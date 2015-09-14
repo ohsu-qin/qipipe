@@ -10,7 +10,7 @@ class ClinicalError(Exception):
     pass
 
 
-def sync(subject, filename):
+def update(subject, filename):
     """
     Updates the subject clinical database content from the given workbook
     file.

@@ -39,7 +39,7 @@ MODELING_FIXTURE = os.path.join(FIXTURES, 'modeling' 'parameters.csv')
 
 class TestImaging(object):
     """
-    Imaging sync tests.
+    Imaging update tests.
     """
 
     def setup(self):
@@ -72,7 +72,7 @@ class TestImaging(object):
         with qixnat.connect() as xnat:
             xnat.delete(PROJECT, self._subject_name, self._session_name)
 
-    def test_sync(self):
+    def test_update(self):
         # The test qiprofile subject.
         subject = Subject(project=PROJECT, collection=COLLECTION,
                           number=SUBJECT)
@@ -80,4 +80,4 @@ class TestImaging(object):
             # The test XNAT scan.
             scan = xnat.find(PROJECT, self._subject_name, self._session_name,
                              scan=SCAN)
-            imaging.sync(SUBJECT, scan)
+            imaging.update(SUBJECT, scan)
