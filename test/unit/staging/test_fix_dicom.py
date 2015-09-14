@@ -23,31 +23,30 @@ SUBJECT = 'Sarcoma003'
 class TestFixDicom(object):
     """Fix DICOM header unit tests."""
 
-    def test_breast(self):
+    def setUp(self):
         shutil.rmtree(RESULTS, True)
-        dest = os.path.dirname(RESULTS)
-        fixed = fix_dicom_headers(COLLECTION, SUBJECT, FIXTURE, dest=dest)
+        os.makedirs(RESULTS)
+
+    def tearDown(self):
+        shutil.rmtree(RESULTS, True)
+
+    def test_breast(self):
+        fixed = fix_dicom_headers(COLLECTION, SUBJECT, FIXTURE, dest=RESULTS)
         # Verify the result.
         for ds in reader.iter_dicom(*fixed):
             assert_equal(ds.BodyPartExamined, 'CHEST',
                          "Incorrect Body Part: %s" % ds.BodyPartExamined)
-            assert_equal(
-                ds.PatientID, SUBJECT, "Incorrect Patient ID: %s" % ds.PatientID)
-        # Cleanup.
-        shutil.rmtree(RESULTS, True)
+            assert_equal(ds.PatientID, SUBJECT, "Incorrect Patient ID: %s" %
+                                                ds.PatientID)
 
     def test_sarcoma(self):
-        shutil.rmtree(RESULTS, True)
-        dest = os.path.dirname(RESULTS)
-        fixed = fix_dicom_headers(COLLECTION, SUBJECT, FIXTURE, dest=dest)
+        fixed = fix_dicom_headers(COLLECTION, SUBJECT, FIXTURE, dest=RESULTS)
         # Verify the result.
         for ds in reader.iter_dicom(*fixed):
             assert_equal(ds.BodyPartExamined, 'CHEST',
                          "Incorrect Body Part: %s" % ds.BodyPartExamined)
             assert_equal(ds.PatientID, SUBJECT,
                          "Incorrect Patient ID: %s" % ds.PatientID)
-        # Cleanup.
-        shutil.rmtree(RESULTS, True)
 
 
 if __name__ == "__main__":
