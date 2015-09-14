@@ -2,9 +2,10 @@ import os
 import shutil
 import distutils
 from nose.tools import (assert_equal, assert_is_not_none, assert_true)
+from qiutil.ast_config import read_config
+from qiutil.which import which
 from qipipe.pipeline import qipipeline as qip
 import qixnat
-from qiutil.ast_config import read_config
 from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
 from ...helpers.staging import subject_sources
@@ -47,7 +48,7 @@ class TestQIPipeline(object):
         data = os.getenv('QIN_DATA')
         if data:
             fixture = os.path.join(RESULTS, 'data', 'breast')
-            parent = os.path.join(fixture, 'BreastChemo1')
+            parent = os.path.join(fixture, 'BreastChemo3')
             os.makedirs(parent)
             src = os.path.join(data, 'Breast_Chemo_Study', 'BreastChemo3',
                                'Visit1')
@@ -97,7 +98,7 @@ class TestQIPipeline(object):
                     registration=REG_CONF)
         # If fastfit is not available, then only execute the staging and
         # registration workflows. Otherwise, execute all workflows.
-        if not distutils.spawn.find_executable('fastfit'):
+        if not which('fastfit'):
             opts['actions'] = ['stage', 'register']
 
         # The test subject => directory dictionary.
