@@ -10,6 +10,7 @@ from qiutil.ast_config import read_config
 from ..helpers.distributable import DISTRIBUTABLE
 from .pipeline_error import PipelineError
 
+
 class WorkflowBase(object):
     """
     The WorkflowBase class is the base class for the qipipe workflow
