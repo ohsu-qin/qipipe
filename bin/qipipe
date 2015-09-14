@@ -96,6 +96,17 @@ def _parse_arguments():
     parser.add_argument('--no-submit', action='store_true',
                         help="don't submit jobs to a cluster environment")
 
+    ##
+    # TODO -
+    # * Move the staging, registration and modeling options to
+    #   a config file with topics [Staging], etc.
+    # * Add a -c/--config option, with default ./qipipe.cfg.
+    # * Delete the shim option.
+    # * Move staging/collections.py into collection.py, renaming
+    #   module attribute extent to collections.
+    # * Rename staging/ohsu.py to staging/patterns and read the
+    #   constants from the config property file.
+    ##
     # The staging options.
     parser.add_argument('-p', '--project',
                         help='the QIN project name, required for staging')
@@ -137,10 +148,6 @@ def _parse_arguments():
     parser.add_argument('--modeling-technique',
                         help='the XNAT modeling technique',
                         metavar='TECHNIQUE')
-
-    # The application extention option.
-    parser.add_argument('--shim', help='the application extension',
-                        metavar='MODULE')
 
     # The input directories or XNAT labels to process.
     parser.add_argument('input', nargs='+',
