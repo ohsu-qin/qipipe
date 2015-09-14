@@ -39,6 +39,7 @@ number, as determined by the
 :meth:`qipipeline.pipeline.staging.volume_format` function.
 """
 
+
 def run(*inputs, **opts):
     """
     Creates a :class:`qipipe.pipeline.qipipeline.QIPipelineWorkflow`
@@ -109,10 +110,16 @@ def _run_with_dicom_input(actions, *inputs, **opts):
     for scan_input in iter_stage(project, collection, *inputs, **opts):
         # OHSU - Only multi-volume scans can have post-staging downstream
         # actions.
-        if len(scan_input.iterators.dicom) == MULTI_VOLUME_SCAN_NUMBERS:
+        if scan_input.scan in MULTI_VOLUME_SCAN_NUMBERS:
             if 'stage' in actions:
                 wf_actions = ['stage']
             else:
+                self.logger.debug("Skipping %s %s %s scan %d, since the"
+                            " actions do not include stage and only"
+                            " multi-volume scans support post-stage"
+                            "actions." %
+                            (project, scan_input.subject, scan_input.session,
+                             scan_input.scan))
                 continue
         else:
             wf_actions = actions
