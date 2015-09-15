@@ -517,8 +517,6 @@ class ModelingWorkflow(WorkflowBase):
 
         # The PK modeling parameters.
         opts = self._pk_parameters(**opts)
-        # Set the use_fixed_r1_0 flag.
-        use_fixed_r1_0 = not not opts.get('r1_0_val')
 
         # Set up the input node.
         non_pk_flds = ['time_series', 'mask', 'bolus_arrival_index']
@@ -684,14 +682,6 @@ def make_r1_0(pdw_image, t1w_image, max_r1_0, **kwargs):
     r1_space = np.arange(0.01, max_r1_0, 0.01)
     mask_opt = kwargs.pop('mask', None)
     if mask_opt:
-        
-        
-        
-        
-        raise ValueError("Bogus: %s (%s)" % (mask_opt, mask_opt.__class_))
-        
-        
-        
         kwargs['mask'] = nb.load(mask_opt).get_data()
     r1_0 = pdw_t1w_to_r1(pdw_nw, t1w_nw, r1_space=r1_space, **kwargs)
 
