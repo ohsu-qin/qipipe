@@ -505,9 +505,10 @@ class ModelingWorkflow(WorkflowBase):
 
     def _create_mock_workflow(self, **opts):
         """
-        Creates a dummy modeling base workflow. This workflow performs the steps
-        described in :class:`qipipe.pipeline.modeling.ModelingWorkflow` with
-        the exception of XNAT upload.
+        Creates a dummy modeling base workflow. This workflow performs
+        the steps described in
+        :class:`qipipe.pipeline.modeling.ModelingWorkflow` with the
+        exception of XNAT upload.
 
         :param opts: the PK modeling parameters
         :return: the pyxnat Workflow

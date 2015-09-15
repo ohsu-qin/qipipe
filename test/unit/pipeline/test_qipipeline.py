@@ -102,13 +102,7 @@ class TestQIPipeline(object):
 
         # The pipeline options.
         opts = dict(base_dir=base_dir, dest=dest, collection=collection,
-                    registration_technique='mock')
-        # If fastfit is not available, then only execute the staging and
-        # registration workflows. Otherwise, execute all workflows.
-        if which('fastfit'):
-            actions = None
-        else:
-            actions = opts['actions'] = ['stage', 'register']
+                    registration_technique='mock', modeling_technique='mock')
 
         # The {test subject: input directory} dictionary.
         sbj_dir_dict = subject_sources(collection, fixture)
