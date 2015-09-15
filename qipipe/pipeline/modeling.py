@@ -14,18 +14,20 @@ from .pipeline_error import PipelineError
 PK_PREFIX = 'pk'
 """The XNAT modeling resource object label prefix."""
 
-DEF_TECHNIQUE = 'bolero'
-"""The default modeling technique is the OHSU proprietary ``bolero``."""
+TECHNIQUES = ['mock']
+"""The built-in modeling techniques."""
+
 
 class ModelingError(Exception):
     pass
 
 
-def run(project, subject, session, scan, time_series, **opts):
+def run(technique, project, subject, session, scan, time_series, **opts):
     """
     Creates a :class:`qipipe.pipeline.modeling.ModelingWorkflow` and
     runs it on the given inputs.
 
+    :param technique: the :attr:ModelingWorkflow.technique`
     :param project: the project name
     :param subject: the input subject
     :param session: the input session
@@ -37,8 +39,8 @@ def run(project, subject, session, scan, time_series, **opts):
         result
     """
     mask = opts.pop('mask', None)
-    wf = ModelingWorkflow(project, **opts)
-    
+    wf = ModelingWorkflow(project=project, technique=technique, **opts)
+
     return wf.run(subject, session, scan, time_series, mask=mask)
 
 
@@ -141,7 +143,7 @@ class ModelingWorkflow(WorkflowBase):
     .. _AIRC DCE: https://everett.ohsu.edu/hg/qin_dce
     """
 
-    def __init__(self, project, **opts):
+    def __init__(self, **kwargs):
         """
         The modeling parameters can be defined in either the options or the
         configuration as follows:
@@ -164,11 +166,9 @@ class ModelingWorkflow(WorkflowBase):
         - The *baseline_end_idx* defaults to 1 if it is not set in
           either the input options or the configuration.
 
-        :param project: the XNAT project name
-        :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
-            initializer options, as well as the following options:
+        :param kwargs: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
+            initializer keyword arguments, as well as the following options:
         :keyword resource: the XNAT resource name
-        :keyword technique: the modeling technique (default ``bolero``)
         :keyword r1_0_val: the optional fixed |R10| value
         :keyword max_r1_0: the maximum computed |R10| value, if the fixed
             |R10| option is not set
@@ -178,13 +178,15 @@ class ModelingWorkflow(WorkflowBase):
             series baseline image (default is 1)
         """
         super(ModelingWorkflow, self).__init__(logger=logger(__name__),
-                                               **opts)
+                                               **kwargs)
 
-        tech_opt = opts.pop('technique', None)
-        self.technique = tech_opt.lower() if tech_opt else DEF_TECHNIQUE
-        """The modeling technique (default :const:`DEF_TECHNIQUE`)."""
+        technique_opt = kwargs.pop('technique', None)
+        if not technique_opt:
+            raise PipelineError('The modeling technique was not specified.')
+        self.technique = technique_opt.lower()
+        """The modeling technique. Built-in techniques include ``mock``."""
 
-        rsc_opt = opts.pop('resource', None)
+        rsc_opt = kwargs.pop('resource', None)
         self.resource = rsc_opt or generate_resource_name(self.technique)
         """
         The XNAT resource name for all executions of this
@@ -193,7 +195,7 @@ class ModelingWorkflow(WorkflowBase):
         stored for each input volume without a name conflict.
         """
 
-        self.workflow = self._create_workflow(**opts)
+        self.workflow = self._create_workflow(**kwargs)
         """
         The modeling workflow described in
         :class:`qipipe.pipeline.modeling.ModelingWorkflow`.
@@ -291,7 +293,6 @@ class ModelingWorkflow(WorkflowBase):
         #     wf_gen = __import__(child_opt)
         # base_wf = wf_gen.create_workflow(**opts)
         #
-        technique = opts.get('technique', DEF_TECHNIQUE)
         if self.technique == 'bolero':
             base_wf = self._create_bolero_workflow(**opts)
         elif self.technique == 'mock':
@@ -300,7 +301,7 @@ class ModelingWorkflow(WorkflowBase):
             raise ModelingError("The modeling technique is unsupported:"
                                 " %s" % self.technique)
         else:
-            raise ModelingError("The modeling technique is missing")
+            raise ModelingError('The modeling technique is missing')
 
         # The workflow input fields.
         in_fields = ['subject', 'session', 'scan', 'time_series', 'mask',

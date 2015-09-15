@@ -6,12 +6,6 @@ from nose.tools import assert_is_not_none
 import nipype.pipeline.engine as pe
 from nipype.interfaces.dcmstack import MergeNifti
 import qixnat
-# Modeling requires the proprietary OHSU fastfit module.
-# If fastfit is not found, then the tests are skipped.
-try:
-    import fastfit
-except ImportError:
-    fastfit = None
 from qipipe.pipeline import modeling
 from qipipe.pipeline import qipipeline
 from ... import (ROOT, PROJECT)
@@ -28,7 +22,7 @@ RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'modeling')
 class TestModelingWorkflow(VolumeTestBase):
     """
     Modeling workflow unit tests.
-    This test exercises the modeling workflow on the QIN Breast and Sarcoma
+    This test exercises the modeling workflow on the Breast and Sarcoma
     study visits in the ``test/fixtures/pipeline/modeling`` test fixture
     directory.
     
@@ -59,22 +53,21 @@ class TestModelingWorkflow(VolumeTestBase):
         super(TestModelingWorkflow, self).__init__(logger(__name__), RESULTS)
 
     def test_breast(self):
-        if fastfit:
-            for args in self.stage('Breast'):
-                self._test_workflow(*args)
-        else:
-            logger(__name__).debug('Skipping modeling test since fastfit'
-                                   ' is unavailable.')
+        for args in self.stage('Breast'):
+            for technique in modeling.TECHNIQUES:
+                self._test_workflow(technique, *args)
 
     def test_sarcoma(self):
-        if fastfit:
-            for args in self.stage('Sarcoma'):
-                self._test_workflow(*args)
+        for args in self.stage('Sarcoma'):
+            for technique in modeling.TECHNIQUES:
+                self._test_workflow(technique, *args)
 
-    def _test_workflow(self, project, subject, session, scan, *images):
+    def _test_workflow(self, technique, project, subject, session, scan,
+                       *images):
         """
-        Executes :meth:`qipipe.pipeline.modeling.run` on the input scans.
-        
+        Executes :meth:`qipipe.pipeline.modeling.run` on the given input.
+
+        :param technique: the built-in modeling technique
         :param project: the input project name
         :param subject: the input subject name
         :param session: the input session name
@@ -88,20 +81,22 @@ class TestModelingWorkflow(VolumeTestBase):
         merge = MergeNifti(in_files=list(images),
                            out_format=qipipeline.SCAN_TS_RSC)
         time_series = merge.run().outputs.out_file
-        # Work-around for nipype bug described above.
+
+        # Work around the Nipype bug described above.
         _, ts_fname = os.path.split(time_series)
         ts_dest = os.path.join(RESULTS, ts_fname)
         import shutil
         shutil.move(time_series, ts_dest)
         time_series = ts_dest
         # End of work-around.
-        logger(__name__).debug("Testing the modeling workflow on the %s %s"
+
+        logger(__name__).debug("Testing the %s modeling workflow on the %s %s"
                                " time series %s..." %
-                               (subject, session, time_series))
+                               (technique, subject, session, time_series))
         with qixnat.connect() as xnat:
             xnat.delete(project, subject)
-            result = modeling.run(project, subject, session, scan, time_series, 
-                                  config=MODELING_CONF, technique='mock',
+            result = modeling.run(technique, project, subject, session, scan,
+                                  time_series, config=MODELING_CONF,
                                   base_dir=self.base_dir)
             # Find the modeling resource.
             rsc = xnat.find_one(project, subject, session, scan=scan,

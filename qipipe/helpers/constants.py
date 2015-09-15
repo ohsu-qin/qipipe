@@ -1,5 +1,5 @@
 SUBJECT_FMT = '%s%03d'
-"""The QIN subject name format with argument subject number."""
+"""The XNAT subject name format with argument subject number."""
 
 SESSION_FMT = 'Session%02d'
-"""The QIN session name format with argument session number."""
+"""The XNAT session name format with argument session number."""

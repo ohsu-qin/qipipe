@@ -1,3 +1,7 @@
+"""The proprietary OHSU mask conversion workflow."""
+
+# TODO - move this file to ohsu-qin.pipeline.
+
 import os
 import re
 import tempfile
@@ -29,7 +33,7 @@ def run(project, subject, session, scan, time_series, *inputs, **opts):
     :return: the :meth:`ROIWorkflow.run` result
     """
     # Make the workflow.
-    roi_wf = ROIWorkflow(project, **opts)
+    roi_wf = ROIWorkflow(project=project, **opts)
     # Run the workflow.
     return roi_wf.run(subject, session, scan, time_series, *inputs)
 
@@ -68,17 +72,17 @@ class ROIWorkflow(WorkflowBase):
     ``lesion2_slice12.nii.gz``.
     """
 
-    def __init__(self, project, **opts):
+    def __init__(self, **kwargs):
         """
         If the optional configuration file is specified, then the workflow
         settings in that file override the default settings.
 
-        :param project: the XNAT project name
-        :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
-            initializer options
+        :param kwargs: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
+            initializer keyword arguments
         """
-        super(ROIWorkflow, self).__init__(logger=logger(__name__), **opts)
-        self.workflow = self._create_workflow(**opts)
+        super(ROIWorkflow, self).__init__(logger=logger(__name__), **kwargs)
+        # The child workflow.
+        self.workflow = self._create_workflow(**kwargs)
         """The ROI workflow."""
 
     def run(self, subject, session, scan, time_series, *inputs):

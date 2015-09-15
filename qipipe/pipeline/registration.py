@@ -18,15 +18,15 @@ from .pipeline_error import PipelineError
 REG_PREFIX = 'reg'
 """The XNAT registration resource name prefix."""
 
-DEF_TECHNIQUE = 'ants'
-"""The default registration technique is ANTS."""
+TECHNIQUES = ['ants', 'fnirt', 'mock']
+"""The built-in registration techniques."""
 
 
-def run(project, subject, session, scan, ref_0, *images,
-        **opts):
+def run(technique, project, subject, session, scan, ref_0, *images, **opts):
     """
     Runs the registration workflow on the given session scan images.
 
+    :param technique: the :attr:`RegistrationWorkflow.technique`
     :param project: the project name
     :param subject: the subject name
     :param session: the session name
@@ -40,7 +40,8 @@ def run(project, subject, session, scan, ref_0, *images,
     # Extract the run options.
     run_opts = {k: opts.pop(k) for k in ['dest', 'mask'] if k in opts}
     # Make the workflow.
-    reg_wf = RegistrationWorkflow(project, **opts)
+    reg_wf = RegistrationWorkflow(project=project, technique=technique,
+                                  **opts)
     # Run the workflow.
     return reg_wf.run(subject, session, scan, ref_0, *images, **run_opts)
 
@@ -124,40 +125,35 @@ class RegistrationWorkflow(WorkflowBase):
     .. _SyN: http://www.ncbi.nlm.nih.gov/pubmed/17659998
     """
 
-    def __init__(self, project, **opts):
+    def __init__(self, **kwargs):
         """
         If the optional configuration file is specified, then the workflow
         settings in that file override the default settings.
 
-        :param project: the XNAT project name
-        :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
+        :param kwargs: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
             initializer options, as well as the following options:
-        :keyword base_dir: the workflow execution directory
-            (default a new temp directory)
         :keyword resource: the XNAT resource name to use
-        :keyword technique: the case-insensitive workflow technique
-            (``ANTS`` or ``FNIRT``, default ``ANTS``)
         :keyword recursive: flag indicating whether to perform step-wise
             iterative recursive registration
         """
         super(RegistrationWorkflow, self).__init__(logger=logger(__name__),
-                                                   **opts)
+                                                   **kwargs)
 
-        technique_opt = opts.pop('technique', None)
-        self.technique = (
-            technique_opt.lower() if technique_opt else DEF_TECHNIQUE
-        )
+        technique_opt = kwargs.pop('technique', None)
+        if not technique_opt:
+            raise PipelineError('The registration technique was not specified.')
+        self.technique = technique_opt.lower()
         """
-        The lower-case XNAT registration technique (``ants``, `fnirt``
-        or ``mock``, default :const:`DEF_TECHNIQUE`).
+        The lower-case XNAT registration technique. The built-in techniques
+        include ``ants``, `fnirt`` and ``mock``.
         """
 
-        rsc_opt = opts.pop('resource', None)
+        rsc_opt = kwargs.pop('resource', None)
         self.resource = rsc_opt or generate_resource_name(self.technique)
         """The XNAT resource name used for all runs against this
         workflow instance."""
 
-        self.workflow = self._create_realignment_workflow(**opts)
+        self.workflow = self._create_realignment_workflow(**kwargs)
         """The registration realignment workflow."""
 
     def run(self, subject, session, scan, ref_0, *images, **opts):

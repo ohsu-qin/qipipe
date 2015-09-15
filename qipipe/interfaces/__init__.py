@@ -1,5 +1,5 @@
 """
-The ``interfaces`` module includes the custom QIN Nipype interface classes.
+The ``interfaces`` module includes the custom Nipype interface classes.
 As a convenience, this  ``interfaces`` module imports all of the
 non-proprietary interface classes. The proprietary interface class
 :class:`qipipe.interfaces.fastfit.Fastfit` must be imported
@@ -10,6 +10,8 @@ separately from the :mod:`qipipe.interfaces.fastfit` module, e.g.::
 Importing ``fastfit`` in an environment that does not provide the
 fastfit application will raise an ImportError.
 """
+
+# TODO - move qipipe.interfaces.fastfit to ohsu-qipipe 
 
 from .compress import Compress
 from .copy import Copy

@@ -35,8 +35,8 @@ class WorkflowBase(object):
 
     3. the standard config file name in the current working directory
 
-    4. the standard config file name in the ``QIN_CONF`` environment
-       variable directory
+    4. the standard config file name in the ``QIPIPE_CONF_PATH``
+       environment variable directory
 
     5. the *config* initialization parameter
     """
@@ -47,7 +47,7 @@ class WorkflowBase(object):
     DEF_CONF_DIR = os.path.join(os.path.dirname(__file__), '..', 'conf')
     """The default configuration directory."""
 
-    CFG_ENV_VAR = 'QIN_CONF'
+    CFG_PATH = 'QIPIPE_CONF_PATH'
     """The configuration directory environment variable."""
 
     INTERFACE_PREFIX_PAT = re.compile('(\w+\.)+interfaces?\.?')
@@ -165,7 +165,7 @@ class WorkflowBase(object):
             dry_run = kwargs.get('dry_run')
         elif parent:
             dry_run = parent.dry_run
-        else
+        else:
             dry_run = False
         self.dry_run = dry_run
         """Flag indicating whether to prepare but not run the workflow."""
@@ -218,7 +218,7 @@ class WorkflowBase(object):
             cfg_files.append(cwd_cfg_file)
 
         # The config file specified by the directory environment variable.
-        env_cfg_dir = os.getenv(WorkflowBase.CFG_ENV_VAR, None)
+        env_cfg_dir = os.getenv(WorkflowBase.CFG_PATH, None)
         if env_cfg_dir:
             env_cfg_file = os.path.abspath(os.path.join(env_cfg_dir, fname))
             if os.path.exists(env_cfg_file) and env_cfg_file not in cfg_files:

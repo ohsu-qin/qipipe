@@ -10,8 +10,10 @@ import qixnat
 from qixnat.helpers import path_hierarchy
 from qiutil.logging import logger
 from . import staging
+from .pipeline_error import PipelineError
 from .workflow_base import WorkflowBase
 from .staging import StagingWorkflow
+from .modeling import ModelingWorkflow
 from .mask import MaskWorkflow
 from .roi import ROIWorkflow
 from . import registration
@@ -28,8 +30,8 @@ SCAN_TS_RSC = 'scan_ts'
 MASK_RSC = 'mask'
 """The XNAT mask resouce name."""
 
-ACTIONS = ['stage', 'roi', 'register', 'model']
-"""The list of all available actions."""
+ACTIONS = ['stage', 'roi', 'qiprofile', 'register', 'model']
+"""The list of all workflow actions."""
 
 VOLUME_FILE_PAT = re.compile("volume(\d{3}).nii.gz$")
 """
@@ -43,7 +45,8 @@ number, as determined by the
 def run(*inputs, **opts):
     """
     Creates a :class:`qipipe.pipeline.qipipeline.QIPipelineWorkflow`
-    and runs it on the given inputs, as follows:
+    and runs it on the given inputs. The pipeline execution depends
+    on the *actions* option, as follows:
 
     - If the workflow actions includes ``stage`` or ``roi``, then
       the input is the :meth:`QIPipelineWorkflow.run_with_dicom_input`
@@ -61,11 +64,13 @@ def run(*inputs, **opts):
     :keyword project: the XNAT project name
     :keyword collection: the image collection name
     :keyword actions: the workflow actions to perform
+        (default :const:`ACTIONS`)
     :keyword resume: flag indicating whether to resume processing on
         existing sessions (default False)
     """
     # The actions to perform.
-    actions = opts.pop('actions', [])
+    actions = opts.pop(
+    'actions', ACTIONS)
     if 'stage' in actions:
         # Run with staging DICOM subject directory input.
         _run_with_dicom_input(actions, *inputs, **opts)
@@ -259,7 +264,7 @@ class QIPipelineWorkflow(WorkflowBase):
       resource is found, then that resource file is downloaded.
       Otherwise, the mask is created from the staged images.
 
-    The QIN workflow input node is *input_spec* with the following
+    The workflow input node is *input_spec* with the following
     fields:
 
     - *subject*: the subject name
@@ -279,7 +284,7 @@ class QIPipelineWorkflow(WorkflowBase):
 
     The constituent workflows are combined as follows:
 
-    - The staging workflow input is the QIN workflow input.
+    - The staging workflow input is the workflow input.
 
     - The mask workflow input is the newly created or previously staged
       scan NiFTI image files.
@@ -317,13 +322,10 @@ class QIPipelineWorkflow(WorkflowBase):
 
         reg_tech_opt = opts.get('registration_technique')
         if reg_tech_opt:
-            reg_tech = reg_tech_opt.lower()
+            self.registration_technique = reg_tech_opt.lower()
+            """The registration technique."""
         elif 'register' in actions:
-            reg_tech = registration.DEF_TECHNIQUE
-        else:
-            reg_tech = None
-        self.registration_technique = reg_tech
-        """The registration technique."""
+            raise PipelineError('The registration technique was not specified.')
 
         reg_rsc_opt = opts.get('registration_resource')
         if reg_rsc_opt:
@@ -339,18 +341,15 @@ class QIPipelineWorkflow(WorkflowBase):
 
         mdl_tech_opt = opts.get('modeling_technique')
         if mdl_tech_opt:
-            mdl_tech = mdl_tech_opt.lower()
-        elif 'modeling' in actions:
-            mdl_tech = modeling.DEF_TECHNIQUE
-        else:
-            mdl_tech = None
-        self.modeling_technique = mdl_tech
-        """The modeling technique name."""
+            self.modeling_technique = mdl_tech_opt.lower()
+            """The modeling technique name."""
+        elif 'model' in actions:
+            raise PipelineError('The modeling technique was not specified.')
 
         mdl_rsc_opt = opts.get('modeling_resource')
         if mdl_rsc_opt:
             mdl_rsc = mdl_rsc_opt
-        elif 'modeling' in actions:
+        elif 'model' in actions:
             mdl_rsc = modeling.generate_resource_name(mdl_tech)
         else:
             mdl_rsc = None
@@ -414,19 +413,19 @@ class QIPipelineWorkflow(WorkflowBase):
         # Get the volume numbers.
         scan_obj = xnat.find_one(project, subject, session, scan=scan)
         if not scan_obj:
-            raise NotFoundError("The QIN pipeline did not find a %s %s %s"
+            raise NotFoundError("The pipeline did not find a %s %s %s"
                                 " scan %d." %
                                 (project, subject, session, scan))
         # The NIFTI resource contains the volume files.
         rsc_obj = scan_obj.resource('NIFTI')
         if not rsc_obj.exists():
-            raise NotFoundError("The QIN pipeline did not find a %s %s %s"
+            raise NotFoundError("The pipeline did not find a %s %s %s"
                                 " scan %d NIFTI resource." %
                                 (project, subject, session, scan))
         # The volume files.
         files = rsc_obj.files().get()
         if not files:
-            raise ArgumentError("There are no QIN pipeline %s %s %s Scan %d"
+            raise ArgumentError("There are no pipeline %s %s %s Scan %d"
                                 " NIFTI volumes" %
                                 (project, subject, session, scan))
 
@@ -462,13 +461,13 @@ class QIPipelineWorkflow(WorkflowBase):
                                     session, scan))
                 self.logger.debug("%s" % unregistered)
         elif unregistered:
-            self.logger.error("The QIN pipeline %s %s %s Scan %d register"
+            self.logger.error("The pipeline %s %s %s Scan %d register"
                                 " action is not specified but there are"
                                 "  %d unregistered volumes:" %
                                 (project, subject, session, scan,
                                  len(unregistered)))
             self.logger.error("%s" % unregistered)
-            raise ArgumentError("The QIN pipeline %s %s %s Scan %d register"
+            raise ArgumentError("The pipeline %s %s %s Scan %d register"
                                 " action is not specified but there are"
                                 " unregistered volumes" %
                                 (project, subject, session, scan))
@@ -557,7 +556,7 @@ class QIPipelineWorkflow(WorkflowBase):
         #
         # By contrast, the workflows are tied together in front-to-back
         # order.
-        self.logger.debug("Building the QIN pipeline execution workflow"
+        self.logger.debug("Building the pipeline execution workflow"
                             " for the actions %s..." % actions)
         # The execution workflow.
         exec_wf = pe.Workflow(name='qipipeline', base_dir=self.base_dir)
@@ -574,14 +573,9 @@ class QIPipelineWorkflow(WorkflowBase):
         reg_tech_opt = opts.get('registration_technique')
         mdl_tech_opt = opts.get('modeling_technique')
 
-        # The modeling workflow. Since the proprietary fastfit module
-        # might not be available, only import the ModelingWorkflow on
-        # demand if modeling is required.
         if 'model' in actions:
-            from .modeling import ModelingWorkflow
-            mdl_wf_gen = ModelingWorkflow(parent=self, 
-                                          resource=self.modeling_resource,
-                                          technique=self.modeling_technique)
+            mdl_wf_gen = ModelingWorkflow(parent=self, technique=mdl_tech_opt,
+                                          resource=self.modeling_resource)
             mdl_wf = mdl_wf_gen.workflow
             self.modeling_resource = mdl_wf_gen.resource
         else:
@@ -594,13 +588,17 @@ class QIPipelineWorkflow(WorkflowBase):
                           'in_files', 'mask', 'opts']
             # The registration function keyword options.
             if not self.registration_technique:
-                raise ArgumentError("Missing the registration technique")
+                raise ArgumentError('Missing the registration technique')
             if not self.registration_resource:
-                raise ArgumentError("Missing the registration resource name")
+                raise ArgumentError('Missing the registration resource name')
+            # Spell out the registration workflow options rather
+            # than delegating to this qipipeline workflow as the
+            # parent, since Nipype Function arguments must be
+            # primitive.
             reg_opts = dict(
                 base_dir=self.base_dir,
                 distributable=self.is_distributable,
-                technique=self.registration_technique
+                dry_run=self.dry_run
             )
             if 'recursive_registration' in opts:
                 reg_opts['recursive'] = opts['recursive_registration']
@@ -610,6 +608,7 @@ class QIPipelineWorkflow(WorkflowBase):
                                function=_register)
             reg_node = pe.Node(reg_xfc, name='register')
             reg_node.inputs.project = self.project
+            reg_node.inputs.technique = self.registration_technique
             reg_node.inputs.resource = self.registration_resource
             reg_node.inputs.opts = reg_opts
             self.logger.info("Enabled registration.")
@@ -909,10 +908,10 @@ class QIPipelineWorkflow(WorkflowBase):
                                     merge_reg, 'in_files')
                 else:
                     raise ArgumentError(
-                        "The QIN pipeline cannot perform modeling on the"
-                        " registration result, since the registration"
-                        " workflow is disabled and no registration resource"
-                        " was specified.")
+                        'The pipeline cannot perform modeling on the'
+                        ' registration result, since the registration'
+                        ' workflow is disabled and no registration resource'
+                        ' was specified.')
 
                 # Upload the realigned time series to XNAT.
                 upload_reg_ts_xfc = XNATUpload(project=self.project,
@@ -1007,10 +1006,10 @@ def bolus_arrival_index_or_zero(time_series):
         return 0
 
 
-def _register(project, subject, session, scan, resource,
+def _register(technique, project, subject, session, scan, resource,
              bolus_arrival_index, mask, in_files, opts):
     """
-    A stub for the register method.
+    A stub for the :meth:`register` method.
 
     :Note: contrary to Python convention, the opts method parameter
       is a required dictionary rather than a keyword aggregate (i.e.,
@@ -1020,15 +1019,16 @@ def _register(project, subject, session, scan, resource,
     """
     from qipipe.pipeline.qipipeline import register
 
-    return register(project, subject, session, scan, resource,
+    return register(technique, project, subject, session, scan, resource,
                     bolus_arrival_index, mask, *in_files, **opts)
 
 
-def register(project, subject, session, scan, resource,
+def register(technique, project, subject, session, scan, resource,
              bolus_arrival_index, mask, *in_files, **opts):
     """
     Runs the registration workflow on the given session scan images.
 
+    :param technique: the registration technique
     :param project: the project name
     :param subject: the subject name
     :param session: the session name

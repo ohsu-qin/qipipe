@@ -25,15 +25,12 @@ FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
 
 class TestQIPipeline(object):
     """
-    OHSU - QIN Pipeline unit tests.
+    Pipeline unit tests.
     
     Note:: a precondition for running this test is that the environment
-        variable ``QIN_DATA`` is set to the DICOM source directory.
-        If ``QIN_DATA`` is not set, then no test cases are run and a
+        variable ``QIPIPE_DATA`` is set to the DICOM source directory.
+        If ``QIPIPE_DATA`` is not set, then no test cases are run and a
         log message is issued.
-    
-    Note:: the modeling workflow is only executed if the ``fastfit``
-        executable is found.
     
     Note:: this test takes app. four hours to run serially without
     modeling.
@@ -46,7 +43,7 @@ class TestQIPipeline(object):
         shutil.rmtree(RESULTS, True)
 
     def test_breast(self):
-        data = os.getenv('QIN_DATA')
+        data = os.getenv('QIPIPE_DATA')
         if data:
             # Make the input area to hold a link to the first session.
             fixture = os.path.join(RESULTS, 'data', 'breast')
@@ -63,12 +60,12 @@ class TestQIPipeline(object):
             # Run the pipeline on the first visit.
             self._test_collection('Breast', fixture)
         else:
-            logger(__name__).info('Skipping the QIN pipeline unit Breast'
-                                  ' test, since the QIN_DATA environment'
+            logger(__name__).info('Skipping the pipeline unit Breast'
+                                  ' test, since the QIPIPE_DATA environment'
                                   ' variable is not set.')
 
     def test_sarcoma(self):
-        data = os.getenv('QIN_DATA')
+        data = os.getenv('QIPIPE_DATA')
         if data:
             # Make the input area to hold a link to the first session.
             fixture = os.path.join(RESULTS, 'data', 'sarcoma')
@@ -84,8 +81,8 @@ class TestQIPipeline(object):
             # Run the pipeline on the first visit.
             self._test_collection('Sarcoma', fixture)
         else:
-            logger(__name__).info('Skipping the QIN pipeline unit Sarcoma'
-                                  ' test, since the QIN_DATA environment'
+            logger(__name__).info('Skipping the pipeline unit Sarcoma'
+                                  ' test, since the QIPIPE_DATA environment'
                                   ' variable is not set.')
 
     def _test_collection(self, collection, fixture):
@@ -97,18 +94,20 @@ class TestQIPipeline(object):
         :param fixture: the test input directory holding a link to the
             first visit data
         """
-        logger(__name__).debug("Testing the QIN pipeline on %s..." % fixture)
+        logger(__name__).debug("Testing the pipeline on %s..." % fixture)
 
         # The staging destination and work area.
         dest = os.path.join(RESULTS, 'data')
         base_dir = os.path.join(RESULTS, 'work')
 
         # The pipeline options.
-        opts = dict(base_dir=base_dir, dest=dest, mask=MASK_CONF,
-                    collection=collection, registration=REG_CONF)
+        opts = dict(base_dir=base_dir, dest=dest, collection=collection,
+                    registration_technique='mock')
         # If fastfit is not available, then only execute the staging and
         # registration workflows. Otherwise, execute all workflows.
-        if not which('fastfit'):
+        if which('fastfit'):
+            actions = None
+        else:
             actions = opts['actions'] = ['stage', 'register']
 
         # The {test subject: input directory} dictionary.
@@ -123,7 +122,7 @@ class TestQIPipeline(object):
             for sbj in subjects:
                 xnat.delete(PROJECT, sbj)
             # Run the workflow on the subject input directories.
-            logger(__name__).debug("Executing the QIN pipeline on %s..." %
+            logger(__name__).debug("Executing the pipeline on %s..." %
                                    sbj_dir_dict)
             # The {subject: {session: }}
             output_dict = qip.run(*sources, **opts)
@@ -133,7 +132,7 @@ class TestQIPipeline(object):
                     # If registration is enabled, then verify the
                     # registration resource.  Otherwise, skip the
                     # remaining stage verification.
-                    if not 'register' in opts['actions']:
+                    if actions and not 'register' in opts['actions']:
                         continue
                     # The XNAT registration resource name.
                     rsc = results['registration']

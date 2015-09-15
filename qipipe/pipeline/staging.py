@@ -171,16 +171,15 @@ class StagingWorkflow(WorkflowBase):
     .. _DcmStack: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.dcmstack.html
     """
 
-    def __init__(self, project, **opts):
+    def __init__(self, **kwargs):
         """
         If the optional configuration file is specified, then the workflow
         settings in that file override the default settings.
 
-        :param project: the XNAT project name
-        :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
-            initializer options, as well as the following options:
+        :param kwargs: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
+            initializer keyword arguments
         """
-        super(StagingWorkflow, self).__init__(logger=logger(__name__), **opts)
+        super(StagingWorkflow, self).__init__(logger=logger(__name__), **kwargs)
 
         # Make the workflow.
         self.workflow = self._create_workflow()

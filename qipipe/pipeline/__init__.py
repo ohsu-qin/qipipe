@@ -1,5 +1,5 @@
 """
-The ``pipeline`` module includes the following QIN workflows:
+This ``pipeline`` module includes the following workflows:
 
 - :mod:`qipipe.pipeline.qipipeline`: the soup-to-nuts pipeline to stage, mask,
   register and model new images

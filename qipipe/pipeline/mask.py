@@ -27,7 +27,7 @@ def run(project, subject, session, scan, time_series, **opts):
     :param opts: additional :class:`MaskWorkflow` initialization parameters
     :return: the XNAT mask resource name
     """
-    wf_gen = MaskWorkflow(project, **opts)
+    wf_gen = MaskWorkflow(project=project, **opts)
 
     return wf_gen.run(subject, session, scan, time_series)
 
@@ -64,16 +64,15 @@ class MaskWorkflow(WorkflowBase):
         interface options
     """
 
-    def __init__(self, project, **opts):
+    def __init__(self, **kwargs):
         """
         If the optional configuration file is specified, then the workflow
         settings in that file override the default settings.
 
-        :param project: the XNAT project name
-        :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
-            initializer options, as well as the following options:
+        :param kwargs: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
+            initializer keyword arguments
         """
-        super(MaskWorkflow, self).__init__(logger=logger(__name__), **opts)
+        super(MaskWorkflow, self).__init__(logger=logger(__name__), **kwargs)
 
         self.workflow = self._create_workflow()
         """The mask creation workflow."""

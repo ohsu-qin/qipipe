@@ -41,16 +41,21 @@ class TestRegistrationWorkflow(VolumeTestBase):
 
     def test_breast(self):
         for args in self.stage('Breast'):
-            self._test_workflow(*args)
+            for technique in registration.TECHNIQUES:
+                self._test_workflow(technique, *args)
 
     def test_sarcoma(self):
         for args in self.stage('Sarcoma'):
-            self._test_workflow(*args)
+            for technique in registration.TECHNIQUES:
+                self._test_workflow(technique, *args)
 
-    def _test_workflow(self, project, subject, session, scan, *images):
+    def _test_workflow(self, technique, project, subject, session, scan,
+                       *images):
         """
-        Executes :meth:`qipipe.pipeline.registration.run` on the given input.
+        Executes :meth:`qipipe.pipeline.registration.run` on the given
+        input.
 
+        :param technique: the built-in registration technique
         :param project: the input project name
         :param subject: the input subject name
         :param session: the input session name
@@ -62,17 +67,17 @@ class TestRegistrationWorkflow(VolumeTestBase):
         # Realign the remaining images.
         moving = images[1:]
         # The target location.
-        self.dest = os.path.join(RESULTS, subject, session, 'scans',
+        self.dest = os.path.join(RESULTS, technique, subject, session, 'scans',
                                  str(scan), 'registration', RESOURCE)
-        logger(__name__).debug("Testing the registration workflow on %s %s"
+        logger(__name__).debug("Testing the %s registration workflow on %s %s"
                                " Scan %d..." %
-                               (subject, session, scan))
+                               (technique, subject, session, scan))
         with qixnat.connect() as xnat:
             xnat.delete(project, subject)
-            result = registration.run(project, subject, session, scan,
+            result = registration.run(technique, project, subject, session, scan,
                                       ref_0, *moving, config=REG_CONF,
-                                      resource=RESOURCE, technique='mock',
-                                      dest=self.dest, base_dir=self.base_dir)
+                                      resource=RESOURCE, dest=self.dest,
+                                      base_dir=self.base_dir)
             # Verify the result.
             try:
                 self._verify_result(xnat, subject, session, scan, result)

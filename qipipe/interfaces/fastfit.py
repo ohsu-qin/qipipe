@@ -9,6 +9,9 @@ OHSU - This module wraps the proprietary OHSU AIRC ``fastfit`` software.
     included, then qipipe would not compile in a non-AIRC cluster
     environment, even if this ``FastFit`` interface is unused.
 """
+
+# TODO - move this to the ohsu-qin.pipeline.interfaces module
+
 # Absolute import (the default in a future Python release) resolves
 # the fastfit import as the installed fastfit Python module rather
 # than this interface of the same name.
