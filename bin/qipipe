@@ -101,7 +101,6 @@ def _parse_arguments():
     # * Move the staging, registration and modeling options to
     #   a config file with topics [Staging], etc.
     # * Add a -c/--config option, with default ./qipipe.cfg.
-    # * Delete the shim option.
     # * Move staging/collections.py into collection.py, renaming
     #   module attribute extent to collections.
     # * Rename staging/ohsu.py to staging/patterns and read the
