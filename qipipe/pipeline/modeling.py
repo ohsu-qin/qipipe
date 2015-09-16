@@ -219,7 +219,7 @@ class ModelingWorkflow(WorkflowBase):
         :param mask: the XNAT mask resource
         :return: the modeling result XNAT resource name
         """
-        self.logger.debug("Modeling the %s %s Scan %d %s time series..." %
+        self.logger.debug("Modeling the %s %s Scan %d time series %s..." %
             (subject, session, scan, time_series))
 
         # Determine the bolus uptake. If it could not be determined,
@@ -241,13 +241,13 @@ class ModelingWorkflow(WorkflowBase):
 
         # Execute the modeling workflow.
         self.logger.debug("Executing the %s workflow on the %s %s scan %d"
-                           " %s time series..." %
-                           (self.workflow.name, subject, session, scan, time_series))
+                          " time series %s..." %
+                          (self.workflow.name, subject, session, scan, time_series))
         self._run_workflow(self.workflow)
-        self.logger.debug("Executed the %s workflow on the %s %s scan %d %s"
-                            " time series." %
-                           (self.workflow.name, subject, session, scan, time_series))
-        
+        self.logger.debug("Executed the %s workflow on the %s %s scan %d"
+                          " time series %s." %
+                          (self.workflow.name, subject, session, scan, time_series))
+
         # Return the resource name.
         return self.resource
 
