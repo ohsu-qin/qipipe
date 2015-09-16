@@ -75,9 +75,13 @@ class TestModelingWorkflow(VolumeTestBase):
         :param images: the input 3D NiFTI images to model
         """
         # Make the 4D time series from the test fixture inputs.
-        # TODO - newer nipype has out_path MergeNifti input field. Set
-        # that field to out_path=RESULTS below. Work-around is to move
-        # the file to RESULTS below.
+        #
+        # Note: newer Nipype, e.g. 0.10, has an out_path MergeNifti
+        # input field. Until that Nipype version is supported by
+        # qipipe, move the file to RESULTS instead.
+        #
+        # TODO - Add out_path=RESULTS and remove the work-around
+        # below when Nipype version >= 0.10 is supported by qipipe.
         merge = MergeNifti(in_files=list(images),
                            out_format=qipipeline.SCAN_TS_RSC)
         time_series = merge.run().outputs.out_file
