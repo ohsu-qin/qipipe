@@ -4,11 +4,15 @@ import shutil
 from collections import defaultdict
 from nose.tools import (assert_equal, assert_not_equal)
 from qiutil.collections import nested_defaultdict
+from qipipe.pipeline.workflow_base import CONF_DIR_ENV_VAR
 from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
 
 FIXTURES = os.path.join(ROOT, 'fixtures', 'staged')
 """The test fixtures directory."""
+
+CONF_DIR = os.path.join(ROOT, 'conf')
+"""The test workflow configuration overrides."""
 
 
 class VolumeTestBase(object):
@@ -33,9 +37,17 @@ class VolumeTestBase(object):
 
     def setUp(self):
         shutil.rmtree(self._results, True)
+        # Override the workflow configuration files with test settings.
+        self._prev_conf_env_var = os.environ.get(CONF_DIR_ENV_VAR)
+        os.environ[CONF_DIR_ENV_VAR] = CONF_DIR
 
     def tearDown(self):
         shutil.rmtree(self._results, True)
+        # Restore the environment.
+        if self._prev_conf_env_var:
+            os.environ[CONF_DIR_ENV_VAR] = self._prev_conf_env_var
+        else:
+            os.environ.pop(CONF_DIR_ENV_VAR)
 
     def stage(self, collection):
         """
