@@ -101,8 +101,9 @@ class TestQIPipeline(object):
         base_dir = os.path.join(RESULTS, 'work')
 
         # The pipeline options.
-        opts = dict(base_dir=base_dir, dest=dest, collection=collection,
-                    registration_technique='mock', modeling_technique='mock')
+        opts = dict(base_dir=base_dir, dest=dest, project=PROJECT,
+                    collection=collection, registration_technique='mock',
+                    modeling_technique='mock')
 
         # The {test subject: input directory} dictionary.
         sbj_dir_dict = subject_sources(collection, fixture)
