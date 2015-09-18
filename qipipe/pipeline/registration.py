@@ -382,6 +382,14 @@ class RegistrationWorkflow(WorkflowBase):
         copy_meta = pe.Node(CopyMeta(), name='copy_meta')
         realign_wf.connect(input_spec, 'moving_image', copy_meta, 'src_file')
 
+        # The input file name without directory.
+        input_filename_xfc = Function(input_names=['in_file'],
+                                      output_names=['out_file'],
+                                      function=filename)
+        input_filename = pe.Node(input_filename_xfc, name='input_filename')
+        realign_wf.connect(input_spec, 'moving_image',
+                           input_filename, 'in_file')
+
         if self.technique.lower() == 'ants':
             # Nipype bug work-around:
             # Setting the registration metric and metric_weight inputs
@@ -403,13 +411,6 @@ class RegistrationWorkflow(WorkflowBase):
                                register, 'fixed_image_mask')
             realign_wf.connect(input_spec, 'mask',
                                register, 'moving_image_mask')
-            # Get the file name without directory.
-            input_filename_xfc = Function(input_names=['in_file'],
-                                          output_names=['out_file'],
-                                          function=filename)
-            input_filename = pe.Node(input_filename_xfc, name='input_filename')
-            realign_wf.connect(input_spec, 'moving_image',
-                               input_filename, 'in_file')
             # Apply the transforms to the input image.
             apply_xfm = pe.Node(ApplyTransforms(), name='apply_xfm')
             realign_wf.connect(input_spec, 'reference',
@@ -440,6 +441,7 @@ class RegistrationWorkflow(WorkflowBase):
             realign_wf.connect(fnirt_copy_moving, 'out_file', fnirt, 'in_file')
             realign_wf.connect(input_spec, 'mask', fnirt, 'inmask_file')
             realign_wf.connect(input_spec, 'mask', fnirt, 'refmask_file')
+            realign_wf.connect(input_filename, 'out_file', fnirt, 'warped_file')
             # Copy the meta-data.
             realign_wf.connect(fnirt, 'warped_file', copy_meta, 'dest_file')
         elif self.technique.lower() == 'mock':
