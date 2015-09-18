@@ -425,15 +425,15 @@ class RegistrationWorkflow(WorkflowBase):
             realign_wf.connect(apply_xfm, 'output_image',
                                copy_meta, 'dest_file')
         elif self.technique.lower() == 'fnirt':
+            # Make the affine transformation.
+            flirt = pe.Node(fsl.FLIRT(), name='flirt')
+            realign_wf.connect(input_spec, 'reference', flirt, 'reference')
+            realign_wf.connect(input_spec, 'moving_image', flirt, 'in_file')
             # Copy the input to a work directory, since FNIRT adds
             # temporary files to the input image location.
             fnirt_copy_moving = pe.Node(Copy(), name='fnirt_copy_moving')
             realign_wf.connect(input_spec, 'moving_image',
                                fnirt_copy_moving, 'in_file')
-            # Get the affine transformation.
-            flirt = pe.Node(fsl.FLIRT(), name='flirt')
-            realign_wf.connect(input_spec, 'reference', flirt, 'reference')
-            realign_wf.connect(fnirt_copy_moving, 'out_file', flirt, 'in_file')
             # Register the image.
             fnirt = pe.Node(fsl.FNIRT(), name='fnirt')
             realign_wf.connect(input_spec, 'reference', fnirt, 'ref_file')
