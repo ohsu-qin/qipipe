@@ -136,8 +136,8 @@ def _parse_arguments():
                         help='the XNAT registration resource label',
                         metavar='RESOURCE')
     parser.add_argument('--registration-technique',
-                        help="the XNAT registration technique"
-                             " (default ants)",
+                        help='the XNAT registration technique'
+                             ' (required for registration)',
                         metavar='TECHNIQUE')
     parser.add_argument('--recursive-registration',
                         help="perform step-wise iterative"
@@ -149,7 +149,8 @@ def _parse_arguments():
                         help='the XNAT modeling resource name',
                         metavar='RESOURCE')
     parser.add_argument('--modeling-technique',
-                        help='the XNAT modeling technique',
+                        help='the XNAT modeling technique'
+                             ' (required for modeling)',
                         metavar='TECHNIQUE')
 
     # The input directories or XNAT labels to process.
