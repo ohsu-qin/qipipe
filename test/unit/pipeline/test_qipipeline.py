@@ -9,6 +9,7 @@ import qixnat
 from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
 from ...helpers.staging import subject_sources
+from . import CONF_DIR
 from .test_mask import MASK_CONF
 from .test_registration import REG_CONF
 from .test_modeling import MODELING_CONF
@@ -101,8 +102,9 @@ class TestQIPipeline(object):
         base_dir = os.path.join(RESULTS, 'work')
 
         # The pipeline options.
-        opts = dict(base_dir=base_dir, dest=dest, project=PROJECT,
-                    collection=collection, registration_technique='mock',
+        opts = dict(base_dir=base_dir, config_dir=CONF_DIR, dest=dest,
+                    project=PROJECT, collection=collection,
+                    registration_technique='mock',
                     modeling_technique='mock')
 
         # The {test subject: input directory} dictionary.

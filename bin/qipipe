@@ -88,6 +88,10 @@ def _parse_arguments():
     parser.add_argument('--model', dest='actions', action='append_const',
                         const='model', help='model the realigned images')
 
+    # The workflow configurations directory.
+    parser.add_argument('--config-dir', help='the optional workflow'
+                                             ' configurations directory')
+
     # Flag indicating whether to prepare but not run the pipeline.
     parser.add_argument('--dry-run', action='store_true',
                         help='prepare but do not run the pipeline')

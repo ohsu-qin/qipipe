@@ -10,10 +10,8 @@ from qipipe.pipeline import registration
 from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
 from ...helpers.name_generator import generate_unique_name
+from . import CONF_DIR
 from .volume_test_base import VolumeTestBase
-
-REG_CONF = os.path.join(ROOT, 'conf', 'registration.cfg')
-"""The test registration workflow configuration."""
 
 RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'registration')
 """The test results directory."""
@@ -75,7 +73,7 @@ class TestRegistrationWorkflow(VolumeTestBase):
         with qixnat.connect() as xnat:
             xnat.delete(project, subject)
             result = registration.run(technique, project, subject, session, scan,
-                                      ref_0, *moving, config=REG_CONF,
+                                      ref_0, *moving, config_dir=CONF_DIR,
                                       resource=RESOURCE, dest=self.dest,
                                       base_dir=self.base_dir)
             # Verify the result.

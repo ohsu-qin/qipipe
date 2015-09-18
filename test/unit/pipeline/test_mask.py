@@ -5,6 +5,7 @@ import qixnat
 from qipipe.pipeline import (mask, qipipeline)
 from ... import ROOT
 from ...helpers.logging import logger
+from . import CONF_DIR
 from .volume_test_base import VolumeTestBase
 
 MASK_CONF = os.path.join(ROOT, 'conf', 'mask.cfg')
@@ -55,7 +56,7 @@ class TestMaskWorkflow(VolumeTestBase):
         with qixnat.connect() as xnat:
             xnat.delete(project, subject)
             result = mask.run(project, subject, session, scan, time_series, 
-                              base_dir=self.base_dir, config=MASK_CONF)
+                              base_dir=self.base_dir, config_dir=CONF_DIR)
             # Find the mask resource.
             rsc = xnat.find_one(project, subject, session, scan=scan,
                                 resource=result)

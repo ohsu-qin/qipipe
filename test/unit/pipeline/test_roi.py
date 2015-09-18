@@ -7,6 +7,7 @@ from qipipe.staging.iterator import iter_stage
 from qipipe.pipeline import (roi, qipipeline)
 from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
+from . import CONF_DIR
 from .volume_test_base import VolumeTestBase
 
 STAGING_FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
@@ -98,7 +99,8 @@ class TestROIWorkflow(VolumeTestBase):
         with qixnat.connect() as xnat:
             xnat.delete(project, subject)
             result = roi.run(project, subject, session, scan, time_series, 
-                             *roi_inputs, base_dir=self.base_dir)
+                             *roi_inputs, base_dir=self.base_dir,
+                              config_dir=CONF_DIR)
             assert_is_not_none(result, "The %s %s Scan %d ROI pipeline did not"
                                        " run" % (subject, session, scan))
             # Find the ROI resource.

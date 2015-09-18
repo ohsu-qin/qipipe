@@ -7,6 +7,7 @@ from qipipe.staging.iterator import iter_stage
 from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
 from ...helpers.staging import subject_sources
+from . import CONF_DIR
 
 FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
 """The test fixture directory."""
@@ -64,7 +65,8 @@ class TestStagingWorkflow(object):
             for scan_input in iter_stage(PROJECT, collection, *inputs, dest=dest):
                 work_dir = os.path.join(work, 'scan', str(scan_input.scan))
                 stg_wf = staging.StagingWorkflow(project=PROJECT,
-                                                 base_dir=work_dir)
+                                                 base_dir=work_dir,
+                                                 config_dir=CONF_DIR)
                 stg_wf.set_inputs(scan_input, dest=dest)
                 stg_wf.run()
                 # Verify the result.

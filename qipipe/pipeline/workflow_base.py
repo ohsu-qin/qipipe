@@ -10,9 +10,6 @@ from qiutil.ast_config import read_config
 from ..helpers.distributable import DISTRIBUTABLE
 from .pipeline_error import PipelineError
 
-CONF_DIR_ENV_VAR = 'QIPIPE_CONFIG_DIR'
-"""The configuration directory environment variable."""
-
 
 class WorkflowBase(object):
     """
@@ -23,25 +20,22 @@ class WorkflowBase(object):
     distributed using the Nipype plug-in specified in the configuration
     *plug_in* parameter.
 
-    The workflow plug-in arguments and node inputs can be specified in a
-    :class:`qiutil.ast_config.ASTConfig` file. The standard
-    configuration file name is the lower-case name of the ``WorkflowBase``
-    subclass with ``.cfg`` extension, e.g. ``registration.cfg``. The
-    configuration file paths to load in low-to-high precedence order
-    consist of the following:
+    The workflow plug-in arguments and node inputs can be specified in
+    a :class:`qiutil.ast_config.ASTConfig` file. The configuration
+    directory order consist of the order consist of the search locations
+    in low-to-high precedence order consist of the following:
 
-    1. the default config file ``default.cfg`` in the qipipe project
-       ``conf`` directory
+    1. the qipipe module ``conf`` directory
 
-    2. the standard config file name in the qipipe project ``conf``
-       directory
+    2. the *config_dir* initialization keyword option
 
-    3. the standard config file name in the current working directory
-
-    4. the standard config file name in the ``QIPIPE_CONFIG_PATH``
-       environment variable directory
-
-    5. the *config* initialization parameter
+    The common configuration is loaded from the ``default.cfg`` file or
+    in the directory locations. The workflow-specific configuration file
+    name is the lower-case name of the ``WorkflowBase`` subclass with
+    ``.cfg`` extension, e.g. ``registration.cfg`` for
+    :class:`qipipe.workflow.registration.RegistrationWorkflow`.
+    The configuration settings are then loaded from the common configuration
+    files followed by the workflow-specific configuration files.
     """
 
     CLASS_NAME_PAT = re.compile("^(\w+)Workflow$")
@@ -83,8 +77,8 @@ class WorkflowBase(object):
         :keyword logger: the :attr:`logger` to use
         :keyword parent: the parent workflow for a child workflow
         :keyword base_dir: the :attr:`base_dir`
-        :keyword config: the optional :attr:`configuration` dictionary
-            or file
+        :keyword config: the optional workflow node :attr:`configuration`
+            file location or dictionary
         :keyword dry_run: the :attr:`dry_run` flag
         :keyword distributable: the :attr:`distributable` flag
         :raise PipelineError: if there is neither a *project* nor
@@ -122,16 +116,19 @@ class WorkflowBase(object):
         self.base_dir = base_dir
         "The workflow execution directory (default a new temp directory)."
 
-        cfg_opt = kwargs.get('config')
-        if cfg_opt:
-            if isinstance(cfg_opt, str):
-                config = self._load_configuration(cfg_opt)
-            else:
-                config = config_opt
+        cfg_dir_opt = kwargs.get('config_dir')
+        if cfg_dir_opt:
+            cfg_dir = cfg_dir_opt
+        elif parent:
+            cfg_dir = parent.cfg_dir
         else:
-            config = self._load_configuration()
-        self.configuration = config
+            cfg_dir = None
+        self.config_dir = cfg_dir
+        """The workflow node inputs configuration directory."""
+
+        self.configuration = self._load_configuration()
         """The workflow node inputs configuration."""
+
         config_s = pprint.pformat(config)
         self.logger.debug("Pipeline configuration:")
         for line in config_s.split("\n"):
@@ -183,12 +180,11 @@ class WorkflowBase(object):
         self.logger.debug("The %s workflow graph is depicted at %s.png." %
                          (workflow.name, fname))
 
-    def _load_configuration(self, cfg_file=None):
+    def _load_configuration(self):
         """
         Loads the workflow configuration, as described in
         :class:`WorkflowBase`.
 
-        :param cfg_file: the optional configuration file path
         :return: the configuration dictionary
         """
         # The configuration files to load.
@@ -202,30 +198,20 @@ class WorkflowBase(object):
         name = match.group(1)
         
         # The default configuration files.
-        def_cfg_files = self._configuration_path_files('default')
+        def_cfg_files = self._configuration_files('default')
         # The workflow configuration files.
-        wf_cfg_files = self._configuration_path_files(name)
+        wf_cfg_files = self._configuration_files(name)
         # All path configuration files.
         cfg_files = def_cfg_files + wf_cfg_files
-        # Add the argument configuration file, if necessary.
-        if cfg_file:
-            cfg_file = os.path.abspath(cfg_file)
-            if os.path.exists(cfg_file):
-                duplicate = (os.path.samefile(cfg_file, other)
-                             for other in cfg_files)
-                if not any(duplicate):
-                    cfg_files.append(cfg_file)
 
         # Load the configuration.
-        if cfg_files:
-            self.logger.debug("Loading the %s configuration files %s..." %
-                             (name, cfg_files))
-            cfg = read_config(*cfg_files)
-            return dict(cfg)
-        else:
-            return {}
+        self.logger.debug("Loading the %s configuration files %s..." %
+                          (name, cfg_files))
+        cfg = read_config(*cfg_files)
 
-    def _configuration_path_files(self, name):
+        return dict(cfg)
+
+    def _configuration_files(self, name):
         """
         :param name: the case-insensitive configuration file name
             without path or extension
@@ -236,19 +222,15 @@ class WorkflowBase(object):
         # The file name is lower-case with .cfg extension.
         fname = name.lower() + '.cfg'
         # The configuration directories.
-        cfg_path = [WorkflowBase.DEF_CONF_DIR, os.getcwd()]
-        env_cfg_dir = os.getenv(CONF_DIR_ENV_VAR, None)
-        if env_cfg_dir:
-            cfg_path.append(env_cfg_dir)
+        cfg_dirs = [WorkflowBase.DEF_CONF_DIR]
+        if self.config_dir:
+            cfg_dirs.append(self.config_dir)
         # The configuration file locations.
         cfg_files = []
-        for cfg_dir in cfg_path:
+        for cfg_dir in cfg_dirs:
             cfg_file = os.path.join(cfg_dir, fname)
             if os.path.exists(cfg_file):
-                duplicate = (os.path.samefile(cfg_file, other)
-                             for other in cfg_files)
-                if not any(duplicate):
-                    cfg_files.append(os.path.abspath(cfg_file))
+                cfg_files.append(os.path.abspath(cfg_file))
 
         return cfg_files
 

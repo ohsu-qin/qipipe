@@ -10,6 +10,7 @@ from qipipe.pipeline import modeling
 from qipipe.pipeline import qipipeline
 from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
+from . import CONF_DIR
 from .volume_test_base import VolumeTestBase
 
 MODELING_CONF = os.path.join(ROOT, 'conf', 'modeling.cfg')
@@ -100,7 +101,7 @@ class TestModelingWorkflow(VolumeTestBase):
         with qixnat.connect() as xnat:
             xnat.delete(project, subject)
             result = modeling.run(technique, project, subject, session, scan,
-                                  time_series, config=MODELING_CONF,
+                                  time_series, config_dir=CONF_DIR,
                                   base_dir=self.base_dir)
             # Find the modeling resource.
             rsc = xnat.find_one(project, subject, session, scan=scan,
