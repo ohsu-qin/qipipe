@@ -9,12 +9,6 @@ import qixnat
 from ... import (ROOT, PROJECT, CONF_DIR)
 from ...helpers.logging import logger
 from ...helpers.staging import subject_sources
-from .test_mask import MASK_CONF
-from .test_registration import REG_CONF
-from .test_modeling import MODELING_CONF
-
-REG_CONF = os.path.join(ROOT, 'conf', 'registration.cfg')
-"""The test registration configuration."""
 
 RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'qipipeline')
 """The test results directory."""

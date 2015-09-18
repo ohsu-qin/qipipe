@@ -7,9 +7,6 @@ from ... import (ROOT, CONF_DIR)
 from ...helpers.logging import logger
 from .volume_test_base import VolumeTestBase
 
-MASK_CONF = os.path.join(ROOT, 'conf', 'mask.cfg')
-"""The test mask configuration."""
-
 RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'mask')
 """The test results directory."""
 

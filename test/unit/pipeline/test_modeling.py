@@ -12,9 +12,6 @@ from ... import (ROOT, PROJECT, CONF_DIR)
 from ...helpers.logging import logger
 from .volume_test_base import VolumeTestBase
 
-MODELING_CONF = os.path.join(ROOT, 'conf', 'modeling.cfg')
-"""The test registration configuration."""
-
 RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'modeling')
 """The test results directory."""
 
