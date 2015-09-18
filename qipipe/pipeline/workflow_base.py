@@ -129,7 +129,7 @@ class WorkflowBase(object):
         self.configuration = self._load_configuration()
         """The workflow node inputs configuration."""
 
-        config_s = pprint.pformat(config)
+        config_s = pprint.pformat(self.configuration)
         self.logger.debug("Pipeline configuration:")
         for line in config_s.split("\n"):
             self.logger.debug(line)
