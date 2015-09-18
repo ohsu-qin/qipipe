@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
+5.5.3 / 2015-09-18
+------------------
+* Set the FNIRT output file name.
+
 5.5.2 / 2015-09-09
 ------------------
 * Qualify tumor location.
