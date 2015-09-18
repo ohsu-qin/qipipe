@@ -5,9 +5,8 @@ from qiutil.which import which
 import qixnat
 from qipipe.staging.iterator import iter_stage
 from qipipe.pipeline import (roi, qipipeline)
-from ... import (ROOT, PROJECT)
+from ... import (ROOT, PROJECT, CONF_DIR)
 from ...helpers.logging import logger
-from . import CONF_DIR
 from .volume_test_base import VolumeTestBase
 
 STAGING_FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')

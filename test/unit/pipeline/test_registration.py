@@ -7,10 +7,9 @@ import nipype.pipeline.engine as pe
 import qixnat
 
 from qipipe.pipeline import registration
-from ... import (ROOT, PROJECT)
+from ... import (ROOT, PROJECT, CONF_DIR)
 from ...helpers.logging import logger
 from ...helpers.name_generator import generate_unique_name
-from . import CONF_DIR
 from .volume_test_base import VolumeTestBase
 
 RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'registration')

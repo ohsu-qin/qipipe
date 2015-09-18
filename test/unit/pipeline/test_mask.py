@@ -3,9 +3,8 @@ from nose.tools import (assert_true, assert_is_not_none)
 from nipype.interfaces.dcmstack import MergeNifti
 import qixnat
 from qipipe.pipeline import (mask, qipipeline)
-from ... import ROOT
+from ... import (ROOT, CONF_DIR)
 from ...helpers.logging import logger
-from . import CONF_DIR
 from .volume_test_base import VolumeTestBase
 
 MASK_CONF = os.path.join(ROOT, 'conf', 'mask.cfg')

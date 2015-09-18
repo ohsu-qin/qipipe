@@ -6,10 +6,9 @@ from qiutil.ast_config import read_config
 from qiutil.which import which
 from qipipe.pipeline import qipipeline as qip
 import qixnat
-from ... import (ROOT, PROJECT)
+from ... import (ROOT, PROJECT, CONF_DIR)
 from ...helpers.logging import logger
 from ...helpers.staging import subject_sources
-from . import CONF_DIR
 from .test_mask import MASK_CONF
 from .test_registration import REG_CONF
 from .test_modeling import MODELING_CONF

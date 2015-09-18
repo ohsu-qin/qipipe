@@ -8,9 +8,8 @@ from nipype.interfaces.dcmstack import MergeNifti
 import qixnat
 from qipipe.pipeline import modeling
 from qipipe.pipeline import qipipeline
-from ... import (ROOT, PROJECT)
+from ... import (ROOT, PROJECT, CONF_DIR)
 from ...helpers.logging import logger
-from . import CONF_DIR
 from .volume_test_base import VolumeTestBase
 
 MODELING_CONF = os.path.join(ROOT, 'conf', 'modeling.cfg')
