@@ -4,7 +4,6 @@ import shutil
 from collections import defaultdict
 from nose.tools import (assert_equal, assert_not_equal)
 from qiutil.collections import nested_defaultdict
-from qipipe.pipeline.workflow_base import CONF_DIR_ENV_VAR
 from ... import (ROOT, PROJECT)
 from ...helpers.logging import logger
 
