@@ -33,7 +33,7 @@ class TestUpdate(object):
     def test_breast(self):
         # TODO - make a simpler mash-up of the clinical and imaging test cases.
         pass
-    
+
     def test_sarcoma(self):
         # TODO - make a simpler mash-up of the clinical and imaging test cases.
         pass
