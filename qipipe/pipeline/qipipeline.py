@@ -9,20 +9,21 @@ from nipype.interfaces.dcmstack import MergeNifti
 import qixnat
 from qixnat.helpers import path_hierarchy
 from qiutil.logging import logger
-from . import staging
+from . import (staging, registration, modeling)
 from .pipeline_error import PipelineError
 from .workflow_base import WorkflowBase
 from .staging import StagingWorkflow
 from .modeling import ModelingWorkflow
 from .mask import MaskWorkflow
 from .roi import ROIWorkflow
-from . import registration
 from ..interfaces import (XNATDownload, XNATUpload)
 from ..staging.iterator import iter_stage
 from ..staging.map_ctp import map_ctp
 from ..staging.roi import iter_roi
 # OHSU - multi-volume scans.
-from ..staging.ohsu import (VOLUME_TAG, MULTI_VOLUME_SCAN_NUMBERS)
+# TODO - get this from a [Staging] multi_volume_scans config parameter.,
+# with default all scans.
+from ..staging.ohsu import MULTI_VOLUME_SCAN_NUMBERS
 
 SCAN_TS_RSC = 'scan_ts'
 """The XNAT scan time series resource name."""
