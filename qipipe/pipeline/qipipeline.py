@@ -351,7 +351,7 @@ class QIPipelineWorkflow(WorkflowBase):
         if mdl_rsc_opt:
             mdl_rsc = mdl_rsc_opt
         elif 'model' in actions:
-            mdl_rsc = modeling.generate_resource_name(mdl_tech)
+            mdl_rsc = modeling.generate_resource_name(self.modeling_technique)
         else:
             mdl_rsc = None
         self.modeling_resource = mdl_rsc
