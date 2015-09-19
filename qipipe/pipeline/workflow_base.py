@@ -120,7 +120,7 @@ class WorkflowBase(object):
         if cfg_dir_opt:
             cfg_dir = cfg_dir_opt
         elif parent:
-            cfg_dir = parent.cfg_dir
+            cfg_dir = parent.config_dir
         else:
             cfg_dir = None
         self.config_dir = cfg_dir
