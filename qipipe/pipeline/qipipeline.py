@@ -331,7 +331,7 @@ class QIPipelineWorkflow(WorkflowBase):
         if reg_rsc_opt:
             reg_rsc = reg_rsc_opt
         elif 'register' in actions:
-            reg_rsc = registration.generate_resource_name(reg_tech)
+            reg_rsc = registration.generate_resource_name(self.registration_technique)
             self.logger.debug("Generated registration resource name %s" %
                                reg_rsc)
         else:
