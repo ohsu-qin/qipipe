@@ -364,9 +364,11 @@ class StagingWorkflow(WorkflowBase):
         workflow.connect(stack, 'out_file', output_gate, 'image')
         workflow.connect(upload_3d, 'xnat_files', output_gate, 'xnat_files')
 
-        # The output is the 3D NiFTI stack file. Make an intermediate
-        # Gate node to prevent Nipype from overzealously pruning it as
-        # extraneous.
+        # Make the output a Gate node to work around the following Nipype
+        # bug:
+        # * Nipype overzealously prunes an IdentityInterface node as
+        #   extraneous, even if it is connected in a parent workflow.
+        # TODO - verify that this is still the case
         output_spec_xfc = Gate(fields=['image'])
         output_spec = pe.Node(output_spec_xfc, name='output_spec')
         workflow.connect(output_gate, 'image', output_spec, 'image')
