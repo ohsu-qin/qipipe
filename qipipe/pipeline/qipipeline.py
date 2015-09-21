@@ -1068,7 +1068,7 @@ def register(technique, project, subject, session, scan, resource,
     reg_inputs = volumes[start:]
 
     # Register the files.
-    realigned = registration.run(project, subject, session, scan,
+    realigned = registration.run(technique, project, subject, session, scan,
                                  ref_0, *reg_inputs, **reg_opts)
     # Upload the unrealigned images into the XNAT registration
     # resource.
