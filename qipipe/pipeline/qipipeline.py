@@ -584,8 +584,8 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # The registration workflow node.
         if 'register' in actions:
-            reg_inputs = ['project', 'subject', 'session', 'scan',
-                          'resource', 'bolus_arrival_index', 
+            reg_inputs = ['technique', 'project', 'subject', 'session',
+                          'scan', 'resource', 'bolus_arrival_index', 
                           'in_files', 'mask', 'opts']
             # The registration function keyword options.
             if not self.registration_technique:
