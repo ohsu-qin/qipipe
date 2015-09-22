@@ -20,7 +20,7 @@ ROI_RESOURCE = 'roi'
 
 def run(project, subject, session, scan, time_series, *inputs, **opts):
     """
-    Runs the ROI workflow on the given session BOLERO mask files.
+    Runs the ROI workflow on the given session ROI mask files.
 
     :param project: the project name
     :param subject: the subject name
@@ -58,16 +58,16 @@ class ROIWorkflow(WorkflowBase):
 
     - *slice_sequence_number*: the one-based slice sequence number
 
-    - *in_file*: the BOLERO mask file to convert
+    - *in_file*: the ROI mask``.bqf`` file to convert
 
     The output NiFTI file is named
     lesion*lesion*\ ``_slice``\ *slice*\ ``.nii.gz``, where:
-    
+
     - *lesion* is the lesion number
-    
+
     - *slice* is the one-based slice index, zero-padded to length
       two if necessary
-    
+
     Example output file names are ``lesion1_slice09.nii.gz`` or
     ``lesion2_slice12.nii.gz``.
     """
@@ -161,7 +161,7 @@ class ROIWorkflow(WorkflowBase):
         - *scan*: the scan number
 
         - *time_series*: the 4D scan time series
-        
+
         In addition, the workflow runner has the responsibility of setting the
         ``iter_roi`` synchronized (lesion, slice_sequence_number, in_file)
         iterables.
@@ -193,7 +193,7 @@ class ROIWorkflow(WorkflowBase):
         exec_wf.connect(iter_roi, 'lesion', basename, 'lesion')
         exec_wf.connect(iter_roi, 'slice_sequence_number',
                         basename, 'slice_sequence_number')
-        
+
         # Convert the input file.
         convert = pe.Node(ConvertBoleroMask(), name='convert')
         exec_wf.connect(iter_roi, 'in_file', convert, 'in_file')
