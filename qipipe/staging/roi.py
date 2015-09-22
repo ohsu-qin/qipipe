@@ -1,4 +1,8 @@
-"""OHSU - ROI utility functions."""
+"""
+OHSU - ROI utility functions.
+
+TODO - move this to ohsu-qipipe.
+"""
 
 import os
 import re
@@ -37,8 +41,9 @@ class LesionROI(object):
 
 def iter_roi(glob, regex, input_dir):
     """
-    Iterates over the the BOLERO ROI mask files in the given input directory.
-    This method is a :class:`LesionROI` generator, e.g.::
+    Iterates over the the OHSU ROI ``.bqf`` mask files in the given
+    input directory. This method is a :class:`LesionROI` generator,
+    e.g.::
 
         >>> # Find .bqf files anywhere under /path/to/session/processing.
         >>> next(iter_roi('processing/*', '.*/\.bqf', '/path/to/session'))
@@ -60,7 +65,7 @@ def iter_roi(glob, regex, input_dir):
         # If there is no slice index, then complain.
         slice_seq_nbr_s = match.group('slice_sequence_number')
         if not slice_seq_nbr_s:
-            raise ROIError("The BOLERO ROI slice could not be determined" +
+            raise ROIError("The ROI slice could not be determined" +
                            " from the file path: %s" % path)
         slice_seq_nbr = int(slice_seq_nbr_s)
         # Prepend the base directory to the matching file path.
