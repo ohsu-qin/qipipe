@@ -45,9 +45,9 @@ class ConvertBoleroMask(CommandLine):
     def _list_outputs(self):
         outputs = self._outputs().get()
 
-        # The default output base name is slice_<slice>_lesion.
+        # The default output base name is slice_<slice>_lesion_mask.
         out_base = (self.inputs.out_base or
-                    "slice_%d_lesion" % self.inputs.slice_sequence_number)
+                    "slice_%d_lesion_mask" % self.inputs.slice_sequence_number)
         # The output is compressed.
         out_file = out_base + '.nii.gz'
         # Expand the output path.
