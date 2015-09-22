@@ -1,9 +1,9 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
-5.5.3 / 2015-09-18
+5.6.1 / 2015-09-22
 ------------------
-* Set the FNIRT output file name.
+* Require registration and modeling technique.
 
 5.5.2 / 2015-09-09
 ------------------
