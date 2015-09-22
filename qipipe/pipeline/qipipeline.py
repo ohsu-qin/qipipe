@@ -19,7 +19,6 @@ from .roi import ROIWorkflow
 from ..interfaces import (XNATDownload, XNATUpload)
 from ..staging.iterator import iter_stage
 from ..staging.map_ctp import map_ctp
-from ..staging.roi import iter_roi
 # OHSU - multi-volume scans.
 # TODO - get this from a [Staging] multi_volume_scans config parameter.,
 # with default all scans.
