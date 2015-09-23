@@ -187,8 +187,9 @@ def _run_with_xnat_input(actions, *inputs, **opts):
             # If modeling will be performed on a specified registration
             # resource, then check for an existing 4D registration time
             # series.
-            if 'model' in actions and 'registration' in opts:
-                reg_ts_rsc = opts['registration'] + '_ts'
+            reg_rsc_opt = opts.get('registration_resource')
+            if 'model' in actions and reg_rsc_opt:
+                reg_ts_rsc = reg_rsc_opt + '_ts'
                 if _scan_resource_exists(xnat, prj, sbj, sess, scan,
                                          reg_ts_rsc):
                     wf_opts['realigned_time_series'] = reg_ts_rsc
