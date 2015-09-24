@@ -9,7 +9,7 @@ nipy
 dipy
 traits
 networkx
-openpyx
+openpyxl
 six==1.9.0
 qiutil==2.2.8
 qidicom==2.3.7
