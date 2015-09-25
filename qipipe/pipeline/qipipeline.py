@@ -2,7 +2,6 @@ import os
 import re
 import tempfile
 import logging
-from collections import defaultdict
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
 from nipype.interfaces.dcmstack import MergeNifti

@@ -1,7 +1,6 @@
 import os
 import glob
 import shutil
-from collections import defaultdict
 from nose.tools import (assert_equal, assert_not_equal)
 from qiutil.collections import nested_defaultdict
 from ... import (ROOT, PROJECT)

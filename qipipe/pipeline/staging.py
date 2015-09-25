@@ -1,6 +1,5 @@
 import os
 import logging
-from collections import defaultdict
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Function)
 from nipype.interfaces.dcmstack import DcmStack
