@@ -460,7 +460,7 @@ class QIPipelineWorkflow(WorkflowBase):
                                    (len(unregistered), project, subject,
                                     session, scan))
                 self.logger.debug("%s" % unregistered)
-        elif unregistered:
+        elif unregistered and is_existing_registration_resource:
             self.logger.error("The pipeline %s %s %s Scan %d register"
                                 " action is not specified but there are"
                                 "  %d unregistered volumes:" %
