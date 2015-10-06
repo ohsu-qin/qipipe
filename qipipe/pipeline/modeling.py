@@ -744,7 +744,7 @@ def get_fit_params(time_series, bolus_arrival_index):
     from dcmstack.dcmmeta import NiftiWrapper
     from dcmstack import dcm_time_to_sec
 
-    # Load the time series into a nifty NiFTI wrapper.
+    # Load the time series into a NiFTI wrapper.
     nii = nb.load(time_series)
     nw = NiftiWrapper(nii)
 
@@ -761,8 +761,9 @@ def get_fit_params(time_series, bolus_arrival_index):
     # Create the parameter CSV file.
     with open('params.csv', 'w') as csv_file:
         csv_writer = csv.writer(csv_file)
-        csv_writer.writerow(['aif_params', '0.674', '0.4', '2.2',
-                             '0.23', '1.3', '0.09', '0.0013', '0.0'])
+        csv_writer.writerow(['aif_scale', '0.674'])
+        csv_writer.writerow(['aif_params', '0.4', '2.2', '0.23', '1.3',
+                             '0.09', '0.0013', '0.0'])
         csv_writer.writerow(['aif_delta_t', '1.5'])
         csv_writer.writerow(['aif_shift', str(aif_shift)])
         csv_writer.writerow(['r1_cr', '3.8'])
