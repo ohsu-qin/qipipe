@@ -287,7 +287,7 @@ class QIPipelineWorkflow(WorkflowBase):
     - The staging workflow input is the workflow input.
 
     - The mask workflow input is the newly created or previously staged
-      scan NiFTI image files.
+      scan NIfTI image files.
 
     - The modeling workflow input is the combination of the previously
       uploaded and newly realigned image files.
@@ -698,7 +698,7 @@ class QIPipelineWorkflow(WorkflowBase):
                             stg_wf, 'iter_dicom.dicom_file')
 
         # Some workflows require the scan volumes, as follows:
-        # * If staging is enabled, then collect the staged NiFTI
+        # * If staging is enabled, then collect the staged NIfTI
         #   scan images.
         # * Otherwise, if registration is enabled and there is not
         #   yet a scan time series, then download the staged XNAT
@@ -1036,7 +1036,7 @@ def register(technique, project, subject, session, scan, resource,
     :param resource: the registration resource name
     :param bolus_arrival_index: the bolus uptake volume index
     :param mask: the required scan mask file
-    :param in_files: the input session scan 3D NiFTI images
+    :param in_files: the input session scan 3D NIfTI images
     :param opts: the :meth:`qipipe.pipeline.registration.run` keyword
         options
     :return: the realigned image file path array

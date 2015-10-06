@@ -32,7 +32,7 @@ def run(technique, project, subject, session, scan, time_series, **opts):
     :param subject: the input subject
     :param session: the input session
     :param scan: input scan
-    :param time_series: the input 4D NiFTI time series
+    :param time_series: the input 4D NIfTI time series
     :param opts: the :class:`qipipe.pipeline.modeling.ModelingWorkflow`
         initializer options
     :return: the :meth:`qipipe.pipeline.modeling.ModelingWorkflow.run`
@@ -62,7 +62,7 @@ class ModelingWorkflow(WorkflowBase):
     mapping workflow.
 
     The workflow calculates the modeling parameters for an input 4D
-    time series NiFTI image file as follows:
+    time series NIfTI image file as follows:
 
     - Compute the |R10| value, if it is not given in the options
 
@@ -83,7 +83,7 @@ class ModelingWorkflow(WorkflowBase):
 
     - *mask*: the mask to apply to the images
 
-    - *time_series*: the 4D time series NiFTI file to model
+    - *time_series*: the 4D time series NIfTI file to model
 
     - *bolus_arrival_index*: the bolus uptake volume index
 
@@ -626,12 +626,12 @@ class ModelingWorkflow(WorkflowBase):
 
 def make_baseline(time_series, baseline_end_idx):
     """
-    Makes the R1_0 computation baseline NiFTI file.
+    Makes the R1_0 computation baseline NIfTI file.
 
-    :param time_series: the modeling input 4D NiFTI image
+    :param time_series: the modeling input 4D NIfTI image
     :param baseline_end_idx: the exclusive limit of the baseline
         computation input series
-    :return: the baseline NiFTI file name
+    :return: the baseline NIfTI file name
     :raise ModelingError: if the end index is a negative number
     """
     from dcmstack.dcmmeta import NiftiWrapper
@@ -660,16 +660,16 @@ def make_baseline(time_series, baseline_end_idx):
 
 def make_r1_0(pdw_image, t1w_image, max_r1_0, **kwargs):
     """
-    Returns the R1_0 map NiFTI file from the given proton density
+    Returns the R1_0 map NIfTI file from the given proton density
     and T1-weighted images. The R1_0 map is computed using the
     ``pdw_t1w_to_r1`` function. The ``pdw_t1w_to_r1`` module
     must be in the Python path.
 
-    :param pdw_image: the proton density NiFTI image file path
+    :param pdw_image: the proton density NIfTI image file path
     :param t1w_image: the T1-weighted image file path
     :param max_r1_0: the R1_0 range maximum
     :param kwargs: the ``pdw_t1w_to_r1`` function keyword arguments
-    :return: the R1_0 map NiFTI image file name
+    :return: the R1_0 map NIfTI image file name
     """
     import os
     import nibabel as nb
@@ -695,12 +695,12 @@ def make_r1_0(pdw_image, t1w_image, max_r1_0, **kwargs):
 
 def make_r1_series(time_series, r1_0, **kwargs):
     """
-    Makes the R1_0 series NiFTI file.
+    Makes the R1_0 series NIfTI file.
 
-    :param time_series: the modeling input 4D NiFTI image
+    :param time_series: the modeling input 4D NIfTI image
     :param r1_0: the R1_0 image file path
     :param kwargs: the ``dce_to_r1`` keyword options
-    :return: the R1_0 series NiFTI image file name
+    :return: the R1_0 series NIfTI image file name
     """
     import os
     import nibabel as nb
@@ -733,7 +733,7 @@ def get_fit_params(time_series, bolus_arrival_index):
     * *r1_cr*: contrast R1
     * *r1_b_pre*: pre-contrast R1
 
-    :param time_series: the modeling input 4D NiFTI image
+    :param time_series: the modeling input 4D NIfTI image
     :param bolus_arrival_index: the bolus uptake series index
     :return: the parameter CSV file path
     """
@@ -744,7 +744,7 @@ def get_fit_params(time_series, bolus_arrival_index):
     from dcmstack.dcmmeta import NiftiWrapper
     from dcmstack import dcm_time_to_sec
 
-    # Load the time series into a NiFTI wrapper.
+    # Load the time series into a NIfTI wrapper.
     nii = nb.load(time_series)
     nw = NiftiWrapper(nii)
 

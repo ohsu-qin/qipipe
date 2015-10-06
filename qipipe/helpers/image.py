@@ -70,7 +70,7 @@ def discretize(in_file, out_file, nvalues, start=0, threshold=None,
     print ("Color LUT start: %d end: %d threshold: %d" %
            (start, start + nvalues - 1, threshold))
     
-    # Load the NiFTI image.
+    # Load the NIfTI image.
     in_img = nib.load(in_file)
     print ("Loaded %s." % in_file)
     # The image data 3D array.

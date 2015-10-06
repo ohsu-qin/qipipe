@@ -44,7 +44,7 @@ def run(project, subject, session, scan, time_series, *inputs, **opts):
 class ROIWorkflow(WorkflowBase):
     """
     The ROIWorkflow class builds and executes the ROI workflow which
-    converts the BOLERO mask ``.bqf`` files to NiFTI.
+    converts the BOLERO mask ``.bqf`` files to NIfTI.
 
     The ROI workflow input consists of the *input_spec* and *iter_slice*
     nodes. The *input_spec* contains the following input fields:
@@ -65,7 +65,7 @@ class ROIWorkflow(WorkflowBase):
 
     - *in_file*: the ROI mask``.bqf`` file to convert
 
-    The output is the 3D mask NiFTI file location. The file name
+    The output is the 3D mask NIfTI file location. The file name
     is *lesion*\ ``.nii.gz``.
     """
 

@@ -23,7 +23,7 @@ def run(project, subject, session, scan, time_series, **opts):
     :param subject: the input subject
     :param session: the input session
     :param scan: the input scan number
-    :param time_series: the input 4D NiFTI time series to mask
+    :param time_series: the input 4D NIfTI time series to mask
     :param opts: additional :class:`MaskWorkflow` initialization parameters
     :return: the XNAT mask resource name
     """
@@ -37,7 +37,7 @@ class MaskWorkflow(WorkflowBase):
     The MaskWorkflow class builds and executes the mask workflow.
 
     The workflow creates a mask to subtract extraneous tissue for a given
-    input session 4D NiFTI time series. The new mask is uploaded to XNAT
+    input session 4D NIfTI time series. The new mask is uploaded to XNAT
     as a session resource named ``mask``.
 
     The mask workflow input is the `input_spec` node consisting of
@@ -49,7 +49,7 @@ class MaskWorkflow(WorkflowBase):
 
      - scan: the XNAT scan number
 
-     - time_series: the 4D NiFTI series image file
+     - time_series: the 4D NIfTI series image file
 
     The mask workflow output is the `output_spec` node consisting of the
     following output field:
@@ -79,13 +79,13 @@ class MaskWorkflow(WorkflowBase):
 
     def run(self, subject, session, scan, time_series):
         """
-        Runs the mask workflow on the scan NiFTI files for the given
+        Runs the mask workflow on the scan NIfTI files for the given
         time series.
 
         :param subject: the input subject
         :param session: the input session
         :param scan: the input scan number
-        :param time_series: the input 3D NiFTI time series to mask
+        :param time_series: the input 3D NIfTI time series to mask
         :return: the mask XNAT resource name
         """
         self.logger.debug("Creating the mask for the %s %s scan %d time series"

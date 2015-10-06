@@ -8,7 +8,7 @@ def bolus_arrival_index(time_series):
     is the first occurence of a difference in average signal larger than
     double the difference from first two points.
  
-    :param time_series: the 4D NiFTI scan image file path
+    :param time_series: the 4D NIfTI scan image file path
     :return: the bolus arrival time point index
     :raise BolusArrivalError: if the bolus arrival could not be determined
     """

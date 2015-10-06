@@ -39,7 +39,7 @@ class TestMaskWorkflow(VolumeTestBase):
         :param subject: the input subject name
         :param session: the input session name
         :param scan: the input scan number
-        :param images: the input 3D NiFTI images to model
+        :param images: the input 3D NIfTI images to model
         """
         # Make the 4D time series from the test fixture inputs.
         merge = MergeNifti(in_files=list(images),

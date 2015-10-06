@@ -1,7 +1,7 @@
 """
 OHSU - This module wraps the proprietary OHSU AIRC ``bolero_mask_conv``
 utility. ``bolero_mask_conv`` converts a proprietary OHSU format
-mask file into a NiFTI mask file.
+mask file into a NIfTI mask file.
 """
 import os
 from os import path
@@ -13,7 +13,7 @@ from nipype.interfaces.traits_extension import Undefined
 
 
 class ConvertBoleroMaskInputSpec(CommandLineInputSpec):
-    time_series = traits.File(desc='Input 4D DCE series NiFTI file',
+    time_series = traits.File(desc='Input 4D DCE series NIfTI file',
                               mandatory=True, exists=True, position=1,
                               argstr='%s')
     slice_sequence_number = traits.Int(
@@ -27,7 +27,7 @@ class ConvertBoleroMaskInputSpec(CommandLineInputSpec):
 
 
 class ConvertBoleroMaskOutputSpec(TraitedSpec):
-    out_file = traits.File(desc='NiFTI mask file', exists=True)
+    out_file = traits.File(desc='NIfTI mask file', exists=True)
 
 
 class ConvertBoleroMask(CommandLine):

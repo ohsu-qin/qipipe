@@ -57,7 +57,7 @@ class TestRegistrationWorkflow(VolumeTestBase):
         :param subject: the input subject name
         :param session: the input session name
         :param scan: the input scan number
-        :param images: the input 3D NiFTI images to register
+        :param images: the input 3D NIfTI images to register
         """
         # Register against the first image.
         ref_0 = images[0]

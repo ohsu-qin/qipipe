@@ -92,7 +92,7 @@ class StagingWorkflow(WorkflowBase):
 
     - Upload each compressed DICOM file into XNAT.
 
-    - Stack each new volume's 2-D DICOM files into a 3-D volume NiFTI file
+    - Stack each new volume's 2-D DICOM files into a 3-D volume NIfTI file
       using the DcmStack_ interface.
 
     - Upload each new volume stack into XNAT.
@@ -153,7 +153,7 @@ class StagingWorkflow(WorkflowBase):
     The staging workflow output is the *output_spec* node consisting
     of the following output field:
 
-    - *image*: the 3D volume stack NiFTI image file
+    - *image*: the 3D volume stack NIfTI image file
 
     Note: Concurrent XNAT upload fails unpredictably due to one of
         the causes described in the ``qixnat.facade.XNAT.find`` method
@@ -328,7 +328,7 @@ class StagingWorkflow(WorkflowBase):
         vol_fmt = pe.Node(vol_fmt_xfc, name='volume_format')
         workflow.connect(input_spec, 'collection', vol_fmt, 'collection')
 
-        # Stack the scan volume into a 3D NiFTI file.
+        # Stack the scan volume into a 3D NIfTI file.
         stack_xfc = DcmStack(embed_meta=True)
         stack = pe.JoinNode(stack_xfc, joinsource='iter_dicom',
                             joinfield='dicom_files', name='stack')
@@ -344,7 +344,7 @@ class StagingWorkflow(WorkflowBase):
         workflow.connect(upload_dicom, 'xnat_files', upload_3d_gate, 'xnat_files')
         workflow.connect(stack, 'out_file', upload_3d_gate, 'out_file')
 
-        # Upload the 3D NiFTI stack files to XNAT.
+        # Upload the 3D NIfTI stack files to XNAT.
         upload_3d_xfc = XNATUpload(project=self.project, resource='NIFTI',
                                    skip_existing=True, modality='MR')
         upload_3d = pe.JoinNode(upload_3d_xfc, joinsource='iter_volume',
@@ -355,7 +355,7 @@ class StagingWorkflow(WorkflowBase):
         # 3D upload is gated by DICOM upload.
         workflow.connect(upload_3d_gate, 'out_file', upload_3d, 'in_files')
 
-        # The output is the 3D NiFTI stack file. Make an intermediate Gate
+        # The output is the 3D NIfTI stack file. Make an intermediate Gate
         # node to ensure that upload is completed before setting the output
         # field.
         output_gate_xfc = Gate(fields=['image', 'xnat_files'])

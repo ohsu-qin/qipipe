@@ -48,7 +48,7 @@ class XNATDownload(BaseInterface):
     
     Examples:
     
-    >>> # Download the scan NiFTI files.
+    >>> # Download the scan NIfTI files.
     >>> from qipipe.interfaces import XNATDownload
     >>> XNATDownload(project='QIN', subject='Breast003',
     ...     session='Session02', scan=1, resource='NIFTI',

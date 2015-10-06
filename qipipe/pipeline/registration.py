@@ -62,7 +62,7 @@ def generate_resource_name(technique):
 class RegistrationWorkflow(WorkflowBase):
     """
     The RegistrationWorkflow class builds and executes the registration workflow.
-    The workflow registers an input NiFTI scan image against the input reference
+    The workflow registers an input NIfTI scan image against the input reference
     image and uploads the realigned image to XNAT.
 
     The registration workflow input is the *input_spec* node consisting of the

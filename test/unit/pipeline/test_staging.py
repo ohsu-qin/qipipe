@@ -83,7 +83,7 @@ class TestStagingWorkflow(object):
                 assert_is_not_none(scan_obj,
                                    "The %s %s scan %s was not created in XNAT" %
                                    (scan_input.subject, scan_input.session, scan_input.scan))
-                # The XNAT NiFTI resource object.
+                # The XNAT NIfTI resource object.
                 rsc_obj = scan_obj.resource('NIFTI')
                 assert_true(rsc_obj.exists(),
                             "The %s %s scan %s %s resource was not created in XNAT" %
