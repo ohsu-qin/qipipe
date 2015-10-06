@@ -4,6 +4,7 @@ numpy
 nibabel
 scipy
 sympy
+mpi4py
 matplotlib
 nipy
 dipy
@@ -12,7 +13,7 @@ networkx
 openpyxl
 six==1.9.0
 qiutil==2.2.8
-qidicom==2.3.7
+qidicom==2.3.8
 qixnat==4.1.4
 qiprofile-rest-client==5.6.3
 git+git://github.com/moloney/dcmstack.git#egg=dcmstack
