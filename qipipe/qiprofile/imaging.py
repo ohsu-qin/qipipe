@@ -44,7 +44,7 @@ def update(subject, experiment):
     session.detail.save()
     # Save the subject.
     subject.save()
-
+    
 
 def _update(session, experiment):
     """

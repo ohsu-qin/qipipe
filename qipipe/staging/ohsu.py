@@ -5,6 +5,7 @@ The following OHSU QIN scan numbers are captured:
     * 1: T1
     * 2: T2
     * 4: DWI
+    * 6: PD
 These scans have DICOM files specified by the
 :attr:`qipipe.staging.collection.Collection.patterns`
 :attr:`qipipe.staging.collection.Patterns.scan`
