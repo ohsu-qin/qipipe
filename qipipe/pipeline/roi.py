@@ -17,6 +17,9 @@ from .pipeline_error import PipelineError
 ROI_RESOURCE = 'roi'
 """The XNAT ROI resource name."""
 
+ROI_FNAME_PAT = "lesion%d"
+"""The ROI file name pattern."""
+
 
 def run(project, subject, session, scan, time_series, *inputs, **opts):
     """
@@ -43,8 +46,8 @@ class ROIWorkflow(WorkflowBase):
     The ROIWorkflow class builds and executes the ROI workflow which
     converts the BOLERO mask ``.bqf`` files to NiFTI.
 
-    The ROI workflow input is the *input_spec* node consisting of the
-    following input fields:
+    The ROI workflow input consists of the *input_spec* and *iter_slice*
+    nodes. The *input_spec* contains the following input fields:
 
     - *subject*: the subject name
 
@@ -55,21 +58,15 @@ class ROIWorkflow(WorkflowBase):
     - *time_series*: the 4D time series file path
 
     - *lesion*: the lesion number
+    
+    The *iter_slice* contains the following input fields:
 
     - *slice_sequence_number*: the one-based slice sequence number
 
     - *in_file*: the ROI mask``.bqf`` file to convert
 
-    The output NiFTI file is named
-    lesion*lesion*\ ``_slice``\ *slice*\ ``.nii.gz``, where:
-
-    - *lesion* is the lesion number
-
-    - *slice* is the one-based slice index, zero-padded to length
-      two if necessary
-
-    Example output file names are ``lesion1_slice09.nii.gz`` or
-    ``lesion2_slice12.nii.gz``.
+    The output is the 3D mask NiFTI file location. The file name
+    is *lesion*\ ``.nii.gz``.
     """
 
     def __init__(self, **kwargs):
@@ -142,10 +139,10 @@ class ROIWorkflow(WorkflowBase):
         iter_dict = dict(lesion=lesions, slice_sequence_number=slice_seq_nbrs,
                          in_file=in_files)
         iterables = iter_dict.items()
-        iter_roi = self.workflow.get_node('iter_roi')
-        iter_roi.iterables = iterables
+        iter_slice = self.workflow.get_node('iter_slice')
+        iter_slice.iterables = iterables
         # Iterate over the ROI input fields in lock-step.
-        iter_roi.synchronize = True
+        iter_slice.synchronize = True
 
     def _create_workflow(self, **opts):
         """
@@ -163,7 +160,7 @@ class ROIWorkflow(WorkflowBase):
         - *time_series*: the 4D scan time series
 
         In addition, the workflow runner has the responsibility of setting the
-        ``iter_roi`` synchronized (lesion, slice_sequence_number, in_file)
+        ``iter_slice`` synchronized (lesion, slice_sequence_number, in_file)
         iterables.
 
         :param opts: the workflow creation options:
@@ -181,36 +178,39 @@ class ROIWorkflow(WorkflowBase):
         input_spec.inputs.resource = ROI_RESOURCE
 
         # The input ROI tuples are iterable.
-        iter_roi_fields = ['lesion', 'slice_sequence_number', 'in_file']
-        iter_roi = pe.Node(IdentityInterface(fields=iter_roi_fields),
-                           name='iter_roi')
-
-        # The output file base name.
-        basename_xfc = Function(input_names=['lesion', 'slice_sequence_number'],
-                                output_names=['basename'],
-                                function=base_name)
-        basename = pe.Node(basename_xfc, name='basename')
-        exec_wf.connect(iter_roi, 'lesion', basename, 'lesion')
-        exec_wf.connect(iter_roi, 'slice_sequence_number',
-                        basename, 'slice_sequence_number')
+        iter_slice_fields = ['lesion', 'slice_sequence_number', 'in_file']
+        iter_slice = pe.Node(IdentityInterface(fields=iter_slice_fields),
+                           name='iter_slice')
 
         # Convert the input file.
         convert = pe.Node(ConvertBoleroMask(), name='convert')
-        exec_wf.connect(iter_roi, 'in_file', convert, 'in_file')
-        exec_wf.connect(iter_roi, 'slice_sequence_number',
+        exec_wf.connect(iter_slice, 'in_file', convert, 'in_file')
+        exec_wf.connect(iter_slice, 'slice_sequence_number',
                         convert, 'slice_sequence_number')
         exec_wf.connect(input_spec, 'time_series', convert, 'time_series')
         exec_wf.connect(basename, 'basename', convert, 'out_base')
 
-        # Upload the ROI results into the XNAT ROI resource.
+        # The merged 3D output file base name.
+        basename_xfc = Function(input_names=['lesion'],
+                                output_names=['basename'],
+                                function=base_name)
+        basename = pe.Node(basename_xfc, name='basename')
+        exec_wf.connect(iter_slice, 'lesion', basename, 'lesion')
+
+        # Merge the slices.
+        merge = pe.JoinNode(MergeNifti(), joinsource='iter_slice',
+                            joinfield='in_files', name='merge_slices')
+        exec_wf.connect(convert, 'out_file', merge, 'in_files')
+        exec_wf.connect(basename, 'basename', merge, 'out_format')
+
+        # Upload the ROI result into the XNAT ROI resource.
         upload_roi_xfc = XNATUpload(project=self.project,
                                     resource=ROI_RESOURCE, modality='MR')
-        upload_roi = pe.JoinNode(upload_roi_xfc, joinsource='iter_roi',
-                                 joinfield='in_files', name='upload_roi')
+        upload_roi = pe.Node(upload_roi_xfc, name='upload_roi')
         exec_wf.connect(input_spec, 'subject', upload_roi, 'subject')
         exec_wf.connect(input_spec, 'session', upload_roi, 'session')
         exec_wf.connect(input_spec, 'scan', upload_roi, 'scan')
-        exec_wf.connect(convert, 'out_file', upload_roi, 'in_files')
+        exec_wf.connect(merge, 'out_file', upload_roi, 'in_files')
 
         self.logger.debug("Created the %s workflow." % exec_wf.name)
         # If debug is set, then diagram the workflow graph.
@@ -222,11 +222,9 @@ class ROIWorkflow(WorkflowBase):
 
 ### Utility functions called by the workflow nodes. ###
 
-def base_name(lesion, slice_sequence_number):
+def base_name(lesion):
     """
     :param lesion: the lesion number
-    :param slice_sequence_number: the
-        :class:`qipipe.interfaces.ConvertBoleroMask` *slice_sequence_number*
     :return: the base name to use
     """
-    return "lesion%d_slice%02d" % (lesion, slice_sequence_number)
+    return ROI_FNAME_PAT % lesion
