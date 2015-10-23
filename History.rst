@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
+5.6.2 / 2015-10-23
+------------------
+* Add imaging preview and ROI capability.
+
 5.6.1 / 2015-09-22
 ------------------
 * Require registration and modeling technique.

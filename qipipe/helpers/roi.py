@@ -1,37 +1,38 @@
-"""Imaging utility functions."""
-import math
+"""ROI utility functions."""
+import itertools
 from collections import defaultdict
 import nibabel as nib
 import numpy as np
+from scipy.spatial import ConvexHull
 from scipy.spatial.kdtree import minkowski_distance
-from pyhull.convex_hull import ConvexHull
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+from qiutil.collections import concat
 
 
-def load(location):
+def load(location, scale=None):
     """
+    Loads the ROI mask file.
+    
     :param location: the ROI mask file location
-    :return: the :class:`ROI`
+    :param tuple scale: the (x, y, z) scaling factors
+    :return: the :class:`ROI` encapsulation
+    :rtype: ROI
     """
-    return ROI(location)
+    return ROI(location, scale)
 
 
 class ROI(object):
     """Summary information for a 3D ROI mask."""
 
-    def __init__(self, location):
+    def __init__(self, location, scale=None):
         """
         :param location: the ROI mask file location
+        :param tuple scale: the (x, y, z) scaling factors
         """
         points = self._load(location)
-        self.extent = Extent(points)
+        self.extent = Extent(points, scale)
         """The 3D :class:`Extent`."""
-        
-        slice_pts = defaultdict(list)
-        for i, j, k in points:
-            slice_pts[i].append(i, j))
-        slice_exts = {z: Extent(pts) for z, pts in slice_pts.iteritems()}
-        self.slice_extents = slice_exts
-        """The 2D {slice: :class:`Extent`} dictionary."""
 
     def _load(self, location):
         """
@@ -50,26 +51,44 @@ class ROI(object):
         # The non-zero points as a ndarray with a shape.
         return np.transpose(non_zero)
 
-class Extent(tuple):
+    def maximal_extent_slice(self):
+        """
+        :return: the slice number with maximal planar extent
+        """
+        index = 0
+        max_area = 0
+        for i, extent in self.slice_extents.iteritems():
+            if extent.area > max_area:
+                index = i
+                max_area = extent.area
+        
+        return index
+
+
+class Extent(object):
     """
     The line segments which span the largest volume or area
     between a set of points.
     """
 
-    def __new__(klass, points, scale=None):
+    def __init__(self, points, scale=None):
         """
         :param points: the points array
-        :param tuple scale: the anatomical dimension scaling factors
-            (default unit scale)
+        :param tuple scale: the anatomical dimension scaling
+            factors (default unit scale)
         """
-        # Cast the points to an ndarray, if necessary.
-        points = np.array(points)
+        self.scale = scale
+        """
+        The anatomical dimension scaling factors (default unit scale).
+        """
+        # Cast the points to a ndarray, if necessary.
+        points = np.asarray(points)
         # Scale the points, if necessary.
         scaled = points * scale if scale else points
         # The point dimension.
         point_cnt, dim = points.shape
         # The area or volume.
-        unit_area_or_volume = scale.prod() if scale else 1
+        unit_area_or_volume = np.prod(scale) if self.scale else 1
         area_or_volume = point_cnt * unit_area_or_volume
         if dim == 2:
             self._area = area_or_volume
@@ -77,15 +96,16 @@ class Extent(tuple):
             self._volume = area_or_volume
         else:
             raise ExtentError("%d-dimensional extent is not supported" % dim)
-        # The distances between points.
-        dists = self._manhattan_distances(scaled)
-        # Start with the longest segment.
-        longest = self._longest_segment(scaled, dists)
-        # The longest segments in the orthogonal planes.
-        orthogonal = self._orthogonal_extents(scaled, longest)
-        dist = lambda segment: self._manhattan_distance(*segment)
-        widest, deepest = sorted(orthogonal, key=dist)
-        super(Extent, klass).__new__((longest, widest, deepest))
+        vertices = ConvexHull(points).vertices
+        self.boundary = points[vertices]
+        """The convex hull boundary in image space."""
+
+        # The boundary in anatomical space.
+        scaled_bnd = scaled[vertices]
+        factory = ExtentSegmentFactory(scaled_bnd)
+        segment_indexes = np.asarray(factory.create())
+        self.segments = self.boundary[segment_indexes]
+        """The orthogonal extent segments."""
 
     @property
     def area(self):
@@ -96,168 +116,330 @@ class Extent(tuple):
     @property
     def volume(self):
         if not self._volume:
-            raise ExtentError("This 2D extent has an area rather than a volume")
+            raise ExtentError("This 2D extent has an area rather than"
+                              " a volume")
         return self._volume
+    
+    def show(self):
+        """Displays the ROI boundary points and extent segments."""
+        # The boundary points.
+        bnd_pts = np.asarray(concat(self.boundary))
+        # Scale the points, if necessary.
+        if self.scale:
+            bnd_pts = bnd_pts * self.scale 
+        # The number of axes.
+        _, dim = bnd_pts.shape
+        # The figure to plot.
+        fig = plt.figure()
+        # The figure axes.
+        projection = "%dd" % dim
+        axes = fig.gca(projection=projection)
 
-    def _boundary(self, points):
+        # Plot the boundary points as small clear circles.
+        bnd_axes = [bnd_pts[:, i] for i in range(dim)]
+        axes.scatter(*bnd_axes, c='w')
+
+        # Plot the segment lines.
+        seg_colors = ['r', 'b', 'g']
+        for i, seg in enumerate(self.segments):
+            seg_pts = np.asarray(concat(seg))
+            if self.scale:
+                seg_pts = seg_pts * self.scale
+            seg_axes = [seg_pts[:, j] for j in range(dim)]
+            seg_color = seg_colors[i]
+            axes.plot(*seg_axes, c=seg_color)
+
+        # Plot the bounding box faces.
+        bb = np.asarray(self.bounding_box())
+        if self.scale:
+            bb = bb * self.scale
+        # The following obscure code converts the bounding box axes
+        # into six faces for 3D, or 4 faces for 2D.
+        # TODO - find a simpler way of doing this.
+        bbt = np.transpose(bb)
+        prod = list(itertools.product(*bbt))
+        faces = np.asarray([[[p for p in prod if p[i] == x] for x in bbt[i]]
+                            for i in range(dim)]).reshape(dim*2, 4, dim)
+        for face in faces:
+            # Flip the last 2 vertices to get a continuous shape.
+            face = face.tolist()
+            face = face[:2] + list(reversed(face[2:]))
+            face.append(face[0])
+            face = np.asarray(face)
+            face_axes = [face[:, i] for i in range(dim)]
+            axes.plot(*face_axes, c='Moccasin')
+
+        # Display the boundary, segments and bounding box faces.
+        plt.show()
+
+    def bounding_box(self):
         """
-        :param ndarray points: the points array
-        :return: the vertex points
-        :rtype: ndarray
+        Returns the (least, most) points of a rectangle
+        circumscribing the extent.
+  
+        :return: the (least, most) rectangle points
+        :rtype: tuple
         """
-        # The hull vertices as a [[from, to]] list of indexes
-        # into the points array.
-        vertex_edge_indexes = ConvexHull(points).vertices
-        # Pluck the first dimension from the vertex indexes array,
-        # since we only need the points, not the edges, i.e.
-        # convert from [[from, to]] to [from].
-        vertex_indexes = np.array(vertex_edge_indexes)[:, 0]
+        # The smallest axis values.
+        least = self.boundary.min(0)
+        # The largest axis values.
+        most = self.boundary.max(0)
 
-        # Convert the vertex indexes to points.
-        return points[vertex_indexes][:, 0]
+        # The bounding axes.
+        return (least, most)
 
-    def _longest_segment(self, points, distances):
+
+class ExtentSegmentFactory(object):
+    """
+    A utility factory class that computes the extent line segments from
+    a set of convex hull vertex points.
+    """
+
+    def __init__(self, points):
         """
-        Returns the maximal distance segment tuple for the given
-        points, where the segment tuple consists of two points.
-
-        :param points: the point index tuples to consider
-        :param distances: the point-to-point distance N x N array,
-            where N is the number of points
-        :return: the maximal segment point pair tuple
+        :param points: the convex hull vertex points
         """
-        max_dist_flat_ndx = distances.argmax()
-        p1_ndx, p2_ndx = np.unravel_index(flat_ndx, dists.shape)
-
-        return (points[p1_ndx], points[p2_ndx])
-
-    def _orthogonal_extents(self, points, reference):
-        """
-        Returns the maximal segments orthogonal to the given reference
-        segment.
+        self.points = np.asarray(points)
+        """The ndarray of boundary points."""
         
-        :param points: the point index tuples
-        :param reference: the segment to query against
-        :return: the orthogonal segment pair tuple
+        self.distances = self._distances(self.points)
         """
-        # The point furthest from the reference end points
-        # is the first orthogonal point.
-        p1 = self._furthest_point(points, reference)
-        # The point opposite to p1 with respect to the reference
-        # segment is the second orthogonal point.
-        p2 = self._opposite_point(points, reference, p1)
-
-    def _manhattan_distances(self, points):
-        """
-        :param points: the point pairs
-        :return: a M x N matrix of the (i,j) point distances,
-            where M is floor(len(points)), N is ceiling(len(points)),
-            i in range(M) and j in range(M, N)
-        :rtype ndarray
-        """
-        mid = len(points)/2
-        dists = [[minkowski_distance(a, b, p=1) for a in points[:mid]]
-                 for b in points[mid:]]
-
-        return np.array(dists)
-
-    def _manhattan_distance(self, p, q):
-        """
-        Returns the Manhattan distance between the given points.
-
-        :param p: the first point index tuple
-        :param q: the second point index tuple
-        :return: the distance between the points
-        """
-        return sum(abs(p[i] - q[i])) for i in range(len(p1)))
-
-    def _furthest_point(self, points, reference):
-        """
-        Returns the point furthest from the given reference point pair.
-
-        :param points: the points to query
-        :param reference: the segment point pair to query against
-        :return: the point furthest from the given reference points
-        """
-        ref1, ref2 = reference
-
-        # The mininmal delta between a point and the reference end points
-        # is initialized to the reference segment length, since the
-        # furthest point delta must at least be less than that length.
-        min_delta = self._manhattan_distance(ref1, ref2)
-        furthest = None
-        for p in points:
-            d1 = self._manhattan_distance(p, ref1)
-            d2 = self._manhattan_distance(p, ref2)
-            delta = abs(d2 - d1)
-            if delta < min_delta:
-                min_delta = min_delta
-                furthest = p
-
-        return p
-
-    def _opposite_point(self, points, axis, reference):
-        """
-        Returns the point in the given points that is opposite to
-        the reference with respect to the axis segment.
-        
-        :param points: the points to query
-        :param axis: the segment point pair
-        :param reference: the point to compare against
-        """
-        # Rotate the points about the axis.
-        
-
-
-
-
-
-    def _dist_squared(self, p1, p2):
-        """
-        Returns the distance squared between the given points.
-
-        :param p1: the first point index tuple
-        :param p2: the second point index tuple
-        :return: the distance squared between the points
-        """
-        return sum((p1[i] - p2[i])**2 for i in range(0, len(p1)))
-
-
-    def roi_maximal_slice(roi):
-        """
-        :param: the ROI mask
-        :return: the slice number with maximal planar extent
+        The N x N point distance array, where N is the number
+        of points and ``self.distances[i][j]`` is the distance
+        from ``self.points[i]`` to ``self.points[j]``.
         """
     
-
-    def roi_extent(roi):
+    def create(self):
         """
-        :param: the ROI mask
-        :return: the maximal (length, width, breadth)
-        """
-
-
-class Segment(object):
-    """Encapsulation of a (begin, end) point pair."""
-
-    def __init__(self, begin, end, scale=None):
-        """
-        :param begin: the starting point tuple
-        :param end: the ending point tuple
-        :param scale: the anatomical dimension scaling factors
-            (default unit array)
-        """
-        self.points = np.array(begin, end)
-        """The segment end points pair."""
+        Returns the orthogonal segments end point indexes as the
+        tuple (longest, widest, deepest), where each of the tuple
+        elements is a (from, to) segment end point pair of indexes
+        into the :attr:`points`, e.g.:
         
-        self.scale = scale or np.ones(self.points.shape, np.int8)
-        """The anatomical dimension scaling factors."""
+        >> points.shape
+        (128, 3)
+        >> factory = ExtentSegmentFactory(points)
+        >> segment_indexes = factory.create()
+        >> segment_indexes
+        ((34, 12), (122, 14), (48, 111))
+        >> segments = points[segments]
+        >> np.all(np.equal(segments[0][0], points[34]))
+        True
+        >> np.all(np.equal(segments[0][1], points[12]))
+        True
 
-    def __len__(self):
+        :return: the orthogonal segment end point index tuples
+        :rtype: list
         """
-        :return: the anatomical Cartesian distance between this
-            segment's end points
-        """
-        p, q = self.points * scale
+        # The point dimension.
+        _, dim = self.points.shape
+        segments = []
+        for i in range(0, dim):
+            longest = self._longest_segment(*segments)
+            segments.append(longest)
 
-        return minkowski_distance(p, q)
+        return segments
+
+    def _longest_segment(self, *reference):
+        """
+        Returns the maximal distance segment index tuple (i, j),
+        where i and j are indexes into self.points. If there are
+        reference segments, then the segments are adjusted to be
+        as orthogonal to the reference segments as the point space
+        allows.
+
+        :param reference: the segment point index tuples to
+            constrain the query against
+        :return: the maximal segment point index pair
+        :rtype: tuple
+        """
+        if not reference:
+            flat_ndx = self.distances.argmax()
+            return np.unravel_index(flat_ndx, self.distances.shape)
+
+        # The number of reference segments.
+        ref_cnt = len(reference)
+        # The point count and dimension
+        points_cnt, dim = self.points.shape
+        # The reference segment point pairs.
+        rs = self.points[reference, :]
+        # The reference segments starting points are the offsets.
+        offsets = rs[:, 0]
+        # The offset indexes.
+        offset_ndxs = [seg[0] for seg in reference]
+        # The reference end point indexes.
+        ref_end_ndxs = [seg[1] for seg in reference]
+        # Flatten the reference segment indexes into the offset
+        # and end point indexes in segment order.
+        ref_ndxs = concat(*reference)
+        # The reference unit vectors.
+        ruvs = self._units(rs[:, 1], offsets)
+        # The reference unit vector axes.
+        ruvt = ruvs.transpose()
+
+        # Mask out references in the points and distances for the
+        # calculations below.
+        masked_pts = np.ma.asarray(self.points)
+        masked_pts[ref_ndxs] = np.ma.masked
+        masked_dists = np.ma.asarray(self.distances)
+        masked_dists[ref_ndxs, :] = np.ma.masked
+        # Mask out distances of a point to itself.
+        np.fill_diagonal(masked_dists, np.ma.masked)        
+        if ref_cnt == 1:
+            # The point furthest from the reference points is the first
+            # orthogonal segment end point.
+            furthest_ndx = self._furthest_point(masked_dists, *ref_ndxs)
+        elif ref_cnt == 2:
+            # The furthest point of the third segment maximizes the
+            # distance to the plane formed by the reference points.
+            cross = np.cross(*ruvs)
+            cuv = cross / np.sqrt(np.dot(cross, cross))
+            prdists = [np.abs(np.dot(cuv, p)) for p in self.points]
+            furthest_ndx = np.argmax(prdists)
+        else:
+            raise NotImplementedError("More than two reference segments is"
+                                      "not supported: %d" % ref_cnt) 
+        # The furthest point.
+        furthest = self.points[furthest_ndx]
+        # The distances from the furthest point to the reference
+        # segments starting point offsets.
+        fdist = self.distances[furthest_ndx][offset_ndxs]
+        # The furthest vectors relative to the offsets.
+        fvs = furthest - offsets 
+        # The furthest unit vectors relative to the offsets.
+        fuvs = self._units(furthest, offsets)
+        # The cosines of the angles between the furthest and
+        # reference vectors.
+        fcos = [np.dot(fuv, ruvs[i]) for i, fuv in enumerate(fuvs)]
+        # The point on each reference segment orthogonal to
+        # the furthest point.
+        odist = fcos * fdist
+        ovs = np.transpose(ruvt * odist)
+        # The (furthest, orthogonal) unit vectors.
+        ouvs = self._units(ovs, fvs)
+
+        # Mask out the furthest point, since we are looking
+        # for a point besides the furthest point.
+        masked_pts[furthest_ndx] = np.ma.masked
+        # Translate the points relative to the offsets.
+        shifted = [p - offsets for p in masked_pts]
+        # The (furthest, point) unit vectors relative to the
+        # offsets as a P x R x D array, where:
+        # * P is the number of points
+        # * R is the number of reference vectors (or segments)
+        # * D is the number of point dimensions (3 is supported,
+        #   but 2 probably works)
+        puvs = self._units(shifted, fvs)
+
+        # The (point, orthogonal) cosines in a R x P matrix.
+        pcost = [np.dot(puvs[:, i, :], ouv) for i, ouv in enumerate(ouvs)]
+        # Flip the R x P matrix into a P x R matrix.
+        pcos_unmasked = np.transpose(pcost)
+        # Work around the following numpy bug:
+        # * numpy dot product passes through a masked argument, e.g.:
+        #   >>> ma = np.ma.asarray([1, 1])
+        #   >>> ma[0] = np.ma.masked
+        #   >>> np.dot(ma, [2, 2])
+        #   4
+        #
+        #   The work-around is to remask the dot product, e.g.:
+        #   >>> ma = np.ma.asarray([[1, 1], [3, 3]])
+        #   >>> dp = np.dot(ma, [2, 2])
+        #   >>> ma[0][0] = np.ma.masked
+        #   >>> np.dot(ma, [2, 2])
+        #   >>> dp[0] = np.ma.masked
+        #
+        # Mask the cosine array.
+        pcos = np.ma.asarray(pcos_unmasked)
+        # The point array mask collapsed from one boolean per
+        # point x/y/z value to one boolean per point.
+        amask = [np.all(m) for m in masked_pts.mask]
+        # Duplicate the boolean mask values to conform to the
+        # cosine array shape.
+        mask = np.repeat(amask, ref_cnt).reshape(*pcos.shape)
+        # Apply the mask.
+        pcos[mask] = np.ma.masked
+
+        # For reference vector r, furthest vector f, point vector p,
+        # orthogonal intersection vector o, (f, o) angle theta and
+        # (p, o) angle gamma, (f, p) is orthogonal to r if and only
+        # if theta == gamma.
+        #
+        # Therefore, the preferred orthogonal point is that which
+        # minimizes the pcos array values.
+        #
+        # The cosine differences from 1 (1 = colinearity = maximum). 
+        deltas = np.subtract(1, pcos)
+        # The cumulative cosine differences. Note that we don't need
+        # to take the absolute value, since each delta is non-negative.
+        delta = np.sum(deltas, axis=1)
+        # The target segment end point opposite to the furthest point
+        # minimizes the difference between the ().
+        other_ndx = np.argmin(delta)
+         
+        # Return the best match point indexes.
+        return (furthest_ndx, other_ndx)
+
+    def _units(self, point, offset):
+        """
+        Transforms the given point array into a unit vector array
+        translated to the offset.
+        
+        :param point: an array whose last dimension holds one or
+            points to transform
+        :param offset: an array whose last dimension holds one or
+            offset points
+        :return: the unit vector(s) translated to the offset
+        """
+        pv = np.subtract(point, offset)
+        if pv.ndim == 1:
+            # Apply the unit transformation directly to the point.
+            return self._unit(pv)
+        else:
+            # Apply the unit transformation to each point,
+            # preserving the shape of the input.
+            return np.apply_along_axis(self._unit, pv.ndim - 1, pv)
+    
+    def _unit(self, vector):
+        """
+        :return: the given vector scaled to unit length
+        """
+        return vector / np.linalg.norm(vector)
+
+    def _furthest_point(self, distances, *reference):
+        """
+        Returns the point furthest from the given reference point
+        indexes.
+
+        :param distances: the N x N point distance matrix
+        :param reference: the point indexes to query against
+        :return: the index of the point furthest from the
+            reference points
+        """
+        # The point-to-reference distance matrix. Since the
+        # reference rows are masked out, take the reference
+        # columns of the symmetrical matrix and transpose
+        # the columns to rows.
+        ref_dists = distances[:, reference].transpose()
+        # The distance from all reference points.
+        tot_dists = np.sum(ref_dists, axis=0)
+
+        return np.argmax(tot_dists)
+
+    def _distances(self, points):
+        """
+        Returns a N x N matrix of the (i,j) point distances, where:
+        * N = the number of points
+        * i, j = 0, ..., N
+
+        :param points: the subject points
+        :return: the distance array
+        :rtype ndarray
+        """
+        dists = [[distance(p, q) for p in self.points]
+                 for q in self.points]
+
+        return np.asarray(dists)
+
+# Convenient distance alias.
+distance = minkowski_distance
