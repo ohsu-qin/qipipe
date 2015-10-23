@@ -23,6 +23,7 @@ from .lookup import Lookup
 from .map_ctp import MapCTP
 from .move import Move
 from .mri_volcluster import MriVolCluster
+from .preview import Preview
 from .unpack import Unpack
 from .uncompress import Uncompress
 from .xnat_copy import XNATCopy
