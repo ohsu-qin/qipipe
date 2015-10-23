@@ -1,13 +1,10 @@
-"""Imaging utility functions."""
-import math
+"""ROI utility functions."""
 import itertools
-
 from collections import defaultdict
 import nibabel as nib
 import numpy as np
 from scipy.spatial import ConvexHull
 from scipy.spatial.kdtree import minkowski_distance
-from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from qiutil.collections import concat
@@ -15,9 +12,12 @@ from qiutil.collections import concat
 
 def load(location, scale=None):
     """
+    Loads the ROI mask file.
+    
     :param location: the ROI mask file location
     :param tuple scale: the (x, y, z) scaling factors
-    :return: the :class:`ROI`
+    :return: the :class:`ROI` encapsulation
+    :rtype: ROI
     """
     return ROI(location, scale)
 
@@ -423,15 +423,6 @@ class ExtentSegmentFactory(object):
         ref_dists = distances[:, reference].transpose()
         # The distance from all reference points.
         tot_dists = np.sum(ref_dists, axis=0)
-        
-
-
-        
-        print (">>f dists: %s" % str(tot_dists))
-
-
-        
-        
 
         return np.argmax(tot_dists)
 
