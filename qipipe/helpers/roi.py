@@ -12,52 +12,55 @@ from qiutil.collections import concat
 
 def load(location, scale=None):
     """
-    Loads the ROI mask file.
+    Loads a ROI mask file.
     
     :param location: the ROI mask file location
     :param tuple scale: the (x, y, z) scaling factors
     :return: the :class:`ROI` encapsulation
     :rtype: ROI
     """
-    return ROI(location, scale)
+    # The mask image object.
+    img = nib.load(location)
+    # The mask data array.
+    data = img.get_data()
+    # The non-zero points.
+    non_zero = data.nonzero()
+    points = np.transpose(non_zero)
+
+    # Return the ROI summary.
+    return ROI(points, scale)
 
 
 class ROI(object):
     """Summary information for a 3D ROI mask."""
 
-    def __init__(self, location, scale=None):
+    def __init__(self, points, scale=None):
         """
-        :param location: the ROI mask file location
+        :param points: the ROI mask points
         :param tuple scale: the (x, y, z) scaling factors
         """
-        points = self._load(location)
         self.extent = Extent(points, scale)
         """The 3D :class:`Extent`."""
+        
+        sliced = defaultdict(list)
+        for x, y, z in points:
+            sliced[z].append((x, y))
+        slice_scale = scale[:-1] if scale else None
+        self.slices = [(z, Extent(sliced[z], slice_scale))
+                       for z in sorted(sliced.iterkeys())]
+        """
+        The {z: :class:`Extent`} dictionary for the 2D (x, y) points
+        grouped by z value.
+        """
 
-    def _load(self, location):
+    def maximal_slice_index(self):
         """
-        Loads the given 3D ROI mask file.
-    
-        :param location: the ROI mask file location
-        :return: the ROI
-        :rtype: :class:`ROI`
-        """
-        # The mask image object.
-        img = nib.load(location)
-        # The mask data array.
-        data = img.get_data()
-        # The non-zero indexes grouped by dimension.
-        non_zero = data.nonzero()
-        # The non-zero points as a ndarray with a shape.
-        return np.transpose(non_zero)
-
-    def maximal_extent_slice(self):
-        """
-        :return: the slice number with maximal planar extent
+        :return: the zero-based slice index with maximal planar extent
         """
         index = 0
         max_area = 0
-        for i, extent in self.slice_extents.iteritems():
+        for i, item in enumerate(self.slices):
+            _, extent = item
             if extent.area > max_area:
                 index = i
                 max_area = extent.area
