@@ -7,6 +7,7 @@ import qixnat
 from qiutil.logging import logger
 from qiutil.collections import EMPTY_DICT
 from qiutil.ast_config import read_config
+from .. import CONF_DIR
 from ..helpers.distributable import DISTRIBUTABLE
 from .pipeline_error import PipelineError
 
@@ -40,9 +41,6 @@ class WorkflowBase(object):
 
     CLASS_NAME_PAT = re.compile("^(\w+)Workflow$")
     """The workflow wrapper class name matcher."""
-
-    DEF_CONF_DIR = os.path.join(os.path.dirname(__file__), '..', 'conf')
-    """The default configuration directory."""
 
     INTERFACE_PREFIX_PAT = re.compile('(\w+\.)+interfaces?\.?')
     """
@@ -222,7 +220,7 @@ class WorkflowBase(object):
         # The file name is lower-case with .cfg extension.
         fname = name.lower() + '.cfg'
         # The configuration directories.
-        cfg_dirs = [WorkflowBase.DEF_CONF_DIR]
+        cfg_dirs = [CONF_DIR]
         if self.config_dir:
             cfg_dirs.append(self.config_dir)
         # The configuration file locations.
