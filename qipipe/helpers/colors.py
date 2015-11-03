@@ -2,7 +2,7 @@ import os
 import re
 from matplotlib import (pyplot, colors, cm)
 import nibabel as nib
-from qiutil.file_helper import splitexts
+from qiutil.file import splitexts
 from . import image
 
 
