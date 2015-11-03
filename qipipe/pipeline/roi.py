@@ -182,6 +182,13 @@ class ROIWorkflow(WorkflowBase):
         iter_slice = pe.Node(IdentityInterface(fields=iter_slice_fields),
                            name='iter_slice')
 
+        # The merged 3D output file base name.
+        basename_xfc = Function(input_names=['lesion'],
+                                output_names=['basename'],
+                                function=base_name)
+        basename = pe.Node(basename_xfc, name='basename')
+        exec_wf.connect(iter_slice, 'lesion', basename, 'lesion')
+
         # Convert the input file.
         convert = pe.Node(ConvertBoleroMask(), name='convert')
         exec_wf.connect(iter_slice, 'in_file', convert, 'in_file')
@@ -189,13 +196,6 @@ class ROIWorkflow(WorkflowBase):
                         convert, 'slice_sequence_number')
         exec_wf.connect(input_spec, 'time_series', convert, 'time_series')
         exec_wf.connect(basename, 'basename', convert, 'out_base')
-
-        # The merged 3D output file base name.
-        basename_xfc = Function(input_names=['lesion'],
-                                output_names=['basename'],
-                                function=base_name)
-        basename = pe.Node(basename_xfc, name='basename')
-        exec_wf.connect(iter_slice, 'lesion', basename, 'lesion')
 
         # Merge the slices.
         merge = pe.JoinNode(MergeNifti(), joinsource='iter_slice',
