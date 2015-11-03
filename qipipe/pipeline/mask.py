@@ -148,19 +148,11 @@ class MaskWorkflow(WorkflowBase):
         binarize.inputs.operand_value = 1
         workflow.connect(cluster_mask, 'out_cluster_file', binarize, 'in_file')
 
-        # Make the mask file name.
-        mask_name_func = Function(input_names=['subject', 'session'],
-                                  output_names=['out_file'],
-                                  function=_gen_mask_filename)
-        mask_name = pe.Node(mask_name_func, name='mask_name')
-        workflow.connect(input_spec, 'subject', mask_name, 'subject')
-        workflow.connect(input_spec, 'session', mask_name, 'session')
-
         # Invert the binary mask.
-        inv_mask = pe.Node(fsl.maths.MathsCommand(args='-sub 1 -mul -1'),
-                           name='inv_mask')
+        inv_mask_xfc = fsl.maths.MathsCommand(args='-sub 1 -mul -1',
+                                              out_file='mask.nii.gz')
+        inv_mask = pe.Node(inv_mask_xfc, name='inv_mask')
         workflow.connect(binarize, 'out_file', inv_mask, 'in_file')
-        workflow.connect(mask_name, 'out_file', inv_mask, 'out_file')
 
         # Upload the mask to XNAT.
         upload_mask_xfc = XNATUpload(project=self.project, resource=RESOURCE,
@@ -184,10 +176,6 @@ class MaskWorkflow(WorkflowBase):
             self.depict_workflow(workflow)
 
         return workflow
-
-
-def _gen_mask_filename(subject, session):
-    return "%s_%s_mask.nii.gz" % (subject.lower(), session.lower())
 
 
 def _gen_crop_op_string(cog):
