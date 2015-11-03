@@ -1,4 +1,4 @@
-import tempfile
+import os
 import logging
 from nipype.pipeline import engine as pe
 from nipype.interfaces import fsl
@@ -6,7 +6,8 @@ from nipype.interfaces.dcmstack import CopyMeta
 from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
 import qiutil
 from qiutil.logging import logger
-from ..interfaces import XNATUpload
+from .. import CONF_DIR
+from ..interfaces import (Gate, XNATUpload, XNATFind)
 from ..helpers.bolus_arrival import bolus_arrival_index, BolusArrivalError
 from .workflow_base import WorkflowBase
 from .pipeline_error import PipelineError
@@ -17,12 +18,33 @@ PK_PREFIX = 'pk'
 TECHNIQUES = ['mock']
 """The built-in modeling techniques."""
 
+FIXED_R1_0_OUTPUTS = ['r1_series', 'pk_params', 'fxr_k_trans', 'fxr_v_e',
+           'fxr_tau_i', 'fxr_chisq', 'fxl_k_trans', 'fxl_v_e',
+           'fxl_chisq', 'delta_k_trans']
+"""The modeling outputs for all runs."""
+
+INFERRED_R1_0_OUTPUTS = FIXED_R1_0_OUTPUTS + ['dce_baseline', 'r1_0']
+"""The inferred R1_0 modeling outputs."""
+
+FASTFIT_PARAMS_FILE = 'fastfit.csv'
+"""The fastfit parameters CSV file name."""
+
+FASTFIT_PARAMS_TEMPLATE = os.path.join(CONF_DIR, FASTFIT_PARAMS_FILE)
+"""The fastfit parameters template file location."""
+
+MODELING_CONF_FILE = os.path.join(CONF_DIR, 'modeling.cfg')
+"""The modeling workflow configuration."""
+
+MODELING_PROFILE_FILE = 'profile.csv'
+"""The modeling profile CSV file name."""
+
 
 class ModelingError(Exception):
     pass
 
 
-def run(technique, project, subject, session, scan, time_series, **opts):
+def run(technique, project, subject, session, scan, time_series,
+        **opts):
     """
     Creates a :class:`qipipe.pipeline.modeling.ModelingWorkflow` and
     runs it on the given inputs.
@@ -34,14 +56,16 @@ def run(technique, project, subject, session, scan, time_series, **opts):
     :param scan: input scan
     :param time_series: the input 4D NIfTI time series
     :param opts: the :class:`qipipe.pipeline.modeling.ModelingWorkflow`
-        initializer options
+        initializer and run options
     :return: the :meth:`qipipe.pipeline.modeling.ModelingWorkflow.run`
         result
     """
+    run_opts = {key: opts.pop(key) for key in ['mask', 'registration']
+                if key in opts}
     mask = opts.pop('mask', None)
     wf = ModelingWorkflow(project=project, technique=technique, **opts)
 
-    return wf.run(subject, session, scan, time_series, mask=mask)
+    return wf.run(subject, session, scan, time_series, **run_opts)
 
 
 def generate_resource_name(technique):
@@ -87,9 +111,9 @@ class ModelingWorkflow(WorkflowBase):
 
     - *bolus_arrival_index*: the bolus uptake volume index
 
-    - the PK modeling parameters described below
+    - the R1 modeling parameters described below
 
-    If an input field is defined in the configuration file ``Parameters``
+    If an input field is defined in the configuration file ``R1``
     topic, then the input field is set to that value.
 
     If the |R10| option is not set, then it is computed from the proton
@@ -148,10 +172,10 @@ class ModelingWorkflow(WorkflowBase):
         The modeling parameters can be defined in either the options or the
         configuration as follows:
 
-        - The parameters can be defined in the configuration
-          ``Parameters`` section.
+        - The parameters can be defined in the configuration ``R1``
+          section.
 
-        - The input options take precedence over the configuration
+        - The keyword arguments take precedence over the configuration
           settings.
 
         - The *r1_0_val* takes precedence over the R1_0 computation
@@ -201,7 +225,7 @@ class ModelingWorkflow(WorkflowBase):
         :class:`qipipe.pipeline.modeling.ModelingWorkflow`.
         """
 
-    def run(self, subject, session, scan, time_series, mask=None):
+    def run(self, subject, session, scan, time_series, **opts):
         """
         Executes the modeling workflow described in
         :class:`qipipe.pipeline.modeling.ModelingWorkflow`
@@ -216,7 +240,9 @@ class ModelingWorkflow(WorkflowBase):
         :param session: the session name
         :param scan: the scan number
         :param time_series: the 4D time series resource name
-        :param mask: the XNAT mask resource
+        :param opts: the following keyword parameters:
+        :option mask: the XNAT mask resource name
+        :option registration: the XNAT registration resource name
         :return: the modeling result XNAT resource name
         """
         self.logger.debug("Modeling the %s %s Scan %d time series %s..." %
@@ -229,15 +255,24 @@ class ModelingWorkflow(WorkflowBase):
         except BolusArrivalError:
             bolus_arv_ndx = 0
 
+        # The keyword parameters.
+        mask = opts.get('mask')
+        registration = opts.get('registration')
+
         # Set the workflow input.
         input_spec = self.workflow.get_node('input_spec')
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
         input_spec.inputs.scan = scan
+        input_spec.inputs.resource = self.resource
         input_spec.inputs.time_series = time_series
         input_spec.inputs.bolus_arrival_index = bolus_arv_ndx
+        input_spec.inputs.profile_dest = os.path.join(self.base_dir,
+                                                      MODELING_PROFILE_FILE)
         if mask:
             input_spec.inputs.mask = mask
+        if registration:
+            input_spec.inputs.registration = registration
 
         # Execute the modeling workflow.
         self.logger.debug("Executing the %s workflow on the %s %s scan %d"
@@ -305,8 +340,9 @@ class ModelingWorkflow(WorkflowBase):
 
         # The workflow input fields.
         in_fields = ['subject', 'session', 'scan', 'time_series', 'mask',
-                     'bolus_arrival_index']
+                     'profile_dest', 'resource', 'bolus_arrival_index']
         input_xfc = IdentityInterface(fields=in_fields)
+        # The profile location is a temp file.
         input_spec = pe.Node(input_xfc, name='input_spec')
         self.logger.debug("The modeling workflow input is %s with"
             " fields %s" % (input_spec.name, in_fields))
@@ -327,13 +363,47 @@ class ModelingWorkflow(WorkflowBase):
             base_field = 'output_spec.' + field
             mdl_wf.connect(base_wf, base_field,
                            merge_outputs, "in%d" % (i + 1))
-        upload_xfc = XNATUpload(project=self.project, resource=self.resource,
-                                modality='MR')
-        upload_node = pe.Node(upload_xfc, name='upload_outputs')
-        mdl_wf.connect(input_spec, 'subject', upload_node, 'subject')
-        mdl_wf.connect(input_spec, 'session', upload_node, 'session')
-        mdl_wf.connect(input_spec, 'scan', upload_node, 'scan')
-        mdl_wf.connect(merge_outputs, 'out', upload_node, 'in_files')
+
+        # Make the resource.
+        cr_rsc_xfc = XNATFind(project=self.project, modality='MR', create=True)
+        create_resource = pe.Node(cr_rsc_xfc, name='create_resource')
+        mdl_wf.connect(input_spec, 'subject', create_resource, 'subject')
+        mdl_wf.connect(input_spec, 'session', create_resource, 'session')
+        mdl_wf.connect(input_spec, 'scan', create_resource, 'scan')
+        mdl_wf.connect(input_spec, 'resource', create_resource, 'resource')
+
+        # Gate uploads on the create node.
+        rsc_gate_xfc = Gate(fields=['resource', 'xnat_id'])
+        resource_gate = pe.Node(rsc_gate_xfc, resource=self.resource,
+                                name='resource_gate')
+        mdl_wf.connect(input_spec, 'resource', resource_gate, 'resource')
+        mdl_wf.connect(create_resource, 'xnat_id', resource_gate, 'xnat_id')
+
+        # Upload the outputs.
+        upload_xfc = XNATUpload(project=self.project)
+        upload_outputs = pe.Node(upload_xfc, name='upload_outputs')
+        mdl_wf.connect(input_spec, 'subject', upload_outputs, 'subject')
+        mdl_wf.connect(input_spec, 'session', upload_outputs, 'session')
+        mdl_wf.connect(input_spec, 'scan', upload_outputs, 'scan')
+        mdl_wf.connect(resource_gate, 'resource', upload_outputs, 'resource')
+        mdl_wf.connect(merge_outputs, 'out', upload_outputs, 'in_files')
+
+        # Make the profile.
+        create_profile_xfc = Function(input_names=['dest_file'],
+                                      output_names=['dest_file'],
+                                      function=create_profile)
+        create_profile_func = pe.Node(create_profile_xfc, name='create_profile')
+        mdl_wf.connect(input_spec, 'profile_dest',
+                       create_profile_func, 'dest_file')
+
+        # Upload the profile.
+        upload_profile = pe.Node(upload_xfc, name='upload_profile')
+        mdl_wf.connect(input_spec, 'subject', upload_profile, 'subject')
+        mdl_wf.connect(input_spec, 'session', upload_profile, 'session')
+        mdl_wf.connect(input_spec, 'scan', upload_profile, 'scan')
+        mdl_wf.connect(resource_gate, 'resource', upload_profile, 'resource')
+        mdl_wf.connect(create_profile_func, 'dest_file',
+                       upload_profile, 'in_files')
 
         # TODO - Get the overall and ROI FSL mean intensity values.
 
@@ -373,7 +443,7 @@ class ModelingWorkflow(WorkflowBase):
         base_wf = pe.Workflow(name='bolero', base_dir=self.base_dir)
 
         # The PK modeling parameters.
-        opts = self._pk_parameters(**opts)
+        opts = self._r1_parameters(**opts)
         # Set the use_fixed_r1_0 flag.
         use_fixed_r1_0 = opts.get('r1_0_val') != None
 
@@ -413,11 +483,13 @@ class ModelingWorkflow(WorkflowBase):
             base_wf.connect(input_spec, 'max_r1_0', get_r1_0, 'max_r1_0')
             base_wf.connect(input_spec, 'mask', get_r1_0, 'mask')
 
+        # The R1 destination directory.
         # Convert the DCE time series to R1 maps.
         get_r1_series_func = Function(
-            input_names=['time_series', 'r1_0', 'baseline_end', 'mask'],
+            input_names=['time_series', 'r1_0', 'baseline_end', 'mask', 'dest'],
             output_names=['r1_series'], function=make_r1_series)
-        get_r1_series = pe.Node(get_r1_series_func, name='get_r1_series')
+        get_r1_series = pe.Node(get_r1_series_func, dest=self.base_dir,
+                                name='get_r1_series')
         base_wf.connect(input_spec, 'time_series',
                         get_r1_series, 'time_series')
         base_wf.connect(input_spec, 'baseline_end_idx',
@@ -471,13 +543,8 @@ class ModelingWorkflow(WorkflowBase):
         base_wf.connect(pk_map, 'guess_model.k_trans',
                         delta_k_trans, 'in_file2')
 
-        # Set up the outputs.
-        outputs = ['r1_series', 'pk_params', 'fxr_k_trans', 'fxr_v_e',
-                   'fxr_tau_i', 'fxr_chisq', 'fxl_k_trans', 'fxl_v_e',
-                   'fxl_chisq', 'delta_k_trans']
-        # IF R1_0 is infered, then add the R1_0 outputs.
-        if not use_fixed_r1_0:
-            outputs += ['dce_baseline', 'r1_0']
+        # The modeling outputs.
+        outputs = FIXED_R1_0_OUTPUTS if use_fixed_r1_0 else INFERRED_R1_0_OUTPUTS
         output_spec = pe.Node(IdentityInterface(fields=outputs),
                               name='output_spec')
         # Run the PK model.
@@ -516,7 +583,7 @@ class ModelingWorkflow(WorkflowBase):
         base_wf = pe.Workflow(name='mock', base_dir=self.base_dir)
 
         # The PK modeling parameters.
-        opts = self._pk_parameters(**opts)
+        opts = self._r1_parameters(**opts)
 
         # Set up the input node.
         non_pk_flds = ['time_series', 'mask', 'bolus_arrival_index']
@@ -548,17 +615,17 @@ class ModelingWorkflow(WorkflowBase):
 
         return base_wf
 
-    def _pk_parameters(self, **opts):
+    def _r1_parameters(self, **opts):
         """
-        Collects the modeling parameters defined in either the options
+        Collects the R1 modeling parameters defined in either the options
         or the configuration, as described in :class:`ModelingWorkflow`.
 
         :param opts: the input options
         :return: the parameter {name: value} dictionary
         """
-        config = self.configuration.get('Parameters', {})
+        config = self.configuration.get('R1', {})
 
-        logger(__name__).debug("Setting the PK parameters from the option"
+        logger(__name__).debug("Setting the R1 parameters from the option"
             " keyword parameters %s and configuration %s..." % (opts, config))
 
         # The R1_0 computation fields.
@@ -618,6 +685,7 @@ class ModelingWorkflow(WorkflowBase):
                 pk_opts.pop(field, None)
 
         self.logger.debug("The PK modeling parameters: %s" % pk_opts)
+
         return pk_opts
 
 
@@ -717,10 +785,10 @@ def make_r1_series(time_series, r1_0, **kwargs):
 
     cwd = os.getcwd()
     out_nii = nb.Nifti1Image(r1_series, dce_nw.nii_img.get_affine())
-    out_fn = os.path.join(cwd, 'r1_series.nii.gz')
-    nb.save(out_nii, out_fn)
+    out_file = os.path.join(cwd, 'r1_series.nii.gz')
+    nb.save(out_nii, out_file)
 
-    return out_fn
+    return out_file
 
 
 def get_fit_params(time_series, bolus_arrival_index):
@@ -743,6 +811,8 @@ def get_fit_params(time_series, bolus_arrival_index):
     import numpy as np
     from dcmstack.dcmmeta import NiftiWrapper
     from dcmstack import dcm_time_to_sec
+    from qipipe.pipeline.modeling import (FASTFIT_PARAMS_TEMPLATE,
+                                          FASTFIT_PARAMS_FILE)
 
     # Load the time series into a NIfTI wrapper.
     nii = nb.load(time_series)
@@ -758,15 +828,41 @@ def get_fit_params(time_series, bolus_arrival_index):
         nw.get_meta('AcquisitionTime', (0, 0, 0, bolus_arrival_index + 1)))
     aif_shift = ((acq_time1 + acq_time2) / 2.0) - acq_time0
 
-    # Create the parameter CSV file.
-    with open('params.csv', 'w') as csv_file:
-        csv_writer = csv.writer(csv_file)
-        csv_writer.writerow(['aif_scale', '0.674'])
-        csv_writer.writerow(['aif_params', '0.4', '2.2', '0.23', '1.3',
-                             '0.09', '0.0013', '0.0'])
-        csv_writer.writerow(['aif_delta_t', '1.5'])
-        csv_writer.writerow(['aif_shift', str(aif_shift)])
-        csv_writer.writerow(['r1_cr', '3.8'])
-        csv_writer.writerow(['r1_b_pre', '0.71'])
+    # The static input parameter CSV template.
+    with open(FASTFIT_PARAMS_TEMPLATE) as csv_file:
+        rows = list(csv.reader(csv_file))
+    # Add the shift.
+    rows.append(['aif_shift', str(aif_shift)])
 
-    return os.path.join(os.getcwd(), 'params.csv')
+    # Create the parameter CSV file.
+    with open(FASTFIT_PARAMS_FILE, 'w') as csv_file:
+        csv_writer = csv.writer(csv_file)
+        csv_writer.writerows(rows)
+
+    return os.path.join(os.getcwd(), FASTFIT_PARAMS_FILE)
+
+
+def create_profile(dest_file=None):
+    """
+    :param dest_file: the target profile location
+    :return: the destination file
+    """
+    import os
+    import csv
+    from qiutil.ast_config import read_config
+    from qipipe.pipeline.modeling import (MODELING_CONF_FILE, ModelingError)
+
+    # Make the R1 params file.
+    cfg = read_config(MODELING_CONF_FILE)
+    cfg_dict = dict(cfg)
+    r1_opts = cfg_dict.get('R1')
+    if not r1_opts:
+        raise ModelingError("The imaging configuration file %s"
+                            " is missing the R1 topic" %
+                            configuration)
+    with open(dest_file, 'w+') as csv_file:
+        csv_writer = csv.writer(csv_file)
+        csv_writer.writerows(r1_opts.items())
+
+    return dest_file
+

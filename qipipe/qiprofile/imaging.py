@@ -1,8 +1,12 @@
 """
 This module updates the qiprofile database imaging information
-from a XNAT experiment.
+from a XNAT scan.
 """
+from qiutil.file import splitexts
+from qiprofile_rest_client.helpers import database
+from qiprofile_rest_client.model.imaging import (Session, SessionDetail) 
 from ..helpers.constants import (SUBJECT_FMT, SESSION_FMT)
+from ..pipeline.modeling import FASTFIT_PARAMS_FILE
 from . import modeling
 
 
@@ -10,80 +14,132 @@ class ImagingError(Exception):
     pass
 
 
-def update(subject, experiment):
+def update(subject, scan):
     """
     Updates the imaging content for the given qiprofile REST Subject
-    from the given XNAT experiment.
+    from the given XNAT scan.
 
     :param subject: the target qiprofile Subject to update
-    :param experiment: the XNAT experiment object
+    :param scan: the XNAT scan object
     """
+    # The parent XNAT experiment.
+    exp = scan.parent()
     # The XNAT experiment must have a date.
-    if not experiment.date:
+    date = exp.attrs.get('date')
+    if not date:
         raise ImagingError(
-            "%s %s Subject %d Session %d XNAT experiment is missing"
+            "The XNAT %s %s Subject %d %s experiment is missing"
             " the visit date" % (subject.project, subject.collection,
-                         subject.number, session.number)
+                         subject.number, exp.label)
         )
     # If there is a qiprofile session with the same date,
     # then complain.
-    is_dup_session = lambda sess: sess.date == experiment.date
-    if any(is_dup_session, subject.sessions):
+    if any(sess.date == date for sess in subject.sessions):
         raise ImagingError(
             "qiprofile %s %s Subject %d session with visit date %s"
             " already exists" % (subject.project, subject.collection,
-                                 subject.number, experiment.date)
+                                 subject.number, date)
         )
     # Make the qiprofile session database object.
-    session = Session(date=experiment.date)
+    session = _create_session(exp)
     # Add the session to the subject encounters in date order.
     subject.add_encounter(session)
-    # Update the qiprofile session object.
-    _update(session, experiment)
     # Save the session detail.
     session.detail.save()
     # Save the subject.
     subject.save()
-    
 
-def _update(session, experiment):
+
+def _create_session(xnat_exp):
     """
-    Updates the qiprofile session from the XNAT experiment.
+    Makes the qiprofile Session object from the XNAT scan.
     
-    :param session: the qiprofile session object
-    :param experiment: the XNAT experiment object
+    :param xnat_exp: the XNAT experiment object
+    :return: the qiprofile session object
+    """
+    # Make the qiprofile scans.
+    scans = [_create_scan(xnat_scan) for xnat_scan in xnat_exp.scans()]
+
+    # The modeling resources begin with 'pk_'.
+    xnat_mdl_rscs = (rsc for rsc in xnat_scan.resources()
+                     if rsc.label().startswith('pk_'))
+    modelings = [_create_modeling(rsc) for rsc in xnat_mdl_rscs]
+
+    # The session detail database object to hold the scans.
+    detail = SessionDetail(scans=scans)
+    # Save the detail first, since it is not embedded and we need to
+    # set the detail reference to make the session.
+    detail.save()
+
+    # The XNAT experiment date is the qiprofile session date.
+    date = xnat_exp.attrs.get('date')
+
+    # Return the new qiprofile Session object.
+    return Session(date=date, modelings=modelings, detail=detail)
+
+
+def _create_modeling(xnat_rsc):
+    pass
+    # TODO
+
+
+def _create_scan(xnat_scan):
+    """
+    Makes the qiprofile Session object from the XNAT scan.
+    
+    :param xnat_scan: the XNAT scan object
+    :return: the qiprofile scan object
     """
     # The modeling resources begin with 'pk_'.
-    for rsc in experiment.resources():
-        if rsc.label.startswith('pk_'):
-            _update_modeling(session, rsc)
+    xnat_mdl_rscs = (rsc for rsc in xnat_scan.resources()
+                     if rsc.label().startswith('pk_'))
+    modelings = [_create_modeling(rsc) for rsc in xnat_mdl_rscs]
 
-    # Create the session detail database subject to hold the scans.
-    session.detail = database.get_or_create(SubjectDetail)
-    # The scans are embedded in the SessionDetail document.
-    for scan in experiment.scans():
+    # The qiprofile scan to embed in the SessionDetail document.
+    for scan in scan.scans():
         _update_scan(session, scan)
+    # The session detail database object to hold the scans.
+    detail = SessionDetail(scans=[scan])
+    # Save the detail first, since it is not embedded and we need to
+    # set the detail reference to make the session.
+    detail.save()
+    
+    return Session(date=date, modelings=modelings,
+                   tumor_extents=tumor_extents, detail=detail)
 
 
-def _update_modeling(session, resource):
+def _create_modeling(xnat_resource):
     """
-    Updates the modeling content for the given qiprofile session
-    database object from the given XNAT modeling resource object.
+    Creates the qiprofile Modeling object from the given XNAT
+    resource object.
 
-    :param session: the target qiprofile Session object to update
-    :param resource: the XNAT modeling resource object
+    :param xnat_resource: the XNAT modeling resource object
     """
-    # TODO
-    pass
+    # The XNAT modeling files.
+    xnat_files = xnat_resource.files()
+    # The input parameters.
+    param_csv_finder = (xnat_file for xnat_file in xnat_files
+                        if xnat_file.label() == FASTFIT_PARAMS_FILE)
+    xnat_param_csv_file = next(param_csv_finder, None)
+    if not xnat_param_csv_file:
+        raise ImagingError("The XNAT modeling resource %s does not contain"
+                           " input parameter file %s" %
+                           (xnat_resource.label(), FASTFIT_PARAMS_FILE))
+    param_csv_location = xnat_param_csv_file.get()
+    with open(param_csv_location) as csv_file:
+        csv_reader = csv.reader(csv_file)
+    # The qiprofile modeling output files.
+    output_files = (fname for fname in xnat_files
+                    if fname in OUTPUTS)
 
 
-def _update_scan(session, scan):
+def _update_scan(session, xnat_scan):
     """
     Updates the scan content for the given qiprofile session
     database object from the given XNAT scan object.
 
     :param session: the target qiprofile Session object to update
-    :param scan: the XNAT scan object
+    :param xnat_scan: the XNAT scan object
     """
     # TODO
     pass
