@@ -10,7 +10,7 @@ from nipype.interfaces import fsl
 from nipype.interfaces.dcmstack import CopyMeta
 import qiutil
 from qiutil.logging import logger
-from ..interfaces import (Gate, Copy, XNATUpload)
+from ..interfaces import (Copy, XNATUpload)
 from ..helpers import bolus_arrival
 from .workflow_base import WorkflowBase
 from .pipeline_error import PipelineError
