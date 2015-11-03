@@ -502,7 +502,7 @@ class QIPipelineWorkflow(WorkflowBase):
         # Set the roi function inputs.
         roi_node = self.workflow.get_node('roi')
         roi_node.inputs.in_rois = inputs
-        roi_node.inputs.opts = dict(base_dir=self.workflow.base_dir)
+        roi_node.inputs.opts = dict(base_dir=self.base_dir)
 
     def _partition_registered(self, xnat, project, subject, session, scan,
                               files):
