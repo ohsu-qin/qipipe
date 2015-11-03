@@ -115,12 +115,12 @@ class VolumeTestBase(object):
                     inputs[sbj][sess][scan]['images'] = images
                     # The input mask.
                     if self._use_mask:
-                        masks = glob.glob(sess_dir + '/resources/*mask.*')
-                        assert_not_equal(len(masks), 0, "Mask not found in %s" % sess_dir)
-                        assert_equal(len(masks), 1, "Too many masks found in %s" % sess_dir)
+                        masks = glob.glob(scan_dir + '/resources/mask/mask.*')
+                        assert_not_equal(len(masks), 0, "Mask not found in %s" % scan_dir)
+                        assert_equal(len(masks), 1, "Too many masks found in %s" % scan_dir)
                         mask = masks[0]
-                        self._logger.debug("Discovered %d %s %s test input mask %s" %
-                                           (len(images), sbj, sess, mask))
+                        self._logger.debug("Discovered %d %s %s Scan %d test input mask %s" %
+                                           (len(images), sbj, sess, scan, mask))
                         inputs[sbj][sess][scan]['mask'] = mask
 
         return inputs
