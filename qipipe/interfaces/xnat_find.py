@@ -23,8 +23,9 @@ class XNATFindInputSpec(BaseInterfaceInputSpec):
 
     inout = traits.Str(desc='The XNAT resource in/out designator')
 
-    create = traits.Bool(default=False, desc='Flag indicating whether to '
-                         'create the XNAT object if it does not yet exist')
+    create = traits.Bool(default=False,
+                         desc='Flag indicating whether to create the XNAT'
+                              ' object if it does not yet exist')
 
     modality = traits.Str(desc="The XNAT scan modality, e.g. 'MR'")
 
@@ -87,10 +88,7 @@ class XNATFind(BaseInterface):
             else:
                 obj = xnat.find_one(self.inputs.project, self.inputs.subject,
                                     session, **opts)
-            if obj:
-                self._xnat_id = obj.id()
-            else:
-                self._xnat_id = None
+            self._xnat_id = obj.id() if obj else None
 
         return runtime
 
