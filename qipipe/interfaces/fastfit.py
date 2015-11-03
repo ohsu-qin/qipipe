@@ -36,14 +36,21 @@ class FastfitError(Exception):
 class FastfitInputSpec(MpiCommandLineInputSpec):
     model_name = traits.String(desc='The name of the model to optimize',
                                mandatory=True, position=-2, argstr='%s')
+
     target_data = traits.File(desc='Target data',
                               mandatory=True, position=-1, argstr='%s')
+
     mask = traits.File(desc='Mask file', argstr='-m %s')
+
     weights = traits.File(desc='Weights file', argstr='-w %s')
+
     params = traits.Dict(desc='Parameters for the model')
+
     params_csv = traits.File(desc='Parameters CSV', argstr='--param-csv %s')
+
     fix_params = traits.Dict(desc="Optimization parameters to fix, and "
                              "the values to fix them to", argstr='%s')
+
     optional_outs = traits.List(desc='Optional outputs to produce',
                                 argstr='%s')
 
