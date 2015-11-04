@@ -370,9 +370,8 @@ class ModelingWorkflow(WorkflowBase):
         mdl_wf.connect(input_spec, 'scan', create_resource, 'scan')
 
         # Gate uploads on the create_resource node.
-        rsc_gate_xfc = Gate(fields=['resource', 'xnat_id'])
-        resource_gate = pe.Node(rsc_gate_xfc, resource=self.resource,
-                                name='resource_gate')
+        rsc_gate_xfc = Gate(fields=['resource', 'xnat_id'], resource=self.resource)
+        resource_gate = pe.Node(rsc_gate_xfc, name='resource_gate')
         # xnat_id is not subsequently used. It is a dead-end connection
         # whose sole purpose is to gate successor nodes on create_resource.
         mdl_wf.connect(create_resource, 'xnat_id', resource_gate, 'xnat_id')
@@ -388,9 +387,8 @@ class ModelingWorkflow(WorkflowBase):
 
         # Make a gate whose sole purpose is to tie the input_spec node
         # to create_profile.
-        cr_prf_gate_xfc = Gate(fields=['scan', 'technique'])
-        create_profile_gate = pe.Node(cr_prf_gate_xfc, technique=self.technique,
-                                      name='create_profile_gate')
+        cr_prf_gate_xfc = Gate(fields=['scan', 'technique'], technique=self.technique)
+        create_profile_gate = pe.Node(cr_prf_gate_xfc, name='create_profile_gate')
         # scan is not subsequently used. It is a dead-end connection
         # whose sole purpose is to gate successor nodes on create_profile.
         mdl_wf.connect(input_spec, 'scan', create_profile_gate, 'scan')
@@ -861,7 +859,9 @@ def create_profile(technique, dest_file=None):
     import os
     import csv
     from qiutil.ast_config import read_config
-    from qipipe.pipeline.modeling import (MODELING_CONF_FILE, ModelingError)
+    from qipipe.pipeline.modeling import (MODELING_CONF_FILE,
+                                          MODELING_PROFILE_FILE,
+                                          ModelingError)
 
     # Make the R1 params file.
     cfg = read_config(MODELING_CONF_FILE)
