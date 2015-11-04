@@ -35,8 +35,8 @@ FASTFIT_PARAMS_TEMPLATE = os.path.join(CONF_DIR, FASTFIT_PARAMS_FILE)
 MODELING_CONF_FILE = os.path.join(CONF_DIR, 'modeling.cfg')
 """The modeling workflow configuration."""
 
-MODELING_PROFILE_FILE = 'profile.csv'
-"""The modeling profile CSV file name."""
+MODELING_PROFILE_FILE = 'profile.cfg'
+"""The modeling profile file name."""
 
 
 class ModelingError(Exception):
@@ -264,12 +264,8 @@ class ModelingWorkflow(WorkflowBase):
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
         input_spec.inputs.scan = scan
-        input_spec.inputs.resource = self.resource
         input_spec.inputs.time_series = time_series
         input_spec.inputs.bolus_arrival_index = bolus_arv_ndx
-        # The modeling profile file path.
-        profile_dest = os.path.join(self.base_dir, MODELING_PROFILE_FILE)
-        input_spec.inputs.profile_dest = profile_dest
         if mask:
             input_spec.inputs.mask = mask
         if registration:
@@ -341,7 +337,7 @@ class ModelingWorkflow(WorkflowBase):
 
         # The workflow input fields.
         in_fields = ['subject', 'session', 'scan', 'time_series', 'mask',
-                     'profile_dest', 'resource', 'bolus_arrival_index']
+                     'bolus_arrival_index']
         input_xfc = IdentityInterface(fields=in_fields)
         # The profile location is a temp file.
         input_spec = pe.Node(input_xfc, name='input_spec')
@@ -366,18 +362,19 @@ class ModelingWorkflow(WorkflowBase):
                            merge_outputs, "in%d" % (i + 1))
 
         # Make the resource.
-        cr_rsc_xfc = XNATFind(project=self.project, modality='MR', create=True)
+        cr_rsc_xfc = XNATFind(project=self.project, resource=self.resource,
+                              modality='MR', create=True)
         create_resource = pe.Node(cr_rsc_xfc, name='create_resource')
         mdl_wf.connect(input_spec, 'subject', create_resource, 'subject')
         mdl_wf.connect(input_spec, 'session', create_resource, 'session')
         mdl_wf.connect(input_spec, 'scan', create_resource, 'scan')
-        mdl_wf.connect(input_spec, 'resource', create_resource, 'resource')
 
-        # Gate uploads on the create node.
+        # Gate uploads on the create_resource node.
         rsc_gate_xfc = Gate(fields=['resource', 'xnat_id'])
         resource_gate = pe.Node(rsc_gate_xfc, resource=self.resource,
                                 name='resource_gate')
-        mdl_wf.connect(input_spec, 'resource', resource_gate, 'resource')
+        # xnat_id is not subsequently used. It is a dead-end connection
+        # whose sole purpose is to gate successor nodes on create_resource.
         mdl_wf.connect(create_resource, 'xnat_id', resource_gate, 'xnat_id')
 
         # Upload the outputs.
@@ -389,13 +386,22 @@ class ModelingWorkflow(WorkflowBase):
         mdl_wf.connect(resource_gate, 'resource', upload_outputs, 'resource')
         mdl_wf.connect(merge_outputs, 'out', upload_outputs, 'in_files')
 
+        # Make a gate whose sole purpose is to tie the input_spec node
+        # to create_profile.
+        cr_prf_gate_xfc = Gate(fields=['scan', 'technique'])
+        create_profile_gate = pe.Node(cr_prf_xfc, technique=self.technique,
+                                      name='create_profile_gate')
+        # scan is not subsequently used. It is a dead-end connection
+        # whose sole purpose is to gate successor nodes on create_profile.
+        mdl_wf.connect(input_spec, 'scan', create_profile_gate, 'scan')
+
         # Make the profile.
-        create_profile_xfc = Function(input_names=['dest_file'],
+        create_profile_xfc = Function(input_names=['technique'],
                                       output_names=['out_file'],
                                       function=create_profile)
         create_profile_func = pe.Node(create_profile_xfc, name='create_profile')
-        mdl_wf.connect(input_spec, 'profile_dest',
-                       create_profile_func, 'dest_file')
+        mdl_wf.connect(create_profile_gate, 'technique',
+                       create_profile_func, 'technique')
 
         # Upload the profile.
         upload_profile = pe.Node(upload_xfc, name='upload_profile')
@@ -843,7 +849,7 @@ def get_fit_params(time_series, bolus_arrival_index):
     return os.path.join(os.getcwd(), FASTFIT_PARAMS_FILE)
 
 
-def create_profile(dest_file=None):
+def create_profile(technique, dest_file=None):
     """
     Creates the modeling profile CSV file from the
     :const:`MODELING_CONF_FILE` ``R1`` topic.
@@ -869,6 +875,7 @@ def create_profile(dest_file=None):
         dest_file = os.path.join(os.getcwd(), MODELING_PROFILE_FILE)
     with open(dest_file, 'w+') as csv_file:
         csv_writer = csv.writer(csv_file)
+        csv_writer.writerow(('technique', technique))
         csv_writer.writerows(r1_opts.items())
 
     return dest_file
