@@ -389,7 +389,7 @@ class ModelingWorkflow(WorkflowBase):
         # Make a gate whose sole purpose is to tie the input_spec node
         # to create_profile.
         cr_prf_gate_xfc = Gate(fields=['scan', 'technique'])
-        create_profile_gate = pe.Node(cr_prf_xfc, technique=self.technique,
+        create_profile_gate = pe.Node(cr_prf_gate_xfc, technique=self.technique,
                                       name='create_profile_gate')
         # scan is not subsequently used. It is a dead-end connection
         # whose sole purpose is to gate successor nodes on create_profile.
