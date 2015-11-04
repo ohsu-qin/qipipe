@@ -7,7 +7,7 @@ from qiprofile_rest_client.helpers import database
 from qiprofile_rest_client.model.imaging import (Session, SessionDetail,
                                                  Modeling, ParameterResult)
 from ..helpers.constants import (SUBJECT_FMT, SESSION_FMT)
-from ..pipeline.modeling import FASTFIT_PARAMS_FILE
+from ..pipeline.modeling import MODELING_PROFILE_FILE
 from ..pipeline.modeling import INFERRED_R1_0_OUTPUTS as OUTPUTS
 from . import modeling
 
@@ -115,24 +115,38 @@ def _create_modeling(xnat_resource):
     # The XNAT modeling files.
     xnat_files = xnat_resource.files()
     
-    # The fastfit parameters.
-    fastfit_finder = (xnat_file for xnat_file in xnat_files
-                        if xnat_file.label() == FASTFIT_PARAMS_FILE)
-    xnat_fastfit_file = next(fastfit_finder, None)
-    if not xnat_fastfit_file:
+    # The profile parameters.
+    profile_finder = (xnat_file for xnat_file in xnat_files
+                        if xnat_file.label() == MODELING_PROFILE_FILE)
+    xnat_profile_file = next(profile_finder, None)
+    if not xnat_profile_file:
         raise ImagingError("The XNAT modeling resource %s does not contain"
-                           " input parameter file %s" %
-                           (xnat_resource.label(), FASTFIT_PARAMS_FILE))
-    fastfit_location = xnat_fastfit_file.get()
-    with open(fastfit_location) as fastfit_file:
-        csv_reader = csv.reader(fastfit_file)
-        fastfit_dict = {row[0], ','.join(row[1:]) for row in csv_reader}
+                           " the file %s" %
+                           (xnat_resource.label(), MODELING_PROFILE_FILE))
+    profile_location = xnat_profile_file.get()
+    with open(profile_location) as profile_file:
+        rows = csv.reader(profile_file)
+        row_dict = {row[0]: row[1:] for row in rows}
+        technique = row_dict.get('technique')
+        if not technique:
+            raise ImagingError("The XNAT modeling resource %s %s file does"
+                               " not contain the technique entry" %
+                               (xnat_resource.label(), MODELING_PROFILE_FILE))
+        technique = row_dict.get('technique')
+        if not technique:
+            raise ImagingError("The XNAT modeling resource %s %s file does"
+                               " not contain the technique entry" %
+                               (xnat_resource.label(), MODELING_PROFILE_FILE))
+    
+    # The qiprofile ModelingProtocol.
+    profile_dict = dict(technique=technique, r1_parameters=r1_params,
+                        fastfit_parameter=fastfit_params)
+    ModelingProtocol.objects.get(profile_dict)
     
     # The qiprofile modeling output files.
     possible_output_files = {output + '.nii.gz' for output in OUTPUTS}
     output_xnat_files = (xnat_file.label() for xnat_file in xnat_files
                          if xnat_file.label() in possible_output_files)
-    
 
 def _update_scan(session, xnat_scan):
     """
