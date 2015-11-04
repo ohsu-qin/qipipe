@@ -844,7 +844,11 @@ def get_fit_params(time_series, bolus_arrival_index):
 
 def create_profile(dest_file=None):
     """
+    Creates the modeling profile CSV file from the
+    :const:`MODELING_CONF_FILE` ``R1`` topic.
+
     :param dest_file: the target profile location
+        (default :const:`MODELING_PROFILE_FILE` in the current directory)
     :return: the destination file
     """
     import os
@@ -860,6 +864,8 @@ def create_profile(dest_file=None):
         raise ModelingError("The imaging configuration file %s"
                             " is missing the R1 topic" %
                             configuration)
+    if not dest_file:
+        dest_file = os.path.join(os.getcwd(), MODELING_PROFILE_FILE)
     with open(dest_file, 'w+') as csv_file:
         csv_writer = csv.writer(csv_file)
         csv_writer.writerows(r1_opts.items())
