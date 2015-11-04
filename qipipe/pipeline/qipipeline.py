@@ -842,8 +842,6 @@ class QIPipelineWorkflow(WorkflowBase):
                             mdl_wf, 'input_spec.session')
             exec_wf.connect(input_spec, 'scan',
                             mdl_wf, 'input_spec.scan')
-            exec_wf.connect(input_spec, 'scan',
-                            mdl_wf, 'input_spec.scan')
             # The modeling profile file path.
             mdl_profile_dest = os.path.join(self.base_dir, MODELING_PROFILE_FILE)
             mdl_input_spec = mdl_wf.get_node('input_spec')
