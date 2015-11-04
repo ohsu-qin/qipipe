@@ -96,8 +96,8 @@ class TestImaging(object):
                 xnat.upload(mdl, csv_file.name, name=FASTFIT_PARAMS_FILE)
             # Make the R1 params file.
             with tempfile.NamedTemporaryFile() as profile_dest:
-                create_profile(profile_dest)
-                xnat.upload(mdl, profile_dest, name=MODELING_PROFILE_FILE)
+                create_profile(profile_dest.name)
+                xnat.upload(mdl, profile_dest.name, name=MODELING_PROFILE_FILE)
             # Make the modeling result files.
             with tempfile.NamedTemporaryFile() as dummy:
                 for output in OUTPUTS:
