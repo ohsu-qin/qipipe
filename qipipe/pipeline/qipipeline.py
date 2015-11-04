@@ -12,7 +12,7 @@ from . import (staging, registration, modeling)
 from .pipeline_error import PipelineError
 from .workflow_base import WorkflowBase
 from .staging import StagingWorkflow
-from .modeling import ModelingWorkflow
+from .modeling import (ModelingWorkflow, MODELING_PROFILE_FILE)
 from .mask import MaskWorkflow
 from .roi import ROIWorkflow
 from ..interfaces import (XNATDownload, XNATUpload)
@@ -842,6 +842,12 @@ class QIPipelineWorkflow(WorkflowBase):
                             mdl_wf, 'input_spec.session')
             exec_wf.connect(input_spec, 'scan',
                             mdl_wf, 'input_spec.scan')
+            exec_wf.connect(input_spec, 'scan',
+                            mdl_wf, 'input_spec.scan')
+            # The modeling profile file path.
+            mdl_profile_dest = os.path.join(self.base_dir, MODELING_PROFILE_FILE)
+            mdl_input_spec = mdl_wf.get_node('input_spec')
+            mdl_input_spec.inputs.profile_dest = mdl_profile_dest
             # The mask input.
             if mask_wf:
                 exec_wf.connect(mask_wf, 'output_spec.mask',

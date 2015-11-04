@@ -267,8 +267,9 @@ class ModelingWorkflow(WorkflowBase):
         input_spec.inputs.resource = self.resource
         input_spec.inputs.time_series = time_series
         input_spec.inputs.bolus_arrival_index = bolus_arv_ndx
-        input_spec.inputs.profile_dest = os.path.join(self.base_dir,
-                                                      MODELING_PROFILE_FILE)
+        # The modeling profile file path.
+        profile_dest = os.path.join(self.base_dir, MODELING_PROFILE_FILE)
+        input_spec.inputs.profile_dest = profile_dest
         if mask:
             input_spec.inputs.mask = mask
         if registration:
@@ -390,7 +391,7 @@ class ModelingWorkflow(WorkflowBase):
 
         # Make the profile.
         create_profile_xfc = Function(input_names=['dest_file'],
-                                      output_names=['dest_file'],
+                                      output_names=['out_file'],
                                       function=create_profile)
         create_profile_func = pe.Node(create_profile_xfc, name='create_profile')
         mdl_wf.connect(input_spec, 'profile_dest',
@@ -402,7 +403,7 @@ class ModelingWorkflow(WorkflowBase):
         mdl_wf.connect(input_spec, 'session', upload_profile, 'session')
         mdl_wf.connect(input_spec, 'scan', upload_profile, 'scan')
         mdl_wf.connect(resource_gate, 'resource', upload_profile, 'resource')
-        mdl_wf.connect(create_profile_func, 'dest_file',
+        mdl_wf.connect(create_profile_func, 'out_file',
                        upload_profile, 'in_files')
 
         # TODO - Get the overall and ROI FSL mean intensity values.

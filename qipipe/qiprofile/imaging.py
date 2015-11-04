@@ -4,9 +4,11 @@ from a XNAT scan.
 """
 from qiutil.file import splitexts
 from qiprofile_rest_client.helpers import database
-from qiprofile_rest_client.model.imaging import (Session, SessionDetail) 
+from qiprofile_rest_client.model.imaging import (Session, SessionDetail,
+                                                 Modeling, ParameterResult)
 from ..helpers.constants import (SUBJECT_FMT, SESSION_FMT)
 from ..pipeline.modeling import FASTFIT_PARAMS_FILE
+from ..pipeline.modeling import INFERRED_R1_0_OUTPUTS as OUTPUTS
 from . import modeling
 
 
@@ -78,11 +80,6 @@ def _create_session(xnat_exp):
     return Session(date=date, modelings=modelings, detail=detail)
 
 
-def _create_modeling(xnat_rsc):
-    pass
-    # TODO
-
-
 def _create_scan(xnat_scan):
     """
     Makes the qiprofile Session object from the XNAT scan.
@@ -117,21 +114,25 @@ def _create_modeling(xnat_resource):
     """
     # The XNAT modeling files.
     xnat_files = xnat_resource.files()
-    # The input parameters.
-    param_csv_finder = (xnat_file for xnat_file in xnat_files
+    
+    # The fastfit parameters.
+    fastfit_finder = (xnat_file for xnat_file in xnat_files
                         if xnat_file.label() == FASTFIT_PARAMS_FILE)
-    xnat_param_csv_file = next(param_csv_finder, None)
-    if not xnat_param_csv_file:
+    xnat_fastfit_file = next(fastfit_finder, None)
+    if not xnat_fastfit_file:
         raise ImagingError("The XNAT modeling resource %s does not contain"
                            " input parameter file %s" %
                            (xnat_resource.label(), FASTFIT_PARAMS_FILE))
-    param_csv_location = xnat_param_csv_file.get()
-    with open(param_csv_location) as csv_file:
-        csv_reader = csv.reader(csv_file)
+    fastfit_location = xnat_fastfit_file.get()
+    with open(fastfit_location) as fastfit_file:
+        csv_reader = csv.reader(fastfit_file)
+        fastfit_dict = {row[0], ','.join(row[1:]) for row in csv_reader}
+    
     # The qiprofile modeling output files.
-    output_files = (fname for fname in xnat_files
-                    if fname in OUTPUTS)
-
+    possible_output_files = {output + '.nii.gz' for output in OUTPUTS}
+    output_xnat_files = (xnat_file.label() for xnat_file in xnat_files
+                         if xnat_file.label() in possible_output_files)
+    
 
 def _update_scan(session, xnat_scan):
     """
