@@ -18,9 +18,6 @@ from .roi import ROIWorkflow
 from ..interfaces import (XNATDownload, XNATUpload)
 from ..staging.iterator import iter_stage
 from ..staging.map_ctp import map_ctp
-# OHSU - multi-volume scans.
-# TODO - get this from a [Staging] multi_volume_scans config parameter.,
-# with default all scans.
 from ..staging.ohsu import MULTI_VOLUME_SCAN_NUMBERS
 
 SCAN_TS_RSC = 'scan_ts'
@@ -29,7 +26,10 @@ SCAN_TS_RSC = 'scan_ts'
 MASK_RSC = 'mask'
 """The XNAT mask resouce name."""
 
-ACTIONS = ['stage', 'roi', 'qiprofile', 'register', 'model']
+SINGLE_VOLUME_ACTIONS = ['stage', 'roi']
+"""The workflow actions which apply to a single volume."""
+
+ACTIONS = SINGLE_VOLUME_ACTIONS + ['qiprofile', 'register', 'model']
 """The list of all workflow actions."""
 
 VOLUME_FILE_PAT = re.compile("volume(\d{3}).nii.gz$")
@@ -39,6 +39,7 @@ volume<number>.nii.gz, where <number> is the zero-padded volume
 number, as determined by the
 :meth:`qipipeline.pipeline.staging.volume_format` function.
 """
+
 
 
 def run(*inputs, **opts):
@@ -68,8 +69,7 @@ def run(*inputs, **opts):
         existing sessions (default False)
     """
     # The actions to perform.
-    actions = opts.pop(
-    'actions', ACTIONS)
+    actions = opts.pop('actions', ACTIONS)
     if 'stage' in actions:
         # Run with staging DICOM subject directory input.
         _run_with_dicom_input(actions, *inputs, **opts)
@@ -112,21 +112,7 @@ def _run_with_dicom_input(actions, *inputs, **opts):
     subjects = set()
     # Run the workflow on each session and scan.
     for scan_input in iter_stage(project, collection, *inputs, **opts):
-        # OHSU - Only multi-volume scans can have post-staging downstream
-        # actions.
-        if scan_input.scan in MULTI_VOLUME_SCAN_NUMBERS:
-            if 'stage' in actions:
-                wf_actions = ['stage']
-            else:
-                self.logger.debug("Skipping %s %s %s scan %d, since the"
-                            " actions do not include stage and only"
-                            " multi-volume scans support post-stage"
-                            "actions." %
-                            (project, scan_input.subject, scan_input.session,
-                             scan_input.scan))
-                continue
-        else:
-            wf_actions = actions
+        wf_actions = _filter_actions(actions)
         # Capture the subject.
         subjects.add(scan_input.subject)
         # Create a new workflow.
@@ -137,6 +123,44 @@ def _run_with_dicom_input(actions, *inputs, **opts):
     # If staging is enabled, then make the TCIA subject map.
     if 'stage' in actions:
         map_ctp(collection, *subjects, dest=dest)
+
+
+def _filter_actions(scan_input, actions):
+    """
+    Filters the specified actions for the given scan input.
+    If the scan number is in the :const:`MULTI_VOLUME_SCAN_NUMBERS`,
+    then this method returns the specified actions. Otherwise,
+    this method returns the actions allowed as
+    :const:`SINGLE_VOLUME_ACTIONS`.
+    
+    :param scan_input: the :meth:`qipipe.staging.iterator.iter_stage`
+        scan input
+    :param actions: the specified actions
+    :return: the allowed actions
+    """
+    if scan_input.scan in MULTI_VOLUME_SCAN_NUMBERS:
+        return actions
+    actions = set(actions)
+    allowed = actions.intersection(SINGLE_VOLUME_ACTIONS)
+    disallowed = actions.difference(SINGLE_VOLUME_ACTIONS)
+    if not allowed:
+        logger(__name__).debug(
+            "Skipping %s %s %s scan %d, since the scan is a single-volume"
+            " scan and only the actions %s are supported for a single-volume"
+            " scan." %
+            (project, scan_input.subject, scan_input.session, scan_input.scan,
+             actions, SINGLE_VOLUME_ACTIONS)
+        )
+    elif disallowed:
+        logger(__name__).debug(
+            "Ignoring the %s %s %s scan %d actions %s, since the scan"
+            " is a single-volume scan and only the actions %s are"
+            " supported for a single-volume scan." %
+            (project, scan_input.subject, scan_input.session, scan_input.scan,
+             disallowed, SINGLE_VOLUME_ACTIONS)
+        )
+
+    return allowed
 
 
 def _run_with_xnat_input(actions, *inputs, **opts):
