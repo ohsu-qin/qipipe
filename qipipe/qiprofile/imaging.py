@@ -5,7 +5,7 @@ from a XNAT scan.
 from qiutil.file import splitexts
 from qiprofile_rest_client.helpers import database
 from qiprofile_rest_client.model.imaging import (Session, SessionDetail,
-                                                 Modeling, ParameterResult)
+                                                 Modeling)
 from ..helpers.constants import (SUBJECT_FMT, SESSION_FMT)
 from ..pipeline.modeling import MODELING_PROFILE_FILE
 from ..pipeline.modeling import INFERRED_R1_0_OUTPUTS as OUTPUTS
