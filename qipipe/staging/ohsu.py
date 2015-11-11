@@ -127,7 +127,7 @@ session subdirectory:
 SARCOMA_ROI_REGEX = re.compile("""
     results/                    # The visit processing subdirectory
     ROI_ave(rage)?/             # The ROI subdirectory
-    taui_d001/                  # An intermediate sudirectory
+    taui_*d001/                 # An intermediate sudirectory
     slice(?P<slice_sequence_number>\d+)/  # The slice subdirectory
     (?P<fname>.*\.bqf)          # The ROI file base name
 """, re.VERBOSE)
