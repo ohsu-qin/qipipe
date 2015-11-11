@@ -116,7 +116,7 @@ BREAST_ROI_REGEX = re.compile("""
 The Breast ROI .bqf ROI file match pattern.
 """
 
-SARCOMA_ROI_PAT = 'results/ROI_ave*/taui_d001/slice*/*.bqf'
+SARCOMA_ROI_PAT = 'results/ROI_ave*/taui_*d001/slice*/*.bqf'
 """
 The Sarcoma ROI glob filter. The ``.bqf`` ROI files are in the
 session subdirectory:
