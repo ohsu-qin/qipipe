@@ -21,6 +21,9 @@ def version(package):
 
 def requires():
     """
+    Returns the ``qipipe`` requirements, excluding requirements
+    indicated in this method's documentation notes.
+
     @return: the ``requirements.txt`` package specifications
     
     :Note: ``pip`` supports VCS package specifications, but
@@ -28,10 +31,17 @@ def requires():
        the VCS requirements in ``requirements.txt``. The VCS
        dependencies must be installed separately as described
        in the User Guide **Installation** section.
+
+    :Note: the ``nibabel`` package is excluded from this install,
+        since nibabel validation requires ``numpy`` to be installed
+        before any of the dependent packages are installed. ``numpy``
+        and ``nibabel`` must be installed separately as described
+        in the User Guide **Installation** section. 
     """
     with open('requirements.txt') as f:
         rqmts = f.read().splitlines()
-        return [rqmt for rqmt in rqmts if not VCS_RQMT_PAT.match(rqmt)]
+        return [rqmt for rqmt in rqmts
+                if not rqmt.startswith('nibabel') and not VCS_RQMT_PAT.match(rqmt)]
 
 
 def readme():
