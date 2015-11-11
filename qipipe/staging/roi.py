@@ -49,7 +49,7 @@ def iter_roi(glob, regex, input_dir):
         >>> next(iter_roi('processing/*', '.*/\.bqf', '/path/to/session'))
         {lesion: 1, slice: 12, path: '/path/to/session/processing/rois/roi.bqf'}
 
-    :param glob_pat: the glob match pattern
+    :param glob: the glob match pattern
     :;param regex: the file name match regular expression
     :param input_dir: the source session directory to search
     :yield: the :class:`LesionROI` objects
