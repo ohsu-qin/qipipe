@@ -27,10 +27,10 @@ MASK_RSC = 'mask'
 """The XNAT mask resouce name."""
 
 SINGLE_VOLUME_ACTIONS = ['stage', 'roi']
-"""The workflow actions which apply to a single volume."""
+"""The workflow actions which apply to a single-volume scan."""
 
-ACTIONS = SINGLE_VOLUME_ACTIONS + ['qiprofile', 'register', 'model']
-"""The list of all workflow actions."""
+MULTI_VOLUME_ACTIONS = SINGLE_VOLUME_ACTIONS + ['qiprofile', 'register', 'model']
+"""The workflow actions which apply to a multi-volume scan."""
 
 VOLUME_FILE_PAT = re.compile("volume(\d{3}).nii.gz$")
 """
@@ -64,12 +64,12 @@ def run(*inputs, **opts):
     :keyword project: the XNAT project name
     :keyword collection: the image collection name
     :keyword actions: the workflow actions to perform
-        (default :const:`ACTIONS`)
+        (default :const:`MULTI_VOLUME_ACTIONS`)
     :keyword resume: flag indicating whether to resume processing on
         existing sessions (default False)
     """
     # The actions to perform.
-    actions = opts.pop('actions', ACTIONS)
+    actions = opts.pop('actions', MULTI_VOLUME_ACTIONS)
     if 'stage' in actions:
         # Run with staging DICOM subject directory input.
         _run_with_dicom_input(actions, *inputs, **opts)
@@ -112,7 +112,7 @@ def _run_with_dicom_input(actions, *inputs, **opts):
     subjects = set()
     # Run the workflow on each session and scan.
     for scan_input in iter_stage(project, collection, *inputs, **opts):
-        wf_actions = _filter_actions(actions)
+        wf_actions = _filter_actions(scan_input, actions)
         # Capture the subject.
         subjects.add(scan_input.subject)
         # Create a new workflow.
