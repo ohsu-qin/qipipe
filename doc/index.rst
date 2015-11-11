@@ -74,14 +74,18 @@ customary Python_ pip_ command ``pip install qipipe`` alone. Install
 
 6. Install the ``qipipe`` dependencies hosted by Anaconda::
 
-      wget --no-check-certificate -O - https://raw.githubusercontent.com/ohsu-qin/qipipe/master/requirements.txt | xargs -n 1 conda install --yes
+      wget -q --no-check-certificate -O \
+          - https://www.github.com/ohsu-qin/qipipe/raw/master/requirements.txt \
+          | xargs -n 1 conda install --yes
 
   Ignore ``No packages found`` messages for non-Anaconda packages. These
   packages will be installed in the next step.
 
 7. Install the ``qipipe`` dependencies hosted by pip::
 
-      wget --no-check-certificate -O - https://raw.githubusercontent.com/ohsu-qin/qipipe/master/requirements.txt | xargs -n 1 pip install -y
+      wget -q --no-check-certificate -O \
+          - https://www.github.com/ohsu-qin/qipipe/raw/master/requirements.txt \
+          | xargs -n 1 pip install
 
   The dependencies must be installed in succession one at a time because some
   requirements, e.g. ``nipy``, have implicit dependencies that necessitate this
