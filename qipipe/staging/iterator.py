@@ -71,7 +71,13 @@ class ScanIterators(object):
     def roi(self):
         """The :meth:`qipipe.staging.roi.iter_roi` iterator."""
         if self._roi == None:
-            self._roi = list(self._roi_gen) if self._roi_gen else []
+            if self._roi_gen: 
+                self._roi = list(self._roi_gen)
+                logger(__name__).debug("Found %d ROI files." %
+                                       len(self._roi_gen))
+            else:
+                self._roi = []
+
         return self._roi
 
     def __repr__(self):
