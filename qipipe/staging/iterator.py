@@ -74,7 +74,7 @@ class ScanIterators(object):
             if self._roi_gen: 
                 self._roi = list(self._roi_gen)
                 logger(__name__).debug("Found %d ROI files." %
-                                       len(self._roi_gen))
+                                       len(self._roi))
             else:
                 self._roi = []
 
