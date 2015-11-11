@@ -276,7 +276,7 @@ class WorkflowBase(object):
                                " since the dry run flag is set." %
                                workflow.name)
         else:
-            with qixnat.connect():
+            with qixnat.connect(cachedir=workflow.base_dir):
                 workflow.run(**opts)
 
     def _inspect_workflow_inputs(self, workflow):
