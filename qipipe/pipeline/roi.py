@@ -6,6 +6,7 @@ import os
 import re
 import logging
 from nipype.pipeline import engine as pe
+from nipype.interfaces.dcmstack import MergeNifti
 from nipype.interfaces.utility import (IdentityInterface, Function)
 import qiutil
 from qiutil.logging import logger
@@ -226,4 +227,6 @@ def base_name(lesion):
     :param lesion: the lesion number
     :return: the base name to use
     """
+    from qipipe.pipeline.roi import ROI_FNAME_PAT
+    
     return ROI_FNAME_PAT % lesion
