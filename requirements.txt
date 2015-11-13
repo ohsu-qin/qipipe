@@ -14,7 +14,7 @@ openpyxl
 six==1.9.0
 qiutil
 qidicom==2.3.9
-qixnat==4.1.7
+qixnat==4.1.8
 qiprofile-rest-client
 git+git://github.com/moloney/dcmstack.git#egg=dcmstack
 git+git://github.com/FredLoney/nipype.git#egg=nipype-master
