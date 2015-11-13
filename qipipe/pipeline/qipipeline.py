@@ -115,8 +115,19 @@ def _run_with_dicom_input(actions, *inputs, **opts):
         wf_actions = _filter_actions(scan_input, actions)
         # Capture the subject.
         subjects.add(scan_input.subject)
+        # If only ROI is enabled, then check for an existing scan
+        # time series.
+        if set(wf_actions) == {'roi'}:
+            with qixnat.connect() as xnat:
+                wf_opts = opts.copy()
+                if _scan_resource_exists(xnat, project, scan_input.subject,
+                                         scan_input.session, scan_input.scan,
+                                         SCAN_TS_RSC):
+                    wf_opts['scan_time_series'] = SCAN_TS_RSC
+        else:
+            wf_opts = opts
         # Create a new workflow.
-        wf_gen = QIPipelineWorkflow(project, wf_actions, **opts)
+        wf_gen = QIPipelineWorkflow(project, wf_actions, **wf_opts)
         # Run the workflow on the scan.
         wf_gen.run_with_dicom_input(wf_actions, scan_input, dest)
 
@@ -217,13 +228,14 @@ def _run_with_xnat_input(actions, *inputs, **opts):
                                          reg_ts_rsc):
                     wf_opts['realigned_time_series'] = reg_ts_rsc
 
-            # Execute the workflow.
-            wf_gen = QIPipelineWorkflow(prj, actions, **wf_opts)
-            # If a registration resource was specified, then set the flag
-            # to check for registered scans.
-            check_reg = opts.get('registration_resource') != None
-            wf_gen.run_with_scan_download(xnat, prj, sbj, sess, scan, actions,
-                                          check_reg)
+        # Make the workflow.
+        wf_gen = QIPipelineWorkflow(prj, actions, **wf_opts)
+        # If a registration resource was specified, then set the flag
+        # to check for registered scans.
+        check_reg = opts.get('registration_resource') != None
+        # Run the workflow.
+        wf_gen.run_with_scan_download(prj, sbj, sess, scan, actions,
+                                      check_reg)
 
 
 def _scan_resource_exists(xnat, project, subject, session, scan, resource):
@@ -406,6 +418,7 @@ class QIPipelineWorkflow(WorkflowBase):
         # If staging is enabled, then set the staging iterables.
         if 'stage' in actions:
             staging.set_workflow_iterables(self.workflow, scan_input, dest)
+            
         # If roi is enabled and has input, then set the roi function inputs.
         if 'roi' in actions and scan_input.iterators.roi:
             self._set_roi_inputs(*scan_input.iterators.roi)
@@ -418,8 +431,8 @@ class QIPipelineWorkflow(WorkflowBase):
                            (scan_input.subject, scan_input.session,
                             scan_input.scan))
 
-    def run_with_scan_download(self, xnat, project, subject, session, scan,
-                               actions, is_existing_registration_resource):
+    def run_with_scan_download(self, project, subject, session, scan, actions,
+                               is_existing_registration_resource):
         """
         Runs the execution workflow on downloaded scan image files.
 
@@ -435,34 +448,36 @@ class QIPipelineWorkflow(WorkflowBase):
         self.logger.debug("Processing the %s %s %s Scan %d volumes..." %
                            (project, subject, session, scan))
         # Get the volume numbers.
-        scan_obj = xnat.find_one(project, subject, session, scan=scan)
-        if not scan_obj:
-            raise NotFoundError("The pipeline did not find a %s %s %s"
-                                " scan %d." %
-                                (project, subject, session, scan))
-        # The NIFTI resource contains the volume files.
-        rsc_obj = scan_obj.resource('NIFTI')
-        if not rsc_obj.exists():
-            raise NotFoundError("The pipeline did not find a %s %s %s"
-                                " scan %d NIFTI resource." %
-                                (project, subject, session, scan))
-        # The volume files.
-        files = rsc_obj.files().get()
-        if not files:
-            raise ArgumentError("There are no pipeline %s %s %s Scan %d"
-                                " NIFTI volumes" %
-                                (project, subject, session, scan))
+        with qixnat.connect() as xnat:
+            scan_obj = xnat.find_one(project, subject, session, scan=scan)
+            if not scan_obj:
+                raise NotFoundError("The pipeline did not find a %s %s %s"
+                                    " scan %d." %
+                                    (project, subject, session, scan))
+            # The NIFTI resource contains the volume files.
+            rsc_obj = scan_obj.resource('NIFTI')
+            if not rsc_obj.exists():
+                raise NotFoundError("The pipeline did not find a %s %s %s"
+                                    " scan %d NIFTI resource." %
+                                    (project, subject, session, scan))
+            # The volume files.
+            files = rsc_obj.files().get()
+            if not files:
+                raise ArgumentError("There are no pipeline %s %s %s Scan %d"
+                                    " NIFTI volumes" %
+                                    (project, subject, session, scan))
 
-        # If the registration resource already exists in XNAT, then
-        # partition the scan image file names into those which are
-        # already registered and those which need to be registered.
-        if is_existing_registration_resource:
-            registered, unregistered = self._partition_registered(
-                xnat, project, subject, session, scan, files
-            )
-        else:
-            registered = []
-            unregistered = files
+            # If the registration resource already exists in XNAT, then
+            # partition the scan image file names into those which are
+            # already registered and those which need to be registered.
+            if is_existing_registration_resource:
+                registered, unregistered = self._partition_registered(
+                    xnat, project, subject, session, scan, files
+                )
+            else:
+                registered = []
+                unregistered = files
+
         # Validate and log the partition.
         if 'register' in actions:
             if registered:
