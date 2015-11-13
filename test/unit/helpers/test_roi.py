@@ -43,7 +43,9 @@ class TestROI(object):
         assert_equal(z, 56, "ROI maximal slice z value is incorrect: %d" % z)
         assert_equal(extent.area, 1933, "ROI maximal slice volume is"
                                        " incorrect: %f" % extent.area)
-        self.roi.extent.show()
+
+        # Uncomment to display the ROI convex hull.
+        # self.roi.extent.show()
 
 
 if __name__ == "__main__":
