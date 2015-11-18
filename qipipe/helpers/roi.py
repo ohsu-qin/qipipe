@@ -13,7 +13,7 @@ from qiutil.collections import concat
 def load(location, scale=None):
     """
     Loads a ROI mask file.
-    
+
     :param location: the ROI mask file location
     :param tuple scale: the (x, y, z) scaling factors
     :return: the :class:`ROI` encapsulation
@@ -41,7 +41,7 @@ class ROI(object):
         """
         self.extent = Extent(points, scale)
         """The 3D :class:`Extent`."""
-        
+
         sliced = defaultdict(list)
         for x, y, z in points:
             sliced[z].append((x, y))
@@ -64,7 +64,7 @@ class ROI(object):
             if extent.area > max_area:
                 index = i
                 max_area = extent.area
-        
+
         return index
 
 
@@ -122,14 +122,14 @@ class Extent(object):
             raise ExtentError("This 2D extent has an area rather than"
                               " a volume")
         return self._volume
-    
+
     def show(self):
         """Displays the ROI boundary points and extent segments."""
         # The boundary points.
         bnd_pts = np.asarray(concat(self.boundary))
         # Scale the points, if necessary.
         if self.scale:
-            bnd_pts = bnd_pts * self.scale 
+            bnd_pts = bnd_pts * self.scale
         # The number of axes.
         _, dim = bnd_pts.shape
         # The figure to plot.
@@ -179,7 +179,7 @@ class Extent(object):
         """
         Returns the (least, most) points of a rectangle
         circumscribing the extent.
-  
+
         :return: the (least, most) rectangle points
         :rtype: tuple
         """
@@ -204,21 +204,21 @@ class ExtentSegmentFactory(object):
         """
         self.points = np.asarray(points)
         """The ndarray of boundary points."""
-        
+
         self.distances = self._distances(self.points)
         """
         The N x N point distance array, where N is the number
         of points and ``self.distances[i][j]`` is the distance
         from ``self.points[i]`` to ``self.points[j]``.
         """
-    
+
     def create(self):
         """
         Returns the orthogonal segments end point indexes as the
         tuple (longest, widest, deepest), where each of the tuple
         elements is a (from, to) segment end point pair of indexes
         into the :attr:`points`, e.g.:
-        
+
         >> points.shape
         (128, 3)
         >> factory = ExtentSegmentFactory(points)
@@ -230,6 +230,30 @@ class ExtentSegmentFactory(object):
         True
         >> np.all(np.equal(segments[0][1], points[12]))
         True
+
+        The bounding segments procedure is as follows:
+
+        * Find the length segment *(r1, r2)* which maximizes the
+          Cartesian distance between points.
+
+        * Find the point *r3* furthest from *r1* and *r2*.
+
+        * Compute the point *o* orthogonal to *r3* on the segment
+          *(r1, r2)*.
+
+        * The width segment is then *(r3, r4)*, where the point
+          *r4* minimizes the angle between the segments *(r3, p)*
+          and *(r3, o)* for all points p.
+        
+        * Iterate on a generalization of the above algorithm to
+          find the depth segment *(r5, r6)*, where:
+          
+          - *r5* maximizes the distance to the plane formed by the
+             length segment *(r1, r2)* and the width segment
+             *(r3, r4)*.
+          
+          - *r6* is the point which is most orthogonal to the length
+             and width segments.
 
         :return: the orthogonal segment end point index tuples
         :rtype: list
@@ -287,7 +311,7 @@ class ExtentSegmentFactory(object):
         masked_dists = np.ma.asarray(self.distances)
         masked_dists[ref_ndxs, :] = np.ma.masked
         # Mask out distances of a point to itself.
-        np.fill_diagonal(masked_dists, np.ma.masked)        
+        np.fill_diagonal(masked_dists, np.ma.masked)
         if ref_cnt == 1:
             # The point furthest from the reference points is the first
             # orthogonal segment end point.
@@ -301,14 +325,15 @@ class ExtentSegmentFactory(object):
             furthest_ndx = np.argmax(prdists)
         else:
             raise NotImplementedError("More than two reference segments is"
-                                      "not supported: %d" % ref_cnt) 
+                                      "not supported: %d" % ref_cnt)
+
         # The furthest point.
         furthest = self.points[furthest_ndx]
         # The distances from the furthest point to the reference
         # segments starting point offsets.
         fdist = self.distances[furthest_ndx][offset_ndxs]
         # The furthest vectors relative to the offsets.
-        fvs = furthest - offsets 
+        fvs = furthest - offsets
         # The furthest unit vectors relative to the offsets.
         fuvs = self._units(furthest, offsets)
         # The cosines of the angles between the furthest and
@@ -371,15 +396,15 @@ class ExtentSegmentFactory(object):
         # Therefore, the preferred orthogonal point is that which
         # minimizes the pcos array values.
         #
-        # The cosine differences from 1 (1 = colinearity = maximum). 
+        # The cosine differences from 1 (1 = colinearity = maximum).
         deltas = np.subtract(1, pcos)
         # The cumulative cosine differences. Note that we don't need
         # to take the absolute value, since each delta is non-negative.
         delta = np.sum(deltas, axis=1)
         # The target segment end point opposite to the furthest point
-        # minimizes the difference between the ().
+        # minimizes the difference between the deltas.
         other_ndx = np.argmin(delta)
-         
+
         # Return the best match point indexes.
         return (furthest_ndx, other_ndx)
 
@@ -387,7 +412,7 @@ class ExtentSegmentFactory(object):
         """
         Transforms the given point array into a unit vector array
         translated to the offset.
-        
+
         :param point: an array whose last dimension holds one or
             points to transform
         :param offset: an array whose last dimension holds one or
@@ -402,7 +427,7 @@ class ExtentSegmentFactory(object):
             # Apply the unit transformation to each point,
             # preserving the shape of the input.
             return np.apply_along_axis(self._unit, pv.ndim - 1, pv)
-    
+
     def _unit(self, vector):
         """
         :return: the given vector scaled to unit length
