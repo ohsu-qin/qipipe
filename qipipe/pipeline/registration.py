@@ -11,6 +11,7 @@ from nipype.interfaces.dcmstack import CopyMeta
 import qiutil
 from qiutil.logging import logger
 from ..interfaces import (Copy, XNATUpload)
+from ..interfaces.ants.utils import AffineInitializer
 from ..helpers import bolus_arrival
 from .workflow_base import WorkflowBase
 from .pipeline_error import PipelineError
@@ -76,6 +77,8 @@ class RegistrationWorkflow(WorkflowBase):
 
     - *mask*: the mask to apply to the images
 
+    - *initial_transform*: the starting affine transform to apply
+
     - *reference*: the fixed reference image
 
     - *image*: the image file to register
@@ -83,13 +86,6 @@ class RegistrationWorkflow(WorkflowBase):
     The mask can be obtained by running the
     :class:`qipipe.pipeline.mask.MaskWorkflow` workflow.
 
-    The reference can be obtained by running the
-    :class:`qipipe.pipeline.reference.ReferenceWorkflow` workflow.
-
-    The output realigned image file is named the same as the input scan
-    image file name is in the XNAT registration resource. The default
-    resource name is auto-generated.
-    
     Three registration techniques are supported:
 
     - ``ants``: ANTS_ SyN_ symmetric normalization diffeomorphic registration
@@ -103,9 +99,12 @@ class RegistrationWorkflow(WorkflowBase):
     The optional workflow configuration file can contain overrides for the
     Nipype interface inputs in the following sections:
 
-    - ``ants.Registration``: the ANTS `Registration interface`_ options
+    - ``AffineInitializer``: the :class:`qipipe.interfaces.ants.utils.AffineInitializer`
+       options
 
-    - ``ants.ApplyTransforms``: the ANTS `ApplyTransform interface`_ options
+    - ``ants.Registration``: the ANTs `Registration interface`_ options
+
+    - ``ants.ApplyTransforms``: the ANTs `ApplyTransform interface`_ options
 
     - ``fsl.FNIRT``: the FSL `FNIRT interface`_ options
 
@@ -132,7 +131,9 @@ class RegistrationWorkflow(WorkflowBase):
 
         :param kwargs: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
             initializer options, as well as the following options:
-        :keyword resource: the XNAT resource name to use
+        :keyword technique: the required registration :attr:`technique`
+        :keyword resource: the XNAT resource name to use (default is
+            an auto-generated name beginning with ``reg_``:attr:`technique`_)
         :keyword recursive: flag indicating whether to perform step-wise
             iterative recursive registration
         """
@@ -232,7 +233,8 @@ class RegistrationWorkflow(WorkflowBase):
         In addition, the caller has the responsibility of setting the
         ``iter_reg_input`` iterables to the 3D image files to realign.
 
-        The *reference* input is set by :meth:`recurse`.
+        If the *recurse* option is set, then the *reference* input is set
+        by :meth:`recurse`. Otherwise, *ref_0* is used for each registration.
 
         :param ref_0: the initial fixed reference image
         :param dest: the target realigned image directory
@@ -390,7 +392,15 @@ class RegistrationWorkflow(WorkflowBase):
         realign_wf.connect(input_spec, 'moving_image',
                            input_filename, 'in_file')
 
-        if self.technique.lower() == 'ants':
+        if self.technique == 'ants':
+            # Make an initial transform.
+            init_xfm = pe.node(AffineInitializer(), name='initialize_affine')
+            realign_wf.connect(input_spec, 'reference',
+                               init_xfm, 'fixed_image')
+            realign_wf.connect(input_spec, 'moving_image',
+                               init_xfm, 'moving_image')
+            realign_wf.connect(input_spec, 'mask',
+                               init_xfm, 'image_mask')
             # Nipype bug work-around:
             # Setting the registration metric and metric_weight inputs
             # after the node is created results in a Nipype input trait
@@ -411,6 +421,8 @@ class RegistrationWorkflow(WorkflowBase):
                                register, 'fixed_image_mask')
             realign_wf.connect(input_spec, 'mask',
                                register, 'moving_image_mask')
+            realign_wf.connect(init_xfm, 'affine_transform',
+                               register, 'initial_moving_transform')
             # Apply the transforms to the input image.
             apply_xfm = pe.Node(ApplyTransforms(), name='apply_xfm')
             realign_wf.connect(input_spec, 'reference',
@@ -424,7 +436,7 @@ class RegistrationWorkflow(WorkflowBase):
             # Copy the meta-data.
             realign_wf.connect(apply_xfm, 'output_image',
                                copy_meta, 'dest_file')
-        elif self.technique.lower() == 'fnirt':
+        elif self.technique == 'fnirt':
             # Make the affine transformation.
             flirt = pe.Node(fsl.FLIRT(), name='flirt')
             realign_wf.connect(input_spec, 'reference', flirt, 'reference')
@@ -444,7 +456,7 @@ class RegistrationWorkflow(WorkflowBase):
             realign_wf.connect(input_filename, 'out_file', fnirt, 'warped_file')
             # Copy the meta-data.
             realign_wf.connect(fnirt, 'warped_file', copy_meta, 'dest_file')
-        elif self.technique.lower() == 'mock':
+        elif self.technique == 'mock':
             # Copy the input scan file to an output file.
             mock_copy = pe.Node(Copy(), name='mock_copy')
             realign_wf.connect(input_spec, 'moving_image',
