@@ -394,7 +394,7 @@ class RegistrationWorkflow(WorkflowBase):
 
         if self.technique == 'ants':
             # Make an initial transform.
-            init_xfm = pe.node(AffineInitializer(), name='initialize_affine')
+            init_xfm = pe.Node(AffineInitializer(), name='initialize_affine')
             realign_wf.connect(input_spec, 'reference',
                                init_xfm, 'fixed_image')
             realign_wf.connect(input_spec, 'moving_image',
