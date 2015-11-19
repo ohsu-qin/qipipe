@@ -11,10 +11,10 @@ dipy
 traits
 networkx
 openpyxl
-six==1.9.0
+six
 qiutil
-qidicom==2.3.9
-qixnat==4.1.8
+qidicom
+qixnat
 qiprofile-rest-client
-git+git://github.com/moloney/dcmstack.git#egg=dcmstack
-git+git://github.com/FredLoney/nipype.git#egg=nipype-master
+dcmstack
+nipype-master
