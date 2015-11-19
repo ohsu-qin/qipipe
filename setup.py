@@ -74,7 +74,8 @@ def dependency_links():
         warning.warn("numpy must be installed separately prior to qipipe."
                      " This qipipe installation is adequate only for a"
                      " ReadTheDocs build.")
-        return [rqmt for rqmt in ext_rqmts if not rqmt.endswith('dcmstack')]
+        return [rqmt for rqmt in ext_rqmts
+                if not ('dcmstack' in rqmt or 'nipype' in rqmt))]
 
 
 def readme():
