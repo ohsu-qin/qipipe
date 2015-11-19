@@ -90,6 +90,8 @@ customary Python_ pip_ command ``pip install qipipe`` alone. Install
   The dependencies must be installed in succession one at a time because some
   requirements, e.g. ``nipy``, have implicit dependencies that necessitate this
   one-at-a-time approach.
+  
+  TODO - try installing only numpy and then removing steps 6 and 7.
 
 8. Install the ``qipipe`` package::
 
