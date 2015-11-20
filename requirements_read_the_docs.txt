@@ -1,0 +1,22 @@
+# The requirements for a ReadTheDocs build only.
+# This file excludes nibabel and any packages which depend on nibabel,
+# since numpy must be built before the requirements are even collected,
+# as explained in the qipipe Installation Guide. ReadTheDocs does
+# not support this customization.
+bunch
+inflection
+numpy
+scipy
+sympy
+mpi4py
+matplotlib
+nipy
+dipy
+traits
+networkx
+openpyxl
+six
+qiutil
+qidicom
+qixnat
+qiprofile-rest-client
