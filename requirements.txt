@@ -17,4 +17,4 @@ qidicom
 qixnat
 qiprofile-rest-client
 dcmstack
-nipype-master
+nipype
