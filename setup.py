@@ -24,58 +24,39 @@ def requires():
     """
     Returns the PyPI ``qipipe`` requirements in ``requirements.txt``
     which don't match the :const:`VCS_RQMT_PAT` pattern.
-    
-    :Note: ``pip`` supports VCS package specifications, but
-       setup.py does not. Therefore, this method filters out
-       the requirements in ``requirements.txt`` entries which
-       match the :const:`VCS_RQMT_PAT` pattern. The VCS
-       dependencies must be installed separately as described
-       in the User Guide **Installation** section.
-
-    :Note: the ``nibabel`` package is excluded from this install,
-        since nibabel validation requires ``numpy`` to be installed
-        before any of the dependent packages are installed. ``numpy``
-        and ``nibabel`` must be installed separately as described
-        in the User Guide **Installation** section. 
 
     :return: the ``requirements.txt`` PyPI package specifications
     """
+    # If numpy is not installed, then go for a ReadTheDocs build.
+    # try:
+    #     import numpy
+    #     rqmts_file = 'requirements.txt'
+    # except ImportError:
+    #     warning.warn("numpy must be installed separately prior to qipipe."
+    #                  " This qipipe installation is adequate only for a"
+    #                  " ReadTheDocs build.")
+    dependencies = dependency_links()
     with open('requirements.txt') as f:
         rqmts = f.read().splitlines()
-        pypi_rqmts = [rqmt for rqmt in rqmts if not VCS_RQMT_PAT.match(rqmt)]
-    # If numpy is not installed, then don't include nibabel.
-    try:
-        import numpy
-        return pypi_rqmts
-    catch ImportError:
-        warning.warn("numpy must be installed separately prior to qipipe."
-                     " This qipipe installation is adequate only for a"
-                     " ReadTheDocs build.")
-        return [rqmt for rqmt in pypi_rqmts if not rqmt.startswith('nibabel')]
+        # Match on git dependency links. Not a general solution, but
+        # good enough so far.
+        # TODO - revisit if Python 3 settles on a sane package manager.
+        return [rqmt for rqmt in rqmts
+                if any("%s.git" % rqmt in dep
+                       for dep in dependencies)] 
 
 
 def dependency_links():
     """
     Returns the non-PyPI ``qipipe`` requirements in
-    ``requirements.txt`` which match the :const:`VCS_RQMT_PAT`
-    pattern. See the :meth:`requires` note.
+    ``constraints.txt`` which match the :const:`VCS_RQMT_PAT`
+    pattern.
 
-    :Note: the ``dcmstack`` package is excluded from this install,
-        since it depends on nibabel which is excluded from :meth:`requires`.
+    :return: the non-PyPI package specifications
     """
-    with open('requirements.txt') as f:
+    with open('constraints.txt') as f:
         rqmts = f.read().splitlines()
-        ext_rqmts = [rqmt for rqmt in rqmts if VCS_RQMT_PAT.match(rqmt)]
-    # If numpy is not installed, then don't include dcmstack.
-    try:
-        import numpy
-        return ext_rqmts
-    catch ImportError:
-        warning.warn("numpy must be installed separately prior to qipipe."
-                     " This qipipe installation is adequate only for a"
-                     " ReadTheDocs build.")
-        return [rqmt for rqmt in ext_rqmts
-                if not ('dcmstack' in rqmt or 'nipype' in rqmt))]
+        return [rqmt for rqmt in rqmts if VCS_RQMT_PAT.match(rqmt)]
 
 
 def readme():
