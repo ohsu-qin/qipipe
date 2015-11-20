@@ -28,15 +28,16 @@ def requires():
     :return: the ``requirements.txt`` PyPI package specifications
     """
     # If numpy is not installed, then go for a ReadTheDocs build.
-    # try:
-    #     import numpy
-    #     rqmts_file = 'requirements.txt'
-    # except ImportError:
-    #     warning.warn("numpy must be installed separately prior to qipipe."
-    #                  " This qipipe installation is adequate only for a"
-    #                  " ReadTheDocs build.")
+    try:
+        import numpy
+        rqmts_file = 'requirements.txt'
+    except ImportError:
+        warning.warn("numpy must be installed separately prior to qipipe."
+                     " This qipipe installation is adequate only for a"
+                     " ReadTheDocs build.")
+        rqmts_file = 'requirements_read_the_docs.txt'
     dependencies = dependency_links()
-    with open('requirements.txt') as f:
+    with open(rqmts_file) as f:
         rqmts = f.read().splitlines()
         # Match on git dependency links. Not a general solution, but
         # good enough so far.
