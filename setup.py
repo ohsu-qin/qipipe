@@ -42,8 +42,8 @@ def requires():
         # good enough so far.
         # TODO - revisit if Python 3 settles on a sane package manager.
         return [rqmt for rqmt in rqmts
-                if any("%s.git" % rqmt in dep
-                       for dep in dependencies)] 
+                if not any("%s.git" % rqmt in dep
+                           for dep in dependencies)] 
 
 
 def dependency_links():
