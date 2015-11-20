@@ -4,13 +4,15 @@
 # * any packages which depend on nibabel
 # * mpi4py
 #
-# ReadTheDocs build fails on nibabel and dependent packages, since
-# numpy must be built before the requirements are even collected,
-# as explained in the qipipe Installation Guide. ReadTheDocs does
-# not support this customization.
+# This requirement subset works around the following problems:
 #
-# ReadTheDocs build fails on mpi4py, since the environment cannot
-# build MPI programs.
+# * ReadTheDocs build fails on nibabel and dependent packages, since
+#   numpy must be built before the requirements are even collected,
+#   as explained in the qipipe Installation Guide. ReadTheDocs does
+#   not support this customization.
+#
+# * ReadTheDocs build fails on mpi4py, since the environment cannot
+#   build MPI programs.
 #
 bunch
 inflection
