@@ -108,6 +108,6 @@ class AffineInitializer(ANTSCommand):
 
     def _list_outputs(self):
         outputs = self._outputs().get()
-        outputs['affine_transform'] = os.path.abspath(
-            self.inputs.output_affine_transform)
+        out_file = os.path.abspath(self.inputs.output_affine_transform)
+        outputs['affine_transform'] = out_file
         return outputs
