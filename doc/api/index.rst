@@ -6,7 +6,8 @@ API Documentation
 
 .. toctree::
 
-  pipeline
   helpers
-  staging
   interfaces
+  pipeline
+  qiprofile
+  staging

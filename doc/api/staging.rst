@@ -12,6 +12,11 @@ staging
 
 .. automodule:: qipipe.staging.collection
 
+:mod:`collections`
+-----------------
+
+.. automodule:: qipipe.staging.collections
+
 :mod:`ctp_config`
 -----------------
 
@@ -51,8 +56,3 @@ staging
 --------------------
 
 .. automodule:: qipipe.staging.staging_error
-
-:mod:`staging_helper`
----------------------
-
-.. automodule:: qipipe.staging.staging_helper

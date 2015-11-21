@@ -36,15 +36,8 @@ def requires():
                      " This qipipe installation is adequate only for a"
                      " ReadTheDocs build.")
         rqmts_file = 'requirements_read_the_docs.txt'
-    dependencies = dependency_links()
     with open(rqmts_file) as f:
-        rqmts = f.read().splitlines()
-        # Match on git dependency links. Not a general solution, but
-        # good enough so far.
-        # TODO - revisit if Python 3 settles on a sane package manager.
-        return [rqmt for rqmt in rqmts
-                if not any("%s.git" % rqmt in dep
-                           for dep in dependencies)] 
+        return f.read().splitlines()
 
 
 def dependency_links():
@@ -57,6 +50,9 @@ def dependency_links():
     """
     with open('constraints.txt') as f:
         rqmts = f.read().splitlines()
+        # Match on git dependency links. Not a general solution, but
+        # good enough so far.
+        # TODO - revisit if Python 3 settles on a sane package manager.
         return [rqmt for rqmt in rqmts if VCS_RQMT_PAT.match(rqmt)]
 
 

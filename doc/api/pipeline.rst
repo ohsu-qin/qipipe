@@ -6,10 +6,6 @@ pipeline
 -----------------------
 .. automodule:: qipipe.pipeline
 
-:mod:`distributable`
---------------------
-.. automodule:: qipipe.pipeline.distributable
-
 :mod:`mask`
 -----------
 .. automodule:: qipipe.pipeline.mask

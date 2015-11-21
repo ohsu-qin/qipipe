@@ -1,0 +1,8 @@
+numpy
+scipy
+mpi4py
+matplotlib
+traits
+networkx
+openpyxl
+six

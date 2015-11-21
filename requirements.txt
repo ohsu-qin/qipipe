@@ -3,11 +3,8 @@ inflection
 numpy
 nibabel
 scipy
-sympy
 mpi4py
 matplotlib
-nipy
-dipy
 traits
 networkx
 openpyxl

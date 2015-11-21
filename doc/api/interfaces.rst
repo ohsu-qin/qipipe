@@ -54,6 +54,10 @@ interfaces
 ---------------------
 .. automodule:: qipipe.interfaces.mri_volcluster
 
+:mod:`preview`
+---------------------
+.. automodule:: qipipe.interfaces.preview
+
 :mod:`touch`
 -----------------
 .. automodule:: qipipe.interfaces.touch

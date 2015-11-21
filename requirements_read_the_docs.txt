@@ -9,10 +9,15 @@
 # * ReadTheDocs build fails on nibabel and dependent packages, since
 #   numpy must be built before the requirements are even collected,
 #   as explained in the qipipe Installation Guide. ReadTheDocs does
-#   not support this customization.
+#   not support this customization. This is not a problem with the
+#   two-stage conda/pip install, but ReadTheDocs is a distutils-only
+#   install.
 #
 # * ReadTheDocs build fails on mpi4py, since the environment cannot
 #   build MPI programs.
+#
+# TODO - mpi4py is OHSU-specific. Move to ohsu-qipipe when that is
+# available and eliminate the comment above.
 #
 bunch
 inflection

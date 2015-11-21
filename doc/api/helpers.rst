@@ -17,12 +17,24 @@ helpers
 
 .. automodule:: qipipe.helpers.colors
 
+:mod:`command`
+--------------------
+.. automodule:: qipipe.pipeline.command
+
+:mod:`constants`
+--------------------
+.. automodule:: qipipe.pipeline.constants
+
+:mod:`distributable`
+--------------------
+.. automodule:: qipipe.helpers.distributable
+
 :mod:`image`
 ------------
 
 .. automodule:: qipipe.helpers.image
 
-:mod:`qiprofile`
+:mod:`roi`
 ----------------
 
-.. automodule:: qipipe.helpers.qiprofile
+.. automodule:: qipipe.helpers.roi

@@ -61,45 +61,26 @@ customary Python_ pip_ command ``pip install qipipe`` alone. Install
    ``$HOME/.bashrc`` or ``$HOME/.bash_profile`` and add the following
    lines::
 
-      # Prepend ANTS to the path.
-      ANTS_HOME=$HOME/ants
-      export PATH=$ANTS_HOME/bin
+       # Prepend ANTS to the path.
+       ANTS_HOME=$HOME/ants
+       export PATH=$ANTS_HOME/bin
 
 4. Refresh your environment::
 
-      . $HOME/.bash_profile
+       . $HOME/.bash_profile
    
 5. Install ``qixnat`` using Anaconda_ as described in the
    `qixnat installation instructions`_.
 
 6. Install the ``qipipe`` dependencies hosted by Anaconda::
 
-      wget -q --no-check-certificate -O \
-          - https://www.github.com/ohsu-qin/qipipe/raw/master/requirements.txt \
-          | xargs -n 1 conda install --yes
+       wget -q --no-check-certificate -O \
+         - https://www.github.com/ohsu-qin/qipipe/raw/master/requirements_conda.txt \
+         | xargs conda install --yes
 
-  Ignore ``No packages found`` messages for non-Anaconda packages. These
-  packages will be installed in the next step.
-
-7. Install the ``qipipe`` dependencies hosted by pip::
-
-      wget -q --no-check-certificate -O \
-          - https://www.github.com/ohsu-qin/qipipe/raw/master/requirements.txt \
-          | xargs -n 1 pip install
-
-  The dependencies must be installed in succession one at a time because some
-  requirements, e.g. ``nipy``, have implicit dependencies that necessitate this
-  one-at-a-time approach.
-  
-  TODO - try installing only numpy and then removing steps 6 and 7.
-
-8. Install the ``qipipe`` package::
+7. Install the ``qipipe`` package::
 
        pip install qipipe
-
-9. Install any additional packages used in the pipeline. For example, the base
-   installation has an optional pipeline modeling phase which uses the OHSU
-   proprietary shutter speed PK modeling package.
 
 
 *****
@@ -107,7 +88,7 @@ Usage
 *****
 Run the following command for the pipeline options::
 
-     qipipe --help
+    qipipe --help
 
 
 ***********
@@ -119,11 +100,17 @@ Testing is performed with the nose_ package, which must be installed separately.
 Documentation is built automatically by ReadTheDocs_ when the project is pushed
 to GitHub. Documentation can be generated locally as follows:
 
-* Install Sphinx_, if necessary.
+* Install Sphinx_ and ``docutils``, if necessary:
+
+      conda install Sphinx docutils
 
 * Run the following in the ``doc`` subdirectory::
 
       make html
+
+Installing from a local qipipe clone requires the constraints option::
+
+    pip install -c constraints.txt -e .
 
 ---------
 
