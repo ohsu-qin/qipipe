@@ -412,7 +412,26 @@ class RegistrationWorkflow(WorkflowBase):
                              if field in reg_cfg}
             # Register the images to create the rigid, affine and SyN
             # ANTS transformations.
-            register = pe.Node(Registration(**metric_inputs), name='register')
+            # Work around the following Nipype bug:
+            # * If the Registration has an initial_moving_transform,
+            #   then the default invert_initial_moving_transform value
+            #   is not applied, resulting in the following error:
+            #
+            #   TraitError: Each element of the 'forward_invert_flags' trait
+            #   of a RegistrationOutputSpec instance must be a boolean, but a
+            #   value of <undefined> <class 'traits.trait_base._Undefined'>
+            #   was specified.
+            #
+            #   The forward_invert_flags output field is set from the
+            #   invert_initial_moving_transform input field. Even though
+            #   the invert_initial_moving_transform trait specifies
+            #   default=False, the invert_initial_moving_transform value
+            #   is apparently undefined. Perhaps the input trait should
+            #   also set the usedefault option. The work-around is to
+            #   always set the the invert_initial_moving_transform field. 
+            reg_xfc = Registration(invert_initial_moving_transform=False,
+                                   **metric_inputs)
+            register = pe.Node(reg_xfc, name='register')
             realign_wf.connect(input_spec, 'reference',
                                register, 'fixed_image')
             realign_wf.connect(input_spec, 'moving_image',
