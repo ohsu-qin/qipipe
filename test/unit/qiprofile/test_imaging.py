@@ -17,7 +17,7 @@ from qipipe.pipeline.modeling import (
 from qipipe.qiprofile import imaging
 from qipipe.helpers.constants import (SUBJECT_FMT, SESSION_FMT)
 from ...helpers.logging import logger
-from ... import PROJECT
+from ... import (PROJECT, ROOT)
 from ..pipeline.volume_test_base import FIXTURES as STAGED
 from . import (DATABASE, FIXTURES)
 
@@ -33,9 +33,12 @@ SESSION = 1
 SCAN = 1
 """The test scan number."""
 
+DUMMY = os.path.join(ROOT, 'fixtures', 'dummy.nii.gz')
+'''The test fixture empty "image" file.'''
+
 VOLUMES = os.path.join(STAGED, 'breast', 'Breast003', 'Session01',
                        'scans', '1', 'resources', 'NIFTI')
-"""The 3D volume files."""
+"""The test fixture 3D volume files."""
 
 REGISTRATION = 'reg_ants_test'
 """The test registration resource name."""
@@ -59,6 +62,29 @@ class TestImaging(object):
         # Seed the XNAT test subject.
         self._subject_name = SUBJECT_FMT % (COLLECTION, SUBJECT)
         self._session_name = SESSION_FMT % SESSION
+        self._seed()
+
+    def tearDown(self):
+        self._connection.drop_database(DATABASE)
+        with qixnat.connect() as xnat:
+            xnat.delete(PROJECT, self._subject_name, self._session_name)
+
+    def test_update(self):
+        # The test qiprofile subject.
+        subject = Subject(project=PROJECT, collection=COLLECTION,
+                          number=SUBJECT)
+        with qixnat.connect() as xnat:
+            # The test XNAT scan.
+            scan = xnat.find_one(PROJECT, self._subject_name, self._session_name,
+                                 scan=SCAN)
+            imaging.update(subject, scan)
+
+    def _seed(self):
+        """
+        Seeds the XNAT database with the test fixture scan :const:`VOLUMES`,
+        a dummy registration and the :const:`FASTFIT_PARAMS_TEMPLATE` modeling
+        results.
+        """
         exp_opt = (self._session_name, dict(date=datetime.now()))
         with qixnat.connect() as xnat:
             xnat.delete(PROJECT, self._subject_name, self._session_name)
@@ -86,37 +112,22 @@ class TestImaging(object):
                 rows = list(csv.reader(csv_file))
             # Add a plausible shift.
             rows.append(['aif_shift', 58.0])
-            # The resource files staging area.
-            dest = tempfile.mkdtemp()
             # Make the fastfit params file.
             with tempfile.NamedTemporaryFile() as csv_file:
                 csv_writer = csv.writer(csv_file)
                 csv_writer.writerows(rows)
+                csv_file.flush()
                 # Upload the file.
                 xnat.upload(mdl, csv_file.name, name=FASTFIT_PARAMS_FILE)
+
             # Make the R1 params file.
             with tempfile.NamedTemporaryFile() as profile_dest:
-                create_profile(profile_dest.name)
+                create_profile('ants', dest_file=profile_dest.name)
+                profile_dest.flush()
                 xnat.upload(mdl, profile_dest.name, name=MODELING_PROFILE_FILE)
+
             # Make the modeling result files.
-            with tempfile.NamedTemporaryFile() as dummy:
-                for output in OUTPUTS:
-                    name = output + '.nii.gz'
-                    # Upload the dummy file.
-                    xnat.upload(mdl, dummy.name, name=name)
-            shutil.rmtree(dest)
-
-    def tearDown(self):
-        self._connection.drop_database(DATABASE)
-        with qixnat.connect() as xnat:
-            xnat.delete(PROJECT, self._subject_name, self._session_name)
-
-    def test_update(self):
-        # The test qiprofile subject.
-        subject = Subject(project=PROJECT, collection=COLLECTION,
-                          number=SUBJECT)
-        with qixnat.connect() as xnat:
-            # The test XNAT scan.
-            scan = xnat.find_one(PROJECT, self._subject_name, self._session_name,
-                                 scan=SCAN)
-            imaging.update(subject, scan)
+            for output in OUTPUTS:
+                name = output + '.nii.gz'
+                # Upload the dummy file as a modeling result.
+                xnat.upload(mdl, DUMMY, name=name)
