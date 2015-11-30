@@ -32,9 +32,9 @@ def requires():
         import numpy
         rqmts_file = 'requirements.txt'
     except ImportError:
-        warning.warn("numpy must be installed separately prior to qipipe."
-                     " This qipipe installation is adequate only for a"
-                     " ReadTheDocs build.")
+        warnings.warn("numpy must be installed separately prior to qipipe."
+                      " This qipipe installation is adequate only for a"
+                      " ReadTheDocs build.")
         rqmts_file = 'requirements_read_the_docs.txt'
     with open(rqmts_file) as f:
         return f.read().splitlines()
