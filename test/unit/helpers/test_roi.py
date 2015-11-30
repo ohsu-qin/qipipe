@@ -4,14 +4,10 @@ from qiutil.collections import tuplize
 from qipipe.helpers import roi
 from ... import ROOT
 
-# matplotlib plot induces a FutureWarning.
-import warnings
-warnings.simplefilter(action = "ignore", category = FutureWarning)
-
-
 FIXTURE = os.path.join(ROOT, 'fixtures', 'staged', 'breast', 'Breast003',
                        'Session01', 'scans', '1', 'resources', 'roi',
                        'roi.nii.gz') 
+
 
 class TestROI(object):
     
@@ -44,8 +40,15 @@ class TestROI(object):
         assert_equal(extent.area, 1933, "ROI maximal slice volume is"
                                        " incorrect: %f" % extent.area)
 
+        # Work around the following bug:
+        # * extent.show() triggers a matplotlib plot function FutureWarning.
+        #   The work-around is to filter this warning in a context.
+        #
         # Uncomment to display the ROI convex hull.
-        # self.roi.extent.show()
+        # import warnings
+        # with warnings.catch_warnings():
+        #    warnings.simplefilter(action='ignore', category=FutureWarning)
+        #    self.roi.extent.show()
 
 
 if __name__ == "__main__":
