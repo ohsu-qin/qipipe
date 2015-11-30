@@ -1,7 +1,7 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
-5.6.4 / 2015-11-20
+5.6.4 / 2015-11-30
 ------------------
 Add ANTs affine initializer.
 
