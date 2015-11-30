@@ -3,6 +3,8 @@ inflection
 numpy
 nibabel
 scipy
+dipy
+nipy
 mpi4py
 matplotlib
 traits
