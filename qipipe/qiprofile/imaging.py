@@ -2,6 +2,7 @@
 This module updates the qiprofile database imaging information
 from a XNAT scan.
 """
+import csv
 from qiutil.file import splitexts
 from qiprofile_rest_client.helpers import database
 from qiprofile_rest_client.model.imaging import (Session, SessionDetail,
@@ -114,7 +115,7 @@ def _create_modeling(xnat_resource):
     """
     # The XNAT modeling files.
     xnat_files = xnat_resource.files()
-    
+
     # The profile parameters.
     profile_finder = (xnat_file for xnat_file in xnat_files
                         if xnat_file.label() == MODELING_PROFILE_FILE)
@@ -132,17 +133,18 @@ def _create_modeling(xnat_resource):
             raise ImagingError("The XNAT modeling resource %s %s file does"
                                " not contain the technique entry" %
                                (xnat_resource.label(), MODELING_PROFILE_FILE))
-        technique = row_dict.get('technique')
+        technique = row_dict.pop('technique', None)
         if not technique:
             raise ImagingError("The XNAT modeling resource %s %s file does"
                                " not contain the technique entry" %
                                (xnat_resource.label(), MODELING_PROFILE_FILE))
-    
+        r1_params = row_dict
+
     # The qiprofile ModelingProtocol.
     profile_dict = dict(technique=technique, r1_parameters=r1_params,
                         fastfit_parameter=fastfit_params)
     ModelingProtocol.objects.get(profile_dict)
-    
+
     # The qiprofile modeling output files.
     possible_output_files = {output + '.nii.gz' for output in OUTPUTS}
     output_xnat_files = (xnat_file.label() for xnat_file in xnat_files
