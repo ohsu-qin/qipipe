@@ -429,7 +429,8 @@ class RegistrationWorkflow(WorkflowBase):
             #   is apparently undefined. Perhaps the input trait should
             #   also set the usedefault option. The work-around is to
             #   always set the the invert_initial_moving_transform field. 
-            reg_xfc = Registration(invert_initial_moving_transform=False,
+            reg_xfc = Registration(float=True,
+                                   invert_initial_moving_transform=False,
                                    **metric_inputs)
             register = pe.Node(reg_xfc, name='register')
             realign_wf.connect(input_spec, 'reference',

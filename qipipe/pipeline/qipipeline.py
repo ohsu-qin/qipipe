@@ -898,9 +898,7 @@ class QIPipelineWorkflow(WorkflowBase):
                             mdl_wf, 'input_spec.bolus_arrival_index')
             self.logger.debug('Connected bolus arrival to modeling.')
 
-            # If registration is enabled, then the registration 4D
-            # time series is created by that workflow, otherwise
-            # download the previously created time series.
+            # Obtain the registration 4D time series.
             if reg_ts_rsc_opt:
                 # Download the XNAT time series file.
                 ts_dl_xfc = XNATDownload(project=self.project,

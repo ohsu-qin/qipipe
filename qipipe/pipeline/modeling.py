@@ -29,9 +29,6 @@ INFERRED_R1_0_OUTPUTS = FIXED_R1_0_OUTPUTS + ['dce_baseline', 'r1_0']
 FASTFIT_PARAMS_FILE = 'fastfit.csv'
 """The fastfit parameters CSV file name."""
 
-FASTFIT_PARAMS_TEMPLATE = os.path.join(CONF_DIR, FASTFIT_PARAMS_FILE)
-"""The fastfit parameters template file location."""
-
 MODELING_CONF_FILE = os.path.join(CONF_DIR, 'modeling.cfg')
 """The modeling workflow configuration."""
 
@@ -272,13 +269,15 @@ class ModelingWorkflow(WorkflowBase):
             input_spec.inputs.registration = registration
 
         # Execute the modeling workflow.
-        self.logger.debug("Executing the %s workflow on the %s %s scan %d"
-                          " time series %s..." %
-                          (self.workflow.name, subject, session, scan, time_series))
+        self.logger.debug(
+            "Executing the %s workflow on the %s %s scan %d time series %s..." %
+            (self.workflow.name, subject, session, scan, time_series)
+        )
         self._run_workflow(self.workflow)
-        self.logger.debug("Executed the %s workflow on the %s %s scan %d"
-                          " time series %s." %
-                          (self.workflow.name, subject, session, scan, time_series))
+        self.logger.debug(
+            "Executed the %s workflow on the %s %s scan %d time series %s." %
+            (self.workflow.name, subject, session, scan, time_series)
+        )
 
         # Return the resource name.
         return self.resource
@@ -370,7 +369,8 @@ class ModelingWorkflow(WorkflowBase):
         mdl_wf.connect(input_spec, 'scan', create_resource, 'scan')
 
         # Gate uploads on the create_resource node.
-        rsc_gate_xfc = Gate(fields=['resource', 'xnat_id'], resource=self.resource)
+        rsc_gate_xfc = Gate(fields=['resource', 'xnat_id'],
+                            resource=self.resource)
         resource_gate = pe.Node(rsc_gate_xfc, name='resource_gate')
         # xnat_id is not subsequently used. It is a dead-end connection
         # whose sole purpose is to gate successor nodes on create_resource.
@@ -387,19 +387,19 @@ class ModelingWorkflow(WorkflowBase):
 
         # Make a gate whose sole purpose is to tie the input_spec node
         # to create_profile.
-        cr_prf_gate_xfc = Gate(fields=['scan', 'technique'], technique=self.technique)
-        create_profile_gate = pe.Node(cr_prf_gate_xfc, name='create_profile_gate')
+        cr_prf_gate_xfc = Gate(fields=['scan', 'technique'],
+                               technique=self.technique)
+        cr_prf_gate = pe.Node(cr_prf_gate_xfc, name='create_profile_gate')
         # scan is not subsequently used. It is a dead-end connection
         # whose sole purpose is to gate successor nodes on create_profile.
-        mdl_wf.connect(input_spec, 'scan', create_profile_gate, 'scan')
+        mdl_wf.connect(input_spec, 'scan', cr_prf_gate, 'scan')
 
         # Make the profile.
-        create_profile_xfc = Function(input_names=['technique'],
-                                      output_names=['out_file'],
-                                      function=create_profile)
-        create_profile_func = pe.Node(create_profile_xfc, name='create_profile')
-        mdl_wf.connect(create_profile_gate, 'technique',
-                       create_profile_func, 'technique')
+        cr_prf_xfc = Function(input_names=['technique'],
+                              output_names=['out_file'],
+                              function=create_profile)
+        cr_prf = pe.Node(cr_prf_xfc, name='create_profile')
+        mdl_wf.connect(cr_prf_gate, 'technique', cr_prf, 'technique')
 
         # Upload the profile.
         upload_profile = pe.Node(upload_xfc, name='upload_profile')
@@ -407,8 +407,7 @@ class ModelingWorkflow(WorkflowBase):
         mdl_wf.connect(input_spec, 'session', upload_profile, 'session')
         mdl_wf.connect(input_spec, 'scan', upload_profile, 'scan')
         mdl_wf.connect(resource_gate, 'resource', upload_profile, 'resource')
-        mdl_wf.connect(create_profile_func, 'out_file',
-                       upload_profile, 'in_files')
+        mdl_wf.connect(cr_prf, 'out_file', upload_profile, 'in_files')
 
         # TODO - Get the overall and ROI FSL mean intensity values.
 
@@ -432,15 +431,16 @@ class ModelingWorkflow(WorkflowBase):
 
     def _create_bolero_workflow(self, **opts):
         """
-        Creates the modeling base workflow. This workflow performs the steps
-        described in :class:`qipipe.pipeline.modeling.ModelingWorkflow` with
-        the exception of XNAT upload.
+        Creates the modeling base workflow. This workflow performs the
+        steps described in
+        :class:`qipipe.pipeline.modeling.ModelingWorkflow` with the
+        exception of XNAT upload.
 
         :Note: This workflow is adapted from the AIRC workflow at
-        https://everett.ohsu.edu/hg/qin_dce. The AIRC workflow time series
-        merge is removed and added as input to the workflow created by this
-        method. Any change to the ``qin_dce`` workflow should be reflected in
-        this method.
+        https://everett.ohsu.edu/hg/qin_dce. The AIRC workflow time
+        series merge is removed and added as input to the workflow
+        created by this method. Any change to the ``qin_dce`` workflow
+        should be reflected in this method.
 
         :param opts: the PK modeling parameters
         :return: the pyxnat Workflow
@@ -480,8 +480,8 @@ class ModelingWorkflow(WorkflowBase):
             # Create the R1_0 map.
             get_r1_0_func = Function(
                 input_names=['pdw_image', 't1w_image', 'max_r1_0', 'mask'],
-                output_names=['r1_0_map'],
-                function=make_r1_0),
+                output_names=['r1_0_map'], function=make_r1_0
+            )
             get_r1_0 = pe.Node(get_r1_0_func, name='get_r1_0')
             base_wf.connect(input_spec, 'pd_nii', get_r1_0, 'pdw_image')
             base_wf.connect(make_base, 'baseline', get_r1_0, 't1w_image')
@@ -492,7 +492,8 @@ class ModelingWorkflow(WorkflowBase):
         # Convert the DCE time series to R1 maps.
         get_r1_series_func = Function(
             input_names=['time_series', 'r1_0', 'baseline_end', 'mask', 'dest'],
-            output_names=['r1_series'], function=make_r1_series)
+            output_names=['r1_series'], function=make_r1_series
+        )
         get_r1_series = pe.Node(get_r1_series_func, dest=self.base_dir,
                                 name='get_r1_series')
         base_wf.connect(input_spec, 'time_series',
@@ -630,8 +631,10 @@ class ModelingWorkflow(WorkflowBase):
         """
         config = self.configuration.get('R1', {})
 
-        logger(__name__).debug("Setting the R1 parameters from the option"
-            " keyword parameters %s and configuration %s..." % (opts, config))
+        logger(__name__).debug(
+            "Setting the R1 parameters from the option keyword parameters"
+            " %s and configuration %s..." % (opts, config)
+        )
 
         # The R1_0 computation fields.
         r1_fields = ['pd_dir', 'max_r1_0']
@@ -680,8 +683,8 @@ class ModelingWorkflow(WorkflowBase):
                     pk_opts[field] = config[field]
                 # Validate the R1 parameter.
                 if not pk_opts.get(field):
-                    raise ModelingError("Missing both the r1_0_val and the %s"
-                        " parameter." % field)
+                    raise ModelingError("Missing both the r1_0_val and the"
+                                        " %s parameter." % field)
 
         # If the use_fixed_r1_0 flag is set, then remove the
         # extraneous R1 computation fields.
@@ -710,8 +713,9 @@ def make_baseline(time_series, baseline_end_idx):
     from dcmstack.dcmmeta import NiftiWrapper
 
     if baseline_end_idx <= 0:
-        raise ModelingError("The R1_0 computation baseline end index input value"
-                            " is not a positive number: %s" % baseline_end_idx)
+        raise ModelingError("The R1_0 computation baseline end index"
+                            " input value is not a positive number:"
+                            " %s" % baseline_end_idx)
     nii = nb.load(time_series)
     nw = NiftiWrapper(nii)
 
@@ -806,6 +810,10 @@ def get_fit_params(time_series, bolus_arrival_index):
     * *r1_cr*: contrast R1
     * *r1_b_pre*: pre-contrast R1
 
+    The *aif_shift* is derived from the time series embedded meta
+    *AcquisitionTime* tag. The remaining parameters are read from
+    the :const:`MODELING_CONF_FILE`.
+
     :param time_series: the modeling input 4D NIfTI image
     :param bolus_arrival_index: the bolus uptake series index
     :return: the parameter CSV file path
@@ -816,7 +824,8 @@ def get_fit_params(time_series, bolus_arrival_index):
     import numpy as np
     from dcmstack.dcmmeta import NiftiWrapper
     from dcmstack import dcm_time_to_sec
-    from qipipe.pipeline.modeling import (FASTFIT_PARAMS_TEMPLATE,
+    from qiutil.collections import is_nonstring_iterable
+    from qipipe.pipeline.modeling import (MODELING_CONF_FILE,
                                           FASTFIT_PARAMS_FILE)
 
     # Load the time series into a NIfTI wrapper.
@@ -828,14 +837,32 @@ def get_fit_params(time_series, bolus_arrival_index):
     # time.
     acq_time0 = dcm_time_to_sec(nw.get_meta('AcquisitionTime', (0, 0, 0, 0)))
     acq_time1 = dcm_time_to_sec(
-        nw.get_meta('AcquisitionTime', (0, 0, 0, bolus_arrival_index)))
+        nw.get_meta('AcquisitionTime', (0, 0, 0, bolus_arrival_index))
+    )
     acq_time2 = dcm_time_to_sec(
-        nw.get_meta('AcquisitionTime', (0, 0, 0, bolus_arrival_index + 1)))
+        nw.get_meta('AcquisitionTime', (0, 0, 0, bolus_arrival_index + 1))
+    )
     aif_shift = ((acq_time1 + acq_time2) / 2.0) - acq_time0
 
-    # The static input parameter CSV template.
-    with open(FASTFIT_PARAMS_TEMPLATE) as csv_file:
-        rows = list(csv.reader(csv_file))
+    # The config parameters.
+    cfg = read_config(MODELING_CONF_FILE)
+    cfg_dict = dict(cfg)
+    # Start with the AIF parameters.
+    fastfit_opts = cfg_dict.get('AIF')
+    # Add the R1 Fastfit parameters.
+    r1_opts = cfg_dict.get('R1')
+    fastfit_r1_params = ['r1_cr', 'r1_b_pre']
+    for param in fastfit_r1_params:
+        if param in r1_opts:
+            fastfit_opts[param] = r1_opts[params]
+
+    # Make CSV rows from the options.
+    rows = []
+    for key, value in fastfit_opts.iteritems():
+        if is_nonstring_iterable(value):
+            row = [key] + [str(v) for v in value])
+        else
+            row = [key, str(value)]
     # Add the shift.
     rows.append(['aif_shift', str(aif_shift)])
 
