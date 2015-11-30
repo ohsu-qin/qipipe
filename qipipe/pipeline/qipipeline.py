@@ -2,7 +2,11 @@ import os
 import re
 import tempfile
 import logging
-from nipype.pipeline import engine as pe
+# Disable nipype nipy import FutureWarnings.
+import warnings
+with warnings.catch_warnings():
+   warnings.simplefilter(action='ignore', category=FutureWarning)
+    from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
 from nipype.interfaces.dcmstack import MergeNifti
 import qixnat
@@ -1102,7 +1106,7 @@ def register(technique, project, subject, session, scan, resource,
     # The files up to and including bolus arrival are not realigned.
     start = bolus_arrival_index + 1
     unrealigned = volumes[:start]
-    # The bolus arrival is the initial fixed image.
+    # The first file after bolus arrival is the initial fixed image.
     ref_0 = volumes[bolus_arrival_index]
     # The files to realign.
     reg_inputs = volumes[start:]
