@@ -1,5 +1,11 @@
 import os
-import qipipe
+try:
+    import qipipe
+except ImportError:
+    # Load the module directly.
+    src_dir = os.path.join(os.path.dirname(__file__), '..', 'qipipe')
+    sys.path.append(src_dir)
+    import qipipe
 
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinx.ext.todo']
 autoclass_content = "both"
