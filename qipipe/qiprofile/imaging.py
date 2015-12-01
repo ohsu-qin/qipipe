@@ -17,23 +17,21 @@ class ImagingError(Exception):
     pass
 
 
-def update(subject, scan):
+def update(subject, experiment):
     """
     Updates the imaging content for the given qiprofile REST Subject
-    from the given XNAT scan.
+    from the given XNAT experiment.
 
     :param subject: the target qiprofile Subject to update
-    :param scan: the XNAT scan object
+    :param experiment: the XNAT experiment object
     """
-    # The parent XNAT experiment.
-    exp = scan.parent()
     # The XNAT experiment must have a date.
-    date = exp.attrs.get('date')
+    date = experiment.attrs.get('date')
     if not date:
         raise ImagingError(
             "The XNAT %s %s Subject %d %s experiment is missing"
             " the visit date" % (subject.project, subject.collection,
-                         subject.number, exp.label)
+                         subject.number, experiment.label)
         )
     # If there is a qiprofile session with the same date,
     # then complain.
@@ -44,7 +42,7 @@ def update(subject, scan):
                                  subject.number, date)
         )
     # Make the qiprofile session database object.
-    session = _create_session(exp)
+    session = _create_session(experiment)
     # Add the session to the subject encounters in date order.
     subject.add_encounter(session)
     # Save the session detail.
@@ -53,15 +51,15 @@ def update(subject, scan):
     subject.save()
 
 
-def _create_session(xnat_exp):
+def _create_session(experiment):
     """
     Makes the qiprofile Session object from the XNAT scan.
     
-    :param xnat_exp: the XNAT experiment object
+    :param experiment: the XNAT experiment object
     :return: the qiprofile session object
     """
     # Make the qiprofile scans.
-    scans = [_create_scan(xnat_scan) for xnat_scan in xnat_exp.scans()]
+    scans = [_create_scan(xnat_scan) for xnat_scan in experiment.scans()]
 
     # The modeling resources begin with 'pk_'.
     xnat_mdl_rscs = (rsc for rsc in xnat_scan.resources()
@@ -75,7 +73,7 @@ def _create_session(xnat_exp):
     detail.save()
 
     # The XNAT experiment date is the qiprofile session date.
-    date = xnat_exp.attrs.get('date')
+    date = experiment.attrs.get('date')
 
     # Return the new qiprofile Session object.
     return Session(date=date, modelings=modelings, detail=detail)

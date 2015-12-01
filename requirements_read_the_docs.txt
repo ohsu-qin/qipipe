@@ -1,5 +1,5 @@
-# The requirements for a ReadTheDocs build only.
-# This file excludes the following packages:
+# The requirements for a ReadTheDocs build only. This file excludes
+# the following packages:
 # * nibabel
 # * any packages which depend on nibabel
 # * mpi4py
