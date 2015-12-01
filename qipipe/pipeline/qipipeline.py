@@ -1086,7 +1086,6 @@ def register(technique, project, subject, session, scan, resource,
         options
     :return: the realigned image file path array
     """
-
     # Note: There is always a mask and resource argument. The mask
     # file and resource name are either specified as an input or
     # built by the workflow. The mask and resource is optional in
@@ -1106,7 +1105,7 @@ def register(technique, project, subject, session, scan, resource,
     # The files up to and including bolus arrival are not realigned.
     start = bolus_arrival_index + 1
     unrealigned = volumes[:start]
-    # The first file after bolus arrival is the initial fixed image.
+    # The bolus arrival is the initial fixed image.
     ref_0 = volumes[bolus_arrival_index]
     # The files to realign.
     reg_inputs = volumes[start:]
