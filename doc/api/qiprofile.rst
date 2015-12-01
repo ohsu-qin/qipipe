@@ -43,7 +43,7 @@ qiprofile update
 .. automodule:: qipipe.qiprofile.pathology
 
 :mod:`radiotherapy`
-----------------
+-------------------
 .. automodule:: qipipe.qiprofile.radiotherapy
 
 :mod:`sarcoma_pathology`
