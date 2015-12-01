@@ -1,14 +1,20 @@
 import os
 import logging
-from nipype.pipeline import engine as pe
-from nipype.interfaces import fsl
-from nipype.interfaces.dcmstack import CopyMeta
-from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
+# The ReadTheDocs build does not include nipype.
+try:
+    from nipype.pipeline import engine as pe
+    from nipype.interfaces import fsl
+    from nipype.interfaces.dcmstack import CopyMeta
+    from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
+    from ..helpers.bolus_arrival import bolus_arrival_index, BolusArrivalError
+except ImportError:
+    import warnings
+    warnings.warning("nipype import failed. This build is only suitable"
+                     " for documentation.")
 import qiutil
 from qiutil.logging import logger
 from .. import CONF_DIR
 from ..interfaces import (Gate, XNATUpload, XNATFind)
-from ..helpers.bolus_arrival import bolus_arrival_index, BolusArrivalError
 from .workflow_base import WorkflowBase
 from .pipeline_error import PipelineError
 
