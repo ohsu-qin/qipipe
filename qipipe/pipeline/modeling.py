@@ -860,7 +860,7 @@ def get_fit_params(time_series, bolus_arrival_index):
     rows = []
     for key, value in fastfit_opts.iteritems():
         if is_nonstring_iterable(value):
-            row = [key] + [str(v) for v in value])
+            row = [key] + [str(v) for v in value]
         else
             row = [key, str(value)]
     # Add the shift.
