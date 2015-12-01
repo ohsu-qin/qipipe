@@ -6,14 +6,14 @@ import logging
 import warnings
 with warnings.catch_warnings():
     warnings.simplefilter(action='ignore', category=FutureWarning)
-    from nipype.pipeline import engine as pe
-# The ReadTheDocs build does not include nipype.
-try:
-    from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
-    from nipype.interfaces.dcmstack import MergeNifti
-except ImportError:
-    warnings.warning("nipype import failed. This build is only suitable"
-                     " for documentation.")
+    # The ReadTheDocs build does not include nipype.
+    try:
+        from nipype.pipeline import engine as pe
+        from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
+        from nipype.interfaces.dcmstack import MergeNifti
+    except ImportError:
+        warnings.warning("nipype import failed. This build is only suitable"
+                         " for documentation.")
 import qixnat
 from qixnat.helpers import path_hierarchy
 from qiutil.logging import logger
