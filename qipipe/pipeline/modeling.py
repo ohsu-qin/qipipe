@@ -1,16 +1,13 @@
 import os
 import logging
 # The ReadTheDocs build does not include nipype.
-try:
+on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+if not on_rtd:
     from nipype.pipeline import engine as pe
     from nipype.interfaces import fsl
     from nipype.interfaces.dcmstack import CopyMeta
     from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
     from ..helpers.bolus_arrival import bolus_arrival_index, BolusArrivalError
-except ImportError:
-    import warnings
-    warnings.warning("nipype import failed. This build is only suitable"
-                     " for documentation.")
 import qiutil
 from qiutil.logging import logger
 from .. import CONF_DIR

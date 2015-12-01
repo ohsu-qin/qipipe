@@ -27,15 +27,12 @@ def requires():
 
     :return: the ``requirements.txt`` PyPI package specifications
     """
-    # If numpy is not installed, then go for a ReadTheDocs build.
-    try:
-        import numpy
-        rqmts_file = 'requirements.txt'
-    except ImportError:
-        warnings.warn("numpy must be installed separately prior to qipipe."
-                      " This qipipe installation is adequate only for a"
-                      " ReadTheDocs build.")
+    # ReadTheDocs can't build packages dependent on mpi or nipy.
+    on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+    if on_rtd:
         rqmts_file = 'requirements_read_the_docs.txt'
+    else:
+        rqmts_file = 'requirements.txt'
     with open(rqmts_file) as f:
         return f.read().splitlines()
 

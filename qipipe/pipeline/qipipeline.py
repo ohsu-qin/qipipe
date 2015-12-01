@@ -2,18 +2,16 @@ import os
 import re
 import tempfile
 import logging
-# Disable nipype nipy import FutureWarnings.
-import warnings
-with warnings.catch_warnings():
-    warnings.simplefilter(action='ignore', category=FutureWarning)
-    # The ReadTheDocs build does not include nipype.
-    try:
+# The ReadTheDocs build does not include nipype.
+on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+if not on_rtd:
+    # Disable nipype nipy import FutureWarnings.
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter(action='ignore', category=FutureWarning)
         from nipype.pipeline import engine as pe
         from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
-        from nipype.interfaces.dcmstack import MergeNifti
-    except ImportError:
-        warnings.warning("nipype import failed. This build is only suitable"
-                         " for documentation.")
+        from nipype.interfaces.dcmstack import MergeNifti    
 import qixnat
 from qixnat.helpers import path_hierarchy
 from qiutil.logging import logger
