@@ -13,7 +13,7 @@ def add(*collections):
     :param collections: the collection objects to add
     """
     for coll in collections:
-        extent[coll.name] = coll
+        extent[coll.name.lower()] = coll
 
 
 def with_name(name):
@@ -22,7 +22,7 @@ def with_name(name):
     :return: the corresponding :class:`qipipe.staging.collection.Collection`
     :raise StagingError: if the collection is not recognized
     """
-    coll = extent.get(name, None)
+    coll = extent.get(name.lower(), None)
     if not coll:
         raise StagingError("The collection name is not recognized: %s" %
                            name)
