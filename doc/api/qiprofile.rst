@@ -2,8 +2,8 @@
 qiprofile
 =========
 
-qiprofile update
-----------------
+:mod:`qiprofile` Package
+------------------------
 .. automodule:: qipipe.qiprofile
 
 :mod:`breast_pathology`
