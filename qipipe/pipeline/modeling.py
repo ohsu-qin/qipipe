@@ -903,10 +903,8 @@ def create_profile(technique, dest_file=None):
                             configuration)
     if not dest_file:
         dest_file = os.path.join(os.getcwd(), MODELING_PROFILE_FILE)
-    with open(dest_file, 'w+') as csv_file:
-        csv_writer = csv.writer(csv_file)
-        csv_writer.writerow(('technique', technique))
-        csv_writer.writerows(r1_opts.items())
+    with open(dest_file) as f:
+        cfg.write(f)
 
     return dest_file
 
