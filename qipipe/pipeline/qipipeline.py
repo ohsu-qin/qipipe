@@ -134,7 +134,8 @@ def _run_with_dicom_input(actions, *inputs, **opts):
         else:
             wf_opts = opts
         # Create a new workflow.
-        wf_gen = QIPipelineWorkflow(project, wf_actions, **wf_opts)
+        wf_gen = QIPipelineWorkflow(project, wf_actions, collection=collection,
+                                    **wf_opts)
         # Run the workflow on the scan.
         wf_gen.run_with_dicom_input(wf_actions, scan_input, dest)
 
@@ -346,6 +347,7 @@ class QIPipelineWorkflow(WorkflowBase):
         :param actions: the actions to perform
         :param opts: the :class:`qipipe.staging.WorkflowBase`
             initialization options as well as the following options:
+        :keyword collection: the image collection name
         :keyword mask: the XNAT mask resource name
         :keyword registration_resource: the XNAT registration resource
             name
@@ -784,7 +786,17 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(input_spec, 'scan', scan_ts, 'scan')
             elif staged:
                 # Merge the staged files.
-                scan_ts_xfc = MergeNifti(out_format=SCAN_TS_RSC)
+                collection = opts.get('collection')
+                if not collection:
+                    raise ArgumentError('The scan time series pipeline'
+                                        ' collection option is missing.')
+                # The volume grouping tag.
+                vol_tag = collection.patterns.volume
+                if not vol_tag:
+                    raise ArgumentError('The scan time series pipeline'
+                                        ' collection volume tag is missing.')
+                scan_ts_xfc = MergeNifti(sort_order=[vol_tag],
+                                         out_format=SCAN_TS_RSC)
                 scan_ts = pe.Node(scan_ts_xfc, name='merge_volumes')
                 exec_wf.connect(staged, 'out_files', scan_ts, 'in_files')
                 self.logger.debug('Connected staging to scan time series merge.')
