@@ -245,7 +245,3 @@ The release is then published as follows:
   :hidden:
 
   api/index
-  api/helpers
-  api/interfaces
-  api/pipeline
-  api/staging
