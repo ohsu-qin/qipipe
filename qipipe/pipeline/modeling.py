@@ -906,7 +906,7 @@ def create_profile(technique, cfg_file, aif_shift, dest_file=None):
     :param cfg_file: the modeling configuration file
     :param aif_shift: the AIF shift
     :param dest_file: the target profile location
-        (default :const:`MODELING_PROFILE_FILE` in the current directory)
+        (default :const:`MODELING_CONF_FILE` in the current directory)
     :return: the destination file
     """
     import os
