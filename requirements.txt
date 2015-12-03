@@ -1,5 +1,6 @@
 bunch
 inflection
+cython
 numpy
 nibabel
 scipy
