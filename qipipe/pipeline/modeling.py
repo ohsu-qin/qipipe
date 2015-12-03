@@ -520,9 +520,9 @@ class ModelingWorkflow(WorkflowBase):
                                    output_names=['aif_shift'],
                                    function=get_aif_shift)
         aif_shift = pe.Node(aif_shift_func, name='get_aif_shift')
-        base_wf.connect(input_spec, 'time_series', get_params, 'time_series')
+        base_wf.connect(input_spec, 'time_series', aif_shift, 'time_series')
         base_wf.connect(input_spec, 'bolus_arrival_index',
-                        get_params, 'bolus_arrival_index')
+                        aif_shift, 'bolus_arrival_index')
         get_params_flds = ['cfg_file', 'aif_shift']
         get_params_func = Function(input_names=get_params_flds,
                                    output_names=['params_csv'],
