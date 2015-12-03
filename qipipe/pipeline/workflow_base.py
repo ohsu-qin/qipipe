@@ -477,7 +477,7 @@ class WorkflowBase(object):
         :return: the corresponding {field: value} dictionary
         """
         return (self._interface_configuration(node.interface.__class__) or
-         self._node_name_configuration(workflow, node) or EMPTY_DICT)
+                self._node_name_configuration(workflow, node) or EMPTY_DICT)
 
     def _node_name_configuration(self, workflow, node):
         """
