@@ -791,7 +791,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 if not collection:
                     raise ArgumentError('The scan time series pipeline'
                                         ' collection option is missing.')
-                coll = collections.with_name(collections)
+                coll = collections.with_name(collection)
                 # The volume grouping tag.
                 vol_tag = coll.patterns.volume
                 if not vol_tag:
