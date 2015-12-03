@@ -212,7 +212,8 @@ def _run_with_xnat_input(actions, *inputs, **opts):
             # The XNAT scan object must exist.
             scan_obj = xnat.find_one(prj, sbj, sess, scan=scan)
             if not scan_obj:
-                raise ArgumentError("The XNAT scan object does not exist: %s" % path)
+                raise ArgumentError("The XNAT scan object does not exist: %s" %
+                                    path)
 
             # The workflow options are augmented from the base options.
             wf_opts = dict(opts)
@@ -377,7 +378,9 @@ class QIPipelineWorkflow(WorkflowBase):
         if reg_rsc_opt:
             reg_rsc = reg_rsc_opt
         elif 'register' in actions:
-            reg_rsc = registration.generate_resource_name(self.registration_technique)
+            reg_rsc = registration.generate_resource_name(
+                self.registration_technique
+            )
             self.logger.debug("Generated registration resource name %s" %
                                reg_rsc)
         else:
@@ -870,8 +873,8 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(staged, 'out_files', reg_node, 'in_files')
             else:
                 exc_regd_xfc = Function(input_names=['in_files', 'exclusions'],
-                                         output_names=['out_files'],
-                                         function=exclude_files)
+                                        output_names=['out_files'],
+                                        function=exclude_files)
                 exclude_registered = pe.Node(exc_regd_xfc,
                                              name='exclude_registered')
                 exec_wf.connect(staged, 'out_files',
@@ -893,8 +896,8 @@ class QIPipelineWorkflow(WorkflowBase):
                             reg_node, 'bolus_arrival_index')
             self.logger.debug('Connected bolus arrival to registration.')
 
-        # If the modeling workflow is enabled, then model the scan or realigned
-        # images.
+        # If the modeling workflow is enabled, then model the scan or
+        # realigned images.
         if mdl_wf:
             exec_wf.connect(input_spec, 'subject',
                             mdl_wf, 'input_spec.subject')
@@ -1024,7 +1027,8 @@ class QIPipelineWorkflow(WorkflowBase):
                 # If registration is enabled, then simulate it.
                 if self.workflow.get_node('register'):
                     opts = dict(base_dir=self.workflow.base_dir, dry_run=True)
-                    register('Dummy', 'Dummy', 'Dummy', 1, 0, path, [path], opts)
+                    register('Dummy', 'Dummy', 'Dummy', 1, 0, path, [path],
+                             opts)
                 # If ROI is enabled, then simulate it.
                 if self.workflow.get_node('roi'):
                     opts = dict(base_dir=self.workflow.base_dir, dry_run=True)
