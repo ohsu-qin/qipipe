@@ -11,7 +11,7 @@ from nipype.interfaces.dcmstack import CopyMeta
 import qiutil
 from qiutil.logging import logger
 from ..interfaces import (Copy, XNATUpload)
-from ..interfaces.ants.utils import AffineInitializer
+from ..interfaces.ants import AffineInitializer
 from ..helpers import bolus_arrival
 from .workflow_base import WorkflowBase
 from .pipeline_error import PipelineError
