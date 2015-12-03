@@ -7,7 +7,7 @@ qiprofile
 .. automodule:: qipipe.qiprofile
 
 :mod:`breast_pathology`
---------------------
+-----------------------
 .. automodule:: qipipe.qiprofile.breast_pathology
 
 :mod:`chemotherapy`

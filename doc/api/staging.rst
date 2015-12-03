@@ -11,7 +11,7 @@ staging
 .. automodule:: qipipe.staging.collection
 
 :mod:`collections`
------------------
+------------------
 .. automodule:: qipipe.staging.collections
 
 :mod:`ctp_config`
@@ -35,7 +35,7 @@ staging
 .. automodule:: qipipe.staging.ohsu
 
 :mod:`roi`
------------
+----------
 .. automodule:: qipipe.staging.roi
 
 :mod:`sarcoma_config`

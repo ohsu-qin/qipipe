@@ -19,7 +19,7 @@ interfaces
 .. automodule:: qipipe.interfaces.copy
 
 :mod:`fastfit`
-----------------
+--------------
 .. automodule:: qipipe.interfaces.fastfit
 
 :mod:`fix_dicom`
@@ -27,7 +27,7 @@ interfaces
 .. automodule:: qipipe.interfaces.fix_dicom
 
 :mod:`gate`
-----------------
+-----------
 .. automodule:: qipipe.interfaces.gate
 
 :mod:`group_dicom`
@@ -35,7 +35,7 @@ interfaces
 .. automodule:: qipipe.interfaces.group_dicom
 
 :mod:`interface_error`
-----------------
+----------------------
 .. automodule:: qipipe.interfaces.interface_error
 
 :mod:`lookup`
@@ -55,11 +55,11 @@ interfaces
 .. automodule:: qipipe.interfaces.mri_volcluster
 
 :mod:`preview`
----------------------
+--------------
 .. automodule:: qipipe.interfaces.preview
 
 :mod:`touch`
------------------
+------------
 .. automodule:: qipipe.interfaces.touch
 
 :mod:`uncompress`
@@ -72,11 +72,11 @@ interfaces
 .. automodule:: qipipe.interfaces.unpack
 
 :mod:`update_qiprofile`
--------------
+-----------------------
 .. automodule:: qipipe.interfaces.update_qiprofile
 
 :mod:`xnat_copy`
---------------------
+----------------
 .. automodule:: qipipe.interfaces.xnat_copy
 
 :mod:`xnat_download`
@@ -84,7 +84,7 @@ interfaces
 .. automodule:: qipipe.interfaces.xnat_download
 
 :mod:`xnat_find`
---------------------
+----------------
 .. automodule:: qipipe.interfaces.xnat_find
 
 :mod:`xnat_upload`
