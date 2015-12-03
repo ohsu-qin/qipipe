@@ -29,7 +29,7 @@ FIXED_R1_0_OUTPUTS = ['r1_series', 'pk_params', 'fxr_k_trans', 'fxr_v_e',
 INFERRED_R1_0_OUTPUTS = FIXED_R1_0_OUTPUTS + ['dce_baseline', 'r1_0']
 """The inferred R1_0 modeling outputs."""
 
-FASTFIT_PARAMS_FILE = 'fastfit.csv'
+FASTFIT_PARAMS_FILE = 'params.csv'
 """The fastfit parameters CSV file name."""
 
 MODELING_CONF_FILE = 'modeling.cfg'
@@ -395,11 +395,13 @@ class ModelingWorkflow(WorkflowBase):
         mdl_wf.connect(input_spec, 'scan', cr_prf_gate, 'scan')
 
         # Make the profile.
-        cr_prf_xfc = Function(input_names=['technique'],
+        cr_prf_fields = ['cfg_file', 'aif_shift']
+        cr_prf_xfc = Function(input_names=cr_prf_fields,
                               output_names=['out_file'],
                               function=create_profile)
         cr_prf = pe.Node(cr_prf_xfc, name='create_profile')
-        mdl_wf.connect(cr_prf_gate, 'technique', cr_prf, 'technique')
+        cr_prf.inputs.cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
+        mdl_wf.connect(aif_shift, 'aif_shift', cr_prf, 'aif_shift')
 
         # Upload the profile.
         upload_profile = pe.Node(upload_xfc, name='upload_profile')
@@ -540,9 +542,6 @@ class ModelingWorkflow(WorkflowBase):
             from ..interfaces.fastfit import Fastfit
         # Optimize the pharmacokinetic model.
         pk_map = pe.Node(Fastfit(), name='pk_map')
-        pk_map.inputs.model_name = 'fxr.model'
-        pk_map.inputs.optional_outs = ['chisq', 'guess_model.k_trans',
-                                       'guess_model.v_e', 'guess_model.chisq']
         base_wf.connect(copy_meta, 'dest_file', pk_map, 'target_data')
         base_wf.connect(input_spec, 'mask', pk_map, 'mask')
         base_wf.connect(get_params, 'params_csv', pk_map, 'params_csv')
@@ -891,12 +890,11 @@ def get_fit_params(cfg_file, aif_shift):
     return os.path.join(os.getcwd(), FASTFIT_PARAMS_FILE)
 
 
-def create_profile(technique, cfg_file, aif_shift, dest_file=None):
+def create_profile(cfg_file, aif_shift, dest_file=None):
     """
     Creates the modeling profile CSV file from the
-    :const:`MODELING_CONF_FILE` ``R1`` section.
+    :const:`MODELING_CONF_FILE`.
 
-    :param technique: the modeling technique
     :param cfg_file: the modeling configuration file
     :param aif_shift: the AIF shift
     :param dest_file: the target profile location
@@ -909,21 +907,24 @@ def create_profile(technique, cfg_file, aif_shift, dest_file=None):
     from qipipe.pipeline.modeling import (CONF_DIR, MODELING_CONF_FILE,
                                           ModelingError)
 
-    # Augment the R1 params.
+    # The input config.
     cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
     cfg = read_config(cfg_file)
-    if not cfg.has_section('R1'):
-        raise ModelingError("The imaging configuration file %s"
-                            " is missing the R1 section" % cfg_file)
-    # TODO - finish.
-    if not cfg.has_section('AIF'):
-        raise ModelingError("The imaging configuration file %s"
-                            " is missing the AIF section" % cfg_file)
-    cfg.set('AIF', 'aif_shift', aif_shift)
+    # Doctor the config for the profile.
+    for section in cfg.sections():
+        # Remove the run-time cluster options.
+        cfg.remove_option(section, 'plugin_args')
+        cfg.remove_option(section, 'run_without_submitting')
+        if section == 'AIF':
+            # Augment the AIF section with the shift.
+            cfg.set('AIF', 'aif_shift', aif_shift)
+        # If no options remain, then delete the empty section.
+        if not section.options():
+            cfg.delete_section(section)
+
     if not dest_file:
         dest_file = os.path.join(os.getcwd(), MODELING_CONF_FILE)
-    with open(dest_file) as f:
+    with open(dest_file, 'w') as f:
         cfg.write(f)
 
     return dest_file
-
