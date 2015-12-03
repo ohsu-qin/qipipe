@@ -23,6 +23,7 @@ from .modeling import (ModelingWorkflow, MODELING_PROFILE_FILE)
 from .mask import MaskWorkflow
 from .roi import ROIWorkflow
 from ..interfaces import (XNATDownload, XNATUpload)
+from ..staging import collections
 from ..staging.iterator import iter_stage
 from ..staging.map_ctp import map_ctp
 from ..staging.ohsu import MULTI_VOLUME_SCAN_NUMBERS
@@ -790,8 +791,9 @@ class QIPipelineWorkflow(WorkflowBase):
                 if not collection:
                     raise ArgumentError('The scan time series pipeline'
                                         ' collection option is missing.')
+                coll = collections.with_name(collections)
                 # The volume grouping tag.
-                vol_tag = collection.patterns.volume
+                vol_tag = coll.patterns.volume
                 if not vol_tag:
                     raise ArgumentError('The scan time series pipeline'
                                         ' collection volume tag is missing.')
