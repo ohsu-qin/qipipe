@@ -464,7 +464,7 @@ class WorkflowBase(object):
     def _node_configuration(self, workflow, node):
         """
         Returns the {parameter: value} dictionary defined for the given
-        node in this WorkflowBase's configuration. The configuration topic
+        node in this WorkflowBase's configuration. The configuration section
         is determined as follows:
 
         * the node class, as described in :meth:`_interface_configuration`
@@ -498,8 +498,8 @@ class WorkflowBase(object):
         """
         Returns the {parameter: value} dictionary defined for the given
         interface class in this WorkflowBase's configuration. The
-        configuration topic matches the module path of the interface class
-        name. The topic can elide the ``interfaces`` or ``interface`` prefix,
+        configuration section matches the module path of the interface class
+        name. The section can elide the ``interfaces`` or ``interface`` prefix,
         e.g.:
 
             [nipype.interfaces.ants.AverageImages]
@@ -510,13 +510,13 @@ class WorkflowBase(object):
         :param node: the interface class to check
         :return: the corresponding {field: value} dictionary
         """
-        topic = "%s.%s" % (klass.__module__, klass.__name__)
-        if topic in self.configuration:
-            return self.configuration[topic]
-        elif WorkflowBase.INTERFACE_PREFIX_PAT.match(topic):
+        section = "%s.%s" % (klass.__module__, klass.__name__)
+        if section in self.configuration:
+            return self.configuration[section]
+        elif WorkflowBase.INTERFACE_PREFIX_PAT.match(section):
             # A parent module might import the class. Therefore,
             # strip out the last module and retry.
-            abbr = WorkflowBase.INTERFACE_PREFIX_PAT.sub('', topic)
+            abbr = WorkflowBase.INTERFACE_PREFIX_PAT.sub('', section)
             while abbr:
                 if abbr in self.configuration:
                     return self.configuration[abbr]

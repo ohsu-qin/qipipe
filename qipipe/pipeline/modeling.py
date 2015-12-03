@@ -32,11 +32,8 @@ INFERRED_R1_0_OUTPUTS = FIXED_R1_0_OUTPUTS + ['dce_baseline', 'r1_0']
 FASTFIT_PARAMS_FILE = 'fastfit.csv'
 """The fastfit parameters CSV file name."""
 
-MODELING_CONF_FILE = os.path.join(CONF_DIR, 'modeling.cfg')
+MODELING_CONF_FILE = 'modeling.cfg'
 """The modeling workflow configuration."""
-
-MODELING_PROFILE_FILE = 'profile.cfg'
-"""The modeling profile file name."""
 
 
 class ModelingError(Exception):
@@ -114,7 +111,7 @@ class ModelingWorkflow(WorkflowBase):
     - the R1 modeling parameters described below
 
     If an input field is defined in the configuration file ``R1``
-    topic, then the input field is set to that value.
+    section, then the input field is set to that value.
 
     If the |R10| option is not set, then it is computed from the proton
     density weighted scans and DCE series baseline image.
@@ -518,14 +515,21 @@ class ModelingWorkflow(WorkflowBase):
         base_wf.connect(get_r1_series, 'r1_series', copy_meta, 'dest_file')
 
         # Get the pharmacokinetic mapping parameters.
-        get_params_flds = ['time_series', 'bolus_arrival_index']
+        aif_shift_flds = ['time_series', 'bolus_arrival_index']
+        aif_shift_func = Function(input_names=get_aif_shift_flds,
+                                   output_names=['aif_shift'],
+                                   function=get_aif_shift)
+        get_aif_shift = pe.Node(aif_shift_func, name='get_aif_shift')
+        base_wf.connect(input_spec, 'time_series', get_params, 'time_series')
+        base_wf.connect(input_spec, 'bolus_arrival_index',
+                        get_params, 'bolus_arrival_index')
+        get_params_flds = ['cfg_file', 'aif_shift']
         get_params_func = Function(input_names=get_params_flds,
                                    output_names=['params_csv'],
                                    function=get_fit_params)
         get_params = pe.Node(get_params_func, name='get_params')
-        base_wf.connect(input_spec, 'time_series', get_params, 'time_series')
-        base_wf.connect(input_spec, 'bolus_arrival_index',
-                        get_params, 'bolus_arrival_index')
+        get_params.inputs.cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
+        base_wf.connect(get_aif_shift, 'aif_shift', get_params, 'aif_shift')
 
         # Import Fastfit on demand. This allows the modeling module to be
         # imported by clients without the proprietary Fastfit modeling
@@ -803,19 +807,15 @@ def make_r1_series(time_series, r1_0, **kwargs):
     return out_file
 
 
-def get_fit_params(time_series, bolus_arrival_index):
+def get_aif_shift(time_series, bolus_arrival_index):
     """
-    Obtains the following modeling fit parameters:
-
-    * *aif_params*: arterial input function parameter array
-    * *aif_delta_t*: acquisition time deltas
-    * *aif_shift*: acquisition time shift
-    * *r1_cr*: contrast R1
-    * *r1_b_pre*: pre-contrast R1
-
-    The *aif_shift* is derived from the time series embedded meta
-    *AcquisitionTime* tag. The remaining parameters are read from
-    the :const:`MODELING_CONF_FILE`.
+    Calculates the arterial input function offset as:
+    
+    *t*\ :sub:`arrival` - *t*\ :sub:`0`
+    
+    where *t*\ :sub:`0` is the first slice acquisition time
+    and *t*\ :sub:`arrival` averages the acquisition times at
+    and immediately following bolus arrival.
 
     :param time_series: the modeling input 4D NIfTI image
     :param bolus_arrival_index: the bolus uptake series index
@@ -827,9 +827,6 @@ def get_fit_params(time_series, bolus_arrival_index):
     import numpy as np
     from dcmstack.dcmmeta import NiftiWrapper
     from dcmstack import dcm_time_to_sec
-    from qiutil.collections import is_nonstring_iterable
-    from qipipe.pipeline.modeling import (MODELING_CONF_FILE,
-                                          FASTFIT_PARAMS_FILE)
 
     # Load the time series into a NIfTI wrapper.
     nii = nb.load(time_series)
@@ -845,10 +842,33 @@ def get_fit_params(time_series, bolus_arrival_index):
     acq_time2 = dcm_time_to_sec(
         nw.get_meta('AcquisitionTime', (0, 0, 0, bolus_arrival_index + 1))
     )
-    aif_shift = ((acq_time1 + acq_time2) / 2.0) - acq_time0
+    return ((acq_time1 + acq_time2) / 2.0) - acq_time0
+
+
+def get_fit_params(cfg_file, aif_shift):
+    """
+    Obtains the following modeling fit parameters:
+
+    * *aif_shift*: arterial input function parameter array
+    * *aif_delta_t*: acquisition time deltas
+    * *aif_shift*: acquisition time shift
+    * *r1_cr*: contrast R1
+    * *r1_b_pre*: pre-contrast R1
+
+    The *aif_shift* is calculated by :func:`get_aif_params` and passed
+    to this function. The remaining parameters are read from the
+    :const:`MODELING_CONF_FILE`.
+
+    :param cfg_file: the modeling configuration file
+    :return: the parameter CSV file path
+    """
+    import os
+    import csv
+    from qiutil.collections import is_nonstring_iterable
+    from qipipe.pipeline.modeling import (FASTFIT_PARAMS_FILE)
 
     # The config parameters.
-    cfg = read_config(MODELING_CONF_FILE)
+    cfg = read_config(cfg_file)
     cfg_dict = dict(cfg)
     # Start with the AIF parameters.
     fastfit_opts = cfg_dict.get('AIF')
@@ -877,11 +897,14 @@ def get_fit_params(time_series, bolus_arrival_index):
     return os.path.join(os.getcwd(), FASTFIT_PARAMS_FILE)
 
 
-def create_profile(technique, dest_file=None):
+def create_profile(technique, cfg_file, aif_shift, dest_file=None):
     """
     Creates the modeling profile CSV file from the
-    :const:`MODELING_CONF_FILE` ``R1`` topic.
+    :const:`MODELING_CONF_FILE` ``R1`` section.
 
+    :param technique: the modeling technique
+    :param cfg_file: the modeling configuration file
+    :param aif_shift: the AIF shift
     :param dest_file: the target profile location
         (default :const:`MODELING_PROFILE_FILE` in the current directory)
     :return: the destination file
@@ -889,20 +912,22 @@ def create_profile(technique, dest_file=None):
     import os
     import csv
     from qiutil.ast_config import read_config
-    from qipipe.pipeline.modeling import (MODELING_CONF_FILE,
-                                          MODELING_PROFILE_FILE,
+    from qipipe.pipeline.modeling import (CONF_DIR, MODELING_CONF_FILE,
                                           ModelingError)
 
-    # Make the R1 params file.
-    cfg = read_config(MODELING_CONF_FILE)
-    cfg_dict = dict(cfg)
-    r1_opts = cfg_dict.get('R1')
-    if not r1_opts:
+    # Augment the R1 params.
+    cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
+    cfg = read_config(cfg_file)
+    if not cfg.has_section('R1'):
         raise ModelingError("The imaging configuration file %s"
-                            " is missing the R1 topic" %
-                            configuration)
+                            " is missing the R1 section" % cfg_file)
+    # TODO - finish.
+    if not cfg.has_section('AIF'):
+        raise ModelingError("The imaging configuration file %s"
+                            " is missing the AIF section" % cfg_file)
+    cfg.set('AIF', 'aif_shift', aif_shift)
     if not dest_file:
-        dest_file = os.path.join(os.getcwd(), MODELING_PROFILE_FILE)
+        dest_file = os.path.join(os.getcwd(), MODELING_CONF_FILE)
     with open(dest_file) as f:
         cfg.write(f)
 

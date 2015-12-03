@@ -103,7 +103,7 @@ def _parse_arguments():
     ##
     # TODO -
     # * Move the staging, registration and modeling options to
-    #   a config file with topics [Staging], etc.
+    #   a config file with sections [Staging], etc.
     # * Add a -c/--config option, with default ./qipipe.cfg.
     # * Move staging/collections.py into collection.py, renaming
     #   module attribute extent to collections.
