@@ -516,7 +516,7 @@ class ModelingWorkflow(WorkflowBase):
 
         # Get the pharmacokinetic mapping parameters.
         aif_shift_flds = ['time_series', 'bolus_arrival_index']
-        aif_shift_func = Function(input_names=get_aif_shift_flds,
+        aif_shift_func = Function(input_names=aif_shift_flds,
                                    output_names=['aif_shift'],
                                    function=get_aif_shift)
         get_aif_shift = pe.Node(aif_shift_func, name='get_aif_shift')
@@ -637,12 +637,6 @@ class ModelingWorkflow(WorkflowBase):
         :return: the parameter {name: value} dictionary
         """
         config = self.configuration.get('R1', {})
-
-        logger(__name__).debug(
-            "Setting the R1 parameters from the option keyword parameters"
-            " %s and configuration %s..." % (opts, config)
-        )
-
         # The R1_0 computation fields.
         r1_fields = ['pd_dir', 'max_r1_0']
         # All of the possible fields.
