@@ -519,7 +519,7 @@ class ModelingWorkflow(WorkflowBase):
         aif_shift_func = Function(input_names=aif_shift_flds,
                                    output_names=['aif_shift'],
                                    function=get_aif_shift)
-        get_aif_shift = pe.Node(aif_shift_func, name='get_aif_shift')
+        aif_shift = pe.Node(aif_shift_func, name='get_aif_shift')
         base_wf.connect(input_spec, 'time_series', get_params, 'time_series')
         base_wf.connect(input_spec, 'bolus_arrival_index',
                         get_params, 'bolus_arrival_index')
@@ -529,7 +529,7 @@ class ModelingWorkflow(WorkflowBase):
                                    function=get_fit_params)
         get_params = pe.Node(get_params_func, name='get_params')
         get_params.inputs.cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
-        base_wf.connect(get_aif_shift, 'aif_shift', get_params, 'aif_shift')
+        base_wf.connect(aif_shift, 'aif_shift', get_params, 'aif_shift')
 
         # Import Fastfit on demand. This allows the modeling module to be
         # imported by clients without the proprietary Fastfit modeling
