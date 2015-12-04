@@ -47,17 +47,15 @@ def run(technique, project, subject, session, scan, ref_0, *images, **opts):
     return reg_wf.run(subject, session, scan, ref_0, *images, **run_opts)
 
 
-def generate_resource_name(technique):
+def generate_resource_name():
     """
     Makes a unique registration resource name. Uniqueness permits more
     than one registration to be stored for a given session without a
     name conflict.
 
-    :param technique: the registration technique
     :return: a unique XNAT registration resource name
     """
-    return "%s_%s_%s" % (REG_PREFIX, technique,
-                         qiutil.file.generate_file_name())
+    return "%s_%s" % (REG_PREFIX, qiutil.file.generate_file_name())
 
 
 class RegistrationWorkflow(WorkflowBase):
@@ -150,7 +148,7 @@ class RegistrationWorkflow(WorkflowBase):
         """
 
         rsc_opt = kwargs.pop('resource', None)
-        self.resource = rsc_opt or generate_resource_name(self.technique)
+        self.resource = rsc_opt or generate_resource_name()
         """The XNAT resource name used for all runs against this
         workflow instance."""
 

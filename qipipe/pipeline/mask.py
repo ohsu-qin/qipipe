@@ -122,19 +122,20 @@ class MaskWorkflow(WorkflowBase):
         input_spec = pe.Node(IdentityInterface(fields=in_fields),
                              name='input_spec')
 
-        # Get a mean image from the DCE data.
-        dce_mean = pe.Node(fsl.MeanImage(), name='dce_mean')
-        workflow.connect(input_spec, 'time_series', dce_mean, 'in_file')
+        # Take the mean image of the time series.
+        mean = pe.Node(fsl.MeanImage(), name='mean')
+        workflow.connect(input_spec, 'time_series', mean, 'in_file')
 
         # Find the center of gravity from the mean image.
-        find_cog = pe.Node(fsl.ImageStats(), name='find_cog')
-        find_cog.inputs.op_string = '-C'
-        workflow.connect(dce_mean, 'out_file', find_cog, 'in_file')
+        cog = pe.Node(fsl.ImageStats(), name='cog')
+        cog.inputs.op_string = '-C'
+        workflow.connect(mean, 'out_file', cog, 'in_file')
 
-        # Zero everything posterior to the center of gravity on mean image.
+        # Zero everything posterior to the center of gravity on the
+        # mean image.
         crop_back = pe.Node(fsl.ImageMaths(), name='crop_back')
-        workflow.connect(dce_mean, 'out_file', crop_back, 'in_file')
-        workflow.connect(find_cog, ('out_stat', _gen_crop_op_string),
+        workflow.connect(mean, 'out_file', crop_back, 'in_file')
+        workflow.connect(cog, ('out_stat', _gen_crop_op_string),
                          crop_back, 'op_string')
 
         # The cluster options.
@@ -184,12 +185,3 @@ def _gen_crop_op_string(cog):
     :return: the crop -roi option
     """
     return "-roi 0 -1 %d -1 0 -1 0 -1" % cog[1]
-
-
-def _crop_posterior(image, cog):
-    from nipype.interfaces import fsl
-
-    crop_back = fsl.ImageMaths()
-    crop_back.inputs.op_string = '-roi 0 -1 %d -1 0 -1 0 -1' % cog[1]
-    crop_back.inputs.in_file = image
-    return crop_back.run().outputs.out_file

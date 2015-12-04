@@ -65,16 +65,15 @@ def run(technique, project, subject, session, scan, time_series,
     return wf.run(subject, session, scan, time_series, **run_opts)
 
 
-def generate_resource_name(technique):
+def generate_resource_name():
     """
     Makes a unique modeling resource name. Uniqueness permits more than
     one resource to be stored for a given session without a name conflict.
 
-    :param technique: the modeling technique
     :return: a unique XNAT modeling resource name
     """
-    return "%s_%s_%s" % (PK_PREFIX, technique,
-                         qiutil.file.generate_file_name())
+    return "%s_%s" % (PK_PREFIX, technique,
+                      qiutil.file.generate_file_name())
 
 
 class ModelingWorkflow(WorkflowBase):
@@ -208,7 +207,7 @@ class ModelingWorkflow(WorkflowBase):
         """The modeling technique. Built-in techniques include ``mock``."""
 
         rsc_opt = kwargs.pop('resource', None)
-        self.resource = rsc_opt or generate_resource_name(self.technique)
+        self.resource = rsc_opt or generate_resource_name()
         """
         The XNAT resource name for all executions of this
         :class:`qipipe.pipeline.modeling.ModelingWorkflow` instance.
@@ -919,8 +918,8 @@ def create_profile(cfg_file, aif_shift, dest_file=None):
             # Augment the AIF section with the shift.
             cfg.set('AIF', 'aif_shift', aif_shift)
         # If no options remain, then delete the empty section.
-        if not section.options():
-            cfg.delete_section(section)
+        if not cfg.options(section):
+            cfg.remove_section(section)
 
     if not dest_file:
         dest_file = os.path.join(os.getcwd(), MODELING_CONF_FILE)
