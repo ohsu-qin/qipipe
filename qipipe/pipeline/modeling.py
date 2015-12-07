@@ -338,8 +338,6 @@ class ModelingWorkflow(WorkflowBase):
         input_spec = pe.Node(input_xfc, name='input_spec')
         self.logger.debug("The modeling workflow input is %s with"
             " fields %s" % (input_spec.name, in_fields))
-        mdl_wf.connect(input_spec, 'resource',
-                       base_wf, 'input_spec.resource')
         mdl_wf.connect(input_spec, 'time_series',
                        base_wf, 'input_spec.time_series')
         mdl_wf.connect(input_spec, 'mask', base_wf, 'input_spec.mask')
