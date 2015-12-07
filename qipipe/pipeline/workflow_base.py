@@ -66,11 +66,11 @@ class WorkflowBase(object):
     None
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **opts):
         """
         Initializes this workflow wrapper object.
 
-        :param kwargs: the following keyword arguments:
+        :param opts: the following keyword arguments:
         :keyword project: the :attr:`project`
         :keyword logger: the :attr:`logger` to use
         :keyword parent: the parent workflow for a child workflow
@@ -82,8 +82,8 @@ class WorkflowBase(object):
         :raise PipelineError: if there is neither a *project* nor
             a *parent* argument
         """
-        parent = kwargs.get('parent')
-        project_opt = kwargs.get('project')
+        parent = opts.get('parent')
+        project_opt = opts.get('project')
         if project_opt:
             project = project_opt
         elif parent:
@@ -94,7 +94,7 @@ class WorkflowBase(object):
         self.project = project
         """The XNAT project name."""
 
-        logger_opt = kwargs.get('logger')
+        logger_opt = opts.get('logger')
         if logger_opt:
             _logger = logger_opt
         elif parent:
@@ -104,7 +104,7 @@ class WorkflowBase(object):
         self.logger = _logger
         """This workflow's logger."""
 
-        base_dir_opt = kwargs.get('base_dir')
+        base_dir_opt = opts.get('base_dir')
         if base_dir_opt:
             base_dir = base_dir_opt
         elif parent:
@@ -114,7 +114,7 @@ class WorkflowBase(object):
         self.base_dir = base_dir
         "The workflow execution directory (default a new temp directory)."
 
-        cfg_dir_opt = kwargs.get('config_dir')
+        cfg_dir_opt = opts.get('config_dir')
         if cfg_dir_opt:
             cfg_dir = cfg_dir_opt
         elif parent:
@@ -139,7 +139,7 @@ class WorkflowBase(object):
         # either the --no-submit command option was set or there is
         # no cluster environment. Otherwise, there is a cluster
         # environment and the is_distributable flag is set to True.
-        distributable_opt = kwargs.get('distributable')
+        distributable_opt = opts.get('distributable')
         if distributable_opt:
             distributable = distributable_opt
         elif parent:
@@ -156,8 +156,8 @@ class WorkflowBase(object):
         else:
             self.plug_in = None
 
-        if 'dry_run' in kwargs:
-            dry_run = kwargs.get('dry_run')
+        if 'dry_run' in opts:
+            dry_run = opts.get('dry_run')
         elif parent:
             dry_run = parent.dry_run
         else:
@@ -423,7 +423,7 @@ class WorkflowBase(object):
                                    " were set from the configuration: %s" %
                                    (workflow.name, node, input_dict))
 
-    def _set_node_inputs(self, node, **kwargs):
+    def _set_node_inputs(self, node, **opts):
         """
         Sets the given node attributes. The input attributes can be
         either a node input interface field, e.g. the
@@ -431,12 +431,12 @@ class WorkflowBase(object):
         of the node itself, e.g. *run_without_submitting*.
         
         :param node: the target node
-        :param kwargs: the input {attribute: value} dictionary
+        :param opts: the input {attribute: value} dictionary
         """
         # The node interface input traits.
         traits = node.inputs.traits()
         # The input interface {attribute: value} dictionary.
-        input_dict = {attr: kwargs[attr] for attr in kwargs if attr in traits}
+        input_dict = {attr: opts[attr] for attr in opts if attr in traits}
         # The input interface attributes.
         input_attrs = set(input_dict.iterkeys())
         # The {attribute: dependencies} requirement dictionary.
@@ -457,9 +457,9 @@ class WorkflowBase(object):
         for attr in sorted_attrs:
             setattr(node.inputs, attr, input_dict[attr])
         # Set the node attribute values.
-        node_attrs = (attr for attr in kwargs if not attr in input_dict)
+        node_attrs = (attr for attr in opts if not attr in input_dict)
         for attr in node_attrs:
-            setattr(node, attr, kwargs[attr])
+            setattr(node, attr, opts[attr])
 
     def _node_configuration(self, workflow, node):
         """

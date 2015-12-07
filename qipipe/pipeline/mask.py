@@ -64,17 +64,17 @@ class MaskWorkflow(WorkflowBase):
         interface options
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **opts):
         """
         If the optional configuration file is specified, then the workflow
         settings in that file override the default settings.
 
-        :param kwargs: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
+        :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
             initializer keyword arguments, as well as the following options:
         :option crop_posterior: crop posterior to the center of gravity,
             e.g. for a breast tumor
         """
-        super(MaskWorkflow, self).__init__(logger=logger(__name__), **kwargs)
+        super(MaskWorkflow, self).__init__(logger=logger(__name__), **opts)
 
         crop_posterior = opts.get('crop_posterior', False)
         self.workflow = self._create_workflow(crop_posterior)
