@@ -72,8 +72,7 @@ def generate_resource_name():
 
     :return: a unique XNAT modeling resource name
     """
-    return "%s_%s" % (PK_PREFIX, technique,
-                      qiutil.file.generate_file_name())
+    return "%s_%s" % (PK_PREFIX, qiutil.file.generate_file_name())
 
 
 class ModelingWorkflow(WorkflowBase):
@@ -534,8 +533,22 @@ class ModelingWorkflow(WorkflowBase):
             Fastfit
         except NameError:
             from ..interfaces.fastfit import Fastfit
-        # Optimize the pharmacokinetic model.
-        pk_map = pe.Node(Fastfit(), name='pk_map')
+        # Work around the following Fastfit limitation:
+        # * The Fastfit model_name and optional_outs inputs must be
+        #   set before the Fastfit output is connected in the workflow.
+        # These inputs are specified in the ModelingWorkflow configuration
+        # named modeling.cfg. However, the configuration inputs are assigned
+        # only in the WorkflowBase._run_workflow wrapper directly before
+        # the workflow is run. The work-around is to get the configuration
+        # settings and set the inputs here.
+        pk_cfg = self.configuration['Fastfit']
+        if not pk_cfg:
+            raise ModelingError("The modeling configuration is missing the"
+                                " Fastfit topic")
+        pk_opts = {opt: pk_cfg[opt] for opt in ['model_name', 'optional_outs']
+                   if opt in pk_cfg}
+        # The pharmacokinetic model optimizer.
+        pk_map = pe.Node(Fastfit(**pk_opts), name='pk_map')
         base_wf.connect(copy_meta, 'dest_file', pk_map, 'target_data')
         base_wf.connect(input_spec, 'mask', pk_map, 'mask')
         base_wf.connect(get_params, 'params_csv', pk_map, 'params_csv')
