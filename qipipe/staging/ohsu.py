@@ -167,7 +167,8 @@ class BreastCollection(Collection):
         dwi = ScanPatterns(dicom=BREAST_DWI_PAT)
         pd = ScanPatterns(dicom=BREAST_PD_PAT)
         scan = {1: t1, 2: t2, 4: dwi, 6: pd}
-        opts = dict(subject=BREAST_SUBJECT_REGEX,
+        opts = dict(crop_posterior=True,
+                    subject=BREAST_SUBJECT_REGEX,
                     session=BREAST_SESSION_REGEX,
                     scan=scan, volume=VOLUME_TAG)
         super(BreastCollection, self).__init__('Breast', **opts)

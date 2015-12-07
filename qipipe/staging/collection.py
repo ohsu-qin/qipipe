@@ -60,10 +60,18 @@ class Collection(object):
     def __init__(self, name, **opts):
         """
         :param name: `self.name`
-        :param opts: the :class:`Patterns` attributes
+        :param opts: the :class:`Patterns` attributes as well as the
+            following keyword options:
+        :keyword crop_posterior: the :attr:`crop_posterior` flag
         """
         self.name = name
         """The collection name."""
+
+        self.crop_posterior = opts.pop('crop_posterior', False)
+        """
+        A flag indicating whether to crop the image posterior in the
+        mask, e.g. for a breast tumor (default False).
+        """
 
         self.patterns = Patterns(**opts)
         """The file and DICOM meta-data patterns."""

@@ -70,11 +70,14 @@ class MaskWorkflow(WorkflowBase):
         settings in that file override the default settings.
 
         :param kwargs: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
-            initializer keyword arguments
+            initializer keyword arguments, as well as the following options:
+        :option crop_posterior: crop posterior to the center of gravity,
+            e.g. for a breast tumor
         """
         super(MaskWorkflow, self).__init__(logger=logger(__name__), **kwargs)
 
-        self.workflow = self._create_workflow()
+        crop_posterior = opts.get('crop_posterior', False)
+        self.workflow = self._create_workflow(crop_posterior)
         """The mask creation workflow."""
 
     def run(self, subject, session, scan, time_series):
@@ -108,10 +111,13 @@ class MaskWorkflow(WorkflowBase):
         input_spec.inputs.scan = scan
         input_spec.inputs.time_series = time_series
 
-    def _create_workflow(self):
+    def _create_workflow(self, crop_posterior=False):
         """
         Creates the mask workflow.
 
+        :param crop_posterior: flag indicating whether to crop the
+            image posterior in the mask, e.g. for a breast tumor
+            (default False)
         :return: the Workflow object
         """
         self.logger.debug('Creating the mask reusable workflow...')
@@ -122,26 +128,31 @@ class MaskWorkflow(WorkflowBase):
         input_spec = pe.Node(IdentityInterface(fields=in_fields),
                              name='input_spec')
 
-        # Take the mean image of the time series.
-        mean = pe.Node(fsl.MeanImage(), name='mean')
-        workflow.connect(input_spec, 'time_series', mean, 'in_file')
-
-        # Find the center of gravity from the mean image.
-        cog = pe.Node(fsl.ImageStats(), name='cog')
-        cog.inputs.op_string = '-C'
-        workflow.connect(mean, 'out_file', cog, 'in_file')
-
-        # Zero everything posterior to the center of gravity on the
-        # mean image.
-        crop_back = pe.Node(fsl.ImageMaths(), name='crop_back')
-        workflow.connect(mean, 'out_file', crop_back, 'in_file')
-        workflow.connect(cog, ('out_stat', _gen_crop_op_string),
-                         crop_back, 'op_string')
-
-        # The cluster options.
-        # Find large clusters of empty space on the cropped image.
+        # The node to find large clusters of empty space.
         cluster_mask = pe.Node(MriVolCluster(), name='cluster_mask')
-        workflow.connect(crop_back, 'out_file', cluster_mask, 'in_file')
+
+        # If the crop_posterior flag is set, then the cluster mask
+        # input is the cropped image. Otherwise, the cluster mask
+        # input is the time series.
+        if crop_posterior:
+            # Take the mean image of the time series.
+            mean = pe.Node(fsl.MeanImage(), name='mean')
+            workflow.connect(input_spec, 'time_series', mean, 'in_file')
+
+            # Find the center of gravity from the mean image.
+            cog = pe.Node(fsl.ImageStats(), name='cog')
+            cog.inputs.op_string = '-C'
+            workflow.connect(mean, 'out_file', cog, 'in_file')
+
+            # Zero everything posterior to the center of gravity on the
+            # mean image.
+            crop_back = pe.Node(fsl.ImageMaths(), name='crop_back')
+            workflow.connect(mean, 'out_file', crop_back, 'in_file')
+            workflow.connect(cog, ('out_stat', _gen_crop_op_string),
+                             crop_back, 'op_string')
+            workflow.connect(crop_back, 'out_file', cluster_mask, 'in_file')
+        else:
+            workflow.connect(input_spec, 'time_series', cluster_mask, 'in_file')
 
         # Convert the cluster labels to a binary mask.
         binarize = pe.Node(fsl.BinaryMaths(), name='binarize')

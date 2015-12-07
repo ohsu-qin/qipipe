@@ -221,7 +221,7 @@ class ModelingWorkflow(WorkflowBase):
         :class:`qipipe.pipeline.modeling.ModelingWorkflow`.
         """
 
-    def run(self, subject, session, scan, time_series, **opts):
+    def run(self, subject, session, scan, resource, time_series, **opts):
         """
         Executes the modeling workflow described in
         :class:`qipipe.pipeline.modeling.ModelingWorkflow`
@@ -235,10 +235,10 @@ class ModelingWorkflow(WorkflowBase):
         :param subject: the subject name
         :param session: the session name
         :param scan: the scan number
-        :param time_series: the 4D time series resource name
+        :param resource: the XNAT resource containing the time series
+        :param time_series: the 4D time series XNAT file name
         :param opts: the following keyword parameters:
         :option mask: the XNAT mask resource name
-        :option registration: the XNAT registration resource name
         :return: the modeling result XNAT resource name
         """
         self.logger.debug("Modeling the %s %s Scan %d time series %s..." %
@@ -253,29 +253,27 @@ class ModelingWorkflow(WorkflowBase):
 
         # The keyword parameters.
         mask = opts.get('mask')
-        registration = opts.get('registration')
 
         # Set the workflow input.
         input_spec = self.workflow.get_node('input_spec')
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
         input_spec.inputs.scan = scan
+        input_spec.inputs.resource = resource
         input_spec.inputs.time_series = time_series
         input_spec.inputs.bolus_arrival_index = bolus_arv_ndx
         if mask:
             input_spec.inputs.mask = mask
-        if registration:
-            input_spec.inputs.registration = registration
 
         # Execute the modeling workflow.
         self.logger.debug(
-            "Executing the %s workflow on the %s %s scan %d time series %s..." %
-            (self.workflow.name, subject, session, scan, time_series)
+            "Executing the %s workflow on the %s %s scan %d %s time series %s..." %
+            (self.workflow.name, subject, session, scan, resource, time_series)
         )
         self._run_workflow(self.workflow)
         self.logger.debug(
-            "Executed the %s workflow on the %s %s scan %d time series %s." %
-            (self.workflow.name, subject, session, scan, time_series)
+            "Executed the %s workflow on the %s %s scan %d %s time series %s." %
+            (self.workflow.name, subject, session, scan, resource, time_series)
         )
 
         # Return the resource name.
@@ -334,13 +332,15 @@ class ModelingWorkflow(WorkflowBase):
             raise ModelingError('The modeling technique is missing')
 
         # The workflow input fields.
-        in_fields = ['subject', 'session', 'scan', 'time_series', 'mask',
+        in_fields = ['subject', 'session', 'scan', 'resource', 'time_series', 'mask',
                      'bolus_arrival_index']
         input_xfc = IdentityInterface(fields=in_fields)
         # The profile location is a temp file.
         input_spec = pe.Node(input_xfc, name='input_spec')
         self.logger.debug("The modeling workflow input is %s with"
             " fields %s" % (input_spec.name, in_fields))
+        mdl_wf.connect(input_spec, 'resource',
+                       base_wf, 'input_spec.resource')
         mdl_wf.connect(input_spec, 'time_series',
                        base_wf, 'input_spec.time_series')
         mdl_wf.connect(input_spec, 'mask', base_wf, 'input_spec.mask')
@@ -384,23 +384,15 @@ class ModelingWorkflow(WorkflowBase):
         mdl_wf.connect(resource_gate, 'resource', upload_outputs, 'resource')
         mdl_wf.connect(merge_outputs, 'out', upload_outputs, 'in_files')
 
-        # Make a gate whose sole purpose is to tie the input_spec node
-        # to create_profile.
-        cr_prf_gate_xfc = Gate(fields=['scan', 'technique'],
-                               technique=self.technique)
-        cr_prf_gate = pe.Node(cr_prf_gate_xfc, name='create_profile_gate')
-        # scan is not subsequently used. It is a dead-end connection
-        # whose sole purpose is to gate successor nodes on create_profile.
-        mdl_wf.connect(input_spec, 'scan', cr_prf_gate, 'scan')
-
         # Make the profile.
-        cr_prf_fields = ['cfg_file', 'aif_shift']
+        cr_prf_fields = ['cfg_file', 'resource', 'sections']
         cr_prf_xfc = Function(input_names=cr_prf_fields,
                               output_names=['out_file'],
                               function=create_profile)
         cr_prf = pe.Node(cr_prf_xfc, name='create_profile')
         cr_prf.inputs.cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
-        mdl_wf.connect(aif_shift, 'aif_shift', cr_prf, 'aif_shift')
+        cr_prf.inputs.sections = base_wf.profile_sections
+        mdl_wf.connect(input_spec, 'resource', cr_prf, 'resource')
 
         # Upload the profile.
         upload_profile = pe.Node(upload_xfc, name='upload_profile')
@@ -447,6 +439,9 @@ class ModelingWorkflow(WorkflowBase):
         :return: the pyxnat Workflow
         """
         base_wf = pe.Workflow(name='bolero', base_dir=self.base_dir)
+
+        # The modeling profile configuration sections.
+        base_wf.profile_sections = {'Fastfit', 'R1', 'AIF'}
 
         # The PK modeling parameters.
         opts = self._r1_parameters(**opts)
@@ -592,6 +587,9 @@ class ModelingWorkflow(WorkflowBase):
         :return: the pyxnat Workflow
         """
         base_wf = pe.Workflow(name='mock', base_dir=self.base_dir)
+
+        # The modeling profile configuration sections.
+        base_wf.profile_sections = {}
 
         # The PK modeling parameters.
         opts = self._r1_parameters(**opts)
@@ -889,13 +887,14 @@ def get_fit_params(cfg_file, aif_shift):
     return os.path.join(os.getcwd(), FASTFIT_PARAMS_FILE)
 
 
-def create_profile(cfg_file, aif_shift, dest_file=None):
+def create_profile(cfg_file, resource, sections, dest_file=None):
     """
-    Creates the modeling profile CSV file from the
+    Creates the modeling profile file from the
     :const:`MODELING_CONF_FILE`.
 
     :param cfg_file: the modeling configuration file
-    :param aif_shift: the AIF shift
+    :param resource: the XNAT resource containing the time series
+    :param sections: the configuration profile sections
     :param dest_file: the target profile location
         (default :const:`MODELING_CONF_FILE` in the current directory)
     :return: the destination file
@@ -906,24 +905,33 @@ def create_profile(cfg_file, aif_shift, dest_file=None):
     from qipipe.pipeline.modeling import (CONF_DIR, MODELING_CONF_FILE,
                                           ModelingError)
 
+    # The config options to exclude in the profile.
+    EXCLUDE_OPTS =  {'plugin_args', 'run_without_submitting'}
+    
     # The input config.
     cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
     cfg = read_config(cfg_file)
-    # Doctor the config for the profile.
-    for section in cfg.sections():
-        # Remove the run-time cluster options.
-        cfg.remove_option(section, 'plugin_args')
-        cfg.remove_option(section, 'run_without_submitting')
-        if section == 'AIF':
-            # Augment the AIF section with the shift.
-            cfg.set('AIF', 'aif_shift', aif_shift)
-        # If no options remain, then delete the empty section.
-        if not cfg.options(section):
-            cfg.remove_section(section)
+    
+    # Populate the profile.
+    profile = ASTConfig()
+    # Add the source section.
+    profile.add_section('Source')
+    profile.set('Source', 'resource', resource)
+    # Add the parameter sections.
+    for section in sections:
+        if cfg.has_section(section):
+            # The profile {key, value} dictionary.
+            items = {k: v for k, v in cfg.items(section)
+                     if k not in EXCLUDE_OPTS}
+            if items:
+                profile.add_section(section)
+                for opt, val in items(section):
+                    profile.set(section, opt, val)
 
+    # Save the profile.
     if not dest_file:
         dest_file = os.path.join(os.getcwd(), MODELING_CONF_FILE)
     with open(dest_file, 'w') as f:
-        cfg.write(f)
+        profile.write(f)
 
     return dest_file
