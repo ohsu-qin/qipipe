@@ -12,7 +12,7 @@ class MriVolClusterInputSpec(CommandLineInputSpec):
 
     min_thresh = traits.Float(0.0, usedefault=True,
                               desc="Minimum threshold value",
-                              argstr='--thmin %s')0
+                              argstr='--thmin %s')
 
     max_thresh = traits.Float(desc="Maximum threshold value",
                               argstr='--thmax %s')
