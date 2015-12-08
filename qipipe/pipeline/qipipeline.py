@@ -231,9 +231,10 @@ def _run_with_xnat_input(actions, *inputs, **opts):
             # series.
             reg_rsc_opt = opts.get('registration_resource')
             if 'model' in actions and reg_rsc_opt:
-                reg_ts_name = reg_rsc_opt + '_ts'
-                if _scan_resource_exists(xnat, prj, sbj, sess, scan,
-                                         reg_ts_name):
+                reg_ts_name = reg_rsc_opt + '_ts.nii.gz'
+                file_obj = xnat.find_one(project, subject, session, scan=scan,
+                                         resource=reg_rsc_opt, file=reg_ts_name)
+                if file_obj:
                     wf_opts['realigned_time_series'] = reg_ts_name
 
         # Make the workflow.
@@ -251,7 +252,7 @@ def _scan_resource_exists(xnat, project, subject, session, scan, resource):
     :return: whether the given XNAT scan resource exists
     """
     rsc_obj = xnat.find_one(project, subject, session, scan=scan,
-                        resource=resource)
+                            resource=resource)
     exists = rsc_obj and rsc_obj.files().get()
     status = 'found' if exists else 'not found'
     logger(__name__).debug("The %s %s %s scan %d resource %s was %s." %
@@ -904,10 +905,6 @@ class QIPipelineWorkflow(WorkflowBase):
                             mdl_wf, 'input_spec.session')
             exec_wf.connect(input_spec, 'scan',
                             mdl_wf, 'input_spec.scan')
-            # The modeling profile file path.
-            mdl_profile_dest = os.path.join(self.base_dir, MODELING_CONF_FILE)
-            mdl_input_spec = mdl_wf.get_node('input_spec')
-            mdl_input_spec.inputs.profile_dest = mdl_profile_dest
             # The mask input.
             if mask_wf:
                 exec_wf.connect(mask_wf, 'output_spec.mask',
@@ -926,12 +923,13 @@ class QIPipelineWorkflow(WorkflowBase):
             if reg_ts_name_opt:
                 # Download the XNAT time series file.
                 ts_dl_xfc = XNATDownload(project=self.project,
-                                         resource=reg_ts_name_opt)
+                                         resource=self.registration_resource,
+                                         file=reg_ts_name_opt)
                 reg_ts = pe.Node(ts_dl_xfc, name='download_reg_time_series')
                 exec_wf.connect(input_spec, 'subject', reg_ts, 'subject')
                 exec_wf.connect(input_spec, 'session', reg_ts, 'session')
                 exec_wf.connect(input_spec, 'scan', reg_ts, 'scan')
-                mdl_input_spec.inputs.resource = reg_ts_name_opt
+                mdl_input_spec.inputs.resource = self.registration_resource
                 exec_wf.connect(reg_ts, 'out_file',
                                 mdl_wf, 'input_spec.time_series')
             elif self.registration_resource:
