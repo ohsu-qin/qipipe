@@ -10,10 +10,6 @@ staging
 -----------------
 .. automodule:: qipipe.staging.collection
 
-:mod:`collections`
-------------------
-.. automodule:: qipipe.staging.collections
-
 :mod:`ctp_config`
 -----------------
 .. automodule:: qipipe.staging.ctp_config
