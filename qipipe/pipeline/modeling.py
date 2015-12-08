@@ -811,9 +811,9 @@ def make_r1_series(time_series, r1_0, **kwargs):
 def get_aif_shift(time_series, bolus_arrival_index):
     """
     Calculates the arterial input function offset as:
-    
+
     *t*\ :sub:`arrival` - *t*\ :sub:`0`
-    
+
     where *t*\ :sub:`0` is the first slice acquisition time
     and *t*\ :sub:`arrival` averages the acquisition times at
     and immediately following bolus arrival.
@@ -869,6 +869,9 @@ def get_fit_params(cfg_file, aif_shift):
     from qiutil.ast_config import read_config
     from qipipe.pipeline.modeling import (FASTFIT_PARAMS_FILE)
 
+    # The R1 parameters used by Fastfit.
+    FASTFIT_R1_PARAMS = ['r1_cr', 'r1_b_pre']
+
     # The config parameters.
     cfg = read_config(cfg_file)
     cfg_dict = dict(cfg)
@@ -876,10 +879,9 @@ def get_fit_params(cfg_file, aif_shift):
     fastfit_opts = cfg_dict.get('AIF')
     # Add the R1 Fastfit parameters.
     r1_opts = cfg_dict.get('R1')
-    fastfit_r1_params = ['r1_cr', 'r1_b_pre']
-    for param in fastfit_r1_params:
+    for param in FASTFIT_R1_PARAMS:
         if param in r1_opts:
-            fastfit_opts[param] = r1_opts[params]
+            fastfit_opts[param] = r1_opts[param]
 
     # Make CSV rows from the options.
     rows = []
@@ -918,12 +920,12 @@ def create_profile(cfg_file, resource, sections, dest_file=None):
                                           ModelingError)
 
     # The config options to exclude in the profile.
-    EXCLUDE_OPTS =  {'plugin_args', 'run_without_submitting'}
-    
+    EXCLUDED_OPTS =  {'plugin_args', 'run_without_submitting'}
+
     # The input config.
     cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
     cfg = read_config(cfg_file)
-    
+
     # Populate the profile.
     profile = ASTConfig()
     # Add the source section.
@@ -933,11 +935,11 @@ def create_profile(cfg_file, resource, sections, dest_file=None):
     for section in sections:
         if cfg.has_section(section):
             # The profile {key, value} dictionary.
-            items = {k: v for k, v in cfg.items(section)
-                     if k not in EXCLUDE_OPTS}
+            items = {opt: val for opt, val in cfg.items(section)
+                     if opt not in EXCLUDED_OPTS}
             if items:
                 profile.add_section(section)
-                for opt, val in section.items():
+                for opt, val in items:
                     profile.set(section, opt, val)
 
     # Save the profile.
