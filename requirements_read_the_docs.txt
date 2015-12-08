@@ -1,9 +1,6 @@
-# The requirements for a ReadTheDocs build only. This file excludes
-# the following packages:
-# * cython
-# * nibabel
-# * any packages which depend on nibabel
-# * mpi4py
+# The requirements for a ReadTheDocs build only. This file includes
+# the subset of the ``requirements.txt`` packages which are required
+# for documentation generation.
 #
 # This requirement subset works around the following problems:
 #
@@ -17,8 +14,9 @@
 # * ReadTheDocs build fails on mpi4py, since the environment cannot
 #   build MPI programs.
 #
-# TODO - mpi4py is OHSU-specific. Move to ohsu-qipipe when that is
-# available and eliminate the comment above.
+# Note: nibabel is imported in some modules, e.g. helpers/roi.py.
+# RTD compiles and documents these modules. It is unknown why RTD
+# succeeds.
 #
 bunch
 inflection
