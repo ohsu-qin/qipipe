@@ -18,7 +18,7 @@ attribute. The T1 scan has ROI files as well, specified by the
 
 import re
 from .collection import (Collection, ScanPatterns, ROIPatterns)
-from . import collections
+from . import collection
 from .staging_error import StagingError
 
 MULTI_VOLUME_SCAN_NUMBERS = [1]

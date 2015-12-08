@@ -1,6 +1,5 @@
 import re
 from .staging_error import StagingError
-from . import collections
 
 
 class ROIPatterns(object):
@@ -54,8 +53,19 @@ class Patterns(object):
         """The DICOM tag which identifies a scan volume."""
 
 
+def with_name(name):
+    """
+    :return: the :class:`Collection` whose name is a case-insensitive
+        match for the given name, or None if no match is found
+    """
+    return Collection.instances.get(name.lower())
+
+
 class Collection(object):
     """The image collection."""
+
+    instances = {}
+    """The collection {name: object} dictionary."""
 
     def __init__(self, name, **opts):
         """
@@ -64,8 +74,8 @@ class Collection(object):
             following keyword options:
         :keyword crop_posterior: the :attr:`crop_posterior` flag
         """
-        self.name = name
-        """The collection name."""
+        self.name = name.capitalize()
+        """The capitalized collection name."""
 
         self.crop_posterior = opts.pop('crop_posterior', False)
         """
@@ -76,5 +86,8 @@ class Collection(object):
         self.patterns = Patterns(**opts)
         """The file and DICOM meta-data patterns."""
 
-        # Add this collection to the collections extent.
-        collections.add(self)
+        # If a collection with this name has not yet been recorded,
+        # then add this canonical instance to the collection extent.
+        key = name.lower()
+        if key not in Collection.instances:
+            Collection.instances[key] = self
