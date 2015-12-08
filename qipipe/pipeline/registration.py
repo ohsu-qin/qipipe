@@ -122,23 +122,25 @@ class RegistrationWorkflow(WorkflowBase):
     .. _SyN: http://www.ncbi.nlm.nih.gov/pubmed/17659998
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **opts):
         """
         If the optional configuration file is specified, then the workflow
         settings in that file override the default settings.
 
-        :param kwargs: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
+        :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
             initializer options, as well as the following options:
         :keyword technique: the required registration :attr:`technique`
         :keyword resource: the XNAT resource name to use (default is
             an auto-generated name beginning with ``reg_``:attr:`technique`_)
+        :keyword initialize: flag indicating whether to create an initial
+            affine transform (ANTs only)
         :keyword recursive: flag indicating whether to perform step-wise
             iterative recursive registration
         """
         super(RegistrationWorkflow, self).__init__(logger=logger(__name__),
-                                                   **kwargs)
+                                                   **opts)
 
-        technique_opt = kwargs.pop('technique', None)
+        technique_opt = opts.pop('technique', None)
         if not technique_opt:
             raise PipelineError('The registration technique was not specified.')
         self.technique = technique_opt.lower()
@@ -147,12 +149,12 @@ class RegistrationWorkflow(WorkflowBase):
         include ``ants``, `fnirt`` and ``mock``.
         """
 
-        rsc_opt = kwargs.pop('resource', None)
+        rsc_opt = opts.pop('resource', None)
         self.resource = rsc_opt or generate_resource_name()
         """The XNAT resource name used for all runs against this
         workflow instance."""
 
-        self.workflow = self._create_realignment_workflow(**kwargs)
+        self.workflow = self._create_realignment_workflow(**opts)
         """The registration realignment workflow."""
 
     def run(self, subject, session, scan, ref_0, *images, **opts):
@@ -391,14 +393,6 @@ class RegistrationWorkflow(WorkflowBase):
                            input_filename, 'in_file')
 
         if self.technique == 'ants':
-            # Make an initial transform.
-            init_xfm = pe.Node(AffineInitializer(), name='initialize_affine')
-            realign_wf.connect(input_spec, 'reference',
-                               init_xfm, 'fixed_image')
-            realign_wf.connect(input_spec, 'moving_image',
-                               init_xfm, 'moving_image')
-            realign_wf.connect(input_spec, 'mask',
-                               init_xfm, 'image_mask')
             # Nipype bug work-around:
             # Setting the registration metric and metric_weight inputs
             # after the node is created results in a Nipype input trait
@@ -409,27 +403,9 @@ class RegistrationWorkflow(WorkflowBase):
                              for field in ['metric', 'metric_weight']
                              if field in reg_cfg}
             # Register the images to create the rigid, affine and SyN
-            # ANTS transformations.
-            # Work around the following Nipype bug:
-            # * If the Registration has an initial_moving_transform,
-            #   then the default invert_initial_moving_transform value
-            #   is not applied, resulting in the following error:
-            #
-            #   TraitError: Each element of the 'forward_invert_flags' trait
-            #   of a RegistrationOutputSpec instance must be a boolean, but a
-            #   value of <undefined> <class 'traits.trait_base._Undefined'>
-            #   was specified.
-            #
-            #   The forward_invert_flags output field is set from the
-            #   invert_initial_moving_transform input field. Even though
-            #   the invert_initial_moving_transform trait specifies
-            #   default=False, the invert_initial_moving_transform value
-            #   is apparently undefined. Perhaps the input trait should
-            #   also set the usedefault option. The work-around is to
-            #   always set the the invert_initial_moving_transform field. 
-            reg_xfc = Registration(float=True,
-                                   invert_initial_moving_transform=False,
-                                   **metric_inputs)
+            # ANTS transformations. The float option is set to reduce
+            # the output image size by app. 4x.
+            reg_xfc = Registration(float=True, **metric_inputs)
             register = pe.Node(reg_xfc, name='register')
             realign_wf.connect(input_spec, 'reference',
                                register, 'fixed_image')
@@ -439,8 +415,38 @@ class RegistrationWorkflow(WorkflowBase):
                                register, 'fixed_image_mask')
             realign_wf.connect(input_spec, 'mask',
                                register, 'moving_image_mask')
-            realign_wf.connect(init_xfm, 'affine_transform',
-                               register, 'initial_moving_transform')
+
+            # If the initialize option is set, then make an initial
+            # transform.
+            initialize = opts.get('initialize')
+            if initialize:
+                init_xfm = pe.Node(AffineInitializer(), name='initialize_affine')
+                realign_wf.connect(input_spec, 'reference',
+                                   init_xfm, 'fixed_image')
+                realign_wf.connect(input_spec, 'moving_image',
+                                   init_xfm, 'moving_image')
+                realign_wf.connect(input_spec, 'mask',
+                                   init_xfm, 'image_mask')
+                realign_wf.connect(init_xfm, 'affine_transform',
+                                   register, 'initial_moving_transform')
+                # Work around the following Nipype bug:
+                # * If the Registration has an initial_moving_transform,
+                #   then the default invert_initial_moving_transform value
+                #   is not applied, resulting in the following error:
+                #
+                #   TraitError: Each element of the 'forward_invert_flags' trait
+                #   of a RegistrationOutputSpec instance must be a boolean, but a
+                #   value of <undefined> <class 'traits.trait_base._Undefined'>
+                #   was specified.
+                #
+                #   The forward_invert_flags output field is set from the
+                #   invert_initial_moving_transform input field. Even though
+                #   the invert_initial_moving_transform trait specifies
+                #   default=False, the invert_initial_moving_transform value
+                #   is apparently undefined. Perhaps the input trait should
+                #   also set the usedefault option. The work-around is to
+                #   always set the the invert_initial_moving_transform field.
+                register.inputs.invert_initial_moving_transform = False
             # Apply the transforms to the input image.
             apply_xfm = pe.Node(ApplyTransforms(), name='apply_xfm')
             realign_wf.connect(input_spec, 'reference',
