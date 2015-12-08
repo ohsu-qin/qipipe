@@ -97,7 +97,7 @@ class TestModelingWorkflow(VolumeTestBase):
         with qixnat.connect() as xnat:
             xnat.delete(project, subject)
             result = modeling.run(technique, project, subject, session, scan,
-                                  time_series, config_dir=CONF_DIR,
+                                  SCAN_TS_RSC, time_series, config_dir=CONF_DIR,
                                   base_dir=self.base_dir)
             # Find the modeling resource.
             rsc = xnat.find_one(project, subject, session, scan=scan,
