@@ -235,7 +235,7 @@ class ModelingWorkflow(WorkflowBase):
         :param session: the session name
         :param scan: the scan number
         :param resource: the XNAT resource containing the time series
-        :param time_series: the 4D time series XNAT file name
+        :param time_series: the 4D time series file location
         :param opts: the following keyword parameters:
         :option mask: the XNAT mask resource name
         :return: the modeling result XNAT resource name
@@ -331,8 +331,8 @@ class ModelingWorkflow(WorkflowBase):
             raise ModelingError('The modeling technique is missing')
 
         # The workflow input fields.
-        in_fields = ['subject', 'session', 'scan', 'resource', 'time_series', 'mask',
-                     'bolus_arrival_index']
+        in_fields = ['subject', 'session', 'scan', 'resource', 'time_series',
+                     'mask', 'bolus_arrival_index']
         input_xfc = IdentityInterface(fields=in_fields)
         # The profile location is a temp file.
         input_spec = pe.Node(input_xfc, name='input_spec')
@@ -866,6 +866,7 @@ def get_fit_params(cfg_file, aif_shift):
     import os
     import csv
     from qiutil.collections import is_nonstring_iterable
+    from qiutil.ast_config import read_config
     from qipipe.pipeline.modeling import (FASTFIT_PARAMS_FILE)
 
     # The config parameters.
@@ -936,7 +937,7 @@ def create_profile(cfg_file, resource, sections, dest_file=None):
                      if k not in EXCLUDE_OPTS}
             if items:
                 profile.add_section(section)
-                for opt, val in items(section):
+                for opt, val in section.items():
                     profile.set(section, opt, val)
 
     # Save the profile.
