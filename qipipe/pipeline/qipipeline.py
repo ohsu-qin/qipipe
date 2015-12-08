@@ -232,8 +232,9 @@ def _run_with_xnat_input(actions, *inputs, **opts):
             reg_rsc_opt = opts.get('registration_resource')
             if 'model' in actions and reg_rsc_opt:
                 reg_ts_name = reg_rsc_opt + '_ts.nii.gz'
-                file_obj = xnat.find_one(project, subject, session, scan=scan,
-                                         resource=reg_rsc_opt, file=reg_ts_name)
+                file_obj = xnat.find_one(prj, sbj, sess, scan=scan,
+                                         resource=reg_rsc_opt,
+                                         file=reg_ts_name)
                 if file_obj:
                     wf_opts['realigned_time_series'] = reg_ts_name
 
