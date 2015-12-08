@@ -912,7 +912,7 @@ def create_profile(cfg_file, resource, sections, dest_file=None):
     """
     import os
     import csv
-    from qiutil.ast_config import read_config
+    from qiutil.ast_config import (read_config, ASTConfig)
     from qipipe.pipeline.modeling import (CONF_DIR, MODELING_CONF_FILE,
                                           ModelingError)
 
