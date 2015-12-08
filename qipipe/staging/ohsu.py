@@ -188,7 +188,3 @@ class SarcomaCollection(Collection):
                     scan=scan, volume=VOLUME_TAG)
         super(SarcomaCollection, self).__init__('Sarcoma', **opts)
 
-
-# Create the OHSU QIN collections.
-collections.add(BreastCollection(), SarcomaCollection())
-
