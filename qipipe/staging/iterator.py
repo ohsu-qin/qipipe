@@ -9,7 +9,7 @@ from collections import defaultdict
 from qiutil.logging import logger
 import qixnat
 import qidicom.hierarchy
-from . import collections
+from . import collection
 from ..helpers.constants import (SUBJECT_FMT, SESSION_FMT)
 from .roi import iter_roi
 from .staging_error import StagingError
@@ -196,7 +196,7 @@ class VisitIterator(object):
         self.project = project
         """The :meth:`iter_stage` project name parameter."""
         
-        self.collection = collections.with_name(collection)
+        self.collection = collection.with_name(collection)
         """The :meth:`iter_stage` collection name parameter."""
 
         self.subject_dirs = subject_dirs
