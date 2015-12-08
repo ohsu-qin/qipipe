@@ -939,7 +939,7 @@ def create_profile(cfg_file, resource, sections, dest_file=None):
                      if opt not in EXCLUDED_OPTS}
             if items:
                 profile.add_section(section)
-                for opt, val in items:
+                for opt, val in items.iteritems():
                     profile.set(section, opt, val)
 
     # Save the profile.
