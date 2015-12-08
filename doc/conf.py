@@ -5,7 +5,7 @@ try:
 except ImportError:
     # A ReadTheDocs build does not install qipipe. In that case,
     # load the module directly.
-    src_dir = os.path.join(os.path.dirname(__file__), '..', 'qipipe')
+    src_dir = os.path.join(os.path.dirname(__file__), '..')
     sys.path.append(src_dir)
     import qipipe
 
