@@ -9,7 +9,7 @@ from collections import defaultdict
 from qiutil.logging import logger
 import qixnat
 import qidicom.hierarchy
-from . import collection
+from .. import staging
 from ..helpers.constants import (SUBJECT_FMT, SESSION_FMT)
 from .roi import iter_roi
 from .staging_error import StagingError
@@ -188,7 +188,7 @@ class VisitIterator(object):
     def __init__(self, project, collection, *subject_dirs, **opts):
         """
         :param project: the XNAT project name
-        :param collection: the TCIA image collection name
+        :param collection: the image collection name
         :param subject_dirs: the subject directories over which
             to iterate
         :param opts: the :meth:`iter_stage` options
@@ -196,7 +196,7 @@ class VisitIterator(object):
         self.project = project
         """The :meth:`iter_stage` project name parameter."""
         
-        self.collection = collection.with_name(collection)
+        self.collection = staging.collection.with_name(collection)
         """The :meth:`iter_stage` collection name parameter."""
 
         self.subject_dirs = subject_dirs
