@@ -11,29 +11,34 @@ The pattern for detecting a VCS requirement spec, e.g.
 """
 
 
+class InstallError(Exception):
+    """qipipe installation error."""
+    pass
+
+
 def version(package):
     """
-    :return: the package version as listed in the `__init.py__`
+    :return: the package version as listed in the package `__init.py__`
         `__version__` variable.
     """
-    init_py = open(os.path.join(package, '__init__.py')).read()
-    return re.search("__version__ = ['\"]([^'\"]+)['\"]", init_py).group(1)
+    # The version string parser.
+    REGEXP = re.compile("""
+       __version__   # The version variable
+       \s*=\s*       # Assignment
+       ['\"]         # Leading quote
+       (.+)          # The version string capture group
+       ['\"]         # Trailing quote
+    """, re.VERBOSE)
+
+    with open(os.path.join(package, '__init__.py')) as f:
+       match = REGEXP.search(f.read())
+       if not match:
+           raise InstallError("The Nipype __version__ variable was not found")
+       return match.group(1)
 
 
 def requires():
-    """
-    Returns the PyPI ``qipipe`` requirements in ``requirements.txt``
-    which don't match the :const:`VCS_RQMT_PAT` pattern.
-
-    :return: the ``requirements.txt`` PyPI package specifications
-    """
-    # ReadTheDocs can't build packages dependent on mpi or nipy.
-    on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-    if on_rtd:
-        rqmts_file = 'requirements_read_the_docs.txt'
-    else:
-        rqmts_file = 'requirements.txt'
-    with open(rqmts_file) as f:
+    with open('requirements.txt') as f:
         return f.read().splitlines()
 
 
