@@ -10,10 +10,7 @@ from qiutil.ast_config import read_config
 import qixnat
 from qiprofile_rest_client.model.subject import Subject
 from qipipe import CONF_DIR
-from qipipe.pipeline.modeling import (
-    FASTFIT_PARAMS_FILE, FASTFIT_PARAMS_TEMPLATE, MODELING_PROFILE_FILE,
-    create_profile
-)
+from qipipe.pipeline.modeling import (MODELING_CONF_FILE, create_profile)
 from qipipe.qiprofile import imaging
 from qipipe.helpers.constants import (SUBJECT_FMT, SESSION_FMT)
 from ...helpers.logging import logger
@@ -50,6 +47,9 @@ OUTPUTS = ['chisq', 'guess_model.k_trans', 'guess_model.v_e',
            'guess_model.chisq']
 """The modeling output file names without .nii.gz extension."""
 
+AIF_SHIFT = 2.4
+"""An arbitrary AIF shift parameter."""
+
 
 class TestImaging(object):
     """
@@ -75,15 +75,16 @@ class TestImaging(object):
                           number=SUBJECT)
         with qixnat.connect() as xnat:
             # The test XNAT scan.
-            scan = xnat.find_one(PROJECT, self._subject_name, self._session_name,
-                                 scan=SCAN)
-            imaging.update(subject, scan)
+            exp = xnat.find_one(PROJECT, self._subject_name,
+                                self._session_name)
+            imaging.update(subject, exp)
+            
 
     def _seed(self):
         """
         Seeds the XNAT database with the test fixture scan :const:`VOLUMES`,
-        a dummy registration and the :const:`FASTFIT_PARAMS_TEMPLATE` modeling
-        results.
+        a dummy registration and the :const:`MODELING_CONF_FILE` modeling
+        profile.
         """
         exp_opt = (self._session_name, dict(date=datetime.now()))
         with qixnat.connect() as xnat:
@@ -107,24 +108,13 @@ class TestImaging(object):
             mdl = scan.resource(MODELING)
             mdl.create()
 
-            # The static input parameter CSV template.
-            with open(FASTFIT_PARAMS_TEMPLATE) as csv_file:
-                rows = list(csv.reader(csv_file))
-            # Add a plausible shift.
-            rows.append(['aif_shift', 58.0])
-            # Make the fastfit params file.
-            with tempfile.NamedTemporaryFile() as csv_file:
-                csv_writer = csv.writer(csv_file)
-                csv_writer.writerows(rows)
-                csv_file.flush()
-                # Upload the file.
-                xnat.upload(mdl, csv_file.name, name=FASTFIT_PARAMS_FILE)
-
-            # Make the R1 params file.
+            # Make the config profile.
+            cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
             with tempfile.NamedTemporaryFile() as profile_dest:
-                create_profile('ants', dest_file=profile_dest.name)
+                create_profile(cfg_file, AIF_SHIFT,
+                               dest_file=profile_dest.name)
                 profile_dest.flush()
-                xnat.upload(mdl, profile_dest.name, name=MODELING_PROFILE_FILE)
+                xnat.upload(mdl, profile_dest.name, name=MODELING_CONF_FILE)
 
             # Make the modeling result files.
             for output in OUTPUTS:

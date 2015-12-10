@@ -1,6 +1,6 @@
 import os
 import re
-from qipipe.staging import collection
+from qipipe import staging
 from qipipe.helpers.constants import SUBJECT_FMT
 from .logging import logger
 
@@ -20,7 +20,7 @@ def subject_sources(collection, source):
     """
     logger(__name__).debug("Detecting %s subjects from %s..." %
           (collection, source))
-    coll = collection.with_name(collection)
+    coll = staging.collection.with_name(collection)
     pat = coll.patterns.subject
     sbj_dir_dict = {}
     for d in os.listdir(source):
