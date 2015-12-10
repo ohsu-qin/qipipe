@@ -36,14 +36,25 @@ Feature List
 Installation
 ************
 The following instructions assume that you start in your home directory.
-``qipipe`` has dependencies with special installation requirements.
-Consequently, ``qipipe`` installation cannot be performed using the
-customary Python_ pip_ command ``pip install qipipe`` alone. Install
-``qipipe`` using the following procedure:
+We recommend the Anaconda_ environment for scientific packages and pip_
+for the remaining Python packages. Install ``qipipe`` using the
+following procedure:
 
-1. Install Git_ on your workstation, if necessary.
+1. Install and activate an Anaconda_ environment as described in the
+   `qixnat installation instructions`_.
 
-2. Build ANTS_ from source using the `ANTS Compile Instructions`_::
+2. Install the ``qipipe`` dependencies hosted by Anaconda::
+
+       wget -q --no-check-certificate -O \
+         - https://www.github.com/ohsu-qin/qipipe/raw/master/requirements_conda.txt \
+         | xargs conda install --yes
+
+3. Install the ``qipipe`` package using pip::
+
+       pip install qipipe
+
+4. For ANTS_ registration, build the ants package from source using
+   the `ANTS Compile Instructions`_::
 
        pushd ~/workspace
        git clone git://github.com/stnava/ANTs.git
@@ -57,37 +68,18 @@ customary Python_ pip_ command ``pip install qipipe`` alone. Install
        make -j 4
        popd
 
-3. Prepend ANTS to your shell login script. Open an editor on
-   ``$HOME/.bashrc`` or ``$HOME/.bash_profile`` and add the following
-   lines::
+   Then, prepend ANTS to your shell login script. E.g., for Linux or
+   Mac OS X, open an editor on ``$HOME/.bashrc`` or ``$HOME/.bash_profile``
+   and add the following lines::
 
        # Prepend ANTS to the path.
        ANTS_HOME=$HOME/ants
        export PATH=$ANTS_HOME/bin
 
-4. Refresh your environment::
+  and refresh your environment::
 
        . $HOME/.bash_profile
-   
-5. Install and activate an Anaconda_ environment as described in the
-   `qixnat installation instructions`_.
-
-6. Install the ``qipipe`` dependencies hosted by Anaconda::
-
-       wget -q --no-check-certificate -O \
-         - https://www.github.com/ohsu-qin/qipipe/raw/master/requirements_conda.txt \
-         | xargs conda install --yes
-
-7. Install the ``nibabel`` package separately::
-
-       pip install nibabel
-
-   This package must be installed separately to avoid a ``nipype`` installation error. 
-
-8. Install the ``qipipe`` package::
-
-       pip install qipipe
-
+ 
 
 *****
 Usage
@@ -214,21 +206,13 @@ The release is then published as follows:
 
 .. _pip: https://pypi.python.org/pypi/pip
 
-.. _pip Installation Instructions: http://pip.readthedocs.org/en/latest/installing.html
-
 .. _PyPI: https://pypi.python.org/pypi
-
-.. _Python: http://www.python.org
-
-.. _qixnat: https://github.com/ohsu-qin/qixnat
 
 .. _qixnat installation instructions: https://github.com/ohsu-qin/qixnat/blob/master/doc/index.rst
 
 .. _QIN collection: https://wiki.cancerimagingarchive.net/display/Public/Quantitative+Imaging+Network+Collections
 
 .. _source repository: https://github.com/ohsu-qin/qipipe
-
-.. _qixnat: https://github.com/ohsu-qin/qixnat
 
 .. _ReadTheDocs: https://www.readthedocs.org
 
