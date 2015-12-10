@@ -356,29 +356,12 @@ class ModelingWorkflow(WorkflowBase):
             mdl_wf.connect(base_wf, base_field,
                            merge_outputs, "in%d" % (i + 1))
 
-        # Make the resource.
-        cr_rsc_xfc = XNATFind(project=self.project, resource=self.resource,
-                              modality='MR', create=True)
-        create_resource = pe.Node(cr_rsc_xfc, name='create_resource')
-        mdl_wf.connect(input_spec, 'subject', create_resource, 'subject')
-        mdl_wf.connect(input_spec, 'session', create_resource, 'session')
-        mdl_wf.connect(input_spec, 'scan', create_resource, 'scan')
-
-        # Gate uploads on the create_resource node.
-        rsc_gate_xfc = Gate(fields=['resource', 'xnat_id'],
-                            resource=self.resource)
-        resource_gate = pe.Node(rsc_gate_xfc, name='resource_gate')
-        # xnat_id is not subsequently used. It is a dead-end connection
-        # whose sole purpose is to gate successor nodes on create_resource.
-        mdl_wf.connect(create_resource, 'xnat_id', resource_gate, 'xnat_id')
-
         # Upload the outputs.
-        upload_xfc = XNATUpload(project=self.project)
+        upload_xfc = XNATUpload(project=self.project, resource=self.resource)
         upload_outputs = pe.Node(upload_xfc, name='upload_outputs')
         mdl_wf.connect(input_spec, 'subject', upload_outputs, 'subject')
         mdl_wf.connect(input_spec, 'session', upload_outputs, 'session')
         mdl_wf.connect(input_spec, 'scan', upload_outputs, 'scan')
-        mdl_wf.connect(resource_gate, 'resource', upload_outputs, 'resource')
         mdl_wf.connect(merge_outputs, 'out', upload_outputs, 'in_files')
 
         # Make the profile.
@@ -396,12 +379,11 @@ class ModelingWorkflow(WorkflowBase):
         mdl_wf.connect(input_spec, 'subject', upload_profile, 'subject')
         mdl_wf.connect(input_spec, 'session', upload_profile, 'session')
         mdl_wf.connect(input_spec, 'scan', upload_profile, 'scan')
-        mdl_wf.connect(resource_gate, 'resource', upload_profile, 'resource')
         mdl_wf.connect(cr_prf, 'out_file', upload_profile, 'in_files')
 
         # TODO - Get the overall and ROI FSL mean intensity values.
 
-        # The output is the modeling outputs.
+        # The modeling workflow output node.
         output_xfc = IdentityInterface(fields=out_fields)
         output_spec = pe.Node(output_xfc, name='output_spec')
         for field in out_fields:
@@ -856,7 +838,7 @@ def get_fit_params(cfg_file, aif_shift):
     * *r1_cr*: contrast R1
     * *r1_b_pre*: pre-contrast R1
 
-    The *aif_shift* is calculated by :func:`get_aif_params` and passed
+    The *aif_shift* is calculated by :func:`get_aif_shift` and passed
     to this function. The remaining parameters are read from the
     :const:`MODELING_CONF_FILE`.
 
