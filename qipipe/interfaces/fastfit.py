@@ -65,7 +65,7 @@ class Fastfit(MpiCommandLine):
       input is set dynamically.
     """
 
-    _cmd = 'fastfit'
+    _cmd = 'global_fastfit'
     input_spec = FastfitInputSpec
     output_spec = DynamicTraitedSpec
 
