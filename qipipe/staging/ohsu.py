@@ -17,6 +17,7 @@ attribute. The T1 scan has ROI files as well, specified by the
 """
 
 import re
+from bunch import bunchify
 from .collection import (Collection, ScanPatterns, ROIPatterns)
 from . import collection
 from .staging_error import StagingError
@@ -157,34 +158,37 @@ selected as the volume number identifier.
 """
 
 
-class BreastCollection(Collection):
-    """The OHSU AIRC Breast collection."""
-
-    def __init__(self):
-        roi = ROIPatterns(glob=BREAST_ROI_PAT, regex=BREAST_ROI_REGEX)
-        t1 = ScanPatterns(dicom=T1_PAT, roi=roi)
-        t2 = ScanPatterns(dicom=BREAST_T2_PAT)
-        dwi = ScanPatterns(dicom=BREAST_DWI_PAT)
-        pd = ScanPatterns(dicom=BREAST_PD_PAT)
-        scan = {1: t1, 2: t2, 4: dwi, 6: pd}
-        opts = dict(crop_posterior=True,
-                    subject=BREAST_SUBJECT_REGEX,
-                    session=BREAST_SESSION_REGEX,
-                    scan=scan, volume=VOLUME_TAG)
-        super(BreastCollection, self).__init__('Breast', **opts)
+def _create_breast_collection():
+    """:return: the OHSU AIRC Breast collection"""
+    roi = ROIPatterns(glob=BREAST_ROI_PAT, regex=BREAST_ROI_REGEX)
+    t1 = ScanPatterns(dicom=T1_PAT, roi=roi)
+    t2 = ScanPatterns(dicom=BREAST_T2_PAT)
+    dwi = ScanPatterns(dicom=BREAST_DWI_PAT)
+    pd = ScanPatterns(dicom=BREAST_PD_PAT)
+    scan = {1: t1, 2: t2, 4: dwi, 6: pd}
+    opts = dict(crop_posterior=True,
+                subject=BREAST_SUBJECT_REGEX,
+                session=BREAST_SESSION_REGEX,
+                scan=scan, volume=VOLUME_TAG)
+    return Collection('Breast', **opts)
 
 
-class SarcomaCollection(Collection):
-    """The OHSU AIRC Sarcoma collection."""
+def _create_sarcoma_collection():
+    """:return: the OHSU AIRC Sarcoma collection"""
+    roi = ROIPatterns(glob=SARCOMA_ROI_PAT, regex=SARCOMA_ROI_REGEX)
+    t1 = ScanPatterns(dicom=T1_PAT, roi=roi)
+    t2 = ScanPatterns(dicom=SARCOMA_T2_PAT)
+    dwi = ScanPatterns(dicom=SARCOMA_DWI_PAT)
+    scan = {1: t1, 2: t2, 4: dwi}
+    opts = dict(subject=SARCOMA_SUBJECT_REGEX,
+                session=SARCOMA_SESSION_REGEX,
+                scan=scan, volume=VOLUME_TAG)
+    return Collection('Sarcoma', **opts)
 
-    def __init__(self):
-        roi = ROIPatterns(glob=SARCOMA_ROI_PAT, regex=SARCOMA_ROI_REGEX)
-        t1 = ScanPatterns(dicom=T1_PAT, roi=roi)
-        t2 = ScanPatterns(dicom=SARCOMA_T2_PAT)
-        dwi = ScanPatterns(dicom=SARCOMA_DWI_PAT)
-        scan = {1: t1, 2: t2, 4: dwi}
-        opts = dict(subject=SARCOMA_SUBJECT_REGEX,
-                    session=SARCOMA_SESSION_REGEX,
-                    scan=scan, volume=VOLUME_TAG)
-        super(SarcomaCollection, self).__init__('Sarcoma', **opts)
 
+def _create_collections():
+    """:return: the OHSU AIRC collection"""
+    return dict(breast=_create_breast_collection(),
+                sarcoma=_create_sarcoma_collection())
+
+collections = bunchify(_create_collections())
