@@ -32,6 +32,9 @@ INFERRED_R1_0_OUTPUTS = FIXED_R1_0_OUTPUTS + ['dce_baseline', 'r1_0']
 FASTFIT_PARAMS_FILE = 'params.csv'
 """The fastfit parameters CSV file name."""
 
+BOLERO_PROFILE_SECTIONS = {'Fastfit', 'R1', 'AIF'}
+"""The OHSU bolero modeling configuration sections."""
+
 MODELING_CONF_FILE = 'modeling.cfg'
 """The modeling workflow configuration."""
 
@@ -420,7 +423,7 @@ class ModelingWorkflow(WorkflowBase):
         base_wf = pe.Workflow(name='bolero', base_dir=self.base_dir)
 
         # The modeling profile configuration sections.
-        base_wf.profile_sections = {'Fastfit', 'R1', 'AIF'}
+        base_wf.profile_sections = BOLERO_PROFILE_SECTIONS
 
         # The PK modeling parameters.
         opts = self._r1_parameters(**opts)
@@ -498,13 +501,13 @@ class ModelingWorkflow(WorkflowBase):
         base_wf.connect(input_spec, 'time_series', aif_shift, 'time_series')
         base_wf.connect(input_spec, 'bolus_arrival_index',
                         aif_shift, 'bolus_arrival_index')
-        get_params_flds = ['cfg_file', 'aif_shift']
-        get_params_func = Function(input_names=get_params_flds,
+        get_fit_params_flds = ['cfg_file', 'aif_shift']
+        get_fit_params_func = Function(input_names=get_fit_params_flds,
                                    output_names=['params_csv'],
                                    function=get_fit_params)
-        get_params = pe.Node(get_params_func, name='get_params')
-        get_params.inputs.cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
-        base_wf.connect(aif_shift, 'aif_shift', get_params, 'aif_shift')
+        get_fit_params = pe.Node(get_fit_params_func, name='get_fit_params')
+        get_fit_params.inputs.cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
+        base_wf.connect(aif_shift, 'aif_shift', get_fit_params, 'aif_shift')
 
         # Import Fastfit on demand. This allows the modeling module to be
         # imported by clients without the proprietary Fastfit modeling
@@ -531,7 +534,7 @@ class ModelingWorkflow(WorkflowBase):
         pk_map = pe.Node(Fastfit(**pk_opts), name='pk_map')
         base_wf.connect(copy_meta, 'dest_file', pk_map, 'target_data')
         base_wf.connect(input_spec, 'mask', pk_map, 'mask')
-        base_wf.connect(get_params, 'params_csv', pk_map, 'params_csv')
+        base_wf.connect(get_fit_params, 'params_csv', pk_map, 'params_csv')
         # Set the MPI flag.
         pk_map.inputs.use_mpi = self.is_distributable
 
@@ -548,7 +551,7 @@ class ModelingWorkflow(WorkflowBase):
                               name='output_spec')
         # Run the PK model.
         base_wf.connect(copy_meta, 'dest_file', output_spec, 'r1_series')
-        base_wf.connect(get_params, 'params_csv', output_spec, 'pk_params')
+        base_wf.connect(get_fit_params, 'params_csv', output_spec, 'pk_params')
         base_wf.connect(pk_map, 'k_trans', output_spec, 'fxr_k_trans')
         base_wf.connect(pk_map, 'v_e', output_spec, 'fxr_v_e')
         base_wf.connect(pk_map, 'tau_i', output_spec, 'fxr_tau_i')
@@ -598,20 +601,20 @@ class ModelingWorkflow(WorkflowBase):
                 setattr(input_spec.inputs, field, opts[field])
 
         # Get the pharmacokinetic mapping parameters.
-        get_params_flds = ['time_series', 'bolus_arrival_index']
-        get_params_func = Function(input_names=get_params_flds,
+        get_fit_params_flds = ['time_series', 'bolus_arrival_index']
+        get_fit_params_func = Function(input_names=get_fit_params_flds,
                                    output_names=['params_csv'],
                                    function=get_fit_params)
-        get_params = pe.Node(get_params_func, name='get_params')
-        base_wf.connect(input_spec, 'time_series', get_params, 'time_series')
+        get_fit_params = pe.Node(get_fit_params_func, name='get_fit_params')
+        base_wf.connect(input_spec, 'time_series', get_fit_params, 'time_series')
         base_wf.connect(input_spec, 'bolus_arrival_index',
-                        get_params, 'bolus_arrival_index')
+                        get_fit_params, 'bolus_arrival_index')
 
         # Set up the outputs.
         outputs = ['pk_params']
         output_spec = pe.Node(IdentityInterface(fields=outputs),
                               name='output_spec')
-        base_wf.connect(get_params, 'params_csv', output_spec, 'pk_params')
+        base_wf.connect(get_fit_params, 'params_csv', output_spec, 'pk_params')
 
         self._configure_nodes(base_wf)
 
@@ -872,6 +875,7 @@ def get_fit_params(cfg_file, aif_shift):
             row = [key] + [str(v) for v in value]
         else:
             row = [key, str(value)]
+        rows.append(row)
     # Add the shift.
     rows.append(['aif_shift', str(aif_shift)])
 
