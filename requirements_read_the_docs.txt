@@ -4,23 +4,21 @@
 #
 # This requirement subset works around the following problems:
 #
-# * ReadTheDocs build fails on nibabel and dependent packages, since
-#   numpy must be built before the requirements are even collected,
-#   as explained in the qipipe Installation Guide. ReadTheDocs does
-#   not support this customization. This is not a problem with the
-#   two-stage conda/pip install, but ReadTheDocs is a distutils-only
-#   install.
+# * ReadTheDocs build fails on the dcmstack package, since
+#   dcmstack is not registered in PyPI. ReadTheDocs does not
+#   honor the constraints.txt git locations.
 #
-# * ReadTheDocs build fails on mpi4py, since the environment cannot
-#   build MPI programs.
-#
-# Note: nibabel is imported in some modules, e.g. helpers/roi.py.
-# RTD compiles and documents these modules. It is unknown why RTD
-# succeeds.
+# * ReadTheDocs build fails on cython and mpi4py, since the
+#   ReadTheDocs environment cannot build C extensions.
 #
 bunch
 inflection
 numpy
+nibabel
+scipy
+dipy
+nipy
+nipype
 matplotlib
 traits
 networkx
