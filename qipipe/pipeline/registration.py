@@ -16,7 +16,7 @@ from ..helpers import bolus_arrival
 from .workflow_base import WorkflowBase
 from .pipeline_error import PipelineError
 
-REG_PREFIX = 'reg'
+REG_PREFIX = 'reg_'
 """The XNAT registration resource name prefix."""
 
 TECHNIQUES = ['ants', 'fnirt', 'mock']
@@ -55,7 +55,7 @@ def generate_resource_name():
 
     :return: a unique XNAT registration resource name
     """
-    return "%s_%s" % (REG_PREFIX, qiutil.file.generate_file_name())
+    return REG_PREFIX + qiutil.file.generate_file_name()
 
 
 class RegistrationWorkflow(WorkflowBase):
@@ -133,7 +133,7 @@ class RegistrationWorkflow(WorkflowBase):
         :keyword resource: the XNAT resource name to use (default is
             an auto-generated name beginning with ``reg_``:attr:`technique`_)
         :keyword initialize: flag indicating whether to create an initial
-            affine transform (ANTs only)
+            affine transform (ANTs only, default false)
         :keyword recursive: flag indicating whether to perform step-wise
             iterative recursive registration
         """
@@ -364,6 +364,8 @@ class RegistrationWorkflow(WorkflowBase):
         :param opts: the following workflow options:
         :keyword base_dir: the workflow directory
             (default a new temp directory)
+        :keyword initialize: flag indicating whether to create an
+            initial affine transform (ANTs only, default false)
         :return: the Workflow object
         """
         self.logger.debug('Creating the registration realignment workflow...')
