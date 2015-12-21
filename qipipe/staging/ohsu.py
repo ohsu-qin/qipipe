@@ -18,8 +18,7 @@ attribute. The T1 scan has ROI files as well, specified by the
 
 import re
 from bunch import bunchify
-from .collection import (Collection, ScanPatterns, ROIPatterns)
-from . import collection
+from .image_collection import (Collection, ScanPatterns, ROIPatterns)
 from .staging_error import StagingError
 
 MULTI_VOLUME_SCAN_NUMBERS = [1]
