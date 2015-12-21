@@ -19,20 +19,14 @@ from . import (staging, registration, modeling)
 from .pipeline_error import PipelineError
 from .workflow_base import WorkflowBase
 from .staging import StagingWorkflow
-from .modeling import (ModelingWorkflow, MODELING_CONF_FILE)
-from .mask import MaskWorkflow
-from .roi import ROIWorkflow
-from ..interfaces import (XNATDownload, XNATUpload)
-from ..staging import collection
 from ..staging.iterator import iter_stage
 from ..staging.map_ctp import map_ctp
 from ..staging.ohsu import MULTI_VOLUME_SCAN_NUMBERS
-
-SCAN_TS_RSC = 'scan_ts'
-"""The XNAT scan time series resource name."""
-
-MASK_RSC = 'mask'
-"""The XNAT mask resouce name."""
+from .modeling import (ModelingWorkflow, MODELING_CONF_FILE)
+from .mask import MaskWorkflow
+from .roi import ROIWorkflow
+from ..helpers.constants import (SCAN_TS_RSC, MASK_RSC)
+from ..interfaces import (XNATDownload, XNATUpload)
 
 SINGLE_VOLUME_ACTIONS = ['stage', 'roi']
 """The workflow actions which apply to a single-volume scan."""
@@ -47,7 +41,6 @@ volume<number>.nii.gz, where <number> is the zero-padded volume
 number, as determined by the
 :meth:`qipipeline.pipeline.staging.volume_format` function.
 """
-
 
 
 def run(*inputs, **opts):
@@ -683,8 +676,8 @@ class QIPipelineWorkflow(WorkflowBase):
             if not collection_opt:
                 raise ArgumentError("The mask workflow collection option is"
                                     " missing")
-            collection = collection.with_name(collection_opt)
-            crop_posterior = collection.crop_posterior
+            coll = staging.collection.with_name(collection_opt)
+            crop_posterior = coll.crop_posterior
             mask_wf_gen = MaskWorkflow(parent=self,
                                        crop_posterior=crop_posterior)
             mask_wf = mask_wf_gen.workflow
@@ -795,7 +788,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 if not collection:
                     raise ArgumentError('The scan time series pipeline'
                                         ' collection option is missing.')
-                coll = collection.with_name(collection)
+                coll = staging.collection.with_name(collection)
                 # The volume grouping tag.
                 vol_tag = coll.patterns.volume
                 if not vol_tag:
@@ -1059,6 +1052,9 @@ def exclude_files(in_files, exclusions):
 
 def bolus_arrival_index_or_zero(time_series):
     """
+    Determines the bolus uptake. If it could not be determined,
+    then the first time point is taken to be the uptake volume.
+
     :param time_series: the 4D time series image
     :return: the bolus arrival index, or zero if the arrival
         cannot be calculated
@@ -1066,8 +1062,6 @@ def bolus_arrival_index_or_zero(time_series):
     from qipipe.helpers.bolus_arrival import (bolus_arrival_index,
                                               BolusArrivalError)
 
-    # Determines the bolus uptake. If it could not be determined,
-    # then the first series is taken to be the uptake.
     try:
         return bolus_arrival_index(time_series)
     except BolusArrivalError:

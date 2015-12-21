@@ -3,15 +3,10 @@ import logging
 from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Function)
 from nipype.interfaces import fsl
+from ..helpers.constants import (SCAN_TS_RSC, MASK_RSC)
 from ..interfaces import (XNATUpload, MriVolCluster)
 from .workflow_base import WorkflowBase
 from qiutil.logging import logger
-
-RESOURCE = 'mask'
-"""The XNAT mask resource name."""
-
-TIME_SERIES = 'scan_ts'
-"""The XNAT scan time series resource name."""
 
 
 def run(project, subject, session, scan, time_series, **opts):
@@ -98,10 +93,10 @@ class MaskWorkflow(WorkflowBase):
         self._run_workflow(self.workflow)
         self.logger.debug("Created the %s %s scan %s time series %s mask XNAT"
                            " resource %s." %
-                           (subject, session, scan, time_series, RESOURCE))
+                           (subject, session, scan, time_series, MASK_RSC))
 
         # Return the mask XNAT resource name.
-        return RESOURCE
+        return MASK_RSC
 
     def set_inputs(self, subject, session, scan, time_series):
         # Set the inputs.
@@ -167,7 +162,7 @@ class MaskWorkflow(WorkflowBase):
         workflow.connect(binarize, 'out_file', inv_mask, 'in_file')
 
         # Upload the mask to XNAT.
-        upload_mask_xfc = XNATUpload(project=self.project, resource=RESOURCE,
+        upload_mask_xfc = XNATUpload(project=self.project, resource=MASK_RSC,
                                      modality='MR')
         upload_mask = pe.Node(upload_mask_xfc, name='upload_mask')
         workflow.connect(input_spec, 'subject', upload_mask, 'subject')
