@@ -113,14 +113,15 @@ class Extent(object):
     @property
     def area(self):
         if not self._area:
-            raise ExtentError("This 3D extent has a volume rather than an area")
+            raise ExtentError("This 3D extent has a volume rather than an"
+                              " area")
         return self._area
 
     @property
     def volume(self):
         if not self._volume:
-            raise ExtentError("This 2D extent has an area rather than"
-                              " a volume")
+            raise ExtentError("This 2D extent has an area rather than a"
+                              " volume")
         return self._volume
 
     def show(self):
@@ -468,6 +469,7 @@ class ExtentSegmentFactory(object):
                  for q in self.points]
 
         return np.asarray(dists)
+
 
 # Convenient distance alias.
 distance = minkowski_distance
