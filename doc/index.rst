@@ -41,7 +41,7 @@ for the remaining Python packages. Install ``qipipe`` using the
 following procedure:
 
 1. Install and activate an Anaconda_ environment as described in the
-   `qixnat installation instructions`_.
+   `qixnat Installation Instructions`_.
 
 2. Install the ``qipipe`` dependencies hosted by Anaconda::
 
@@ -208,7 +208,7 @@ The release is then published as follows:
 
 .. _PyPI: https://pypi.python.org/pypi
 
-.. _qixnat installation instructions: https://github.com/ohsu-qin/qixnat/blob/master/doc/index.rst
+.. _qixnat Installation Instructions: http://qixnat.readthedocs.org/en/latest/#installation
 
 .. _QIN collection: https://wiki.cancerimagingarchive.net/display/Public/Quantitative+Imaging+Network+Collections
 
