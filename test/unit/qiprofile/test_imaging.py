@@ -10,7 +10,8 @@ from qiutil.ast_config import read_config
 import qixnat
 from qiprofile_rest_client.model.subject import Subject
 from qipipe import CONF_DIR
-from qipipe.pipeline.modeling import (MODELING_CONF_FILE, create_profile)
+from qipipe.pipeline.modeling import (MODELING_CONF_FILE, create_profile,
+                                      BOLERO_PROFILE_SECTIONS)
 from qipipe.qiprofile import imaging
 from qipipe.helpers.constants import (SUBJECT_FMT, SESSION_FMT)
 from ...helpers.logging import logger
@@ -103,7 +104,7 @@ class TestImaging(object):
             reg = scan.resource(REGISTRATION)
             reg.create()
             xnat.upload(reg, *files)
-
+            
             # Make a modeling resource.
             mdl = scan.resource(MODELING)
             mdl.create()
@@ -111,7 +112,7 @@ class TestImaging(object):
             # Make the config profile.
             cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
             with tempfile.NamedTemporaryFile() as profile_dest:
-                create_profile(cfg_file, AIF_SHIFT,
+                create_profile(cfg_file, REGISTRATION, BOLERO_PROFILE_SECTIONS,
                                dest_file=profile_dest.name)
                 profile_dest.flush()
                 xnat.upload(mdl, profile_dest.name, name=MODELING_CONF_FILE)
