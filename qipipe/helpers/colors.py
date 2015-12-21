@@ -52,24 +52,27 @@ def create_lookup_table(ncolors, colormap='jet', out_file=None):
 
 def colorize(lut_file, *inputs, **opts):
     """
-    Transforms each input voxel value to a color lookup table reference.
+    Transforms each input voxel value to a color lookup table
+    reference.
 
-    The input voxel values are uniformly partitioned for the given colormap
-    LUT. For example, if the voxel values range from 0.0 to 3.0, then the
-    a voxel value of 0 transformed to the first LUT color, 3.0 is transformed
-    to the last LUT color, and the intermediate values are transformed to
-    intermediate colors.
+    The input voxel values are uniformly partitioned for the given
+    colormap LUT. For example, if the voxel values range from 0.0 to
+    3.0, then the a voxel value of 0 transformed to the first LUT color,
+    3.0 is transformed to the last LUT color, and the intermediate
+    values are transformed to intermediate colors.
 
     The voxel -> reference output file name appends ``_color`` to the
     input file basename and preserves the input file extensions, e.g.
     the input file ``k_trans_map.nii.gz`` is transformed to
     ``k_trans_map_color.nii.gz`` in the output directory.
-    
-    :param lut_file: the color lookup table file path
+
+    :param lut_file: the color lookup table file location
     :param inputs: the image files to transform
-    :param opts: the following options:
-    @option dest: the destination directory (default current working directory)
-    @option threshold: the threshold in the range 0 to nvalues (default 0)
+    :param opts: the following keyword arguments:
+    :option dest: the destination directory
+        (default current working directory)
+    :option threshold: the threshold in the range 0 to nvalues
+        (default 0)
     """
     dest = opts.pop('dest', None)
     if dest:
@@ -83,6 +86,18 @@ def colorize(lut_file, *inputs, **opts):
         _colorize(in_file, dest, **opts)
 
 
+def label_map_basename(in_file):
+    """
+    :param in_file: the input file name
+    :return: the corresponding color file name
+    """
+    # Split up the input file path.
+    _, in_fname = os.path.split(in_file)
+    base, exts = splitexts(in_fname)
+
+    return base + '_color' + exts
+
+
 def _normalize(value, vmin, vspan):
     # Zero always maps to the translucence in the first colormap LUT entry.
     if value == 0:
@@ -92,12 +107,11 @@ def _normalize(value, vmin, vspan):
 
 
 def _colorize(in_file, dest, **opts):
-    # Split up the input file path.
-    _, in_fname = os.path.split(in_file)
-    base, exts = splitexts(in_fname)
-    # The output file.
-    out_fname = base + '_color' + exts
-    out_file = os.path.join(dest, out_fname)
+    # The output file base name.
+    base = label_map_basename(in_file)
+    # The output file location.
+    out_file = os.path.join(dest, base)
+    # Make the output file.
     image.discretize(in_file, out_file, **opts)
 
 
