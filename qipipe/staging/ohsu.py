@@ -24,18 +24,16 @@ from .staging_error import StagingError
 
 MULTI_VOLUME_SCAN_NUMBERS = [1]
 """Only T1 scans can have more than one volume."""
-# OHSU - multi-volume scans.
-# TODO - move MULTI_VOLUME_SCAN_NUMBERS to a qipipe.config
-# dictionary multi_volume_scans entry, where qipipe.config
-# is a qipipe property which dynamically loads a
-# TODO - get this from a [Staging] multi_volume_scans config
-# parameter, with default None (all scans). Augment this with
-# a new ohsu-qipipe staging.cfg.
-# Do the same for the rest of this module, e.g.
-# [Staging]
-# scans = {1: 't2', 2: 't1', 3: 'dw', 4: 'pd'}
-# subjects = {breast: 'BreastChemo(\d+)', ...}
-# sessions = ...
+
+# TODO - Move all of this to a new ohsu-qipipe.collections modules,
+# which is responsible for creating the collections.
+# Get as much as possible from a new ohsu-qipipe staging.cfg, e.g.:
+# [Breast]
+# numbers = {1: 't2', 2: 't1', 3: 'dw', 4: 'pd'}
+# subject = BreastChemo(\d+)
+# ...
+# [Sarcoma]
+# ...
 
 BREAST_SUBJECT_REGEX = re.compile('BreastChemo(\d+)')
 """The Breast subject directory match pattern."""
