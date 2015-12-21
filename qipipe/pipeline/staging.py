@@ -9,6 +9,12 @@ from .workflow_base import WorkflowBase
 from qiutil.logging import logger
 from ..staging import iterator
 
+SCAN_METADATA_RESOURCE = 'metadata'
+"""The label of the XNAT resource holding the scan configuration."""
+
+SCAN_CONF_FILE = 'scan.cfg'
+"""The XNAT scan configuration file name."""
+
 
 def set_workflow_iterables(exec_wf, scan_input, dest=None):
     """
