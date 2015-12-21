@@ -17,6 +17,7 @@ from .compress import Compress
 from .copy import Copy
 from .convert_bolero_mask import ConvertBoleroMask
 from .fix_dicom import FixDicom
+from .fastfit import Fastfit
 from .gate import Gate
 from .group_dicom import GroupDicom
 from .lookup import Lookup

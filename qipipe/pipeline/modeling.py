@@ -11,12 +11,12 @@ if not on_rtd:
 import qiutil
 from qiutil.logging import logger
 from .. import CONF_DIR
-from ..interfaces import (Gate, XNATUpload, XNATFind)
+from ..interfaces import (Gate, XNATUpload, XNATFind, Fastfit)
 from .workflow_base import WorkflowBase
 from .pipeline_error import PipelineError
 
-PK_PREFIX = 'pk'
-"""The XNAT modeling resource object label prefix."""
+MODELING_PREFIX = 'pk_'
+"""The modeling XNAT object label prefix."""
 
 TECHNIQUES = ['mock']
 """The built-in modeling techniques."""
@@ -43,7 +43,7 @@ class ModelingError(Exception):
     pass
 
 
-def run(technique, project, subject, session, scan, time_series,
+def run(technique, project, subject, session, scan, resource, time_series,
         **opts):
     """
     Creates a :class:`qipipe.pipeline.modeling.ModelingWorkflow` and
@@ -65,7 +65,7 @@ def run(technique, project, subject, session, scan, time_series,
     mask = opts.pop('mask', None)
     wf = ModelingWorkflow(project=project, technique=technique, **opts)
 
-    return wf.run(subject, session, scan, time_series, **run_opts)
+    return wf.run(subject, session, scan, resource, time_series, **run_opts)
 
 
 def generate_resource_name():
@@ -75,7 +75,7 @@ def generate_resource_name():
 
     :return: a unique XNAT modeling resource name
     """
-    return "%s_%s" % (PK_PREFIX, qiutil.file.generate_file_name())
+    return MODELING_PREFIX + qiutil.file.generate_file_name()
 
 
 class ModelingWorkflow(WorkflowBase):
@@ -243,6 +243,7 @@ class ModelingWorkflow(WorkflowBase):
         :option mask: the XNAT mask resource name
         :return: the modeling result XNAT resource name
         """
+        resource = opts.get('resource', 'NIFTI')
         self.logger.debug("Modeling the %s %s Scan %d time series %s..." %
             (subject, session, scan, time_series))
 
@@ -458,7 +459,7 @@ class ModelingWorkflow(WorkflowBase):
             # Create the R1_0 map.
             get_r1_0_func = Function(
                 input_names=['pdw_image', 't1w_image', 'max_r1_0', 'mask'],
-                output_names=['r1_0_map'], function=make_r1_0
+                output_names=['r1_0_map'], function=get_r1_0
             )
             get_r1_0 = pe.Node(get_r1_0_func, name='get_r1_0')
             base_wf.connect(input_spec, 'pd_nii', get_r1_0, 'pdw_image')
@@ -468,29 +469,27 @@ class ModelingWorkflow(WorkflowBase):
 
         # The R1 destination directory.
         # Convert the DCE time series to R1 maps.
-        get_r1_series_func = Function(
+        r1_series_func = Function(
             input_names=['time_series', 'r1_0', 'baseline_end', 'mask', 'dest'],
-            output_names=['r1_series'], function=make_r1_series
+            output_names=['r1_series'], function=get_r1_series
         )
-        get_r1_series = pe.Node(get_r1_series_func, dest=self.base_dir,
-                                name='get_r1_series')
-        base_wf.connect(input_spec, 'time_series',
-                        get_r1_series, 'time_series')
+        r1_series = pe.Node(r1_series_func, dest=self.base_dir,
+                            name='r1_series')
+        base_wf.connect(input_spec, 'time_series', r1_series, 'time_series')
         base_wf.connect(input_spec, 'baseline_end_idx',
-                        get_r1_series, 'baseline_end')
-        base_wf.connect(input_spec, 'mask',
-                        get_r1_series, 'mask')
+                        r1_series, 'baseline_end')
+        base_wf.connect(input_spec, 'mask', r1_series, 'mask')
         if use_fixed_r1_0:
-            base_wf.connect(input_spec, 'r1_0_val', get_r1_series, 'r1_0')
+            base_wf.connect(input_spec, 'r1_0_val', r1_series, 'r1_0')
         else:
-            base_wf.connect(get_r1_0, 'r1_0_map', get_r1_series, 'r1_0')
+            base_wf.connect(get_r1_0, 'r1_0_map', r1_series, 'r1_0')
 
         # Copy the time series meta-data to the R1 series.
         copy_meta = pe.Node(CopyMeta(), name='copy_meta')
         copy_meta.inputs.include_classes = [('global', 'const'),
                                             ('time', 'samples')]
         base_wf.connect(input_spec, 'time_series', copy_meta, 'src_file')
-        base_wf.connect(get_r1_series, 'r1_series', copy_meta, 'dest_file')
+        base_wf.connect(r1_series, 'r1_series', copy_meta, 'dest_file')
 
         # Get the pharmacokinetic mapping parameters.
         aif_shift_flds = ['time_series', 'bolus_arrival_index']
@@ -509,13 +508,6 @@ class ModelingWorkflow(WorkflowBase):
         fit_params.inputs.cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
         base_wf.connect(aif_shift, 'aif_shift', fit_params, 'aif_shift')
 
-        # Import Fastfit on demand. This allows the modeling module to be
-        # imported by clients without the proprietary Fastfit modeling
-        # tool.
-        try:
-            Fastfit
-        except NameError:
-            from ..interfaces.fastfit import Fastfit
         # Work around the following Fastfit limitation:
         # * The Fastfit model_name and optional_outs inputs must be
         #   set before the Fastfit output is connected in the workflow.
@@ -549,7 +541,7 @@ class ModelingWorkflow(WorkflowBase):
         outputs = FIXED_R1_0_OUTPUTS if use_fixed_r1_0 else INFERRED_R1_0_OUTPUTS
         output_spec = pe.Node(IdentityInterface(fields=outputs),
                               name='output_spec')
-        # Run the PK model.
+        # Collect the outputs.
         base_wf.connect(copy_meta, 'dest_file', output_spec, 'r1_series')
         base_wf.connect(fit_params, 'params_csv', output_spec, 'pk_params')
         base_wf.connect(pk_map, 'k_trans', output_spec, 'fxr_k_trans')
@@ -600,20 +592,26 @@ class ModelingWorkflow(WorkflowBase):
             if field in opts:
                 setattr(input_spec.inputs, field, opts[field])
 
-        # Get the pharmacokinetic mapping parameters.
-        fit_params_flds = ['time_series', 'bolus_arrival_index']
+        # Get the pharmacokinetic mapping parameters with a mock
+        # AIF shift.
+        fit_params_flds = ['cfg_file', 'aif_shift']
         fit_params_func = Function(input_names=fit_params_flds,
                                    output_names=['params_csv'],
                                    function=get_fit_params)
         fit_params = pe.Node(fit_params_func, name='fit_params')
-        base_wf.connect(input_spec, 'time_series', fit_params, 'time_series')
-        base_wf.connect(input_spec, 'bolus_arrival_index',
-                        fit_params, 'bolus_arrival_index')
+        fit_params.inputs.cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
+        fit_params.inputs.aif_shift = 40.0
+        # The mock pharmacokinetic model optimizer copies the mask.
+        pk_map_flds = ['params_csv', 'fxr_k_trans']
+        pk_map = pe.Node(IdentityInterface(fields=pk_map_flds), name='pk_map')
+        base_wf.connect(input_spec, 'mask', pk_map, 'fxr_k_trans')
+        base_wf.connect(fit_params, 'params_csv', pk_map, 'params_csv')
 
-        # Set up the outputs.
-        outputs = ['pk_params']
-        output_spec = pe.Node(IdentityInterface(fields=outputs),
+        # Collect the mock outputs.
+        output_flds = pk_map_flds + ['pk_params']
+        output_spec = pe.Node(IdentityInterface(fields=output_flds),
                               name='output_spec')
+        base_wf.connect(pk_map, 'fxr_k_trans', output_spec, 'fxr_k_trans')
         base_wf.connect(fit_params, 'params_csv', output_spec, 'pk_params')
 
         self._configure_nodes(base_wf)
@@ -728,7 +726,7 @@ def make_baseline(time_series, baseline_end_idx):
     return baseline_path
 
 
-def make_r1_0(pdw_image, t1w_image, max_r1_0, **kwargs):
+def get_r1_0(pdw_image, t1w_image, max_r1_0, **kwargs):
     """
     Returns the R1_0 map NIfTI file from the given proton density
     and T1-weighted images. The R1_0 map is computed using the
@@ -763,9 +761,9 @@ def make_r1_0(pdw_image, t1w_image, max_r1_0, **kwargs):
     return out_fn
 
 
-def make_r1_series(time_series, r1_0, **kwargs):
+def get_r1_series(time_series, r1_0, **kwargs):
     """
-    Makes the R1_0 series NIfTI file.
+    Creates the R1_0 series NIfTI file.
 
     :param time_series: the modeling input 4D NIfTI image
     :param r1_0: the R1_0 image file path

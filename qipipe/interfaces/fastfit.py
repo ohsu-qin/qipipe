@@ -25,7 +25,14 @@ from nipype.interfaces.base import (DynamicTraitedSpec,
                                     MpiCommandLineInputSpec,
                                     isdefined)
 from nipype.interfaces.traits_extension import Undefined
-from fastfit.fastfit_cli import get_available_models
+# Tolerate import even when the proprietary OHSU fastfit modeling
+# tool is not available. This allows import of the modeling module
+# by clients without fastfit.
+try:
+    from fastfit_iface import get_available_models
+except:
+    import warnings
+    warnings.warn("The Fastfit modeling interface is not supported.")
 from .interface_error import InterfaceError
 
 
@@ -65,8 +72,15 @@ class Fastfit(MpiCommandLine):
       input is set dynamically.
     """
 
-    _cmd = 'global_fastfit'
+    # Note: a local fastfit build results in MPICOMM errors.
+    # The work-around is to specify the full path of the official build.
+    # In that case, a local fastfit build is sufficient to run this interface,
+    # but the local fastfit executable is ignored in preference for the
+    # official build.
+    _cmd = '/usr/global/bin/fastfit'
+
     input_spec = FastfitInputSpec
+
     output_spec = DynamicTraitedSpec
 
     def __init__(self, min_outs=None, **inputs):
@@ -110,7 +124,6 @@ class Fastfit(MpiCommandLine):
                 if not param_name in fixed_params:
                     outputs.add_trait(param_name, traits.File(exists=True))
                     undefined_traits[param_name] = Undefined
-
         #Otherwise we need min_outs
         elif not self._min_outs is None:
             for param_name in self._min_outs:
