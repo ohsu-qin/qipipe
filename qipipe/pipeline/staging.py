@@ -151,8 +151,8 @@ class StagingWorkflow(WorkflowBase):
     * *session* is the session name, e.g. ``Session03``
 
     * *volume number* is determined by the
-      :attr:`qipipe.staging.collection.Collection.patterns`
-      :attr:`qipipe.staging.collection.Patterns.volume` DICOM tag
+      :attr:`qipipe.staging.image_collection.Collection.patterns`
+      :attr:`qipipe.staging.image_collection.Patterns.volume` DICOM tag
 
     * *file* is the DICOM file name
 

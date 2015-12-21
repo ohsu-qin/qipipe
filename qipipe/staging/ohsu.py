@@ -7,13 +7,13 @@ The following OHSU QIN scan numbers are captured:
     * 4: DWI
     * 6: PD
 These scans have DICOM files specified by the
-:attr:`qipipe.staging.collection.Collection.patterns`
-:attr:`qipipe.staging.collection.Patterns.scan`
-:attr:`qipipe.staging.collection.ScanPatterns.dicom`
+:attr:`qipipe.staging.image_collection.Collection.patterns`
+:attr:`qipipe.staging.image_collection.Patterns.scan`
+:attr:`qipipe.staging.image_collection.ScanPatterns.dicom`
 attribute. The T1 scan has ROI files as well, specified by the
-:attr:`qipipe.staging.collection.ScanPatterns.roi`
-:attr:`qipipe.staging.collection.ROIPatterns.glob` and
-:attr:`qipipe.staging.collection.ROIPatterns.regex` attributes
+:attr:`qipipe.staging.image_collection.ScanPatterns.roi`
+:attr:`qipipe.staging.image_collection.ROIPatterns.glob` and
+:attr:`qipipe.staging.image_collection.ROIPatterns.regex` attributes
 """
 
 import re

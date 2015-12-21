@@ -18,7 +18,7 @@ from qiutil.logging import logger
 from . import (staging, registration, modeling)
 from .pipeline_error import PipelineError
 from .workflow_base import WorkflowBase
-from .staging import StagingWorkflow
+from .staging import (StagingWorkflow, image_collection)
 from ..staging.iterator import iter_stage
 from ..staging.map_ctp import map_ctp
 from ..staging.ohsu import MULTI_VOLUME_SCAN_NUMBERS
@@ -676,7 +676,7 @@ class QIPipelineWorkflow(WorkflowBase):
             if not collection_opt:
                 raise ArgumentError("The mask workflow collection option is"
                                     " missing")
-            coll = staging.collection.with_name(collection_opt)
+            coll = image_collection.with_name(collection_opt)
             crop_posterior = coll.crop_posterior
             mask_wf_gen = MaskWorkflow(parent=self,
                                        crop_posterior=crop_posterior)
@@ -788,7 +788,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 if not collection:
                     raise ArgumentError('The scan time series pipeline'
                                         ' collection option is missing.')
-                coll = staging.collection.with_name(collection)
+                coll = image_collection.with_name(collection)
                 # The volume grouping tag.
                 vol_tag = coll.patterns.volume
                 if not vol_tag:

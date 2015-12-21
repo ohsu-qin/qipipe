@@ -10,8 +10,8 @@ def subject_sources(collection, source):
     Infers the XNAT subject names from the given source directory.
     The *source* argument directory contains the subject
     directories. The directories are matched against
-    the :attr:`qipipe.staging.collection.Collection.patterns`
-    :attr:`qipipe.staging.collection.Patterns.subject` regular
+    the :attr:`qipipe.staging.image_collection.Collection.patterns`
+    :attr:`qipipe.staging.image_collection.Patterns.subject` regular
     expression for the given collection.
 
     :param collection: the image collection name
@@ -20,7 +20,7 @@ def subject_sources(collection, source):
     """
     logger(__name__).debug("Detecting %s subjects from %s..." %
           (collection, source))
-    coll = staging.collection.with_name(collection)
+    coll = staging.image_collection.with_name(collection)
     pat = coll.patterns.subject
     sbj_dir_dict = {}
     for d in os.listdir(source):

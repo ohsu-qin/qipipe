@@ -1,7 +1,7 @@
 import os
 from nose.tools import (assert_equal, assert_is, assert_is_not_none)
 from ... import ROOT
-from qipipe.staging.collection import Collection
+from qipipe.staging.image_collection import Collection
 from qipipe.staging import collection
 from ...helpers.logging import logger
 

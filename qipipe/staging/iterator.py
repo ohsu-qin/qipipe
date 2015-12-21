@@ -105,8 +105,8 @@ def iter_stage(project, collection, *inputs, **opts):
         [(1, 19, '/path/to/roi19.bqf'), ...]
 
     The input directories conform to the
-    :attr:`qipipe.staging.collection.Collection.patterns`
-    :attr:`qipipe.staging.collection.Patterns.subject`
+    :attr:`qipipe.staging.image_collection.Collection.patterns`
+    :attr:`qipipe.staging.image_collection.Patterns.subject`
     regular expression.
 
     Each iteration *(subject, session, scan, scan_iters)* tuple is
@@ -124,7 +124,7 @@ def iter_stage(project, collection, *inputs, **opts):
 
     :param project: the XNAT project name
     :param collection: the
-        :attr:`qipipe.staging.collection.Collection.name`
+        :attr:`qipipe.staging.image_collection.Collection.name`
     :param inputs: the source subject directories to stage
     :param opts: the following keyword option:
     :keyword scan: the scan number to stage
@@ -196,7 +196,7 @@ class VisitIterator(object):
         self.project = project
         """The :meth:`iter_stage` project name parameter."""
         
-        self.collection = staging.collection.with_name(collection)
+        self.collection = staging.image_collection.with_name(collection)
         """The :meth:`iter_stage` collection name parameter."""
 
         self.subject_dirs = subject_dirs

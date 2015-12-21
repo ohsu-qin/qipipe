@@ -8,7 +8,7 @@ staging
 
 :mod:`collection`
 -----------------
-.. automodule:: qipipe.staging.collection
+.. automodule:: qipipe.staging.image_collection
 
 :mod:`ctp_config`
 -----------------

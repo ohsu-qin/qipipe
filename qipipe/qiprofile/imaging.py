@@ -47,7 +47,7 @@ class Updater(object):
         """
         self.scan_type = opts.get('scan_type')
         """
-        The :attr:`qipipe.staging.collection.Patterns.scan` scan type,
+        The :attr:`qipipe.staging.image_collection.Patterns.scan` scan type,
             e.g. ``T1``, ``T2``, ``DWI`` or ``PD``.
         """
 
