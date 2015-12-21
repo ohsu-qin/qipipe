@@ -2,7 +2,7 @@
 This module updates the qiprofile database Subject pathology information
 from the pathology Excel workbook file.
 """
-import bunch
+from bunch import bunchify
 from qiprofile_rest_client.model.common import (Encounter, TumorExtent)
 from qiprofile_rest_client.model.clinical import (
     Biopsy, Surgery, PathologyReport, TNM, TumorLocation
@@ -22,11 +22,12 @@ COL_ATTRS = {
 }
 """
 The following non-standard column-attribute associations:
-* ``Patient Weight (kg)``: ``Encounter.weight`` attribute
-* ``Tumor Size Score``: ``TNM.size`` attribute
-* ``Tumor Length (mm)``: ``TumorExtent.length`` attribute
-* ``Tumor Width (mm)``: ``TumorExtent.width`` attribute
-* ``Tumor Depth (mm)``: ``TumorExtent.depth`` attribute
+
+* ``Patient Weight (kg)``: *Encounter.weight* attribute
+* ``Tumor Size Score``: *TNM.size* attribute
+* ``Tumor Length (mm)``: *TumorExtent.length* attribute
+* ``Tumor Width (mm)``: *TumorExtent.width* attribute
+* ``Tumor Depth (mm)``: *TumorExtent.depth* attribute
 """
 
 PARSERS = dict(
@@ -40,10 +41,11 @@ PARSERS = dict(
 )
 """
 The following parser associations:
-* subject_number is an int
-* intervention_type converts the string to an Encounter subclass
-* body_part is capitalized
-* size is a :class:`qiprofile_rest_client.clinical.TNM.Size` object
+
+* *subject_number* is an int
+* *intervention_type* converts the string to an Encounter subclass
+* *body_part* is capitalized
+* *size* is a :class:`qiprofile_rest_client.clinical.TNM.Size` object
 """
 
 SHEET = 'Pathology'
@@ -119,7 +121,7 @@ class PathologyUpdate(object):
         self._subject = subject
         self._tumor_type = tumor_type
         data_model_dict = dict(grade=grade_class, pathology=pathology_class)
-        self._data_models = bunch.bunchify(data_model_dict)
+        self._data_models = bunchify(data_model_dict)
 
     def update(self, rows):
         """
