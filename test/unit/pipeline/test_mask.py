@@ -2,8 +2,9 @@ import os
 from nose.tools import (assert_true, assert_is_not_none)
 from nipype.interfaces.dcmstack import MergeNifti
 import qixnat
-from qipipe.pipeline import (mask, qipipeline)
+from qipipe.pipeline import mask
 from ... import (ROOT, CONF_DIR)
+from ...helpers.constants import SCAN_TS_RSC
 from ...helpers.logging import logger
 from .volume_test_base import VolumeTestBase
 
@@ -43,7 +44,7 @@ class TestMaskWorkflow(VolumeTestBase):
         """
         # Make the 4D time series from the test fixture inputs.
         merge = MergeNifti(in_files=list(images),
-                           out_format=qipipeline.SCAN_TS_RSC)
+                           out_format=SCAN_TS_RSC)
         time_series = merge.run().outputs.out_file
         logger(__name__).debug("Testing the mask workflow on the %s %s"
                                " Scan %d time series %s..." %

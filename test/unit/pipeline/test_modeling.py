@@ -7,7 +7,7 @@ import nipype.pipeline.engine as pe
 from nipype.interfaces.dcmstack import MergeNifti
 import qixnat
 from qipipe.pipeline import modeling
-from qipipe.pipeline import qipipeline
+from qipipe.helpers.constants import SCAN_TS_RSC
 from ... import (ROOT, PROJECT, CONF_DIR)
 from ...helpers.logging import logger
 from .volume_test_base import VolumeTestBase
@@ -79,8 +79,7 @@ class TestModelingWorkflow(VolumeTestBase):
         #
         # TODO - Add out_path=RESULTS and remove the work-around
         # below when Nipype version >= 0.10 is supported by qipipe.
-        merge = MergeNifti(in_files=list(images),
-                           out_format=qipipeline.SCAN_TS_RSC)
+        merge = MergeNifti(in_files=list(images), out_format=SCAN_TS_RSC)
         time_series = merge.run().outputs.out_file
 
         # Work around the Nipype bug described above.
