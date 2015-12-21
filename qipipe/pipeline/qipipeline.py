@@ -18,7 +18,8 @@ from qiutil.logging import logger
 from . import (staging, registration, modeling)
 from .pipeline_error import PipelineError
 from .workflow_base import WorkflowBase
-from .staging import (StagingWorkflow, image_collection)
+from .staging import StagingWorkflow
+from ..staging import image_collection
 from ..staging.iterator import iter_stage
 from ..staging.map_ctp import map_ctp
 from ..staging.ohsu import MULTI_VOLUME_SCAN_NUMBERS
