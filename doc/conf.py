@@ -24,7 +24,7 @@ html_title = "qipipe v%s" % version
 
 def skip(app, what, name, obj, skip, options):
     """
-    @return False if the name is __init__ or *skip* is set, True otherwise
+    :return: False if the name is __init__ or *skip* is set, True otherwise
     """
     return skip and name is not "__init__"
 

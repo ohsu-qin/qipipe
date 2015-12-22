@@ -3,8 +3,8 @@ from nose.tools import (assert_true, assert_is_not_none)
 from nipype.interfaces.dcmstack import MergeNifti
 import qixnat
 from qipipe.pipeline import mask
+from qipipe.helpers.constants import SCAN_TS_RSC
 from ... import (ROOT, CONF_DIR)
-from ...helpers.constants import SCAN_TS_RSC
 from ...helpers.logging import logger
 from .volume_test_base import VolumeTestBase
 

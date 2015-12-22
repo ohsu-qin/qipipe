@@ -20,13 +20,13 @@ class TestCollection(object):
                                         scan=None, volume=None)
                        for name in ['Aa', 'bB']}
         for name, expected in collections.iteritems():
-            actual = collection.with_name(name)
+            actual = image_collection.with_name(name)
             assert_is_not_none(actual, "Collection search on exact name %s"
                                        " unsuccessful" % name)
             assert_is(actual, expected, "Collection search on exact name"
                                         " %s incorrect" % name)
             lc_name = name.lower()
-            actual = collection.with_name(lc_name)
+            actual = image_collection.with_name(lc_name)
             assert_is_not_none(actual, "Collection search on lower-case name %s"
                                        " unsuccessful" % lc_name)
             assert_is(actual, expected, "Collection search on lower-case name"

@@ -25,10 +25,6 @@ class TestRegistrationWorkflow(VolumeTestBase):
 
     This test exercises the registration workflow on three volumes of one visit
     in each of the Breast and Sarcoma studies.
-    
-    The :class:`qiprofile.pipeline.registration.RegistrationWorkflow` technique
-    is set to ``mock``, which mocks the registration process by simply copying
-    the input scan file to the output "realigned" file. 
     """
 
     def __init__(self):
