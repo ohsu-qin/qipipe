@@ -394,9 +394,9 @@ def volume_format(collection):
     :param collection: the collection name
     :return: the volume file name format
     """
-    from qipipe.staging import collection
+    from qipipe.staging import image_collection
 
-    coll = collection.with_name(collection)
+    coll = image_collection.with_name(collection)
 
     return "volume%%(%s)03d" % coll.patterns.volume
 
