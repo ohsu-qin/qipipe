@@ -12,7 +12,7 @@ def normalize(value, vmin, vspan):
     :param value: the input value
     :param vmin: the minimum input range value
     :param vspan: the value range span (maxium - minimum)
-    @return (*in_val* - *vmin*) / *vspan*
+    :return: (*in_val* - *vmin*) / *vspan*
     """
     return (value - vmin) / vspan
 
@@ -51,6 +51,7 @@ def discretize(in_file, out_file, nvalues, start=0, threshold=None,
       (default start)
     :param normalize: an optional function to normalize the input
       value (default :meth:`normalize`)
+    :raise IndexError: if the threshold is not in the color range
     """
     # If there is an output file argument, then ensure that there is an
     # output parent directory. Otherwise, use the default output file.
@@ -67,12 +68,12 @@ def discretize(in_file, out_file, nvalues, start=0, threshold=None,
                          " [%d-%d]: %d" %
                          (start, start + nvalues, threshold))
     
-    print ("Color LUT start: %d end: %d threshold: %d" %
-           (start, start + nvalues - 1, threshold))
+    log.debug("Color LUT start: %d end: %d threshold: %d" %
+              (start, start + nvalues - 1, threshold))
     
     # Load the NIfTI image.
     in_img = nib.load(in_file)
-    print ("Loaded %s." % in_file)
+    log.debug("Loaded %s." % in_file)
     # The image data 3D array.
     in_data = in_img.get_data()
     
@@ -86,8 +87,8 @@ def discretize(in_file, out_file, nvalues, start=0, threshold=None,
             vmin = min(vmin, *z)
             vmax = max(vmax, *z)
 
-    print ("Computed value minimum %f." % vmin)
-    print ("Computed value maximum %f." % vmax)
+    log.debug("Computed value minimum %f." % vmin)
+    log.debug("Computed value maximum %f." % vmax)
 
     # The maximum offset is one less than the number of values.
     max_offset = nvalues - 1
@@ -125,11 +126,11 @@ def discretize(in_file, out_file, nvalues, start=0, threshold=None,
     
     # Log the total number of values and the decile count.
     value_cnt = reduce(lambda x,y: x * y, shape)
-    print ("%d input values were mapped to the inclusive range [%d, %d]." %
-           (value_cnt, start, start + nvalues - 1))
-    print ("Mapped value decile count: %s." % decile_cnts)
+    log.debug("%d input values were mapped to the inclusive range [%d, %d]." %
+              (value_cnt, start, start + nvalues - 1))
+    log.debug("Mapped value decile count: %s." % decile_cnts)
     
-    print ("Saving the output as %s..." % out_file)
+    log.debug("Saving the output as %s..." % out_file)
     hdr = in_img.get_header()
     hdr.set_data_dtype(np.int16)
     out_img = nib.Nifti1Image(out_data, in_img.get_affine(), hdr)

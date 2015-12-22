@@ -218,19 +218,19 @@ class ExtentSegmentFactory(object):
         Returns the orthogonal segments end point indexes as the
         tuple (longest, widest, deepest), where each of the tuple
         elements is a (from, to) segment end point pair of indexes
-        into the :attr:`points`, e.g.:
+        into the :attr:`points`, e.g.::
 
-        >> points.shape
-        (128, 3)
-        >> factory = ExtentSegmentFactory(points)
-        >> segment_indexes = factory.create()
-        >> segment_indexes
-        ((34, 12), (122, 14), (48, 111))
-        >> segments = points[segments]
-        >> np.all(np.equal(segments[0][0], points[34]))
-        True
-        >> np.all(np.equal(segments[0][1], points[12]))
-        True
+            >>> points.shape
+            (128, 3)
+            >>> factory = ExtentSegmentFactory(points)
+            >>> segment_indexes = factory.create()
+            >>> segment_indexes
+            ((34, 12), (122, 14), (48, 111))
+            >>> segments = points[segments]
+            >>> np.all(np.equal(segments[0][0], points[34]))
+            True
+            >>> np.all(np.equal(segments[0][1], points[12]))
+            True
 
         The bounding segments procedure is as follows:
 

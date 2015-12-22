@@ -1,4 +1,5 @@
 class BolusArrivalError(Exception):
+    """Error calculating the bolus arrival."""
     pass
 
 
