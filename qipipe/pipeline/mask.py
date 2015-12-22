@@ -65,7 +65,7 @@ class MaskWorkflow(WorkflowBase):
         settings in that file override the default settings.
 
         :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
-            initializer keyword arguments, as well as the following options:
+            initializer keyword arguments, as well as the following keyword arguments:
         :option crop_posterior: crop posterior to the center of gravity,
             e.g. for a breast tumor
         """

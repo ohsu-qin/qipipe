@@ -81,7 +81,7 @@ class PathologyWorksheet(Worksheet):
         """
         :param workbook: the :class:`qipipe.qiprofile.xls.Workbook` object
         :param classes: the subclass-specific REST data model subclasses
-        :param opts: the following options:
+        :param opts: the following keyword arguments:
         :option parsers: the non-standard parsers {attribute: function}
             dictionary
         :option column_attributes: the non-standard {column name: attribute}

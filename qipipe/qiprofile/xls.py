@@ -38,7 +38,7 @@ class Worksheet(object):
         :param workbook: the openpyxl workbook
         :param sheet: the sheet name
         :param classes: the classes which have spreadsheet attributes
-        :param opts: the following options:
+        :param opts: the following keyword arguments:
         :option parsers: the non-standard
             {attribute: value parser function} parsers dictionary
         :param column_attributes: the non-standard

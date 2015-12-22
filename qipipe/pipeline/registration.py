@@ -128,7 +128,7 @@ class RegistrationWorkflow(WorkflowBase):
         settings in that file override the default settings.
 
         :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
-            initializer options, as well as the following options:
+            initializer options, as well as the following keyword arguments:
         :keyword technique: the required registration :attr:`technique`
         :keyword resource: the XNAT resource name to use (default is
             an auto-generated name beginning with ``reg_``:attr:`technique`_)
@@ -166,7 +166,7 @@ class RegistrationWorkflow(WorkflowBase):
         :param scan: the scan number
         :param ref_0: the required bolus uptake volume index
         :param images: the input session scan images
-        :param opts: the following options:
+        :param opts: the following keyword arguments:
         :option mask: the image mask file path
         :option dest: the realigned image target directory (default is the
             current directory)

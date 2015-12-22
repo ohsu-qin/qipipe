@@ -189,7 +189,7 @@ class ModelingWorkflow(WorkflowBase):
           either the input options or the configuration.
 
         :param kwargs: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
-            initializer keyword arguments, as well as the following options:
+            initializer keyword arguments, as well as the following keyword arguments:
         :keyword resource: the XNAT resource name
         :keyword r1_0_val: the optional fixed |R10| value
         :keyword max_r1_0: the maximum computed |R10| value, if the fixed

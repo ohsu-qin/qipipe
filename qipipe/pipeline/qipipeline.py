@@ -342,7 +342,7 @@ class QIPipelineWorkflow(WorkflowBase):
         :param project: the XNAT project name
         :param actions: the actions to perform
         :param opts: the :class:`qipipe.staging.WorkflowBase`
-            initialization options as well as the following options:
+            initialization options as well as the following keyword arguments:
         :keyword collection: the image collection name
         :keyword mask: the XNAT mask resource name
         :keyword registration_resource: the XNAT registration resource
