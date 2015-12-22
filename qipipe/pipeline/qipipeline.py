@@ -40,7 +40,7 @@ VOLUME_FILE_PAT = re.compile("volume(\d{3}).nii.gz$")
 The volume file name pattern. The image file name is
 volume<number>.nii.gz, where <number> is the zero-padded volume
 number, as determined by the
-:meth:`qipipeline.pipeline.staging.volume_format` function.
+:meth:`qipipe.pipeline.staging.volume_format` function.
 """
 
 
