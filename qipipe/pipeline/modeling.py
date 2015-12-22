@@ -18,9 +18,6 @@ from .pipeline_error import PipelineError
 MODELING_PREFIX = 'pk_'
 """The modeling XNAT object label prefix."""
 
-TECHNIQUES = ['mock']
-"""The built-in modeling techniques."""
-
 FIXED_R1_0_OUTPUTS = ['r1_series', 'pk_params', 'fxr_k_trans', 'fxr_v_e',
            'fxr_tau_i', 'fxr_chisq', 'fxl_k_trans', 'fxl_v_e',
            'fxl_chisq', 'delta_k_trans']

@@ -19,9 +19,6 @@ from .pipeline_error import PipelineError
 REG_PREFIX = 'reg_'
 """The XNAT registration resource name prefix."""
 
-TECHNIQUES = ['ants', 'fnirt', 'mock']
-"""The built-in registration techniques."""
-
 
 def run(technique, project, subject, session, scan, ref_0, *images, **opts):
     """

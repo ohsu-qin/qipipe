@@ -34,13 +34,11 @@ class TestRegistrationWorkflow(VolumeTestBase):
 
     def test_breast(self):
         for args in self.stage('Breast'):
-            for technique in registration.TECHNIQUES:
-                self._test_workflow(technique, *args)
+            self._test_workflow('mock', *args)
 
     def test_sarcoma(self):
         for args in self.stage('Sarcoma'):
-            for technique in registration.TECHNIQUES:
-                self._test_workflow(technique, *args)
+            self._test_workflow('mock', *args)
 
     def _test_workflow(self, technique, project, subject, session, scan,
                        *images):
