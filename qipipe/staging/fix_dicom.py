@@ -13,40 +13,40 @@ DATE_FMT = '%Y%m%d'
 
 
 COMMENT_PREFIX = re.compile('^TTC \d+(\/.\d*)? sec')
-"""OHSU - the Image Comments tag value prefix."""
+"""*OHSU* - the ``Image Comments`` tag value prefix."""
 
 
 def fix_dicom_headers(collection, subject, *in_files, **opts):
     """
     Fix the given input DICOM files as follows:
 
-    - Replace the ``Patient ID`` value with the subject number, e.g.
+    * Replace the ``Patient ID`` value with the subject number, e.g.
         ``Sarcoma001``
 
-    - Add the ``Body Part Examined`` tag
+    * Add the ``Body Part Examined`` tag
 
-    - Anonymize the ``Patient's Birth Date`` tag
+    * Anonymize the ``Patient's Birth Date`` tag
 
-    - Standardize the file name
+    * Standardize the file name
 
-    OHSU - The ``Body Part Examined`` tag is set as follows:
+    *OHSU* - The ``Body Part Examined`` tag is set as follows:
 
-    - If the collection is ``Sarcoma``, then the body part is the
+    * If the collection is ``Sarcoma``, then the body part is the
         :meth:`qipipe.staging.sarcoma_config.sarcoma_location`.
     
-    - Otherwise, the body part is the capitalized collection name, e.g.
+    * Otherwise, the body part is the capitalized collection name, e.g.
         ``BREAST``.
 
-    OHSU - Remove extraneous ``Image Comments`` tag value content
+    *OHSU* - Remove extraneous ``Image Comments`` tag value content
     which might contain PHI.
         
     The output file name is standardized as follows:
 
-    - The file name is lower-case
+    * The file name is lower-case
 
-    - The file extension is ``.dcm``
+    * The file extension is ``.dcm``
 
-    - Each non-word character is replaced by an underscore
+    * Each non-word character is replaced by an underscore
     
     :param collection: the collection name
     :param subject: the input subject name
