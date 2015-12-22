@@ -358,7 +358,8 @@ class ModelingWorkflow(WorkflowBase):
                            merge_outputs, "in%d" % (i + 1))
 
         # Upload the outputs.
-        upload_xfc = XNATUpload(project=self.project, resource=self.resource)
+        upload_xfc = XNATUpload(project=self.project, resource=self.resource,
+                                modality='MR')
         upload_outputs = pe.Node(upload_xfc, name='upload_outputs')
         mdl_wf.connect(input_spec, 'subject', upload_outputs, 'subject')
         mdl_wf.connect(input_spec, 'session', upload_outputs, 'session')
