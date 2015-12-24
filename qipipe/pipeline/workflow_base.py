@@ -7,7 +7,7 @@ import qixnat
 from qiutil.logging import logger
 from qiutil.collections import EMPTY_DICT
 from qiutil.ast_config import read_config
-from .. import CONF_DIR
+from ..helpers.constants import CONF_DIR
 from ..helpers.distributable import DISTRIBUTABLE
 from .pipeline_error import PipelineError
 

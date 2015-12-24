@@ -2,10 +2,12 @@ import os
 import re
 import glob
 import shutil
-from nose.tools import assert_is_not_none
+from nose.tools import (assert_is_not_none, assert_true, assert_equal)
 import nipype.pipeline.engine as pe
 from nipype.interfaces.dcmstack import MergeNifti
+from qiutil.ast_config import read_config
 import qixnat
+from qixnat.helpers import xnat_path
 from qipipe.pipeline import modeling
 from qipipe.helpers.constants import SCAN_TS_RSC
 from ... import (ROOT, PROJECT, CONF_DIR)
@@ -103,8 +105,30 @@ class TestModelingWorkflow(VolumeTestBase):
                 assert_is_not_none(rsc, "The %s %s Scan %d %s resource was not"
                                         " created" %
                                         (subject, session, scan, result))
+                self._validate_profile(xnat, rsc)
             finally:
                 xnat.delete(project, subject)
+
+    def _validate_profile(self, xnat, resource):
+        # The modeling profile XNAT file object.
+        file_obj = resource.file(modeling.MODELING_CONF_FILE)
+        assert_true(file_obj.exists(), "The %s XNAT file was not created" %
+                                      xnat_path(file_obj))
+        # A profile copy.
+        copy = xnat.download_file(file_obj, RESULTS)
+        # Read into a ConfigParser.
+        profile = read_config(copy)
+        # Validate the content.
+        assert_true(profile.has_section('Source'),
+                    "The XNAT modeling profile file %s is missing the Source"
+                    " section" % xnat_path(file_obj))
+        assert_true(profile.has_option('Source', 'resource'),
+                    "The XNAT modeling profile file %s is missing the Source"
+                    " resource option" % xnat_path(file_obj))
+        val = profile.get('Source', 'resource')
+        assert_equal(val, 'NIFTI',
+                     "The XNAT modeling profile file %s Source resource option"
+                     " is incorrect" % xnat_path(file_obj))
 
 
 if __name__ == "__main__":

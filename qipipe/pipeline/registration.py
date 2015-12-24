@@ -19,6 +19,9 @@ from .pipeline_error import PipelineError
 REG_PREFIX = 'reg_'
 """The XNAT registration resource name prefix."""
 
+REG_CONF_FILE = 'registration.cfg'
+"""The registration workflow configuration."""
+
 
 def run(technique, project, subject, session, scan, ref_0, *images, **opts):
     """

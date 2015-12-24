@@ -10,13 +10,16 @@ if not on_rtd:
     from ..helpers.bolus_arrival import bolus_arrival_index, BolusArrivalError
 import qiutil
 from qiutil.logging import logger
-from .. import CONF_DIR
+from ..helpers.constants import CONF_DIR
 from ..interfaces import (Gate, XNATUpload, XNATFind, Fastfit)
 from .workflow_base import WorkflowBase
 from .pipeline_error import PipelineError
 
 MODELING_PREFIX = 'pk_'
 """The modeling XNAT object label prefix."""
+
+MODELING_CONF_FILE = 'modeling.cfg'
+"""The modeling workflow configuration."""
 
 FIXED_R1_0_OUTPUTS = ['r1_series', 'pk_params', 'fxr_k_trans', 'fxr_v_e',
            'fxr_tau_i', 'fxr_chisq', 'fxl_k_trans', 'fxl_v_e',
@@ -31,9 +34,6 @@ FASTFIT_PARAMS_FILE = 'params.csv'
 
 BOLERO_PROFILE_SECTIONS = {'Fastfit', 'R1', 'AIF'}
 """The OHSU bolero modeling configuration sections."""
-
-MODELING_CONF_FILE = 'modeling.cfg'
-"""The modeling workflow configuration."""
 
 
 class ModelingError(Exception):
@@ -883,51 +883,19 @@ def get_fit_params(cfg_file, aif_shift):
     return os.path.join(os.getcwd(), FASTFIT_PARAMS_FILE)
 
 
-def create_profile(cfg_file, resource, sections, dest_file=None):
+def create_profile(cfg_file, resource, sections, **opts):
     """
     Creates the modeling profile file from the
     :const:`MODELING_CONF_FILE`.
 
     :param cfg_file: the modeling configuration file
     :param resource: the XNAT resource containing the time series
-    :param sections: the configuration profile sections
-    :param dest_file: the target profile location
-        (default :const:`MODELING_CONF_FILE` in the current directory)
+    :param sections: the configuration sections to add to the profile
+    :param opts: the additional
+        :meth:`qipipe.helpers.metadata.create_profile` keyword arguments
     :return: the destination file
     """
-    import os
-    import csv
-    from qiutil.ast_config import (read_config, ASTConfig)
-    from qipipe.pipeline.modeling import (CONF_DIR, MODELING_CONF_FILE,
-                                          ModelingError)
-
-    # The config options to exclude in the profile.
-    EXCLUDED_OPTS =  {'plugin_args', 'run_without_submitting'}
-
-    # The input config.
-    cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
-    cfg = read_config(cfg_file)
-
-    # Populate the profile.
-    profile = ASTConfig()
-    # Add the source section.
-    profile.add_section('Source')
-    profile.set('Source', 'resource', resource)
-    # Add the parameter sections.
-    for section in sections:
-        if cfg.has_section(section):
-            # The profile {key, value} dictionary.
-            items = {opt: val for opt, val in cfg.items(section)
-                     if opt not in EXCLUDED_OPTS}
-            if items:
-                profile.add_section(section)
-                for opt, val in items.iteritems():
-                    profile.set(section, opt, val)
-
-    # Save the profile.
-    if not dest_file:
-        dest_file = os.path.join(os.getcwd(), MODELING_CONF_FILE)
-    with open(dest_file, 'w') as f:
-        profile.write(f)
-
-    return dest_file
+    from qipipe.helpers import metadata
+    
+    return metadata.create_profile(cfg_file, resource, sections=[],
+                                   source=dict(resource=resource), **opts)

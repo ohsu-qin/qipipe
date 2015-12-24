@@ -9,11 +9,10 @@ from nose.tools import assert_equal
 from qiutil.ast_config import read_config
 import qixnat
 from qiprofile_rest_client.model.subject import Subject
-from qipipe import CONF_DIR
 from qipipe.pipeline.modeling import (MODELING_CONF_FILE, create_profile,
                                       BOLERO_PROFILE_SECTIONS)
 from qipipe.qiprofile import imaging
-from qipipe.helpers.constants import (SUBJECT_FMT, SESSION_FMT)
+from qipipe.helpers.constants import (CONF_DIR, SUBJECT_FMT, SESSION_FMT)
 from ...helpers.logging import logger
 from ... import (PROJECT, ROOT)
 from ..pipeline.volume_test_base import FIXTURES as STAGED
@@ -111,11 +110,11 @@ class TestImaging(object):
 
             # Make the config profile.
             cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
-            with tempfile.NamedTemporaryFile() as profile_dest:
+            with tempfile.NamedTemporaryFile() as dest_file:
                 create_profile(cfg_file, REGISTRATION, BOLERO_PROFILE_SECTIONS,
-                               dest_file=profile_dest.name)
-                profile_dest.flush()
-                xnat.upload(mdl, profile_dest.name, name=MODELING_CONF_FILE)
+                               dest_file=dest_file.name)
+                dest_file.flush()
+                xnat.upload(mdl, dest_file.name, name=MODELING_CONF_FILE)
 
             # Make the modeling result files.
             for output in OUTPUTS:
