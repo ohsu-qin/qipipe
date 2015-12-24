@@ -30,6 +30,10 @@ helpers
 ------------
 .. automodule:: qipipe.helpers.image
 
+:mod:`metadata`
+------------
+.. automodule:: qipipe.helpers.metadata
+
 :mod:`roi`
 ----------
 .. automodule:: qipipe.helpers.roi
