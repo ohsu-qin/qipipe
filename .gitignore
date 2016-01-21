@@ -12,7 +12,6 @@ wheelhouse
 .loadpath
 .project
 .pypirc
-.tm_properties
 .yardoc
 .*/
 *.pdf
