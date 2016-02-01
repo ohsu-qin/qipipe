@@ -1,7 +1,9 @@
 import os
 import shutil
+from glob import glob
 from nose.tools import (assert_true, assert_is_not_none)
 from qipipe.pipeline import staging
+from qiutil.collections import concat
 import qixnat
 from qipipe.staging.iterator import iter_stage
 from ... import (ROOT, PROJECT, CONF_DIR)
@@ -49,12 +51,15 @@ class TestStagingWorkflow(object):
         dest = os.path.join(RESULTS, 'staged')
         work = os.path.join(RESULTS, 'work')
 
-        # The test subject => directory dictionary.
+        # The test {subject: directory} dictionary.
         sbj_dir_dict = subject_sources(collection, fixture)
         # The test subjects.
-        subjects = sbj_dir_dict.keys()
-        # The test source directories.
-        inputs = sbj_dir_dict.values()
+        subjects = set(sbj_dir_dict.keys())
+        # The test input subject directories.
+        sbj_dirs = sbj_dir_dict.values()
+        # The test input session directories.
+        sess_dir_lists = (glob(d + '/*') for d in sbj_dirs)
+        inputs = concat(*sess_dir_lists)
 
         with qixnat.connect() as xnat:
             # Delete any existing test subjects.

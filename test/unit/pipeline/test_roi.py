@@ -1,4 +1,5 @@
 import os
+from glob import glob
 from nose.tools import (assert_true, assert_is_not_none)
 from nipype.interfaces.dcmstack import MergeNifti
 from qiutil.which import which
@@ -32,10 +33,13 @@ class TestROIWorkflow(VolumeTestBase):
             logger(__name__).debug('Skipping ROI test since bolero_mask_conv'
                                    ' is unavailable.')
             return
-        fixtures = os.path.join(STAGING_FIXTURES, 'breast', 'BreastChemo3')
-        scan_inputs = list(iter_stage(PROJECT, 'Breast', fixtures))
+        fixture = os.path.join(STAGING_FIXTURES, 'breast', 'BreastChemo3')
+        # The test input session directories.
+        sess_dirs = glob(fixture + '/*')
+        # The test scan inputs.
+        inputs = list(iter_stage(PROJECT, 'Breast', *sess_dirs))
         for args in self.stage('Breast'):
-            self._test_workflow(scan_inputs, *args)
+            self._test_workflow(inputs, *args)
 
     def test_sarcoma(self):
         if not which('bolero_mask_conv'):
@@ -47,10 +51,6 @@ class TestROIWorkflow(VolumeTestBase):
         # TODO - Get a combo of volumes and ROIs that work, if not too
         #   unwieldly, otherwise delete the Sarcoma fixture and this test
         #   method.
-        # fixtures = os.path.join(STAGING_FIXTURES, 'sarcoma', 'Subj_1')
-        # scan_inputs = iter_stage(PROJECT, 'Sarcoma', fixtures)
-        # for args in self.stage('Sarcoma'):
-        #     self._test_workflow(scan_inputs, *args)
 
     def _test_workflow(self, scan_inputs, project, subject, session, scan,
                        *images):
