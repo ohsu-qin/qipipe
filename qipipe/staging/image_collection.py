@@ -83,8 +83,21 @@ class Collection(object):
         mask, e.g. for a breast tumor (default False).
         """
 
+        self.scan_types = opts.pop('scan_types', {})
+        """
+        The scan {number: type} dictionary.
+        """
+
         self.patterns = Patterns(**opts)
         """The file and DICOM meta-data patterns."""
+        
+        # The scan pattern key is the scan number.
+        # There must be a scan type for each number.
+        if self.patterns.scan:
+            for scan_number in self.patterns.scan:
+                if not scan_number in self.scan_types:
+                    raise StagingError("The scan number %d is missing a"
+                                       " scan type" % scan_number)
 
         # If a collection with this name has not yet been recorded,
         # then add this canonical instance to the collection extent.
