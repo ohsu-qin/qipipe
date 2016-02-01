@@ -10,7 +10,7 @@ This ``pipeline`` module includes the following workflows:
 
 - :mod:`qipipe.pipeline.mask`: creates a mask to subtract extraneous tissue
   from the input images
-  
+
 - :mod:`qipipe.pipeline.registration`: masks the target tissue and corrects
   motion artifacts
 

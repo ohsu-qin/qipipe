@@ -22,14 +22,14 @@ def create_profile(configuration, sections, dest, **opts):
     arguments. The keyword item overrides a matching input
     configuration item. The resulting profile is written to a
     new file.
-
+    
     :param configuration: the configuration dictionary
     :param sections: the target profile sections
     :param dest: the target profile file location
     :param opts: additional {section: {option: value}} items
     :return: the target file location
     """
-
+    
     # The target profile to populate.
     profile = ASTConfig()
     # MongoDB does not allow dotted dictionary keys.
@@ -52,7 +52,7 @@ def create_profile(configuration, sections, dest, **opts):
                 profile.add_section(prf_section)
                 for opt, val in prf_items.iteritems():
                     profile.set(prf_section, opt, val)
-
+    
     # The keyword arguments override the config file.
     for key, items in opts.iteritems():
         # Topics are capitalized.
@@ -61,7 +61,7 @@ def create_profile(configuration, sections, dest, **opts):
             profile.add_section(section)
         for opt, val in items.iteritems():
             profile.set(section, opt, val)
-
+    
     # Save the profile.
     dest = os.path.abspath(dest)
     dest_dir = os.path.dirname(dest)

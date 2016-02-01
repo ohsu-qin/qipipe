@@ -46,7 +46,7 @@ class TestROI(object):
                 _, fname = os.path.split(path)
                 assert_equal(fname, 'roi.bqf', "The multi-lesion ROI file name"
                                                " is incorrect: %s" % fname)
-
+    
     def test_single_lesion(self):
         single_lesion_visit = os.path.join(FIXTURES, 'Visit2')
         rois = list(iter_roi(self.patterns.glob, self.patterns.regex,

@@ -18,9 +18,9 @@ class Touch(BaseInterface):
     nodes during workflow development.
     """
     input_spec = TouchInputSpec
-
+    
     output_spec = TouchOutputSpec
-
+    
     def _run_interface(self, runtime):
         self._file = os.path.abspath(self.inputs.in_file)
         parent, _ = os.path.split(self._file)
@@ -33,11 +33,11 @@ class Touch(BaseInterface):
             os.utime(self._file, None)
         else:
             open(self._file, 'w').close()
-
+        
         return runtime
-
+    
     def _list_outputs(self):
         outputs = self._outputs().get()
         outputs['out_file'] = self._file
-
+        
         return outputs

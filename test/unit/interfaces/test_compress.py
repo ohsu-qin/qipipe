@@ -14,7 +14,7 @@ RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'compress')
 
 class TestCompress(object):
     """Compress interface unit tests."""
-
+    
     def test_compress(self):
         shutil.rmtree(RESULTS, True)
         compress = Compress(in_file=FIXTURE, dest=RESULTS)
@@ -28,5 +28,5 @@ class TestCompress(object):
 
 if __name__ == "__main__":
     import nose
-
+    
     nose.main(defaultTest=__name__)

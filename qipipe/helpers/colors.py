@@ -22,7 +22,7 @@ def create_lookup_table(ncolors, colormap='jet', out_file=None):
         os.makedirs(out_dir)
     else:
         out_file = colormap + '_colors.txt'
-
+    
     # The LUT reference values.
     values = range(ncolors)
     # The color map.
@@ -33,7 +33,7 @@ def create_lookup_table(ncolors, colormap='jet', out_file=None):
     scalar_map = cm.ScalarMappable(norm=norm, cmap=cmap)
     # The RGBA analog of the values.
     rgbas = scalar_map.to_rgba(values, bytes=True)
-
+    
     # Save the LUT.
     print ("Saving the colormap as %s..." % out_file)
     with open(out_file, 'w') as f:
@@ -54,18 +54,18 @@ def colorize(lut_file, *inputs, **opts):
     """
     Transforms each input voxel value to a color lookup table
     reference.
-
+    
     The input voxel values are uniformly partitioned for the given
     colormap LUT. For example, if the voxel values range from 0.0 to
     3.0, then the a voxel value of 0 transformed to the first LUT color,
     3.0 is transformed to the last LUT color, and the intermediate
     values are transformed to intermediate colors.
-
+    
     The voxel -> reference output file name appends ``_color`` to the
     input file basename and preserves the input file extensions, e.g.
     the input file ``k_trans_map.nii.gz`` is transformed to
     ``k_trans_map_color.nii.gz`` in the output directory.
-
+    
     :param lut_file: the color lookup table file location
     :param inputs: the image files to transform
     :param opts: the following keyword arguments:
@@ -94,7 +94,7 @@ def label_map_basename(location):
     # Split up the input file path.
     _, basename = os.path.split(location)
     base, exts = splitexts(basename)
-
+    
     return base + '_color' + exts
 
 

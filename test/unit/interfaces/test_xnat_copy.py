@@ -38,12 +38,12 @@ ANALYSIS = 'pk'
 
 class TestXNATCopy(object):
     """The XNATCopy interface unit tests."""
-
+    
     def tearDown(self):
         with qixnat.connect() as xnat:
             xnat.delete(PROJECT, SUBJECT)
         shutil.rmtree(RESULTS, True)
-
+    
     def test_scan(self):
         logger(__name__).debug("Testing the XNATCopy interface on %s %s"
                                " scan %d..." % (SUBJECT, SESSION, SCAN))
@@ -52,7 +52,7 @@ class TestXNATCopy(object):
                         scan=SCAN, resource='NIFTI', modality='MR',
                         in_files=FIXTURE)
         result = copy.run()
-    
+        
         # Verify the result.
         xnat_files = set(result.outputs.xnat_files)
         with qixnat.connect() as xnat:
@@ -76,7 +76,7 @@ class TestXNATCopy(object):
         copy = XNATCopy(project=PROJECT, subject=SUBJECT, session=SESSION,
                         resource=REGISTRATION, modality='MR', in_files=FIXTURE)
         result = copy.run()
-    
+        
         # Verify the result.
         with qixnat.connect() as xnat:
             exp_obj = xnat.find_one(PROJECT, SUBJECT, SESSION)
@@ -102,7 +102,7 @@ class TestXNATCopy(object):
                         reconstruction=RECON, resource='NIFTI', modality='MR',
                         inout='out', in_files=FIXTURE)
         result = copy.run()
-    
+        
         # Verify the result.
         with qixnat.connect() as xnat:
             recon_obj = xnat.find_one(PROJECT, SUBJECT, SESSION,
@@ -124,7 +124,7 @@ class TestXNATCopy(object):
                         assessor=ANALYSIS, resource='params', modality='MR',
                         inout='out', in_files=FIXTURE)
         result = copy.run()
-
+        
         # Verify the result.
         with qixnat.connect() as xnat:
             exp_obj = xnat.find_one(PROJECT, SUBJECT, SESSION)
@@ -143,5 +143,5 @@ class TestXNATCopy(object):
 
 if __name__ == "__main__":
     import nose
-
+    
     nose.main(defaultTest=__name__)

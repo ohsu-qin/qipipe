@@ -108,7 +108,7 @@ class PathologyWorksheet(Worksheet):
 
 class PathologyUpdate(object):
     """The pathology update abstract class."""
-
+    
     def __init__(self, subject, tumor_type, grade_class, pathology_class):
         """
         :param subject: the ``Subject`` Mongo Engine database object
@@ -122,24 +122,24 @@ class PathologyUpdate(object):
         self._tumor_type = tumor_type
         data_model_dict = dict(grade=grade_class, pathology=pathology_class)
         self._data_models = bunchify(data_model_dict)
-
+    
     def update(self, rows):
         """
         Updates the subject data object from the given pathology XLS
         rows.
-
-        :param rows: the input pathology :meth:`read` rows list 
+        
+        :param rows: the input pathology :meth:`read` rows list
         """
         # Update the encounter rows.
         for enc_rows in self._encounter_rows(rows):
             self._update_encounter(enc_rows)
-
+    
     def _encounter_rows(self, rows):
         """
         Partition the rows by encounter.
         
         :param rows: the input rows
-        :yield: each encounter's lesion rows 
+        :yield: each encounter's lesion rows
         """
         enc_rows = []
         for row in rows:
@@ -149,7 +149,7 @@ class PathologyUpdate(object):
             enc_rows.append(row)
         if enc_rows:
             yield enc_rows
-
+    
     def _update_encounter(self, rows):
         """
         :param rows: the input pathology :meth:`read` rows for the
@@ -169,7 +169,7 @@ class PathologyUpdate(object):
         enc = self._encounter_for(enc_type, master_row.date)
         # Update the encounter.
         self.update_encounter(enc, rows)
-
+    
     def update_encounter(self, encounter, rows):
         """
         Update the encounter object from the given input row.
@@ -194,7 +194,7 @@ class PathologyUpdate(object):
                   for content in path_content if path_content]
         if tumors:
             encounter.pathology = PathologyReport(tumors=tumors)
-
+    
     def pathology_content(self, row):
         """
         Collects the TumorPathology content from the given input row.
@@ -234,9 +234,9 @@ class PathologyUpdate(object):
                           if row.get(attr)}
         if extent_content:
             path_content['extent'] = TumorExtent(**extent_content)
-
+        
         return path_content
-
+    
     def _encounter_for(self, klass, date):
         """
         :param klass: the encounter class
@@ -254,16 +254,16 @@ class PathologyUpdate(object):
             target = klass(date=date)
             # Add the new encounter to the subject encounters list.
             self._subject.add_encounter(target)
-
+        
         # Return the target encounter.
         return target
-
+    
     def encounter_type(self, row):
         """
         Infers the encounter type from the given row. This base
         implementation returns the parsed row *intervention_type*
         value.
-
+        
         :param row: the input row
         :return: the REST data model Encounter subclass
         """

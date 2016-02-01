@@ -49,7 +49,7 @@ ROW_FIXTURE = [
 
 class TestSarcomaPathology(object):
     """qiprofile pathology pipeline update tests."""
-
+    
     def test_read(self):
         wb = xls.load_workbook(SARCOMA_FIXTURE)
         row_iter = sarcoma_pathology.read(wb, subject_number=SUBJECT)
@@ -64,7 +64,7 @@ class TestSarcomaPathology(object):
         assert_equal(actual_attrs, expected_attrs,
                      "The row attributes are incorrect -\nexpected:\n%s"
                      "\nactual:\n%s" % (expected_attrs, actual_attrs))
-
+    
     def test_update(self):
         # A test subject database object.
         subject = Subject(project=PROJECT, collection=COLLECTION,
@@ -90,7 +90,7 @@ class TestSarcomaPathology(object):
         tumor_cnt = len(biopsy.pathology.tumors)
         assert_equal(tumor_cnt, 2, "Pathology tumor count is incorrect: %d" %
                                    tumor_cnt)
-
+        
         # Validate the tumor location.
         row = ROW_FIXTURE[0]
         pathology = biopsy.pathology.tumors[0]
@@ -102,7 +102,7 @@ class TestSarcomaPathology(object):
             actual = getattr(location, attr)
             assert_equal(actual, expected, "The tumor %s is incorrect: %s" %
                                            (attr, actual))
-
+        
         # Validate the tumor extent.
         for i, row in enumerate(ROW_FIXTURE):
             pathology = biopsy.pathology.tumors[i]
@@ -114,7 +114,7 @@ class TestSarcomaPathology(object):
                 actual = getattr(extent, attr)
                 assert_equal(actual, expected, "The tumor %s is incorrect: %d" %
                                                (attr, actual))
-
+        
         # Validate the TNM.
         row = ROW_FIXTURE[0]
         pathology = biopsy.pathology.tumors[0]
@@ -127,7 +127,7 @@ class TestSarcomaPathology(object):
             actual = getattr(tnm, attr)
             assert_equal(actual, expected, "TNM %s is incorrect: %s" %
                                            (attr, actual))
-
+        
         # Validate the TNM grade.
         assert_is_not_none(tnm.grade, "The TNM grade is missing")
         assert_is_instance(tnm.grade, FNCLCCGrade,
@@ -139,7 +139,7 @@ class TestSarcomaPathology(object):
             actual = getattr(tnm.grade, attr)
             assert_equal(actual, expected, "TNM grade %s is incorrect: %s" %
                                            (attr, actual))
-
+        
         # Validate the full object.
         subject.validate()
 

@@ -13,7 +13,7 @@ def subject_sources(collection, source):
     the :attr:`qipipe.staging.image_collection.Collection.patterns`
     :attr:`qipipe.staging.image_collection.Patterns.subject` regular
     expression for the given collection.
-
+    
     :param collection: the image collection name
     :param source: the input parent directory
     :return: the subject {*name*: *directory*} dictionary
@@ -33,5 +33,5 @@ def subject_sources(collection, source):
             logger(__name__).debug(
                 "Discovered XNAT test subject %s subdirectory: %s" %
                 (subject, d))
-
+    
     return sbj_dir_dict

@@ -7,7 +7,7 @@ from nipype.interfaces.base import (BaseInterfaceInputSpec, TraitedSpec,
 class UncompressInputSpec(BaseInterfaceInputSpec):
     in_file = File(exists=True, mandatory=True,
                    desc='The file to uncompress')
-
+    
     dest = Directory(
         desc='The optional directory to write the uncompressed file (default current directory)')
 
@@ -18,23 +18,23 @@ class UncompressOutputSpec(TraitedSpec):
 
 class Uncompress(BaseInterface):
     input_spec = UncompressInputSpec
-
+    
     output_spec = UncompressOutputSpec
-
+    
     def _run_interface(self, runtime):
         self.out_file = self._uncompress(
             self.inputs.in_file, dest=self.inputs.dest)
         return runtime
-
+    
     def _list_outputs(self):
         outputs = self._outputs().get()
         outputs['out_file'] = self.out_file
         return outputs
-
+    
     def _uncompress(self, in_file, dest=None):
         """
         Uncompresses the given file.
-    
+        
         :param in_file: the path of the file to uncompress
         @parma dest: the destination (default is the working directory)
         :return: the compressed file path

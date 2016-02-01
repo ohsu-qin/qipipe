@@ -13,7 +13,7 @@ RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'lookup')
 
 class TestLookup(object):
     """Lookup interface unit tests."""
-
+    
     def test_lookup(self):
         lookup = Lookup(key='a', dictionary=dict(a=1, b=2))
         result = lookup.run()
@@ -23,5 +23,5 @@ class TestLookup(object):
 
 if __name__ == "__main__":
     import nose
-
+    
     nose.main(defaultTest=__name__)

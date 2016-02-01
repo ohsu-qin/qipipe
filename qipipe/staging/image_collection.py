@@ -4,28 +4,28 @@ from .staging_error import StagingError
 
 class ROIPatterns(object):
     """The ROI file name matching patterns."""
-
+    
     def __init__(self, glob, regex):
         self.glob = glob
         """The ROI file glob pattern."""
         
         self.regex = regex
         """The ROI file name match regular expression."""
-
+    
     def __repr__(self):
         return str(dict(glob=self.glob, regex=self.regex))
 
 
 class ScanPatterns(object):
     """The scan file name matching patterns."""
-
+    
     def __init__(self, dicom, roi=None):
         self.dicom = dicom
         """The DICOM file match *glob* and *regex* patterns."""
         
         self.roi = roi
         """The :class:`ROIPatterns` object."""
-
+    
     def __repr__(self):
         return str(dict(dicom=self.dicom, roi=self.roi))
 
@@ -42,13 +42,13 @@ class Patterns(object):
         """
         self.subject = subject
         """The subject directory match pattern."""
-
+        
         self.session = session
         """The subject directory match pattern."""
-
+        
         self.scan = scan
         """The {scan number: :class:`ScanPatterns`} dictionary."""
-
+        
         self.volume = volume
         """The DICOM tag which identifies a scan volume."""
 
@@ -63,10 +63,10 @@ def with_name(name):
 
 class Collection(object):
     """The image collection."""
-
+    
     instances = {}
     """The collection {name: object} dictionary."""
-
+    
     def __init__(self, name, **opts):
         """
         :param name: `self.name`
@@ -76,18 +76,18 @@ class Collection(object):
         """
         self.name = name.capitalize()
         """The capitalized collection name."""
-
+        
         self.crop_posterior = opts.pop('crop_posterior', False)
         """
         A flag indicating whether to crop the image posterior in the
         mask, e.g. for a breast tumor (default False).
         """
-
+        
         self.scan_types = opts.pop('scan_types', {})
         """
         The scan {number: type} dictionary.
         """
-
+        
         self.patterns = Patterns(**opts)
         """The file and DICOM meta-data patterns."""
         
@@ -98,7 +98,7 @@ class Collection(object):
                 if not scan_number in self.scan_types:
                     raise StagingError("The scan number %d is missing a"
                                        " scan type" % scan_number)
-
+        
         # If a collection with this name has not yet been recorded,
         # then add this canonical instance to the collection extent.
         key = name.lower()

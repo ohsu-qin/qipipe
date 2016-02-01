@@ -21,18 +21,18 @@ def load_workbook(filename):
 
 
 class Worksheet(object):
-
+    
     PAREN_SUFFIX_REGEX = re.compile('\s*\(.*\)$')
     """Matches a parenthesis suffix."""
-
+    
     NONWORD_REGEX = re.compile('\W+')
     """Matches a non-word string."""
-
+    
     """
     Excel worksheet facade. The worksheet rows are required to consist of
     a column heading row followed by the data rows.
     """
-
+    
     def __init__(self, workbook, sheet, *classes, **opts):
         """
         :param workbook: the openpyxl workbook
@@ -47,7 +47,7 @@ class Worksheet(object):
         """
         self.worksheet = workbook[sheet]
         """The wrapped openpyxl worksheet."""
-
+        
         # The default parsers.
         parsers = parse.default_parsers(*classes)
         # Every worksheet has a subject number field.
@@ -58,7 +58,7 @@ class Worksheet(object):
             parsers.update(parsers_opt)
         self._parsers = parsers
         """The {attribute: value parser function} dictionary,"""
-
+        
         # The first row is the headings.
         hdg_row = next(self.worksheet.iter_rows())
         # The column headings stop when the first blank cell is reached.
@@ -74,14 +74,14 @@ class Worksheet(object):
         self.attributes = [col_attrs.get(hdg, self._attributize(hdg))
                            for hdg in headings]
         """The row attributes in column order."""
-
+        
         # There must be a parser for each attribute.
         unparsed = [attr for attr in self.attributes
                     if not attr in self._parsers]
         if unparsed:
             raise XLSError("%s columns are missing a parser: %s" %
                            (sheet, unparsed))
-
+    
     def read(self, **condition):
         """
         Returns a row generator, where each row is a {attribute: value}
@@ -90,18 +90,18 @@ class Worksheet(object):
         1. the row is non-empty, i.e. has at least one cell value, and
         2. if this reader has a filter, then the row satisfies the
            filter condition
-
+        
         :param condition: the {attribute: value} row filter condition
         :return: the row {attribute: value} bunch generator
         """
         reader = Reader(self.worksheet, self.attributes, **condition)
-
+        
         return (self._parse_row(row) for row in reader.read())
-
+    
     def _parse_row(self, row):
         """
         Extracts and parses the row values.
-
+        
         :param row: the XLS row to parse
         :return: the row {attribute: value} bunch
         """
@@ -119,37 +119,37 @@ class Worksheet(object):
             if cell.value == None or cell.value == '':
                 val = None
             else:
-                val = parser(cell.value)            
+                val = parser(cell.value)
             # Add the attribute value entry.
             attr_val_dict[attr] = val
-
+        
         # Return the {attribute: value} bunch.
         return bunchify(attr_val_dict)
-
+    
     def _attributize(self, s):
         """
         Converts the given string to an underscore attribute.
         A trailing parenthesized word is not included.
-
+        
         Examples::
-
+            
             >> reader._attributize('Start Date')
             start_date
             >> reader._attributize('Amount (mg/kg)')
             amount
-
+        
         :param s: the string to convert
         :return: the underscore attribute name
         """
         stripped = Worksheet.PAREN_SUFFIX_REGEX.sub('', s)
         word = Worksheet.NONWORD_REGEX.sub('_', stripped)
-
+        
         return inflection.underscore(word)
 
 
 class Reader(object):
     """Reads an Excel worksheet."""
-
+    
     def __init__(self, worksheet, attributes, **condition):
         """
         :param worksheet: the :attr:`worksheet` object
@@ -170,7 +170,7 @@ class Reader(object):
         # {column index: value} dictonary.
         self._filter = {attributes.index(attr): val
                         for attr, val in condition.iteritems()}
-
+    
     def read(self):
         """
         Returns a row generator, where each row is a {attribute: value}
@@ -179,27 +179,27 @@ class Reader(object):
         1. the row is non-empty, i.e. has at least one cell value, and
         2. if this reader has a filter, then the row satisfies the
            filter condition
-
+        
         :return: the filtered ``openpyxl`` row iterator
         """
         # Start reading after the header row.
         row_iter = self.worksheet.iter_rows(row_offset=1)
         return (row for row in row_iter if self._include_row(row))
-
+    
     def _include_row(self, row):
         """
         :param row: the row to check
         :return: whether to include the row in the iteration
         """
         return self._is_row_nonempty(row) and self._filter_row(row)
-
+    
     def _is_row_nonempty(self, row):
         """
         :param row: the row to check
         :return: whether the row has at least one cell value
         """
         return any(row[i].value != None for i in self._attr_range)
-
+    
     def _filter_row(self, row):
         """
         :param row: the row to check

@@ -25,7 +25,7 @@ class DemographicsError(Exception):
 def read(workbook, **condition):
     """
     Reads the demographics XLS row which matches the given subject.
-
+    
     :param condition: the row selection filter
     :return: the Demographics sheet
         :meth:`qipipe.qiprofile.xls.Worksheet.read`
@@ -47,7 +47,7 @@ def update(subject, rows):
     There can be no more than one Demographics update input row for
     the given subject. The *rows* parameter is an iterable in order to
     conform to other sheet facade modules.
-
+    
     :param subject: the ``Subject`` Mongo Engine database object
         to update
     :param rows: the input Demographics :meth:`read` rows

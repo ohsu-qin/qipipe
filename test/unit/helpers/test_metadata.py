@@ -14,14 +14,14 @@ class TestMetadata(object):
     
     def setup(self):
         shutil.rmtree(RESULTS, True)
-
+    
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
     
     def test_create_profile(self):
         in_file = os.path.join(CONF_DIR, REG_CONF_FILE)
         in_cfg = dict(read_config(in_file))
-        dest = os.path.join(RESULTS, REG_CONF_FILE) 
+        dest = os.path.join(RESULTS, REG_CONF_FILE)
         self.profile = metadata.create_profile(in_cfg, FNIRT_CONF_SECTIONS,
                                                dest=dest)
         assert_true(os.path.exists(dest),
@@ -43,5 +43,5 @@ class TestMetadata(object):
 
 if __name__ == "__main__":
     import nose
-
+    
     nose.main(defaultTest=__name__)

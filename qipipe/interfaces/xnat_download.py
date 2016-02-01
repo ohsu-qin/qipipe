@@ -9,27 +9,27 @@ CONTAINER_OPTS = ['container_type', 'scan', 'reconstruction', 'assessor']
 
 class XNATDownloadInputSpec(BaseInterfaceInputSpec):
     project = traits.Str(mandatory=True, desc='The XNAT project id')
-
+    
     subject = traits.Str(mandatory=True, desc='The XNAT subject name')
-
+    
     session = traits.Str(mandatory=True, desc='The XNAT session name')
-
+    
     scan = traits.Either(traits.Str, traits.Int,
                          desc='The XNAT scan label or number')
-
+    
     reconstruction = traits.Str(desc='The XNAT reconstruction name')
-
+    
     assessor = traits.Str(desc='The XNAT assessor name')
-
+    
     resource = traits.Str(desc='The XNAT resource name')
-
+    
     container_type = traits.Enum('scan', 'reconstruction', 'assessor',
                                  desc='The XNAT resource container type')
-
+    
     inout = traits.Str(desc='The XNAT resource in/out designator')
-
+    
     file = traits.Str(desc="The XNAT file name (default all resource files)")
-
+    
     dest = Directory(desc='The download location')
 
 
@@ -66,11 +66,11 @@ class XNATDownload(BaseInterface):
     ...     session='Session02', resource='reg_H3pIz4',
     ...     dest='data').run()
     """
-
+    
     input_spec = XNATDownloadInputSpec
-
+    
     output_spec = XNATDownloadOutputSpec
-
+    
     def _run_interface(self, runtime):
         opts = {}
         for ctr_type in CONTAINER_OPTS:
@@ -88,13 +88,13 @@ class XNATDownload(BaseInterface):
             self._out_files = xnat.download(self.inputs.project,
                                             self.inputs.subject,
                                             self.inputs.session, **opts)
-
+        
         return runtime
-
+    
     def _list_outputs(self):
         outputs = self._outputs().get()
         outputs['out_files'] = self._out_files
         if len(self._out_files) == 1:
             outputs['out_file'] = self._out_files[0]
-
+        
         return outputs

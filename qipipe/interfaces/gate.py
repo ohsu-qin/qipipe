@@ -11,15 +11,15 @@ class Gate(IOBase):
     IdentityInterface cannot be used to constrain execution order, as in
     the example below. Gate is an IdentityInterface look-alike that
     preserves the node connection in the execution graph.
-
+    
     Example::
-
+        
         from qipipe.interfaces import Gate
         gate = Node(Gate(fields'['a', 'b']))
         workflow.connect(upstream1, 'a', gate, 'a')
         workflow.connect(upstream2, 'b', gate, 'b')
         workflow.connect(gate, 'a', downstream, 'a')
-
+    
     In this example, the ``gate`` node starts after both ``upstream1`` and
     ``upstream2`` finish. Consequently, the ``downstream`` node starts only
     after ``upstream2`` finishes. This execution precedence constraint does
@@ -31,7 +31,7 @@ class Gate(IOBase):
     """
     input_spec = IdentityInterface.input_spec
     output_spec = IdentityInterface.output_spec
-
+    
     def __init__(self, fields=None, mandatory_inputs=True, **inputs):
         super(Gate, self).__init__(**inputs)
         if fields is None or not fields:
@@ -47,7 +47,7 @@ class Gate(IOBase):
         # even it the trait is not in the add_traits argument. The work-around is to reset
         # the values after adding the traits.
         self.inputs.set(**inputs)
-
+    
     def _add_output_traits(self, base):
         undefined_traits = {}
         for key in self._fields:
@@ -55,7 +55,7 @@ class Gate(IOBase):
             undefined_traits[key] = Undefined
         base.trait_set(trait_change_notify=False, **undefined_traits)
         return base
-
+    
     def _list_outputs(self):
         #manual mandatory inputs check
         if self._fields and self._mandatory_inputs:
@@ -66,7 +66,7 @@ class Gate(IOBase):
                     You can turn off mandatory inputs checking by passing mandatory_inputs = False to the constructor." % \
                     (self.__class__.__name__, key)
                     raise InterfaceError(msg)
-
+        
         outputs = self._outputs().get()
         for key in self._fields:
             val = getattr(self.inputs, key)

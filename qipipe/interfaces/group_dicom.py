@@ -20,13 +20,13 @@ class GroupDicomOutputSpec(TraitedSpec):
 
 class GroupDicom(BaseInterface):
     input_spec = GroupDicomInputSpec
-
+    
     output_spec = GroupDicomOutputSpec
-
+    
     def _run_interface(self, runtime):
         self.grp_dict = hierarchy.group_by(self.inputs.tag, *self.inputs.in_files)
         return runtime
-
+    
     def _list_outputs(self):
         outputs = self._outputs().get()
         outputs['groups'] = self.grp_dict

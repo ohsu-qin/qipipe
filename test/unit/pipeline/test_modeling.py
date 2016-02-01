@@ -28,7 +28,7 @@ class TestModelingWorkflow(VolumeTestBase):
     Note:: a precondition for running this test is that the
         ``test/fixtures/pipeline/modeling`` directory contains the series
         stack test data in collection/subject/session format, e.g.::
-    
+            
             breast
                 Breast003
                     Session01
@@ -41,29 +41,29 @@ class TestModelingWorkflow(VolumeTestBase):
                         volume011.nii.gz
                         volume013.nii.gz
                          ...
-    
+        
         The fixture is not included in the Git source repository due to
         storage constraints.
     
     Note:: this test takes several hours to run on the AIRC cluster.
     """
-
+    
     def __init__(self):
         super(TestModelingWorkflow, self).__init__(logger(__name__), RESULTS)
-
+    
     def test_breast(self):
         for args in self.stage('Breast'):
             self._test_workflow('mock', *args)
-
+    
     def test_sarcoma(self):
         for args in self.stage('Sarcoma'):
             self._test_workflow('mock', *args)
-
+    
     def _test_workflow(self, technique, project, subject, session, scan,
                        *images):
         """
         Executes :meth:`qipipe.pipeline.modeling.run` on the given input.
-
+        
         :param technique: the built-in modeling technique
         :param project: the input project name
         :param subject: the input subject name
@@ -81,7 +81,7 @@ class TestModelingWorkflow(VolumeTestBase):
         # below when Nipype version >= 0.10 is supported by qipipe.
         merge = MergeNifti(in_files=list(images), out_format=SCAN_TS_RSC)
         time_series = merge.run().outputs.out_file
-
+        
         # Work around the Nipype bug described above.
         _, ts_fname = os.path.split(time_series)
         ts_dest = os.path.join(RESULTS, ts_fname)
@@ -89,7 +89,7 @@ class TestModelingWorkflow(VolumeTestBase):
         shutil.move(time_series, ts_dest)
         time_series = ts_dest
         # End of work-around.
-
+        
         logger(__name__).debug("Testing the %s modeling workflow on the %s %s"
                                " time series %s..." %
                                (technique, subject, session, time_series))
@@ -108,7 +108,7 @@ class TestModelingWorkflow(VolumeTestBase):
                 self._validate_profile(xnat, rsc)
             finally:
                 xnat.delete(project, subject)
-
+    
     def _validate_profile(self, xnat, resource):
         # The modeling profile XNAT file object.
         file_obj = resource.file(modeling.MODELING_CONF_FILE)
@@ -133,5 +133,5 @@ class TestModelingWorkflow(VolumeTestBase):
 
 if __name__ == "__main__":
     import nose
-
+    
     nose.main(defaultTest=__name__)

@@ -22,18 +22,18 @@ class TestUpdate(object):
     """
     Database update tests.
     """
-
+    
     def setup(self):
         self._connection = connect(db=DATABASE)
         self._connection.drop_database(DATABASE)
-
+    
     def tearDown(self):
       self._connection.drop_database(DATABASE)
-
+    
     def test_breast(self):
         # TODO - make a simpler mash-up of the clinical and imaging test cases.
         pass
-
+    
     def test_sarcoma(self):
         # TODO - make a simpler mash-up of the clinical and imaging test cases.
         pass

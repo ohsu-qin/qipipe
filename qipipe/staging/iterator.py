@@ -19,7 +19,7 @@ class ScanInput(object):
     def __init__(self, collection, subject, session, scan, iterators):
         self.collection = collection
         """The image collection name."""
-
+        
         self.subject = subject
         """The scan subject name."""
         
@@ -31,7 +31,7 @@ class ScanInput(object):
         
         self.iterators = iterators
         """The :class:`ScanIterators` object."""
-
+    
     def __repr__(self):
         return (self.__class__.__name__ +
                 str(dict(collection=self.collection, subject=self.subject,
@@ -42,7 +42,7 @@ class ScanIterators(object):
     """
     Aggregate with attributes :attr:`location`, :meth:`dicom` and :meth:`roi`.
     """
-
+    
     def __init__(self, pattern, dicom_gen, roi_gen=None):
         """
         :param pattern: the scan file pattern
@@ -71,15 +71,15 @@ class ScanIterators(object):
     def roi(self):
         """The :meth:`qipipe.staging.roi.iter_roi` iterator."""
         if self._roi == None:
-            if self._roi_gen: 
+            if self._roi_gen:
                 self._roi = list(self._roi_gen)
                 logger(__name__).debug("Found %d ROI files." %
                                        len(self._roi))
             else:
                 self._roi = []
-
+        
         return self._roi
-
+    
     def __repr__(self):
         return (self.__class__.__name__ +
                 str(dict(dicom=self.dicom, roi=self.roi)))
@@ -91,7 +91,7 @@ def iter_stage(project, collection, *inputs, **opts):
     This method is a staging generator which yields a tuple consisting
     of the subject, session, scan number and :class:`ScanIterators`
     object, e.g.::
-
+        
         >> scan_input = next(iter_stage('QIN', 'Sarcoma', '/path/to/subject'))
         >> print scan_input.subject
         Sarcoma001
@@ -103,25 +103,25 @@ def iter_stage(project, collection, *inputs, **opts):
         {1: ['/path/to/t1/image1.dcm', ...], ...}
         >> print scan_input.iterators.roi
         [(1, 19, '/path/to/roi19.bqf'), ...]
-
+    
     The input directories conform to the
     :attr:`qipipe.staging.image_collection.Collection.patterns`
     :attr:`qipipe.staging.image_collection.Patterns.subject`
     regular expression.
-
+    
     Each iteration *(subject, session, scan, scan_iters)* tuple is
     formed as follows:
-
+    
     - The *subject* is the XNAT subject name formatted by
       :data:`SUBJECT_FMT`.
-
+    
     - The *session* is the XNAT experiment name formatted by
       :data:`SESSION_FMT`.
-
+    
     - The *scan* is the XNAT scan number.
-
+    
     - The *scan_iters* is the :class:`ScanIterators` object.
-
+    
     :param project: the XNAT project name
     :param collection: the
         :attr:`qipipe.staging.image_collection.Collection.name`
@@ -141,7 +141,7 @@ def iter_stage(project, collection, *inputs, **opts):
     # Group the new DICOM files into a
     # {subject: {session: {scan: scan iterators}} dictionary.
     stg_dict = _collect_visits(project, collection, *inputs, **opts)
-
+    
     # Generate the (subject, session, :class:ScanIterators) tuples.
     _logger = logger(__name__)
     for sbj, sess_dict in stg_dict.iteritems():
@@ -162,7 +162,7 @@ def _collect_visits(project, collection, *inputs, **opts):
     """
     Collects the sessions in the given input directories. The session
     DICOM files are grouped by volume.
-
+    
     :param project: the XNAT project name
     :param collection: the TCIA image collection name
     :param inputs: the source DICOM subject directories
@@ -172,7 +172,7 @@ def _collect_visits(project, collection, *inputs, **opts):
     """
     # The visit (subject, session, scan dictionary) tuple generator.
     visits = VisitIterator(project, collection, *inputs, **opts)
-
+    
     # The dictionary to build.
     visit_dict = defaultdict(dict)
     # Add each tuple as a dictionary entry.
@@ -184,7 +184,7 @@ def _collect_visits(project, collection, *inputs, **opts):
 
 class VisitIterator(object):
     """Scan DICOM generator class ."""
-
+    
     def __init__(self, project, collection, *session_dirs, **opts):
         """
         :param project: the XNAT project name
@@ -198,18 +198,18 @@ class VisitIterator(object):
         
         self.collection = staging.image_collection.with_name(collection)
         """The :meth:`iter_stage` collection name parameter."""
-
+        
         self.session_dirs = session_dirs
         """The input directories."""
-
+        
         self.scan = opts.get('scan')
         """The :meth:`iter_stage` scan number option."""
-
+        
         self.skip_existing = opts.get('skip_existing', True)
         """The :meth:`iter_stage` *skip_existing* flag option."""
         
         self.logger = logger(__name__)
-
+    
     def __iter__(self):
         """
         Returns the next (subject, session, scan_dict) tuple for the
@@ -235,14 +235,14 @@ class VisitIterator(object):
         else:
             # Detect all scans.
             scan_pats = all_scan_pats
-
+        
         # Filter existing scans if the skip_existing flag and scan
         # number are set.
         filter_scan = self.skip_existing and self.scan
         # Skip all scans of an existiong session if the skip_existing
         # flag is set and the scan number is not set.
         skip_existing_session = self.skip_existing and not self.scan
-
+        
         # Iterate over the visits.
         with qixnat.connect():
             # Generate the new (subject, session, {scan: DICOM files})
@@ -276,7 +276,7 @@ class VisitIterator(object):
                 else:
                     self.logger.debug("No %s %s scans were discovered"
                                       " in %s" %  (sbj, sess, sess_dir))
-
+    
     def _scan_iterators(self, patterns, input_dir):
         # The DICOM glob pattern.
         dcm_pat = os.path.join(input_dir, patterns.dicom)
@@ -289,10 +289,10 @@ class VisitIterator(object):
         if roi_pats:
             roi_gen = iter_roi(roi_pats.glob, roi_pats.regex, input_dir)
         else:
-            roi_gen = None 
+            roi_gen = None
         
         return ScanIterators(pattern=dcm_pat, dicom_gen=dcm_gen, roi_gen=roi_gen)
-
+    
     def _match_subject_number(self, path):
         """
         :param path: the directory path
@@ -305,9 +305,9 @@ class VisitIterator(object):
             raise StagingError(
                 "The directory path %s does not match the subject pattern %s" %
                 (path, self.collection.patterns.subject.pattern))
-
+        
         return int(match.group(1))
-
+    
     def _match_session_number(self, path):
         """
         :param path: the directory path
@@ -320,7 +320,7 @@ class VisitIterator(object):
             raise StagingError(
                 "The directory path %s does not match the session pattern %s" %
                 (path, self.collection.patterns.session.pattern))
-
+        
         return int(match.group(1))
     
     def _is_new_session(self, subject, session):
@@ -330,7 +330,7 @@ class VisitIterator(object):
             logger(__name__).debug("Skipping %s %s since it has already been"
                                    " loaded to XNAT." % (subject, session))
         return not sess
-
+    
     def _is_new_scan(self, subject, session, scan):
         with qixnat.connect() as xnat:
             scan_obj = xnat.find_one(self.project, subject, session, scan=scan)
@@ -345,12 +345,12 @@ def _scan_dicom_generator(pattern, tag):
     """
     :param pattern: the DICOM file glob pattern
     :param tag: the DICOM volume tag
-    :yield: the {volume: [DICOM files]} dictionary 
+    :yield: the {volume: [DICOM files]} dictionary
     """
     # The visit directory DICOM file iterator.
     dicom_files = glob.iglob(pattern)
     
     # Group the DICOM files by volume.
     yield qidicom.hierarchy.group_by(tag, *dicom_files)
-
+        
         

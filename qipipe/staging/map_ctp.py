@@ -67,7 +67,7 @@ class CTPPatientIdMap(dict):
     input method to build the map and a :meth:`write` output method to
     print the CTP map properties.
     """
-
+    
     SOURCE_PAT = re.compile("""
         ([a-zA-Z]+)     # The study name
         _?              # An optional underscore delimiter
@@ -77,30 +77,30 @@ class CTPPatientIdMap(dict):
     The input Patient ID pattern is the study name followed by a number,
     e.g. ``Breast10``.
     """
-
+    
     CTP_FMT = '%s-%04d'
     """
     The CTP Patient ID format with arguments (CTP collection name, input
     Patient ID number).
     """
-
+    
     MAP_FMT = 'ptid/%s=%s'
     """
     The ID lookup entry format with arguments (input Paitent ID, CTP
     patient id).
     """
-
+    
     MSG_FMT = 'Mapped the QIN patient id %s to the CTP subject id %s.'
     """
     The log message format with arguments (input Paitent ID, CTP patient id).
     """
-
+    
     def add_subjects(self, collection, *patient_ids):
         """
         Adds the input => CTP Patient ID association for the given input
         DICOM patient ids.
-
-        :param collection: the image collection name 
+        
+        :param collection: the image collection name
         :param patient_ids: the DICOM Patient IDs to map
         :raise StagingError: if an input patient id format is not the study
             followed by the patient number
@@ -116,7 +116,7 @@ class CTPPatientIdMap(dict):
             self[in_pt_id] = ctp_id
             logger(__name__).debug(
                 CTPPatientIdMap.MSG_FMT % (in_pt_id, ctp_id))
-
+    
     def write(self, dest=sys.stdout):
         """
         Writes this id map in the standard CTP format.

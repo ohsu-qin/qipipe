@@ -14,7 +14,7 @@ from .pathology import (PathologyError, PathologyWorksheet, PathologyUpdate)
 COL_ATTRS = {'Tumor Location': 'location'}
 """
 The following special column: attribute associations:
-* The ``Tumor Location`` column corresponds to the pathology ``location`` 
+* The ``Tumor Location`` column corresponds to the pathology ``location``
   attribute
 """
 
@@ -29,7 +29,7 @@ def read(workbook, **condition):
     """
     This is a convenience method that wraps :class:`SarcomaPathologyWorksheet`
     :meth:`qipipe.qiprofile.xls.Worksheet.read`.
-
+    
     :param workbook: the read-only ``openpyxl`` workbook object
     :param condition: the :meth:`qipipe.qiprofile.xls.Worksheet.read`
         filter condition
@@ -46,10 +46,10 @@ def update(subject, rows):
     """
     Updates the given subject data object from the Sarcoma pathology XLS
     rows.
-
+    
     :param subject: the ``Subject`` Mongo Engine database object
         to update
-    :param rows: the input pathology :meth:`read` rows list 
+    :param rows: the input pathology :meth:`read` rows list
     """
     updater = SarcomaPathologyUpdate(subject)
     updater.update(rows)
@@ -92,7 +92,7 @@ class SarcomaPathologyUpdate(PathologyUpdate):
             subject, tumor_type='Sarcoma', pathology_class=SarcomaPathology,
             grade_class=FNCLCCGrade
         )
-
+    
     def pathology_content(self, row):
         """
         Collects the pathology object from the given input row.
@@ -111,5 +111,5 @@ class SarcomaPathologyUpdate(PathologyUpdate):
             necrosis_pct = content['necrosis_percent']
             tnm = content['tnm']
             tnm.necrosis_score = necrosis_percent_as_score(necrosis_pct)
-
+        
         return content

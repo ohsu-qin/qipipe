@@ -29,7 +29,7 @@ def version(package):
        (.+)          # The version string capture group
        ['\"]         # Trailing quote
     """, re.VERBOSE)
-
+    
     with open(os.path.join(package, '__init__.py')) as f:
        match = REGEXP.search(f.read())
        if not match:
@@ -47,7 +47,7 @@ def dependency_links():
     Returns the non-PyPI ``qipipe`` requirements in
     ``constraints.txt`` which match the :const:`VCS_RQMT_PAT`
     pattern.
-
+    
     :return: the non-PyPI package specifications
     """
     with open('constraints.txt') as f:

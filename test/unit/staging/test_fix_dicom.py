@@ -22,14 +22,14 @@ SUBJECT = 'Sarcoma003'
 
 class TestFixDicom(object):
     """Fix DICOM header unit tests."""
-
+    
     def setUp(self):
         shutil.rmtree(RESULTS, True)
         os.makedirs(RESULTS)
-
+    
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
-
+    
     def test_breast(self):
         fixed = fix_dicom_headers(COLLECTION, SUBJECT, FIXTURE, dest=RESULTS)
         # Verify the result.
@@ -38,7 +38,7 @@ class TestFixDicom(object):
                          "Incorrect Body Part: %s" % ds.BodyPartExamined)
             assert_equal(ds.PatientID, SUBJECT, "Incorrect Patient ID: %s" %
                                                 ds.PatientID)
-
+    
     def test_sarcoma(self):
         fixed = fix_dicom_headers(COLLECTION, SUBJECT, FIXTURE, dest=RESULTS)
         # Verify the result.

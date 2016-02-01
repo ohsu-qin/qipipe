@@ -19,14 +19,14 @@ class TestClinical(object):
     These test cases spot check object cardinality. Detail content test
     cases are performed in the sheet test classes, e.g. ``TestDemographics``.
     """
-
+    
     def setup(self):
         self._connection = connect(db=DATABASE)
         self._connection.drop_database(DATABASE)
-
+    
     def tearDown(self):
       self._connection.drop_database(DATABASE)
-
+    
     def test_breast(self):
         for n in [1, 2]:
             # Create the database object.
@@ -68,11 +68,11 @@ class TestClinical(object):
         encs = subject.encounters
         assert_equal(len(encs), 1, "The saved Breast Subject 2 encounters count"
                                    " is incorrect: %d" % len(encs))
-
+    
     def test_sarcoma(self):
         for n in [1, 2]:
             # Create the database object.
-            subject = Subject.objects.create(project=PROJECT, collection='Sarcoma', 
+            subject = Subject.objects.create(project=PROJECT, collection='Sarcoma',
                                              number=n)
             # Populate the subject from the spreadsheet.
             clinical.update(subject, SARCOMA_FIXTURE)

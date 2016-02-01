@@ -14,7 +14,7 @@ FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
 
 class TestStagingIterator(object):
     """iter_stage unit tests."""
-
+    
     def test_breast(self):
         discovered = self._test_collection('Breast')
         # The first visit has a T1, T2 and DW scan with numbers
@@ -50,7 +50,7 @@ class TestStagingIterator(object):
                          " incorrect: %d" %
                          (scan_input.subject, scan_input.session,
                           scan_input.scan, len(dcm_files)))
-
+            
             # Validate the ROI inputs.
             rois = scan_input.iterators.roi
             # Only T1 has ROIs.
@@ -84,14 +84,14 @@ class TestStagingIterator(object):
                          " incorrect: %s" %
                          (scan_input.subject, scan_input.session,
                           scan_input.scan, slices))
-
+    
     def test_sarcoma(self):
         self._test_collection('Sarcoma')
-
+    
     def _test_collection(self, collection):
         """
         Iterate on the given collection fixture subdirectory.
-
+        
         :param collection: the image collection name
         """
         fixture = os.path.join(FIXTURES, collection.lower())
@@ -109,7 +109,7 @@ class TestStagingIterator(object):
         with qixnat.connect() as xnat:
             for sbj in subjects:
                 xnat.delete(PROJECT, sbj)
-
+        
         # Iterate over the scans.
         discovered = list(iter_stage(PROJECT, collection, *inputs))
         assert_not_equal(len(discovered), 0, 'No scan images were discovered')
@@ -130,7 +130,7 @@ class TestStagingIterator(object):
             assert_is_not_none(dicom,
                                "%s %s scan %d input DICOM iterator is missing" %
                                (scan_input.subject, scan_input.session, scan_input.scan))
-
+        
         # Return the iterated tuples for further testing.
         return discovered
 

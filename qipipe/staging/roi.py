@@ -32,7 +32,7 @@ class LesionROI(object):
         
         self.location = location
         """The absolute BOLERO ROI .bqf file path."""
-
+    
     def __repr__(self):
         return (self.__class__.__name__ +
                 str(dict(lesion=self.lesion, slice=self.slice,
@@ -44,11 +44,11 @@ def iter_roi(glob, regex, input_dir):
     Iterates over the the OHSU ROI ``.bqf`` mask files in the given
     input directory. This method is a :class:`LesionROI` generator,
     e.g.::
-
+        
         >>> # Find .bqf files anywhere under /path/to/session/processing.
         >>> next(iter_roi('processing/*', '.*/\.bqf', '/path/to/session'))
         {lesion: 1, slice: 12, path: '/path/to/session/processing/rois/roi.bqf'}
-
+    
     :param glob: the glob match pattern
     :;param regex: the file name match regular expression
     :param input_dir: the source session directory to search

@@ -8,13 +8,13 @@ from nipype.interfaces.base import (traits, BaseInterfaceInputSpec,
 class PreviewInputSpec(BaseInterfaceInputSpec):
     in_file = traits.File(exists=True, mandatory=True,
                           desc='The input 3D NIfTI file')
-
+    
     dest = traits.Directory(desc='The destination directory path'
                                  ' (default current directory)')
     
     crop = traits.List(traits.List(traits.Int),
                        desc='The x and y [min, max] bounds')
-
+    
     out_fname = traits.File(desc='The destination file name'
                                  ' (default is the input file name)')
 
@@ -25,28 +25,28 @@ class PreviewOutputSpec(TraitedSpec):
 
 class Preview(BaseInterface):
     """Preview creates a JPEG image from an input DICOM image."""
-
+    
     input_spec = PreviewInputSpec
-
+    
     output_spec = PreviewOutputSpec
-
+    
     def _run_interface(self, runtime):
         self._out_file = self._convert(
             self.inputs.in_file, dest=self.inputs.dest,
             out_fname=self.inputs.out_fname, crop=self.inputs.crop
         )
         return runtime
-
+    
     def _list_outputs(self):
         outputs = self._outputs().get()
         outputs['out_file'] = self._out_file
-
+        
         return outputs
-
+    
     def _convert(self, in_file, dest=None, out_fname=None, crop=None):
         """
         Copies the given file.
-    
+        
         :param in_file: the path of the file or directory to copy
         :param dest: the destination directory path
             (default is the current directory)
@@ -61,7 +61,7 @@ class Preview(BaseInterface):
                 os.makedirs(dest)
         else:
             dest = os.getcwd()
-
+        
         # The default output file name is the input file name
         # with a .jpg extension.
         if not out_fname:

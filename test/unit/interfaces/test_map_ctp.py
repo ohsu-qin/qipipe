@@ -13,10 +13,10 @@ RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'map_ctp')
 
 class TestMapCTP(object):
     """Map CTP unit tests."""
-
+    
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
-
+    
     def test_map_ctp(self):
         logger(__name__).debug("Testing Map CTP on %s..." % SUBJECTS)
         map_ctp = MapCTP(collection=COLLECTION, subjects=SUBJECTS,
@@ -39,5 +39,5 @@ class TestMapCTP(object):
 
 if __name__ == "__main__":
     import nose
-
+    
     nose.main(defaultTest=__name__)

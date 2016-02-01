@@ -12,7 +12,7 @@ RESULTS = os.path.join(ROOT, 'results', 'interfaces', 'unpack')
 
 class TestUnpack(object):
     """Unpack interface unit tests."""
-
+    
     def test_unpack(self):
         unpack = Unpack(input_name='list', output_names=['a', 'b'])
         unpack.inputs.list = [1, 2]
@@ -25,5 +25,5 @@ class TestUnpack(object):
 
 if __name__ == "__main__":
     import nose
-
+    
     nose.main(defaultTest=__name__)

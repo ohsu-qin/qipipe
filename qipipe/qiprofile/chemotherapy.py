@@ -21,25 +21,25 @@ def read(workbook, **condition):
     """
     This is a convenience method that wraps :class:`ChemotherapyWorksheet`
     :meth:`qipipe.qiprofile.xls.Worksheet.read`.
-
-    :param workbook: the read-only ``openpyxl`` workbook object 
+    
+    :param workbook: the read-only ``openpyxl`` workbook object
     :param condition: the :meth:`qipipe.qiprofile.xls.Worksheet.read`
         filter condition
     :return: the :meth:`qipipe.qiprofile.xls.Worksheet.read` rows
     """
     reader = DosageWorksheet(workbook, SHEET, Drug,
                              column_attributes=COL_ATTRS)
-
+    
     return reader.read(**condition)
 
 
 def update(subject, rows):
     """
     Updates the given subject data object from the dosage XLS rows.
-
+    
     :param subject: the ``Subject`` Mongo Engine database object
         to update
-    :param rows: the input chemotherapy :meth:`read` rows list 
+    :param rows: the input chemotherapy :meth:`read` rows list
     
     """
     updater = DosageUpdate(subject, Drug)

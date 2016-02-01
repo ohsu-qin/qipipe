@@ -1,7 +1,7 @@
 # emacs: -*- mode: python; py-indent-offset: 4; indent-tabs-mode: nil -*-
 # vi: set ft = python sts = 4 ts = 4 sw = 4 et:
 """ANTS Affine Initializer interface
-
+   
    Change directory to provide relative paths for doctests
    >>> import os
    >>> filepath = os.path.dirname( os.path.realpath( __file__ ) )
@@ -23,20 +23,20 @@ class AffineInitializerInputSpec(ANTSCommandInputSpec):
     """
     :Note: The antsAffineInitializer command line options are positional
         rather than keyword, e.g.::
-
+            
             antsAffineInitializer 3 fixed.nii.gz moving.nii.gz initial_xform.mat \
             10 0.3
-
+        
         rather than::
-
+            
             antsAffineInitializer 3 fixed.nii.gz moving.nii.gz initial_xform.mat \
             --search_factor 10 --radian_fraction 0.3
-
+        
         Therefore, each optional input field requires the prior input field,
         e.g. *radian_fraction* requires a *search_factor* input. Reasonable
         starting option values are shown in the :class:`AffineInitializer`
         example.
-
+        
         In particular, note that since an image mask is the last positional
         argument, if the *image_mask* input option is set, then all other
         options must be set as well.
@@ -79,7 +79,7 @@ class AffineInitializer(ANTSCommand):
     """
     Examples
     --------
-
+    
     >>> initalizer = AffineInitializer()
     >>> initalizer.inputs.dimension = 3
     >>> initalizer.inputs.fixed_image = 'NIFTI/volume003.nii.gz'
@@ -96,8 +96,8 @@ class AffineInitializer(ANTSCommand):
     _cmd = 'antsAffineInitializer'
     input_spec = AffineInitializerInputSpec
     output_spec = AffineInitializerOutputSpec
-
-
+    
+    
     def _format_arg(self, opt, spec, val):
         if opt == 'radian_fraction':
             # Suppress extraneous trailing zeros.
@@ -105,7 +105,7 @@ class AffineInitializer(ANTSCommand):
             return ('%f' % val).rstrip('0').rstrip('.')
         else:
             return super(AffineInitializer, self)._format_arg(opt, spec, val)
-
+    
     def _list_outputs(self):
         outputs = self._outputs().get()
         out_file = os.path.abspath(self.inputs.output_affine_transform)

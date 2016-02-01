@@ -6,7 +6,7 @@ from ... import ROOT
 
 FIXTURE = os.path.join(ROOT, 'fixtures', 'staged', 'breast', 'Breast003',
                        'Session01', 'scans', '1', 'resources', 'roi',
-                       'roi.nii.gz') 
+                       'roi.nii.gz')
 
 
 class TestROI(object):
@@ -39,7 +39,7 @@ class TestROI(object):
         assert_equal(z, 56, "ROI maximal slice z value is incorrect: %d" % z)
         assert_equal(extent.area, 1933, "ROI maximal slice volume is"
                                        " incorrect: %f" % extent.area)
-
+        
         # Work around the following bug:
         # * extent.show() triggers a matplotlib plot function FutureWarning.
         #   The work-around is to filter this warning in a context.
@@ -53,5 +53,5 @@ class TestROI(object):
 
 if __name__ == "__main__":
     import nose
-
+    
     nose.main(defaultTest=__name__)

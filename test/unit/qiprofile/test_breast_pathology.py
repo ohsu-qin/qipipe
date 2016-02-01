@@ -41,7 +41,7 @@ ROW_FIXTURE = Bunch(
 
 class TestBreastPathology(object):
     """qiprofile pathology pipeline update tests."""
-
+    
     def test_read(self):
         wb = xls.load_workbook(BREAST_FIXTURE)
         row_iter = breast_pathology.read(wb, subject_number=SUBJECT)
@@ -57,7 +57,7 @@ class TestBreastPathology(object):
         assert_equal(actual_attrs, expected_attrs,
                      "The row attributes are incorrect -\nexpected:\n%s"
                      "\nactual:\n%s" % (expected_attrs, actual_attrs))
-
+    
     def test_update(self):
         # A test subject database object.
         subject = Subject(project=PROJECT, collection=COLLECTION,
@@ -86,13 +86,13 @@ class TestBreastPathology(object):
                            "The surgery is missing the surgery type")
         assert_equal(surgery.surgery_type, row.surgery_type,
                      "The surgery type is incorrect: %s" % surgery.surgery_type)
-
+        
         # There is one lesion.
         tumor_cnt = len(surgery.pathology.tumors)
         assert_equal(tumor_cnt, 1, "Pathology tumor count is incorrect: %d" %
                                    tumor_cnt)
         pathology = surgery.pathology.tumors[0]
-
+        
         # Validate the tumor location.
         location = pathology.location
         assert_is_not_none(location, "The pathology is missing a tumor location")
@@ -102,7 +102,7 @@ class TestBreastPathology(object):
             actual = getattr(location, attr)
             assert_equal(actual, expected, "The tumor %s is incorrect: %s" %
                                            (attr, actual))
-
+        
         # Validate the tumor extent.
         extent = pathology.extent
         assert_is_not_none(extent, "The pathology is missing a tumor extent")
@@ -123,7 +123,7 @@ class TestBreastPathology(object):
             actual = getattr(tnm, attr)
             assert_equal(actual, expected, "The TNM %s is incorrect: %s" %
                                            (attr, actual))
-
+        
         # Validate the TNM grade.
         assert_is_not_none(tnm.grade, "The TNM grade is missing")
         assert_is_instance(tnm.grade, ModifiedBloomRichardsonGrade,
@@ -137,7 +137,7 @@ class TestBreastPathology(object):
             actual = getattr(tnm.grade, attr)
             assert_equal(actual, expected, "The TNM grade %s is incorrect: %s" %
                                            (attr, actual))
-
+        
         # Validate the RCB.
         rcb = pathology.rcb
         assert_is_not_none(rcb, "The RCB is missing")

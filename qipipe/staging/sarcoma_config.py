@@ -8,7 +8,7 @@ CFG_FILE = os.path.abspath(
 """
 The Sarcoma Tumor Location configuration file. This file contains
 properties that associat the subject name to the location, e.g.::
-
+    
     Sarcoma004 = SHOULDER
 
 The value is the SNOMED anatomy term.
@@ -40,5 +40,5 @@ def sarcoma_config():
     if not hasattr(sarcoma_config, 'instance'):
         sarcoma_config.instance = Config()
         sarcoma_config.instance.read(CFG_FILE)
-
+    
     return sarcoma_config.instance

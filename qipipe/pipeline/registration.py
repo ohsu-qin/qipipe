@@ -323,7 +323,7 @@ class RegistrationWorkflow(WorkflowBase):
         cr_prf.inputs.configuration = self.configuration
         cr_prf.inputs.sections = self.profile_sections
         cr_prf.inputs.dest = REG_CONF_FILE
-
+        
         # Merge the profile and registration result into one list.
         concat_uploads = pe.Node(Merge(2), name='concat_uploads')
         exec_wf.connect(cr_prf, 'out_file', concat_uploads, 'in1')
@@ -547,7 +547,7 @@ def create_profile(technique, configuration, sections, dest):
     :param sections: the profile sections
     :param dest: the output profile file path
     """
-
+    
     from qipipe.helpers import metadata
     
     # The correct technique names.

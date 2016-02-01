@@ -8,10 +8,10 @@ from nipype.interfaces.base import (traits, BaseInterfaceInputSpec,
 class CopyInputSpec(BaseInterfaceInputSpec):
     in_file = traits.Either(File, Directory, exists=True, mandatory=True,
                             desc='The file or directory to copy')
-
+    
     dest = Directory(desc='The destination directory path'
                           ' (default current directory)')
-
+    
     out_fname = traits.Either(File, Directory,
                               desc='The destination file name'
                                    ' (default is the input file name)')
@@ -25,24 +25,24 @@ class CopyOutputSpec(TraitedSpec):
 class Copy(BaseInterface):
     """The Copy interface copies a file to a destination directory."""
     input_spec = CopyInputSpec
-
+    
     output_spec = CopyOutputSpec
-
+    
     def _run_interface(self, runtime):
         self._out_file = self._copy(self.inputs.in_file, self.inputs.dest,
                                     self.inputs.out_fname)
         return runtime
-
+    
     def _list_outputs(self):
         outputs = self._outputs().get()
         outputs['out_file'] = self._out_file
-
+        
         return outputs
-
+    
     def _copy(self, in_file, dest=None, out_fname=None):
         """
         Copies the given file.
-    
+        
         :param in_file: the path of the file or directory to copy
         :param dest: the destination directory path
             (default is the current directory)
@@ -60,7 +60,7 @@ class Copy(BaseInterface):
             # Remove the out file name directory.
             _, out_fname = os.path.split(out_fname)
         else:
-            # The default out file name is the input file name. 
+            # The default out file name is the input file name.
             _, out_fname = os.path.split(in_file)
         out_file = os.path.join(dest, out_fname)
         if os.path.isdir(in_file):

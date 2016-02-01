@@ -32,7 +32,7 @@ def discretize(in_file, out_file, nvalues, start=0, threshold=None,
     an output value less than (*threshold* * *nvalues*) - *start* is
     transformed to the output start value. For example, if the input
     values range from 0.0 to 3.0, then::
-    
+        
         discretize(in_file, out_file, 1001, threshold=0.5)
     
     transforms input values as follows:
@@ -86,10 +86,10 @@ def discretize(in_file, out_file, nvalues, start=0, threshold=None,
         for z in yz:
             vmin = min(vmin, *z)
             vmax = max(vmax, *z)
-
+    
     log.debug("Computed value minimum %f." % vmin)
     log.debug("Computed value maximum %f." % vmax)
-
+    
     # The maximum offset is one less than the number of values.
     max_offset = nvalues - 1
     # The length of the value range.

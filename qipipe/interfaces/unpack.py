@@ -6,9 +6,9 @@ from .interface_error import InterfaceError
 class Unpack(IOBase):
     """
     The Unpack Interface converts a list input field to one output field per list item.
-
+    
     Example:
-
+    
     >>> from qipipe.interfaces.unpack import Unpack
     >>> unpack = Unpack(input_name='list', output_names=['a', 'b'], list=[1, 2])
     >>> result = unpack.run()
@@ -17,11 +17,11 @@ class Unpack(IOBase):
     >>> result.outputs.b
     2
     """
-
+    
     input_spec = DynamicTraitedSpec
-
+    
     output_spec = DynamicTraitedSpec
-
+    
     def __init__(self, input_name, output_names, mandatory_inputs=True, **inputs):
         """
         :param input_name: the input list field name
@@ -43,10 +43,10 @@ class Unpack(IOBase):
         # initialization, even it the trait is not in the add_traits argument.
         # The work-around is to reset the values after adding the traits.
         self.inputs.set(**inputs)
-
+    
     def _add_output_traits(self, base):
         return add_traits(base, self.output_names)
-
+    
     def _run_interface(self, runtime):
         # Manual mandatory inputs check.
         if self._mandatory_inputs:
@@ -58,14 +58,14 @@ class Unpack(IOBase):
                         " inputs checking  by passing mandatory_inputs = False"
                         " to the constructor." % (self.__class__.__name__, key))
                     raise InterfaceError(msg)
-
+        
         # The input list.
         in_list = getattr(self.inputs, self.input_names[0])
         # The output name => value dictionary result.
         self._result = {self.output_names[i]: value for i, value in enumerate(in_list)}
-
+        
         return runtime
-
+    
     def _list_outputs(self):
         outputs = self._outputs().get()
         for key, value in self._result.iteritems():

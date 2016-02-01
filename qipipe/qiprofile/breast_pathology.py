@@ -18,7 +18,7 @@ def read(workbook, **condition):
     """
     This is a convenience method that wraps :class:`BreastPathologyWorksheet`
     :meth:`qipipe.qiprofile.xls.Worksheet.read`.
-
+    
     :param workbook: the read-only ``openpyxl`` workbook object
     :param condition: the :meth:`qipipe.qiprofile.xls.Worksheet.read`
         filter condition
@@ -29,7 +29,7 @@ def read(workbook, **condition):
                                 ResidualCancerBurden,
                                 BreastGeneticExpression,
                                 parsers=_receptor_parsers())
-
+    
     return reader.read(**condition)
 
 
@@ -37,10 +37,10 @@ def update(subject, rows):
     """
     Updates the given subject data object from the Breast pathology XLS
     rows.
-
+    
     :param subject: the ``Subject`` Mongo Engine database object
         to update
-    :param rows: the input pathology :meth:`read` rows list 
+    :param rows: the input pathology :meth:`read` rows list
     """
     updater = BreastPathologyUpdate(subject)
     updater.update(rows)
@@ -48,7 +48,7 @@ def update(subject, rows):
 
 class BreastPathologyUpdate(PathologyUpdate):
     """The Breast pathology update facade."""
-
+    
     def __init__(self, subject):
         """
         :param subject: the ``Subject`` Mongo Engine database object
@@ -58,19 +58,19 @@ class BreastPathologyUpdate(PathologyUpdate):
             subject, tumor_type='Breast', pathology_class=BreastPathology,
             grade_class=ModifiedBloomRichardsonGrade
         )
-
+    
     def encounter_type(self, row):
         """
         Overrides :meth:`qipipe.qiprofile.Pathology.encounter_type` to
         specialize the *intervention_type* to ``BreastSurgery``.
-
+        
         :param row: the input row
         :return: the REST data model Encounter subclass
         """
         base_type = super(BreastPathologyUpdate, self).encounter_type(row)
-
+        
         return BreastSurgery if base_type == Surgery else base_type
-
+    
     def pathology_content(self, row):
         """
         Collects the pathology object from the given input row.
@@ -133,7 +133,7 @@ def _hormone_receptor_content(hormone, row):
         val = row[row_attr]
         if val != None:
             content[field] = val
-
+    
     return content
 
 
@@ -162,7 +162,7 @@ def _receptor_parsers():
     field for the ``HormoneReceptorStatus`` with name ``estrogen``.
     The parsers for the hormone receptor input fields are thus given by
     the respective default ``HormoneReceptorStatus`` parsers.
-
+    
     :return: the parser {attribute: function} dictionary
     """
     parsers = {}
@@ -170,6 +170,6 @@ def _receptor_parsers():
     for hormone in HORMONES:
         for field, parser in def_receptor_parsers.iteritems():
             attr = '_'.join([hormone, field])
-            parsers[attr] = parser  
-
+            parsers[attr] = parser
+    
     return parsers

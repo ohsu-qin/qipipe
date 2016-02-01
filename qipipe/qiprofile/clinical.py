@@ -14,7 +14,7 @@ def update(subject, filename):
     """
     Updates the subject clinical database content from the given workbook
     file.
-
+    
     :param subject: the target qiprofile Subject to update
     :param filename: the input file location
     """

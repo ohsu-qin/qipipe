@@ -91,7 +91,7 @@ def parse_list_string(value):
     >> from qipipe.qiprofile.parse import parse_list_string
     >> parse_list_string('White, Asian')
     ['White', 'Asian']
-
+    
     :param value: the input value
     :return: the value converted to a list
     """
@@ -109,9 +109,9 @@ def parse_boolean(value):
     * Otherwise, if the input is a string which matches
         :const:`TRUE_REGEX`, then return True
     * Otherwise, if the input is a string which matches
-        :const:`FALSE_REGEX`, then return False 
+        :const:`FALSE_REGEX`, then return False
     * Any other value is an error.
-
+    
     :param value: the input value
     :return: the value as a boolean
     :raise ParseError: if the value cannot be converted
@@ -146,7 +146,7 @@ def default_parsers(*classes):
     parsers = {}
     for klass in classes:
         parsers.update(_default_parsers(klass))
-
+    
     return parsers
 
 
@@ -171,7 +171,7 @@ def _default_parser(field):
     # Compose CV look-up with type casting, allowing for
     # the possibility that one or both might be missing.
     parsers = [p for p in [cv_parser, type_parser] if p]
-
+    
     return functions.compose(*parsers) if parsers else None
 
 
@@ -222,7 +222,7 @@ def _controlled_value_for(value, field):
     """
     Returns the controlled value which matches the given input value.
     The match is case-insensitive for strings.
-
+    
     :param value: the input value
     :param field: the data model field object
     :return the matching controlled value
@@ -237,7 +237,7 @@ def _controlled_value_for(value, field):
         raise ParseError("The input %s value %s does not match one of"
                         " the supported field choices %s" %
                         (field, value, field.choices))
-
+    
     # Return the controlled value specified by the choice.
     return _choice_controlled_value(choice)
 

@@ -53,13 +53,13 @@ class DosageUpdate(object):
     def update(self, rows):
         """
         Updates the subject data object from the given dosage XLS rows.
-
+        
         :param rows: the input dosage
-            :meth:`qipipe.qiprofile.xls.Worksheet.read` rows list 
+            :meth:`qipipe.qiprofile.xls.Worksheet.read` rows list
         """
         for row in rows:
             self._update_for(row)
-
+    
     def _update_for(self, row):
         """
         :param row: the input dosage
@@ -69,7 +69,7 @@ class DosageUpdate(object):
         for attr, val in self._defaults.iteritems():
             if getattr(row, attr) == None:
                 setattr(row, attr, val)
-
+        
         # The treatment object for the input treatment type.
         trt = self._treatment_for(row.treatment_type)
         # Extend the treatment span, if necessary.
@@ -79,7 +79,7 @@ class DosageUpdate(object):
         end_date = row.start_date + delta
         if not trt.end_date or trt.end_date < end_date:
             trt.end_date = end_date
-
+        
         # If there is no amount, then we can only store the
         # treatment without dosages.
         if not row.amount:
@@ -91,7 +91,7 @@ class DosageUpdate(object):
         # Update the target dosage database object.
         for attr in attrs:
             setattr(dosage, attr, row[attr])
-
+    
     def _treatment_for(self, treatment_type):
         """
         :param treatment_type: the treatment type, e.g. ``adjuvant``
@@ -104,16 +104,16 @@ class DosageUpdate(object):
         if not target:
             target = Treatment(treatment_type=treatment_type)
             self._subject.treatments.append(target)
-
+        
         # Return the target treatment.
         return target
-
+    
     def _dosage_for(self, treatment, row):
         """
         :param treatment: the target treatment
         :param row: the input row
         :return: the dosage database object which matches the start
-            date and agent attribute, or a new dosage database 
+            date and agent attribute, or a new dosage database
             object if there is no match
         :raise DosageError: if the key does not include the *start_date*
         """
@@ -141,13 +141,13 @@ class DosageUpdate(object):
             target = Dosage(agent=agent, start_date=row.start_date)
             # Add the new dosage.
             treatment.dosages.insert(index, target)
-
+        
         return target
-
+    
     def _is_dosage_match(self, dosage, row):
         return (dosage.start_date == row.start_date
                 and self._is_agent_match(dosage.agent, row))
-
+    
     def _is_agent_match(self, agent, row):
         return all(getattr(agent, attr) == getattr(row, attr)
                    for attr in agent.__class__._fields

@@ -92,7 +92,7 @@ BREAST_ROI_PAT = 'processing/R10_0.[456]*/slice*/*.bqf'
 """
 The Breast ROI glob filter. The ``.bqf`` ROI files are in the
 following session subdirectory:
-
+    
     processing/<R10 directory>/slice<slice index>/
 """
 
@@ -102,7 +102,7 @@ BREAST_ROI_REGEX = re.compile("""
      (_L                        # The optional lesion modifier
       (?P<lesion>\d+)           # The lesion number
      )?                         # End of the lesion modifier
-     /                          # End of the R10 subdirectory 
+     /                          # End of the R10 subdirectory
     slice                       # The slice subdirectory
      (?P<slice_sequence_number>\d+)       # The slice index
      /                          # End of the slice subdirectory
@@ -118,7 +118,7 @@ SARCOMA_ROI_PAT = 'Breast processing results/multi_slice/slice*/*.bqf'
 """
 The Sarcoma ROI glob filter. The ``.bqf`` ROI files are in the
 session subdirectory:
-
+    
     results/<ROI directory>/slice<slice index>/
 """
 
@@ -134,12 +134,12 @@ The Sarcoma ROI .bqf ROI file match pattern.
 
 :Note: The Sarcoma ROI directories are inconsistently named, with several
     alternatives and duplicates.
-
+    
     TODO - clarify which of the Sarcoma ROI naming variations should be used.
 
 :Note: There are no apparent lesion number indicators in the Sarcoma ROI
     input.
-
+    
     TODO - confirm that there is no Sarcoma lesion indicator.
 """
 

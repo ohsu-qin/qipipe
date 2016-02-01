@@ -18,7 +18,7 @@ SUBJECT = 1
 
 class TestDemographics(object):
     """qiprofile demographics pipeline update tests."""
-
+    
     def test_read(self):
         wb = xls.load_workbook(BREAST_FIXTURE)
         row_iter = demographics.read(wb, subject_number=SUBJECT)
@@ -38,7 +38,7 @@ class TestDemographics(object):
         assert_is_instance(row.races, list,
                            "Demographics row races type is incorrect: %s" %
                            row.races.__class__)
-
+    
     def test_update(self):
         # A test subject database object.
         subject = Subject(project=PROJECT, collection=COLLECTION,

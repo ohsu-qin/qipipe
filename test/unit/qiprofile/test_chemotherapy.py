@@ -16,7 +16,7 @@ COLLECTION = 'Breast'
 
 class TestChemotherapy(object):
     """qiprofile chemotherapy pipeline update tests."""
-
+    
     def test_read(self):
         wb = xls.load_workbook(BREAST_FIXTURE)
         row_iter = chemotherapy.read(wb, subject_number=SUBJECT)
@@ -31,7 +31,7 @@ class TestChemotherapy(object):
                                      (i + 1, attr))
                 assert_is_not_none(row[attr], "Chemotherapy row %d attribute value is"
                                               " missing: %s" % (i + 1, attr))
-
+    
     def test_update(self):
         # A test subject database object.
         subject = Subject(project=PROJECT, collection=COLLECTION,
@@ -66,7 +66,7 @@ class TestChemotherapy(object):
             self._validate_dosage(trt, dosage, trt_rows[i])
         # Validate the full object.
         subject.validate()
-
+    
     def _validate_dosage(self, treatment, dosage, row):
         agent = dosage.agent
         assert_is_not_none(dosage.agent, "The dosage agent is missing")

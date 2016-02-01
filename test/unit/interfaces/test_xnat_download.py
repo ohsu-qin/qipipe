@@ -31,12 +31,12 @@ RESOURCE = 'NIFTI'
 
 class TestXNATDownload(object):
     """The  XNAT download interface unit tests."""
-
+    
     def setUp(self):
         with qixnat.connect() as xnat:
             xnat.delete(PROJECT, SUBJECT)
         shutil.rmtree(RESULTS, True)
-
+        
         with qixnat.connect() as xnat:
             # Make the XNAT scan resource object.
             rsc = xnat.find_or_create(PROJECT, SUBJECT, SESSION, scan=SCAN,
@@ -45,12 +45,12 @@ class TestXNATDownload(object):
             xnat.upload(rsc, FIXTURE)
         logger(__name__).debug("Uploaded the test %s %s scan %d file %s." %
                                (SUBJECT, SESSION, SCAN, FIXTURE))
-
+    
     def tearDown(self):
         with qixnat.connect() as xnat:
             xnat.delete(PROJECT, SUBJECT)
         shutil.rmtree(RESULTS, True)
-
+    
     def test_download_scan(self):
         logger(__name__).debug("Testing the XNATDownload interface on "
                                "%s %s scan %d..." % (SUBJECT, SESSION, SCAN))
@@ -59,7 +59,7 @@ class TestXNATDownload(object):
                                 session=SESSION, scan=SCAN, resource=RESOURCE,
                                 dest=RESULTS)
         result = download.run()
-
+        
         # Verify the result.
         dl_file = result.outputs.out_file
         assert_is_not_none(dl_file, "The %s %s scan %s download result out_file"
@@ -74,5 +74,5 @@ class TestXNATDownload(object):
 
 if __name__ == "__main__":
     import nose
-
+    
     nose.main(defaultTest=__name__)

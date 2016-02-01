@@ -29,13 +29,13 @@ class TestQIPipeline(object):
     Note:: this test takes app. four hours to run serially without
     modeling.
     """
-
+    
     def setUp(self):
         shutil.rmtree(RESULTS, True)
-
+    
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
-
+    
     def test_breast(self):
         data = os.getenv('QIPIPE_DATA')
         if data:
@@ -57,7 +57,7 @@ class TestQIPipeline(object):
             logger(__name__).info('Skipping the pipeline unit Breast'
                                   ' test, since the QIPIPE_DATA environment'
                                   ' variable is not set.')
-
+    
     def test_sarcoma(self):
         data = os.getenv('QIPIPE_DATA')
         if data:
@@ -78,7 +78,7 @@ class TestQIPipeline(object):
             logger(__name__).info('Skipping the pipeline unit Sarcoma'
                                   ' test, since the QIPIPE_DATA environment'
                                   ' variable is not set.')
-
+    
     def _test_collection(self, collection, fixture):
         """
         Run the pipeline on the given collection and verify that scans are
@@ -89,24 +89,24 @@ class TestQIPipeline(object):
             first visit data
         """
         logger(__name__).debug("Testing the pipeline on %s..." % fixture)
-
+        
         # The staging destination and work area.
         dest = os.path.join(RESULTS, 'data')
         base_dir = os.path.join(RESULTS, 'work')
-
+        
         # The pipeline options.
         opts = dict(base_dir=base_dir, config_dir=CONF_DIR, dest=dest,
                     project=PROJECT, collection=collection,
                     registration_technique='mock',
                     modeling_technique='mock')
-
+        
         # The {test subject: input directory} dictionary.
         sbj_dir_dict = subject_sources(collection, fixture)
         # The test subjects.
         subjects = sbj_dir_dict.keys()
         # The test subject input directories.
         sources = sbj_dir_dict.values()
-
+        
         with qixnat.connect() as xnat:
             # Delete any existing test subjects.
             for sbj in subjects:
@@ -126,7 +126,7 @@ class TestQIPipeline(object):
                         continue
                     # The XNAT registration resource name.
                     rsc = results['registration']
-                    assert_is_not_none(rsc, 
+                    assert_is_not_none(rsc,
                                        "The %s %s result does not have a"
                                        " registration resource" %
                                        (sbj, sess))
@@ -142,7 +142,7 @@ class TestQIPipeline(object):
                         assert_true(mdl_obj.exists(),
                                     "The %s %s modeling resource %s was not"
                                     " created in XNAT" % (sbj, sess, rsc))
-
+            
             # Delete the test subjects.
             for sbj in subjects:
                 xnat.delete(PROJECT, sbj)
@@ -150,5 +150,5 @@ class TestQIPipeline(object):
 
 if __name__ == "__main__":
     import nose
-
+    
     nose.main(defaultTest=__name__)

@@ -19,18 +19,18 @@ class TestMaskWorkflow(VolumeTestBase):
     This test exercises the mask workflow on three volumes of one visit in each
     of the Breast and Sarcoma studies.
     """
-
+    
     def __init__(self):
         super(TestMaskWorkflow, self).__init__(logger(__name__), RESULTS)
-
+    
     def test_breast(self):
         for args in self.stage('Breast'):
             self._test_workflow(*args)
-
+    
     def test_sarcoma(self):
         for args in self.stage('Sarcoma'):
             self._test_workflow(*args)
-
+    
     def _test_workflow(self, project, subject, session, scan, *images):
         """
         Executes :meth:`qipipe.pipeline.mask.run` on the input scans.
@@ -52,7 +52,7 @@ class TestMaskWorkflow(VolumeTestBase):
         # Run the workflow.
         with qixnat.connect() as xnat:
             xnat.delete(project, subject)
-            result = mask.run(project, subject, session, scan, time_series, 
+            result = mask.run(project, subject, session, scan, time_series,
                               base_dir=self.base_dir, config_dir=CONF_DIR)
             # Find the mask resource.
             rsc = xnat.find_one(project, subject, session, scan=scan,
@@ -66,5 +66,5 @@ class TestMaskWorkflow(VolumeTestBase):
 
 if __name__ == "__main__":
     import nose
-
+    
     nose.main(defaultTest=__name__)

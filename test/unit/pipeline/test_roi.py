@@ -24,10 +24,10 @@ class TestROIWorkflow(VolumeTestBase):
     This test exercises the ROI workflow on the Breast and Sarcoma test
     fixture images.
     """
-
+    
     def __init__(self):
         super(TestROIWorkflow, self).__init__(logger(__name__), RESULTS)
-
+    
     def test_breast(self):
         if not which('bolero_mask_conv'):
             logger(__name__).debug('Skipping ROI test since bolero_mask_conv'
@@ -40,7 +40,7 @@ class TestROIWorkflow(VolumeTestBase):
         inputs = list(iter_stage(PROJECT, 'Breast', *sess_dirs))
         for args in self.stage('Breast'):
             self._test_workflow(inputs, *args)
-
+    
     def test_sarcoma(self):
         if not which('bolero_mask_conv'):
             return
@@ -51,7 +51,7 @@ class TestROIWorkflow(VolumeTestBase):
         # TODO - Get a combo of volumes and ROIs that work, if not too
         #   unwieldly, otherwise delete the Sarcoma fixture and this test
         #   method.
-
+    
     def _test_workflow(self, scan_inputs, project, subject, session, scan,
                        *images):
         """
@@ -97,7 +97,7 @@ class TestROIWorkflow(VolumeTestBase):
                                (subject, session, time_series))
         with qixnat.connect() as xnat:
             xnat.delete(project, subject)
-            result = roi.run(project, subject, session, scan, time_series, 
+            result = roi.run(project, subject, session, scan, time_series,
                              *roi_inputs, base_dir=self.base_dir,
                               config_dir=CONF_DIR)
             assert_is_not_none(result, "The %s %s Scan %d ROI pipeline did not"
@@ -115,5 +115,5 @@ class TestROIWorkflow(VolumeTestBase):
 
 if __name__ == "__main__":
     import nose
-
+    
     nose.main(defaultTest=__name__)

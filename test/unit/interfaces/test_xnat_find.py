@@ -31,11 +31,11 @@ ASSESSOR = 'pk'
 
 class TestXNATFind(object):
     """The XNAT find interface unit tests."""
-
+    
     def setUp(self):
         with qixnat.connect() as xnat:
             xnat.delete(PROJECT, SUBJECT)
-
+    
     def tearDown(self):
         with qixnat.connect() as xnat:
             xnat.delete(PROJECT, SUBJECT)
@@ -69,7 +69,7 @@ class TestXNATFind(object):
         assert_false(isdefined(result.outputs.xnat_id),
                      "Unsupported file create inadvertently created the"
                      " ancestor %s" % SUBJECT)
-
+    
     def test_find_reconstruction(self):
         self._test_find(SUBJECT, SESSION, reconstruction=RECONSTRUCTION)
     
@@ -78,28 +78,28 @@ class TestXNATFind(object):
     
     def _test_find(self, *args, **opts):
         logger(__name__).debug("Testing the XNATFind interface on %s %s..." %
-                               (args, opts))        
+                               (args, opts))
         # Add the arguments to the inputs.
         inputs = opts
         args = list(args)
         inputs['subject'] = args[0]
         if len(args) > 1:
             inputs['session'] = args[1]
-
+        
         # Try to find the object.
         find = XNATFind(project=PROJECT, **inputs)
         result = find.run()
         assert_false(isdefined(result.outputs.xnat_id),
             "Find %s incorrectly returned an id: %s." %
             (inputs, result.outputs.xnat_id))
-
+        
         # Create the object.
         find = XNATFind(project=PROJECT, modality='MR', create=True, **inputs)
         result = find.run()
         assert_true(isdefined(result.outputs.xnat_id),
             "Find %s with create did not return an id." % inputs)
         xnat_id = result.outputs.xnat_id
-
+        
         # Refind the object.
         find = XNATFind(project=PROJECT, **inputs)
         result = find.run()

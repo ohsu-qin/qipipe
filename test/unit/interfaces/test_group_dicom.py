@@ -12,7 +12,7 @@ FIXTURE = os.path.join(ROOT, 'fixtures', 'staging', 'breast', 'BreastChemo3',
 
 class TestGroupDicom(object):
     """GroupDicom interface unit tests."""
-
+    
     def test_group_dicom(self):
         logger(__name__).debug("Testing the GroupDicom interface on %s..."
                                % FIXTURE)
@@ -31,6 +31,6 @@ class TestGroupDicom(object):
 
 if __name__ == "__main__":
     import nose
-
+    
     nose.main(defaultTest=__name__)
 

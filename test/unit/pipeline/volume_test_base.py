@@ -17,7 +17,7 @@ class VolumeTestBase(object):
     hierarchy found in the ``test/fixtures/staged/``*collection*
     directory.
     """
-
+    
     def __init__(self, logger, results, use_mask=False):
         """
         :param logger: this test case's logger
@@ -29,13 +29,13 @@ class VolumeTestBase(object):
         self._results = results
         self.base_dir = os.path.join(self._results, 'work')
         self._use_mask = use_mask
-
+    
     def setUp(self):
         shutil.rmtree(self._results, True)
-
+    
     def tearDown(self):
         shutil.rmtree(self._results, True)
-
+    
     def stage(self, collection):
         """
         Acquires the test fixture inputs to run the workflow. This
@@ -46,7 +46,7 @@ class VolumeTestBase(object):
         * session name
         * scan number
         * image file location list
-
+        
         :param collection: the collection name
         :param opts: additional workflow options
         :yield: the workflow inputs list
@@ -67,7 +67,7 @@ class VolumeTestBase(object):
             return self._stage_inputs(inputs)
         finally:
             os.chdir(cwd)
-
+    
     def _stage_inputs(self, inputs):
         """
         :param inputs: the :meth:`_group_files` result dictionary
@@ -81,7 +81,7 @@ class VolumeTestBase(object):
                     images = opts.pop('images')
                     args = [PROJECT, sbj, sess, scan] + images
                     yield args
-
+    
     def _group_files(self, fixture):
         """
         Groups the files in the given test fixture directory.
@@ -122,5 +122,5 @@ class VolumeTestBase(object):
                         self._logger.debug("Discovered %d %s %s Scan %d test input mask %s" %
                                            (len(images), sbj, sess, scan, mask))
                         inputs[sbj][sess][scan]['mask'] = mask
-
+        
         return inputs
