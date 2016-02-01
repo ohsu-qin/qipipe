@@ -87,11 +87,11 @@ class ScanIterators(object):
 
 def iter_stage(project, collection, *inputs, **opts):
     """
-    Iterates over the the new sessions in the given input directories.
+    Iterates over the the scans in the given input directories.
     This method is a staging generator which yields a tuple consisting
     of the subject, session, scan number and :class:`ScanIterators`
     object, e.g.::
-    
+
         >> scan_input = next(iter_stage('QIN', 'Sarcoma', '/path/to/subject'))
         >> print scan_input.subject
         Sarcoma001
@@ -185,11 +185,11 @@ def _collect_visits(project, collection, *inputs, **opts):
 class VisitIterator(object):
     """Scan DICOM generator class ."""
 
-    def __init__(self, project, collection, *subject_dirs, **opts):
+    def __init__(self, project, collection, *session_dirs, **opts):
         """
         :param project: the XNAT project name
         :param collection: the image collection name
-        :param subject_dirs: the subject directories over which
+        :param session_dirs: the session directories over which
             to iterate
         :param opts: the :meth:`iter_stage` options
         """
@@ -199,7 +199,7 @@ class VisitIterator(object):
         self.collection = staging.image_collection.with_name(collection)
         """The :meth:`iter_stage` collection name parameter."""
 
-        self.subject_dirs = subject_dirs
+        self.session_dirs = session_dirs
         """The input directories."""
 
         self.scan = opts.get('scan')
@@ -213,7 +213,7 @@ class VisitIterator(object):
     def __iter__(self):
         """
         Returns the next (subject, session, scan_dict) tuple for the
-        scans in the subject directories, where:
+        scans in the session directories, where:
         * *subject* is the subject name
         * *session* is the session name
         * *scan_dict* is the {scan number: :class:`ScanIterators`}
@@ -236,50 +236,46 @@ class VisitIterator(object):
             # Detect all scans.
             scan_pats = all_scan_pats
 
-        filter_sess = self.skip_existing and not self.scan
+        # Filter existing scans if the skip_existing flag and scan
+        # number are set.
         filter_scan = self.skip_existing and self.scan
-        
+        # Skip all scans of an existiong session if the skip_existing
+        # flag is set and the scan number is not set.
+        skip_existing_session = self.skip_existing and not self.scan
+
         # Iterate over the visits.
         with qixnat.connect():
-            for sbj_dir in self.subject_dirs:
-                sbj_dir = os.path.abspath(sbj_dir)
-                self.logger.debug("Discovering sessions in %s..." % sbj_dir)
+            # Generate the new (subject, session, {scan: DICOM files})
+            # tuples for each visit.
+            for input_dir in self.session_dirs:
+                sess_dir = os.path.abspath(input_dir)
+                self.logger.debug("Discovering scans in %s..." % sess_dir)
+                # The input directory is /path/to/<subject>/<visit>.
+                sbj_dir, sess_basename = os.path.split(sess_dir)
+                _, sbj_basename = os.path.split(sbj_dir)
+                sbj_nbr = self._match_subject_number(sbj_basename)
                 # Make the XNAT subject name.
-                _, sbj_subdir = os.path.split(sbj_dir)
-                sbj_nbr = self._match_subject_number(sbj_subdir)
                 sbj = SUBJECT_FMT % (self.collection.name, sbj_nbr)
-                # The subject subdirectory names which match the visit
-                # pattern, sorted in visit order.
-                sess_matches = sorted((d for d in os.listdir(sbj_dir)
-                                       if vpat.match(d)))
-                # Generate the new (subject, session, {scan: DICOM files})
-                # tuples for each visit.
-                for sess_subdir in sess_matches:
-                    # The visit directory path.
-                    sess_dir = os.path.join(sbj_dir, sess_subdir)
-                    # Silently skip non-directories.
-                    if not os.path.isdir(sess_dir):
-                        continue
-                    # The visit (session) number.
-                    sess_nbr = self._match_session_number(sess_subdir)
-                    # The XNAT session name.
-                    sess = SESSION_FMT % sess_nbr
-                    # Apply the selection filter, e.g. an XNAT existence
-                    # check. If the session passes the filter, then the
-                    # files qualify for iteration.
-                    if not filter_sess or self._is_new_session(sbj, sess):
-                        # The DICOM and ROI iterators for each scan number.
-                        scan_dict = {scan: self._scan_iterators(pats, sess_dir)
-                                     for scan, pats in scan_pats.iteritems()
-                                     if not filter_scan or self._is_new_scan(sbj, sess, scan)}
-                        if scan_dict:
-                            scans = scan_dict.keys()
-                            self.logger.debug("Discovered %s %s scans %s in %s" %
-                                              (sbj, sess, scans, sess_dir))
-                            yield sbj, sess, scan_dict
-                        else:
-                            self.logger.debug("No %s %s scans were discovered"
-                                              " in %s" %  (sbj, sess, sess_dir))
+                # The visit (session) number.
+                sess_nbr = self._match_session_number(sess_basename)
+                # The XNAT session name.
+                sess = SESSION_FMT % sess_nbr
+                if skip_existing_session and not self._is_new_session(sbj, sess):
+                    self.logger.debug("Skipping the existing %s %s session"
+                                      " in %s" %  (sbj, sess, sess_dir))
+                    continue
+                # The DICOM and ROI iterators for each scan number.
+                scan_dict = {scan: self._scan_iterators(pats, sess_dir)
+                             for scan, pats in scan_pats.iteritems()
+                             if not filter_scan or self._is_new_scan(sbj, sess, scan)}
+                if scan_dict:
+                    scans = scan_dict.keys()
+                    self.logger.debug("Discovered %s %s scans %s in %s" %
+                                      (sbj, sess, scans, sess_dir))
+                    yield sbj, sess, scan_dict
+                else:
+                    self.logger.debug("No %s %s scans were discovered"
+                                      " in %s" %  (sbj, sess, sess_dir))
 
     def _scan_iterators(self, patterns, input_dir):
         # The DICOM glob pattern.
@@ -324,6 +320,7 @@ class VisitIterator(object):
             raise StagingError(
                 "The directory path %s does not match the session pattern %s" %
                 (path, self.collection.patterns.session.pattern))
+
         return int(match.group(1))
     
     def _is_new_session(self, subject, session):

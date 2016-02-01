@@ -153,7 +153,7 @@ def _parse_arguments():
 
     # The input directories or XNAT labels to process.
     parser.add_argument('input', nargs='+',
-                        help='the input subject directory or XNAT object path'
+                        help='the input session directory or XNAT object path'
                              ' to process')
 
     args = vars(parser.parse_args())
