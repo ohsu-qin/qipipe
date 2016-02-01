@@ -11,7 +11,7 @@ if not on_rtd:
 import qiutil
 from qiutil.logging import logger
 from ..helpers.constants import CONF_DIR
-from ..interfaces import (Gate, XNATUpload, XNATFind, Fastfit)
+from ..interfaces import (Gate, XNATUpload, XNATFind)
 from .workflow_base import WorkflowBase
 from .pipeline_error import PipelineError
 
@@ -32,7 +32,7 @@ INFERRED_R1_0_OUTPUTS = FIXED_R1_0_OUTPUTS + ['dce_baseline', 'r1_0']
 FASTFIT_PARAMS_FILE = 'params.csv'
 """The fastfit parameters CSV file name."""
 
-BOLERO_PROFILE_SECTIONS = {'Fastfit', 'R1', 'AIF'}
+BOLERO_CONF_SECTIONS = ['Fastfit', 'R1', 'AIF']
 """The OHSU bolero modeling configuration sections."""
 
 
@@ -234,8 +234,10 @@ class ModelingWorkflow(WorkflowBase):
         :param subject: the subject name
         :param session: the session name
         :param scan: the scan number
-        :param resource: the XNAT resource containing the time series
-        :param time_series: the 4D time series file location
+        :param resource: the XNAT resource containing the modeling input
+            time series
+        :param time_series: the 4D modeling input time series file
+            location
         :param opts: the following keyword parameters:
         :option mask: the XNAT mask resource name
         :return: the modeling result XNAT resource name
@@ -345,43 +347,43 @@ class ModelingWorkflow(WorkflowBase):
         mdl_wf.connect(input_spec, 'bolus_arrival_index',
                        base_wf, 'input_spec.bolus_arrival_index')
 
-        # Upload the modeling results to XNAT.
-        # Each output field contains a modeling result file.
-        # Upload these files to the modeling resource.
-        base_output = base_wf.get_node('output_spec')
-        out_fields = base_output.outputs.copyable_trait_names()
-        merge_outputs = pe.Node(Merge(len(out_fields)),
-                                name='merge_outputs')
-        for i, field in enumerate(out_fields):
-            base_field = 'output_spec.' + field
-            mdl_wf.connect(base_wf, base_field,
-                           merge_outputs, "in%d" % (i + 1))
-
-        # Upload the outputs.
-        upload_xfc = XNATUpload(project=self.project, resource=self.resource,
-                                modality='MR')
-        upload_outputs = pe.Node(upload_xfc, name='upload_outputs')
-        mdl_wf.connect(input_spec, 'subject', upload_outputs, 'subject')
-        mdl_wf.connect(input_spec, 'session', upload_outputs, 'session')
-        mdl_wf.connect(input_spec, 'scan', upload_outputs, 'scan')
-        mdl_wf.connect(merge_outputs, 'out', upload_outputs, 'in_files')
-
         # Make the profile.
-        cr_prf_fields = ['cfg_file', 'resource', 'sections']
+        cr_prf_fields = ['technique', 'source', 'configuration', 'sections',
+                         'dest']
         cr_prf_xfc = Function(input_names=cr_prf_fields,
                               output_names=['out_file'],
                               function=create_profile)
         cr_prf = pe.Node(cr_prf_xfc, name='create_profile')
-        cr_prf.inputs.cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
-        cr_prf.inputs.sections = base_wf.profile_sections
-        mdl_wf.connect(input_spec, 'resource', cr_prf, 'resource')
+        cr_prf.inputs.technique = self.technique
+        cr_prf.inputs.configuration = self.configuration
+        cr_prf.inputs.sections = self.profile_sections
+        cr_prf.inputs.dest = MODELING_CONF_FILE
+        mdl_wf.connect(input_spec, 'resource', cr_prf, 'source')
 
-        # Upload the profile.
-        upload_profile = pe.Node(upload_xfc, name='upload_profile')
-        mdl_wf.connect(input_spec, 'subject', upload_profile, 'subject')
-        mdl_wf.connect(input_spec, 'session', upload_profile, 'session')
-        mdl_wf.connect(input_spec, 'scan', upload_profile, 'scan')
-        mdl_wf.connect(cr_prf, 'out_file', upload_profile, 'in_files')
+        # Each output field contains a modeling result file.
+        base_output = base_wf.get_node('output_spec')
+        out_fields = base_output.outputs.copyable_trait_names()
+        # The files to upload include the profile and all
+        # modeling result files.
+        upload_file_cnt = len(out_fields) + 1
+        concat_uploads = pe.Node(Merge(upload_file_cnt),
+                                 name='concat_uploads')
+        mdl_wf.connect(cr_prf, 'out_file', concat_uploads, 'in1')
+        for i, field in enumerate(out_fields):
+            base_field = 'output_spec.' + field
+            mdl_wf.connect(base_wf, base_field,
+                           concat_uploads, "in%d" % (i + 2))
+
+        # Upload the profile and modeling results into the XNAT
+        # modeling resource.
+        upload_reg_xfc = XNATUpload(project=self.project,
+                                    resource=self.resource,
+                                    modality='MR')
+        upload_reg = pe.Node(upload_reg_xfc, name='upload_reg')
+        mdl_wf.connect(input_spec, 'subject', upload_reg, 'subject')
+        mdl_wf.connect(input_spec, 'session', upload_reg, 'session')
+        mdl_wf.connect(input_spec, 'scan', upload_reg, 'scan')
+        mdl_wf.connect(concat_uploads, 'out', upload_reg, 'in_files')
 
         # TODO - Get the overall and ROI FSL mean intensity values.
 
@@ -419,10 +421,13 @@ class ModelingWorkflow(WorkflowBase):
         :param opts: the PK modeling parameters
         :return: the pyxnat Workflow
         """
+        # Import the proprietary OHSU FastFit interface.
+        from ..interfaces import Fastfit
+        
         base_wf = pe.Workflow(name='bolero', base_dir=self.base_dir)
 
         # The modeling profile configuration sections.
-        base_wf.profile_sections = BOLERO_PROFILE_SECTIONS
+        self.profile_sections = BOLERO_CONF_SECTIONS
 
         # The PK modeling parameters.
         opts = self._r1_parameters(**opts)
@@ -575,7 +580,7 @@ class ModelingWorkflow(WorkflowBase):
         base_wf = pe.Workflow(name='mock', base_dir=self.base_dir)
 
         # The modeling profile configuration sections.
-        base_wf.profile_sections = {}
+        self.profile_sections = []
 
         # The PK modeling parameters.
         opts = self._r1_parameters(**opts)
@@ -687,6 +692,29 @@ class ModelingWorkflow(WorkflowBase):
 
 
 ### Utility functions called by workflow nodes. ###
+
+def create_profile(technique, source, configuration, sections, dest):
+    """
+    :meth:`qipipe.helpers.metadata.create_profile` wrapper.
+    
+    :param technique: the modeling technique
+    :param source: the modeling input XNAT resource name
+    :param configuration: the modeling workflow interface settings
+    :param sections: the profile sections
+    :param dest: the output profile file path
+    """
+
+    from qipipe.helpers import metadata
+    
+    # The correct technique names.
+    TECHNIQUE_NAMES = dict(bolero='BOLERO', mock='Mock')
+    
+    technique = TECHNIQUE_NAMES.get(technique, technique)
+    
+    return metadata.create_profile(configuration, sections,
+                                   dest=dest,
+                                   general=dict(technique=technique),
+                                   source=dict(resource=source))
 
 
 def make_baseline(time_series, baseline_end_idx):
@@ -881,21 +909,3 @@ def get_fit_params(cfg_file, aif_shift):
         csv_writer.writerows(rows)
 
     return os.path.join(os.getcwd(), FASTFIT_PARAMS_FILE)
-
-
-def create_profile(cfg_file, resource, sections, **opts):
-    """
-    Creates the modeling profile file from the
-    :const:`MODELING_CONF_FILE`.
-
-    :param cfg_file: the modeling configuration file
-    :param resource: the XNAT resource containing the time series
-    :param sections: the configuration sections to add to the profile
-    :param opts: the additional
-        :meth:`qipipe.helpers.metadata.create_profile` keyword arguments
-    :return: the destination file
-    """
-    from qipipe.helpers import metadata
-    
-    return metadata.create_profile(cfg_file, resource, sections=[],
-                                   source=dict(resource=resource), **opts)

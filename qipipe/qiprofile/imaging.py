@@ -5,12 +5,15 @@ from a XNAT scan.
 import csv
 import tempfile
 from qiutil.file import splitexts
+from qiutil.collections import concat
 from qiutil.ast_config import read_config
 from qixnat.helpers import (xnat_path, xnat_name)
 from qiprofile_rest_client.helpers import database
 from qiprofile_rest_client.model.imaging import (
-    Session, SessionDetail, Scan, ScanProtocol, Modeling, ModelingProtocol
+    Session, SessionDetail, Scan, Volume, ScanProtocol, Registration,
+    RegistrationProtocol, Modeling, ModelingProtocol
 )
+from ..staging import image_collection
 from ..helpers.constants import (SUBJECT_FMT, SESSION_FMT)
 from ..helpers.colors import label_map_basename
 from ..pipeline.staging import (SCAN_METADATA_RESOURCE, SCAN_CONF_FILE)
@@ -45,8 +48,8 @@ class Updater(object):
         :param subject: the XNAT :attr:`subject`
         :param opts: the following keyword arguments:
         :option bolus_arrival_index: the :attr:`bolus_arrival_index`
-        :option roi_centroid: the :attr:`roi_centroid`
-        :option roi_average_intensity: the :attr:`roi_average_intensity`
+        :option roi_centroids: the :attr:`roi_centroids`
+        :option roi_average_intensities: the :attr:`roi_average_intensities`
         """
         self.subject = subject
         """The target qiprofile Subject to update."""
@@ -57,11 +60,11 @@ class Updater(object):
         :meth:qipipe.pipeline.qipipeline.bolus_arrival_index_or_zero`.
         """
         
-        self.roi_centroid = opts.get('roi_centroid')
-        """The ROI centroid."""
+        self.roi_centroids = opts.get('roi_centroids')
+        """The ROI centroids list in lesion number order."""
 
-        self.roi_average_intensity = opts.get('roi_average_intensity')
-        """The ROI average signal intensity."""
+        self.roi_average_intensities = opts.get('roi_average_intensities')
+        """The ROI average signal intensities list in lesion number order."""
 
     def update(self, experiment):
         """
@@ -111,7 +114,7 @@ class Updater(object):
         # The modeling resources begin with 'pk_'.
         xnat_mdl_rscs = (rsc for rsc in xnat_scan.resources()
                          if rsc.label().startswith(MODELING_PREFIX))
-        modelings = [self._create_modeling(rsc) for rsc in xnat_mdl_rscs]
+        modelings = [self._create_modeling(rsc, scans) for rsc in xnat_mdl_rscs]
 
         # The session detail database object to hold the scans.
         detail = SessionDetail(scans=scans)
@@ -137,26 +140,29 @@ class Updater(object):
         # The image collection.
         collection = image_collection.with_name(self.subject.collection)
         # Determine the scan type from the collection and scan number.
-        scan_type = collection.scan.get(number)
+        scan_type = collection.scan_types.get(number)
         if not scan_type:
             raise ImagingUpdateError(
                 "The %s XNAT scan number %s is not recognized" %
                 (self.subject.collection, number)
             )
-        # Collect the scan protocol fields into a database key.
-        key = {opt: getattr(self, opt) for opt in ScanProtocol._fields
-               if hasattr(self, opt)}
-        # Add the scan type.
-        key['scan_type'] = scan_type
+        # The scan protocol database key.
+        pcl_key = dict(technique=scan_type)
         # The corresponding qiprofile ScanProtocol.
-        protocol = database.get_or_create(ScanProtocol, key)
+        protocol = database.get_or_create(ScanProtocol, pcl_key)
+        
+        # The scan volumes.
+        rsc = xnat_scan.resource('NIFTI')
+        if not rsc.exists():
+            raise ImagingUpdateError("The XNAT scan %s does not have a NIFTI"
+                                     " resource" % xnat_path(xnat_scan))
+        volumes = [Volume(name=xnat_name(f)) for f in rsc.files()]
 
         # There must be a bolus arrival.
         if not self.bolus_arrival_index:
             raise ImagingUpdateError("The XNAT scan %s qiprofile update is"
                                     " missing the bolus arrival" %
                                     xnat_path(xnat_scan))
-        bolus_arv_ndx = self.bolus_arrival_index
 
         # The ROIs.
         rois = self._create_rois(xnat_scan)
@@ -167,58 +173,62 @@ class Updater(object):
                          if rsc.label().startswith(REG_PREFIX)]
 
         # Return the new qiprofile Scan object.
-        return Scan(number=number, protocol=protocol,
-                    bolus_arrival_index=bolus_arv_ndx,
-                    rois = rois, registrations=registrations)
+        return Scan(number=number, protocol=protocol, volumes=volumes,
+                    bolus_arrival_index=self.bolus_arrival_index,
+                    rois=rois, registrations=registrations)
 
-    def _create_rois(self, xnat_scan):
+    def _create_rois(self, xnat_scan, **opts):
         """
         :param xnat_scan: the XNAT scan object
-        :return: the qiprofile Regions list for each lesion, indexed
-            by lesion number
+        :param opts: the following keyword arguments:
+        :option color_table: the color table file base name
+        :option centroids: the ROI centroids list
+        :option average_intensities: the ROI average intentsity list
+        :return: the qiprofile Regions list for each lesion in
+            lesion number order
         """
         # The ROI resource.
         rsc = xnat_scan.resource(ROI_RESOURCE)
         # The [(mask, label map)] list.
         rois = []
-        if rsc.exists():
-            # The file object label is the file base name.
-            fnames = set(rsc.files().get())
-            # The mask files do not have _color in the prefix.
-            # Sort the mask files by the lesion prefix.
-            masks = sorted(f for f in fnames if not '_color' in f)
-            # Make the (mask, label map) tuples.
-            for mask in masks:
-                roi = Region(mask=mask)
-                label_map_fname = label_map_basename(mask)
-                if label_map_fname in fnames:
-                    # TODO - set the label map color_table property
-                    # to the common color table option.
-                    label_map = LabelMap(filename=label_map_fname)
-                else:
-                    label_map = None
-                rois.append((mask, label_map))
+        if not rsc.exists():
+            return rois
+        # The file object label is the file base name.
+        fnames = set(rsc.files().get())
+        # The mask files do not have _color in the base name.
+        # Sort the mask files by the lesion prefix.
+        masks = sorted(f for f in fnames if not '_color' in f)
+        centroids = opts.get('centroids')
+        avg_intensities = opts.get('average_intensities')
+        # The color look-up table.
+        color_table = opts.get('color_table')
+        # Make the ROIs.
+        rois = []
+        for i, mask in enumerate(masks):
+            roi_opts = lobel_map_opts.clone()
+            label_map_name = label_map_basename(mask)
+            if label_map_name in fnames:
+                # A label map must have a color table.
+                if not color_table:
+                    raise ImagingUpdateError(
+                        "The %s label map %s is missing a color table" %
+                        (xnat_path(xnat_scan), label_map_name)
+                    )
+                label_map = LabelMap(filename=label_map_name,
+                                     color_table=color_table)
+                roi_opts['label_map'] = label_map
+            if centroids and i < len(centroids):
+                centroid = centroids[i]
+                if centroid:
+                    roi_opts['centroid'] = centroid
+            if avg_intensities and i < len(avg_intensities):
+                avg_intensity = avg_intensities[i]
+                if avg_intensity:
+                    roi_opts['avg_intensity'] = avg_intensity
+            roi = Region(mask, **roi_opts)
+            rois.append((mask, label_map))
 
         return rois
-        
-    def _create_region(self, mask):
-        """
-        :param mask: the ROI mask XNAT file name
-        :param opts: the following keyword arguments:
-        :option centroid: the region centroid
-        :option average_intensity: the average signal in the region
-        :option label_map: the ROI mask XNAT file name
-        """
-        label_map_fname = opts.get('label_map')
-        if self.label_map_fname:
-            # The color look-up table.
-            lut = opts.get('color_table')
-            lobel_map_opts = dict(color_table=lut) if lut else {}
-            # The label map embedded object.
-            label_map = LabelMap(filename=label_map_fname, **label_map_opts)
-        region_opts = {opt: opts[opt] for opt in Region._fields if opt in opts}
-
-        return Region(mask=mask)
 
     def _create_registration(self, resource):
         """
@@ -227,32 +237,37 @@ class Updater(object):
         :param resource: the XNAT registration resource object
         :return: the qiprofile Registration object
         """
-        # TODO
-        pass
+        cfg = self._read_configuration(resource, REG_CONF_FILE)
 
-    def _create_modeling(self, resource):
+        # The registration protocol.
+        key = dict(configuration=cfg)
+        protocol = database.get_or_create(RegistrationProtocol, key)
+        
+        # The registration volumes.
+        file_names = (xnat_name(f) for f in resource.files())
+        volumes = [Volume(name=name) for name in file_names
+                   if name.startswith('volume')]  
+
+        # Return the new qiprofile Registration object.
+        return Registration(protocol=protocol, volumes=volumes,
+                            resource=resource.label())
+
+    def _create_modeling(self, resource, scans):
         """
         Creates the qiprofile Modeling object from the given XNAT
         resource object.
 
         :param resource: the modeling source XNAT resource object
+        :param scans: the REST Scan list for the current session
         :return: the qiprofile Modeling object
         """
         # The XNAT modeling files.
         xnat_files = resource.files()
 
         # The modeling configuration.
-        cfg_file_finder = (xnat_file for xnat_file in xnat_files
-                           if xnat_file.label() == MODELING_CONF_FILE)
-        xnat_cfg_file = next(cfg_file_finder, None)
-        if not xnat_cfg_file:
-            raise ImagingUpdateError("The XNAT modeling resource %s does"
-                               " not contain the modeling profile file %s" %
-                               (xnat_path(resource), MODELING_CONF_FILE))
-        cfg_file = xnat_cfg_file.get()
-        cfg = dict(read_config(cfg_file))
+        cfg = self._read_configuration(resource, MODELING_CONF_FILE)
 
-        # Pull out the source.
+        # Tease out the modeling source.
         source_topic = cfg.pop('Source', None)
         if not source_topic:
             raise ImagingUpdateError("The XNAT modeling configuration %s is"
@@ -262,12 +277,27 @@ class Updater(object):
             raise ImagingUpdateError("The XNAT modeling configuration %s Source"
                                " topic is missing the resource option" %
                                xnat_path(cfg_file))
+        xnat_scan = resource.parent()
+        if source_rsc.startswith('reg_'):
+            reg_lists = (s.registrations for s in scans)
+            regs = concat(*reg_lists)
+            reg = next((r for r in regs if r.resource == source_rsc), None)
+            if not reg:
+                raise ImagingUpdateError("The XNAT modeling resource %s source"
+                                         " registration resource %s was not"
+                                         " found in the session scans" %
+                                         (xnat_path(resource), source_rsc))
+            source = Modeling.Source(registration=reg.protocol)
+        else:
+            scan_nbr = xnat_name(xnat_scan)
+            scan = next(s for s in scans if s.number == scan_nbr)
+            source = Modeling.Source(scan=scan.protocol)
 
-        # The corresponding qiprofile ModelingProtocol.
+        # The qiprofile ModelingProtocol.
         key = dict(configuration=cfg)
         protocol = database.get_or_create(ModelingProtocol, key)
 
-        # The qiprofile modeling output files.
+        # The modeling result files.
         xnat_file_labels = {xnat_file.label() for xnat_file in xnat_files}
         result = {}
         for output in OUTPUTS:
@@ -280,4 +310,25 @@ class Updater(object):
 
         # Return the new qiprofile Modeling object.
         return Modeling(protocol=protocol, source=source,
-                        resource=resource.label(), result=result)
+                        resource=xnat_name(resource), result=result)
+
+    def _read_configuration(self, resource, name):
+        """
+        :param resource: the XNAT resource configuration file parent
+        :param name: the configuration XNAT file name
+        :return: the configuration dictionary
+        :raise ImagingUpdateError: if the configuration XNAT file was
+            not found in the resource
+        """
+        # The registration configuration.
+        cfg_file_finder = (xnat_file for xnat_file in resource.files()
+                           if xnat_name(xnat_file) == name)
+        xnat_cfg_file = next(cfg_file_finder, None)
+        if not xnat_cfg_file:
+            raise ImagingUpdateError("The XNAT resource %s does not contain"
+                               " the configuration file %s" %
+                               (xnat_path(resource), name))
+        if xnat_cfg_file:
+            cfg_file = xnat_cfg_file.get()
+            cfg_dict = dict(read_config(cfg_file))
+            return cfg_dict

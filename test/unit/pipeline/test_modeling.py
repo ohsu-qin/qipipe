@@ -102,9 +102,9 @@ class TestModelingWorkflow(VolumeTestBase):
             rsc = xnat.find_one(project, subject, session, scan=scan,
                                 resource=result)
             try:
-                assert_is_not_none(rsc, "The %s %s Scan %d %s resource was not"
-                                        " created" %
-                                        (subject, session, scan, result))
+                assert_is_not_none(rsc, "The /%s/%s/%s/scan/%d/resource/%s"
+                                        " modeling resource was not created" %
+                                        (project, subject, session, scan, result))
                 self._validate_profile(xnat, rsc)
             finally:
                 xnat.delete(project, subject)

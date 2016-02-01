@@ -2,10 +2,10 @@ import os
 import re
 import glob
 import shutil
-from nose.tools import (assert_equal, assert_is_not_none)
+from nose.tools import (assert_true, assert_equal, assert_is_not_none)
 import nipype.pipeline.engine as pe
 import qixnat
-
+from qixnat.helpers import xnat_path
 from qipipe.pipeline import registration
 from ... import (ROOT, PROJECT, CONF_DIR)
 from ...helpers.logging import logger
@@ -95,14 +95,20 @@ class TestRegistrationWorkflow(VolumeTestBase):
         split = (os.path.split(location) for location in result)
         out_dirs, out_files = (set(files) for files in zip(*split))
         rsc_files = set(rsc.files().get())
+        assert_true(registration.REG_CONF_FILE in rsc_files,
+                     "The XNAT registration resource %s does not contain"
+                      " the profile %s" %
+                      (xnat_path(rsc), registration.REG_CONF_FILE))
         assert_equal(out_dirs, set([self.dest]),
-                     "The %s %s Scan %d %s XNAT registration result directory"
-                      " is incorrect - expected %s, found %s" %
+                     "The %s %s Scan %d %s registration result directory"
+                      " is incorrect - expected: %s, found: %s" %
                       (subject, session, scan, RESOURCE, self.dest, out_dirs))
-        assert_equal(out_files, rsc_files,
-                     "The %s %s Scan %d %s XNAT registration result file"
-                     " names are incorrect - expected %s, found %s" %
-                     (subject, session, scan, RESOURCE, rsc_files, out_files))
+        rsc_img_files = {f for f in rsc_files
+                         if f != registration.REG_CONF_FILE}
+        assert_equal(out_files, rsc_img_files,
+                     "The %s %s Scan %d %s XNAT registration image file"
+                     " names are incorrect - expected: %s, found: %s" %
+                     (subject, session, scan, RESOURCE, rsc_img_files, out_files))
 
         # Verify that the output files were created.
         dest_files = (os.path.join(self.dest, location)

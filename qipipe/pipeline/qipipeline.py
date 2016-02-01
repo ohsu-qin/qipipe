@@ -67,8 +67,6 @@ def run(*inputs, **opts):
     :keyword collection: the image collection name
     :keyword actions: the workflow actions to perform
         (default :const:`MULTI_VOLUME_ACTIONS`)
-    :keyword resume: flag indicating whether to resume processing on
-        existing sessions (default False)
     """
     # The actions to perform.
     actions = opts.pop('actions', MULTI_VOLUME_ACTIONS)
@@ -102,10 +100,6 @@ def _run_with_dicom_input(actions, *inputs, **opts):
         raise ArgumentError('The staging pipeline project option is missing.')
     # The target directory.
     dest = opts.get('dest', None)
-    # The resume option corresponds to the staging helper iter_stage
-    # function skip_existing option.
-    if opts.pop('resume', None):
-        opts['skip_existing'] = False
 
     # The set of input subjects is used to build the CTP mapping file
     # after the workflow is completed, if staging is enabled.
