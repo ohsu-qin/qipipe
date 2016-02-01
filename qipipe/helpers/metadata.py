@@ -1,46 +1,58 @@
 import os
 import csv
+from collections import Counter
 from qiutil.ast_config import (read_config, ASTConfig)
 
+EXCLUDED_OPTS =  {'plugin_args', 'run_without_submitting'}
+"""The config options to exclude in the profile."""
 
-def create_profile(cfg_file, resource, sections, **opts):
+
+class MetadataError(Exception):
+    """Metadata parsing error."""
+    pass
+
+
+def create_profile(configuration, sections, dest, **opts):
     """
     Creates a metadata profile from the given configuration.
-    The profile includes the given sections from the input
-    configuration file and keyword arguments. A keyword
-    item overrides a matching input configuration item. The
-    resulting profile is written to a new file.
+    The configuration input is a {section: {option: value}}
+    dictionary. The target profile is a Python configuration
+    file which includes the given sections. The section content
+    is determined by the input configuration and the keyword
+    arguments. The keyword item overrides a matching input
+    configuration item. The resulting profile is written to a
+    new file.
 
-    :param cfg_file: the modeling configuration file location
-    :param resource: the XNAT resource containing the time series
-    :param sections: the configuration profile sections
-    :param opts: additional {section: {option: value}} items, as
-        well as the following keyword arguments:
-    :option dest_file: the target profile location
-        (default is the input configuration file base name in the
-        current directory)
-    :return: the destination file location
+    :param configuration: the configuration dictionary
+    :param sections: the target profile sections
+    :param dest: the target profile file location
+    :param opts: additional {section: {option: value}} items
+    :return: the target file location
     """
 
-    # The config options to exclude in the profile.
-    EXCLUDED_OPTS =  {'plugin_args', 'run_without_submitting'}
-
-    # The destination option.
-    dest_file_opt = opts.pop('dest_file', None)
-    # The input config.
-    cfg = read_config(cfg_file)
-    # Populate the profile.
+    # The target profile to populate.
     profile = ASTConfig()
-    # Add the parameter sections.
-    for section in sections:
-        if cfg.has_section(section):
-            # The profile {key, value} dictionary.
-            items = {opt: val for opt, val in cfg.items(section)
-                     if opt not in EXCLUDED_OPTS}
-            if items:
-                profile.add_section(section)
-                for opt, val in items.iteritems():
-                    profile.set(section, opt, val)
+    # MongoDB does not allow dotted dictionary keys.
+    section_map = {section: section.split('.')[-1] for section in sections}
+    section_counts = Counter(section_map.itervalues())
+    dups = [section for section, count in section_counts.items()
+            if count > 1]
+    if dups:
+        raise MetadataError("The profile configuration has duplicate option"
+                            " base names: %s" % dups)
+    
+    # Add the input parameter sections.
+    for cfg_section, prf_section in section_map.iteritems():
+        cfg_items = configuration.get(cfg_section)
+        if cfg_items:
+            # The profile {option, value} dictionary.
+            prf_items = {opt: val for opt, val in cfg_items.iteritems()
+                         if opt not in EXCLUDED_OPTS}
+            if prf_items:
+                profile.add_section(prf_section)
+                for opt, val in prf_items.iteritems():
+                    profile.set(prf_section, opt, val)
+
     # The keyword arguments override the config file.
     for key, items in opts.iteritems():
         # Topics are capitalized.
@@ -51,12 +63,11 @@ def create_profile(cfg_file, resource, sections, **opts):
             profile.set(section, opt, val)
 
     # Save the profile.
-    if dest_file_opt:
-        dest_file = os.path.abspath(dest_file_opt)
-    else:
-        _, base = os.path.split(cfg_file)
-        dest_file = os.path.join(os.getcwd(), base)
-    with open(dest_file, 'w') as f:
+    dest = os.path.abspath(dest)
+    dest_dir = os.path.dirname(dest)
+    if not os.path.exists(dest_dir):
+        os.makedirs(dest_dir)
+    with open(dest, 'w') as f:
         profile.write(f)
-
-    return dest_file
+    
+    return dest
