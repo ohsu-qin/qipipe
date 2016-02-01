@@ -86,14 +86,14 @@ def colorize(lut_file, *inputs, **opts):
         _colorize(in_file, dest, **opts)
 
 
-def label_map_basename(in_file):
+def label_map_basename(location):
     """
-    :param in_file: the input file name
+    :param location: the input file path
     :return: the corresponding color file name
     """
     # Split up the input file path.
-    _, in_fname = os.path.split(in_file)
-    base, exts = splitexts(in_fname)
+    _, basename = os.path.split(location)
+    base, exts = splitexts(basename)
 
     return base + '_color' + exts
 
