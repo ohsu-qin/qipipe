@@ -1,5 +1,5 @@
 import os
-import glob
+from glob import glob
 from nose.tools import (assert_equal, assert_not_equal, assert_is_not_none)
 from qiutil.collections import concat
 import qixnat
@@ -17,7 +17,7 @@ class TestStagingIterator(object):
 
     def test_breast(self):
         discovered = self._test_collection('Breast')
-        # The first visit has a T1, T2 and DWI scan with numbers
+        # The first visit has a T1, T2 and DW scan with numbers
         # 1, 2 and 4, resp. Visit 2 has only a T1 scan.
         expected_scans = {1: set([1, 2, 4]), 2: set([1])}
         for visit in [1, 2]:
@@ -30,7 +30,7 @@ class TestStagingIterator(object):
         for scan_input in discovered:
             # Validate the DICOM inputs.
             if scan_input.session == "Session01":
-                # T1 has two volumes, T2 and DWI have one volume.
+                # T1 has two volumes, T2 and DW have one volume.
                 expected_vol_cnt = 2 if scan_input.scan == 1 else 1
                 expected_dcm_cnt = 2
             else:
@@ -50,7 +50,7 @@ class TestStagingIterator(object):
                          " incorrect: %d" %
                          (scan_input.subject, scan_input.session,
                           scan_input.scan, len(dcm_files)))
-            
+
             # Validate the ROI inputs.
             rois = scan_input.iterators.roi
             # Only T1 has ROIs.
@@ -91,7 +91,7 @@ class TestStagingIterator(object):
     def _test_collection(self, collection):
         """
         Iterate on the given collection fixture subdirectory.
-        
+
         :param collection: the image collection name
         """
         fixture = os.path.join(FIXTURES, collection.lower())
@@ -99,14 +99,17 @@ class TestStagingIterator(object):
         sbj_dir_dict = subject_sources(collection, fixture)
         # The test subjects.
         subjects = set(sbj_dir_dict.keys())
-        # The test source directories.
-        inputs = sbj_dir_dict.values()
+        # The test input subject directories.
+        sbj_dirs = sbj_dir_dict.values()
+        # The test input session directories.
+        sess_dir_lists = (glob(d + '/*') for d in sbj_dirs)
+        inputs = concat(*sess_dir_lists)
         # Delete the existing test subjects, since staging only detects
         # new visits.
         with qixnat.connect() as xnat:
             for sbj in subjects:
                 xnat.delete(PROJECT, sbj)
-        
+
         # Iterate over the scans.
         discovered = list(iter_stage(PROJECT, collection, *inputs))
         assert_not_equal(len(discovered), 0, 'No scan images were discovered')
@@ -122,16 +125,15 @@ class TestStagingIterator(object):
                                (scan_input.subject, scan_input.session))
             assert_is_not_none(scan_input.iterators,
                                "%s %s scan %d input iterators is missing" %
-                               (scan_input.subject, scan_input.session, scan_input.scan)) 
+                               (scan_input.subject, scan_input.session, scan_input.scan))
             dicom = scan_input.iterators.dicom
             assert_is_not_none(dicom,
                                "%s %s scan %d input DICOM iterator is missing" %
                                (scan_input.subject, scan_input.session, scan_input.scan))
-        
+
         # Return the iterated tuples for further testing.
-        return discovered    
+        return discovered
 
 if __name__ == "__main__":
     import nose
     nose.main(defaultTest=__name__)
-

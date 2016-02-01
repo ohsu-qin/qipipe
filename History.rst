@@ -83,7 +83,7 @@ Add ANTs affine initializer.
 
 5.2.2 / 2015-05-05
 ------------------
-* Detect and stage DWI images.
+* Detect and stage DW images.
 
 5.2.1 / 2015-04-29
 ------------------

@@ -4,7 +4,7 @@ This module contains the OHSU-specific image collections.
 The following OHSU QIN scan numbers are captured:
     * 1: T1
     * 2: T2
-    * 4: DWI
+    * 4: DW
     * 6: PD
 These scans have DICOM files specified by the
 :attr:`qipipe.staging.image_collection.Collection.patterns`
@@ -79,11 +79,11 @@ BREAST_T2_PAT = '*sorted/2_tirm_tra_bilat/*'
 SARCOMA_T2_PAT = '*T2*/*'
 """The Sarcoma T2 DICOM file match pattern."""
 
-BREAST_DWI_PAT = '*sorted/*Diffusion/*'
-"""The Breast DWI DICOM file match pattern."""
+BREAST_DW_PAT = '*sorted/*Diffusion/*'
+"""The Breast DW DICOM file match pattern."""
 
-SARCOMA_DWI_PAT = '*Diffusion/*'
-"""The Sarcoma DWI DICOM file match pattern."""
+SARCOMA_DW_PAT = '*Diffusion/*'
+"""The Sarcoma DW DICOM file match pattern."""
 
 BREAST_PD_PAT = '*sorted/*PD*/*'
 """The Breast pseudo-proton density DICOM file match pattern."""
@@ -114,7 +114,7 @@ BREAST_ROI_REGEX = re.compile("""
 The Breast ROI .bqf ROI file match pattern.
 """
 
-SARCOMA_ROI_PAT = 'results/ROI_ave*/taui_*d001/slice*/*.bqf'
+SARCOMA_ROI_PAT = 'Breast processing results/multi_slice/slice*/*.bqf'
 """
 The Sarcoma ROI glob filter. The ``.bqf`` ROI files are in the
 session subdirectory:
@@ -160,12 +160,12 @@ def _create_breast_collection():
     roi = ROIPatterns(glob=BREAST_ROI_PAT, regex=BREAST_ROI_REGEX)
     t1 = ScanPatterns(dicom=T1_PAT, roi=roi)
     t2 = ScanPatterns(dicom=BREAST_T2_PAT)
-    dwi = ScanPatterns(dicom=BREAST_DWI_PAT)
+    dwi = ScanPatterns(dicom=BREAST_DW_PAT)
     pd = ScanPatterns(dicom=BREAST_PD_PAT)
+    scan_types = {1: 'T1', 2: 'T2', 4: 'DW', 6: 'PD'}
     scan = {1: t1, 2: t2, 4: dwi, 6: pd}
-    opts = dict(crop_posterior=True,
-                subject=BREAST_SUBJECT_REGEX,
-                session=BREAST_SESSION_REGEX,
+    opts = dict(crop_posterior=True, scan_types=scan_types,
+                subject=BREAST_SUBJECT_REGEX, session=BREAST_SESSION_REGEX,
                 scan=scan, volume=VOLUME_TAG)
     return Collection('Breast', **opts)
 
@@ -175,11 +175,11 @@ def _create_sarcoma_collection():
     roi = ROIPatterns(glob=SARCOMA_ROI_PAT, regex=SARCOMA_ROI_REGEX)
     t1 = ScanPatterns(dicom=T1_PAT, roi=roi)
     t2 = ScanPatterns(dicom=SARCOMA_T2_PAT)
-    dwi = ScanPatterns(dicom=SARCOMA_DWI_PAT)
-    scan = {1: t1, 2: t2, 4: dwi}
-    opts = dict(subject=SARCOMA_SUBJECT_REGEX,
-                session=SARCOMA_SESSION_REGEX,
-                scan=scan, volume=VOLUME_TAG)
+    dw = ScanPatterns(dicom=SARCOMA_DW_PAT)
+    scan_types = {1: 'T1', 2: 'T2', 4: 'DW'}
+    scan = {1: t1, 2: t2, 4: dw}
+    opts = dict(scan_types=scan_types, subject=SARCOMA_SUBJECT_REGEX,
+                session=SARCOMA_SESSION_REGEX, scan=scan, volume=VOLUME_TAG)
     return Collection('Sarcoma', **opts)
 
 
