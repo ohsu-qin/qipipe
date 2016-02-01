@@ -1,6 +1,7 @@
 import re
 import functools
 import six
+import numbers
 import mongoengine
 from qiutil import functions
 
@@ -74,8 +75,8 @@ def extract_trailing_number(value):
     :return: the trailing integer
     :raise ParseError: if the input value type is not int or a string type
     """
-    if isinstance(value, int):
-        return value
+    if isinstance(value, numbers.Integral):
+        return int(value)
     elif isinstance(value, six.string_types):
         return parse_trailing_number(value)
     else:

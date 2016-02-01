@@ -3,6 +3,7 @@ This module updates the qiprofile database Subject pathology information
 from the pathology Excel workbook file.
 """
 import six
+import numbers
 from qiprofile_rest_client.model.clinical import (
     SarcomaPathology, FNCLCCGrade, NecrosisPercentValue,
     NecrosisPercentRange, necrosis_percent_as_score
@@ -60,8 +61,8 @@ def _parse_necrosis_percent(value):
     :return: the necrosis percent database object
     :raise qipipe.qiprofile.parse.ParseError: if the value cannot be parsed
     """
-    if isinstance(value, int):
-        return NecrosisPercentValue(value=value)
+    if isinstance(value, numbers.Integral):
+        return NecrosisPercentValue(value=int(value))
     elif not value:
         return None
     elif not isinstance(value, six.string_types):
