@@ -7,7 +7,7 @@ import tempfile
 from qiutil.file import splitexts
 from qiutil.collections import concat
 from qiutil.ast_config import read_config
-from qixnat.helpers import (xnat_path, xnat_name)
+from qixnat.helpers import (xnat_path, xnat_name, parse_xnat_date)
 from qiprofile_rest_client.helpers import database
 from qiprofile_rest_client.model.imaging import (
     Session, SessionDetail, Scan, Volume, ScanProtocol, Registration,
@@ -77,11 +77,14 @@ class Updater(object):
         :raise ImagingUpdateError: if the ``qiprofile`` REST database session
             with the same visit date already exists
         """
-        # The XNAT experiment must have a date.
-        date = experiment.attrs.get('date')
-        if not date:
+        # The XNAT experiment must have a date. The XNAT date is
+        # unfortunately a string, which must be converted to a
+        # datetime.
+        date_s = experiment.attrs.get('date')
+        if not date_s:
             raise ImagingUpdateError( "The XNAT experiment %s is missing the"
                                 " visit date" % xnat_path(experiment))
+        date = parse_xnat_date(date_s)
         # If there is a qiprofile session with the same date,
         # then complain.
         if any( sess.date == date for sess in self.subject.sessions):
@@ -113,7 +116,7 @@ class Updater(object):
         
         # The modeling resources begin with 'pk_'.
         xnat_mdl_rscs = (rsc for rsc in xnat_scan.resources()
-                         if rsc.label().startswith(MODELING_PREFIX))
+                         if xnat_name(rsc).startswith(MODELING_PREFIX))
         modelings = [self._create_modeling(rsc, scans) for rsc in xnat_mdl_rscs]
         
         # The session detail database object to hold the scans.
@@ -122,8 +125,11 @@ class Updater(object):
         # set the detail reference to make the session.
         detail.save()
         
-        # The XNAT experiment date is the qiprofile session date.
-        date = experiment.attrs.get('date')
+        # The qiprofile session date is the XNAT experiment date.
+        # See the comment in the update method in regards to the
+        # type conversion.
+        date_s = experiment.attrs.get('date')
+        date = parse_xnat_date(date_s)
         
         # Return the new qiprofile Session object.
         return Session(date=date, modelings=modelings, detail=detail)
@@ -136,7 +142,7 @@ class Updater(object):
         :return: the qiprofile scan object
         """
         # The scan number.
-        number = int(xnat_scan.label())
+        number = int(xnat_name(xnat_scan))
         # The image collection.
         collection = image_collection.with_name(self.subject.collection)
         # Determine the scan type from the collection and scan number.
@@ -170,7 +176,7 @@ class Updater(object):
         # The XNAT registration resources begin with reg_.
         registrations = [self._create_registration(rsc)
                          for rsc in xnat_scan.resources()
-                         if rsc.label().startswith(REG_PREFIX)]
+                         if xnat_name(rsc).startswith(REG_PREFIX)]
         
         # Return the new qiprofile Scan object.
         return Scan(number=number, protocol=protocol, volumes=volumes,
@@ -237,10 +243,19 @@ class Updater(object):
         :param resource: the XNAT registration resource object
         :return: the qiprofile Registration object
         """
+        # Find or create the registration protocol.
         cfg = self._read_configuration(resource, REG_CONF_FILE)
-        
-        # The registration protocol.
-        key = dict(configuration=cfg)
+        technique_section = cfg.get('General')
+        if not technique_section:
+            raise ImagingUpdateError("The XNAT resource %s protocol is"
+                                     " missing the General section" %
+                                     xnat_path(resource))
+        technique = technique_section.get('technique')
+        if not technique:
+            raise ImagingUpdateError("The XNAT resource %s protocol is"
+                                     " missing the technique option" %
+                                     xnat_path(resource))
+        key = dict(technique=technique, configuration=cfg)
         protocol = database.get_or_create(RegistrationProtocol, key)
         
         # The registration volumes.
@@ -250,7 +265,7 @@ class Updater(object):
         
         # Return the new qiprofile Registration object.
         return Registration(protocol=protocol, volumes=volumes,
-                            resource=resource.label())
+                            resource=xnat_name(resource))
     
     def _create_modeling(self, resource, scans):
         """
@@ -294,11 +309,11 @@ class Updater(object):
             source = Modeling.Source(scan=scan.protocol)
         
         # The qiprofile ModelingProtocol.
-        key = dict(configuration=cfg)
+        key = dict(technique='Mock', configuration=cfg)
         protocol = database.get_or_create(ModelingProtocol, key)
         
         # The modeling result files.
-        xnat_file_labels = {xnat_file.label() for xnat_file in xnat_files}
+        xnat_file_labels = {xnat_name(xnat_file) for xnat_file in xnat_files}
         result = {}
         for output in OUTPUTS:
             fname = output + '.nii.gz'
