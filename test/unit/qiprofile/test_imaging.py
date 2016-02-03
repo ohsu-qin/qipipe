@@ -5,7 +5,7 @@ import csv
 import shutil
 from datetime import datetime
 from mongoengine import connect
-from nose.tools import assert_equal
+from nose.tools import (assert_is_not_none, assert_equal)
 from qiutil.ast_config import read_config
 import qixnat
 from qiprofile_rest_client.helpers import database
@@ -52,6 +52,8 @@ MODELING_OUTPUTS = ['chisq', 'guess_model.k_trans', 'guess_model.v_e',
                     'guess_model.chisq']
 """The modeling output file names without .nii.gz extension."""
 
+SCAN_DATE = datetime(2015, 9, 13)
+
 AIF_SHIFT = 2.4
 """An arbitrary AIF shift parameter."""
 
@@ -70,7 +72,7 @@ class TestImaging(object):
         self._seed()
     
     def tearDown(self):
-        self._connection.drop_database(DATABASE)
+#        self._connection.drop_database(DATABASE)
         with qixnat.connect() as xnat:
             xnat.delete(PROJECT, self._subject_name, self._session_name)
     
@@ -83,7 +85,97 @@ class TestImaging(object):
             exp = xnat.find_one(PROJECT, self._subject_name,
                                 self._session_name)
             imaging.update(subject, exp, bolus_arrival_index=1)
-    
+        
+        # Perform a REST database validation.
+        subject.validate()
+        
+        # Verify the REST session object.
+        sessions = list(subject.sessions)
+        assert_equal(len(sessions), 1,
+                     "The %s Subject %s session count is incorrect: %d" %
+                     (COLLECTION, SUBJECT, len(sessions)))
+        session = sessions[0]
+        assert_is_not_none(session.date,
+                           "The %s %s Session %d date is missing" %
+                           (COLLECTION, SUBJECT, SESSION))
+        assert_equal(str(session.date), str(SCAN_DATE),
+                     "The %s %s Session %d date is incorrect: %s" %
+                     (COLLECTION, SUBJECT, SESSION, session.date))
+        assert_is_not_none(session.detail,
+                           "The %s Subject %s Session %d detail is missing" %
+                           (COLLECTION, SUBJECT, SESSION))
+        
+        # Verify the REST scan object.
+        scans = list(session.detail.scans)
+        assert_equal(len(scans), 1,
+                     "The %s Subject %s Session %d scan count is incorrect: %d" %
+                     (COLLECTION, SUBJECT, SESSION, len(scans)))
+        scan = scans[0]
+        assert_equal(scan.number, SCAN,
+                     "The %s Subject %s Session %d scan number is incorrect: %d" %
+                     (COLLECTION, SUBJECT, SESSION, scan.number))
+        assert_is_not_none(scan.protocol,
+                           "The %s Subject %s Session %d Scan %d protocol is"
+                           " missing" % (COLLECTION, SUBJECT, SESSION, SCAN))
+        assert_is_not_none(scan.protocol.technique,
+                           "The %s Subject %s Session %d Scan %d protocol"
+                           " technique missing" %
+                           (COLLECTION, SUBJECT, SESSION, SCAN))
+        assert_equal(scan.protocol.technique, 'T1',
+                     "The %s Subject %s Session %d Scan %d protocol technique is"
+                     " incorrect: %s" % (COLLECTION, SUBJECT, SESSION, SCAN,
+                                         scan.protocol.technique))
+        
+        # Verify the REST registration object.
+        regs = list(scan.registrations)
+        assert_equal(len(regs), 1, "The %s Subject %s Session %d Scan %d"
+                                   " registrations count is incorrect: %d" %
+                                   (COLLECTION, SUBJECT, SESSION, SCAN, len(regs)))
+        reg = regs[0]
+        assert_equal(reg.resource, REG_RESOURCE,
+                     "The %s Subject %s Session %d Scan %d registration"
+                     " resource is is incorrect: %s" %
+                      (COLLECTION, SUBJECT, SESSION, SCAN, reg.resource))
+        assert_is_not_none(reg.protocol,
+                           "The %s Subject %s Session %d Scan %d registration"
+                           " %s protocol is missing" %
+                           (COLLECTION, SUBJECT, SESSION, SCAN, REG_RESOURCE))
+        assert_is_not_none(reg.protocol.technique,
+                           "The %s Subject %s Session %d Scan %d registration"
+                           " %s protocol technique is missing" %
+                           (COLLECTION, SUBJECT, SESSION, SCAN, REG_RESOURCE))
+        assert_equal(reg.protocol.technique, 'Mock',
+                     "The %s Subject %s Session %d Scan %d registration %s"
+                     " protocol technique is incorrect: %s" %
+                     (COLLECTION, SUBJECT, SESSION, SCAN, REG_RESOURCE,
+                      reg.protocol.technique))
+        
+        # Verify the REST modeling object.
+        mdls = list(session.modelings)
+        assert_equal(len(mdls), 1, "The %s Subject %s Session %d modelings"
+                                    " count is incorrect: %d" %
+                                    (COLLECTION, SUBJECT, SESSION, len(mdls)))
+        mdl = mdls[0]
+        assert_equal(mdl.resource, MODELING_RESOURCE,
+                     "The %s Subject %s Session %d Scan %d registration %s"
+                     " modeling resource is incorrect: %s" %
+                     (COLLECTION, SUBJECT, SESSION, SCAN, REG_RESOURCE,
+                      mdl.resource))
+        assert_is_not_none(mdl.protocol,
+                           "The %s Subject %s Session %d Scan %d registration"
+                           " %s modeling %s protocol is missing" %
+                           (COLLECTION, SUBJECT, SESSION, SCAN, REG_RESOURCE,
+                            MODELING_RESOURCE))
+        assert_is_not_none(mdl.protocol.technique,
+                           "The %s Subject %s Session %d Scan %d registration"
+                           " %s modeling %s protocol technique is missing" %
+                           (COLLECTION, SUBJECT, SESSION, SCAN, REG_RESOURCE,
+                            MODELING_RESOURCE))
+        assert_equal(mdl.protocol.technique, 'Mock',
+                     "The %s Subject %s Session %d Scan %d registration %s"
+                     " modeling %s protocol technique is incorrect: %s" %
+                     (COLLECTION, SUBJECT, SESSION, SCAN, REG_RESOURCE,
+                      MODELING_RESOURCE, mdl.protocol.technique))
     
     def _seed(self):
         """
@@ -91,7 +183,7 @@ class TestImaging(object):
         a dummy registration and the :const:`MODELING_CONF_FILE` modeling
         profile.
         """
-        exp_opt = (self._session_name, dict(date=datetime.now()))
+        exp_opt = (self._session_name, dict(date=SCAN_DATE))
         with qixnat.connect() as xnat:
             xnat.delete(PROJECT, self._subject_name, self._session_name)
             scan = xnat.find_or_create(PROJECT, self._subject_name,
@@ -115,7 +207,7 @@ class TestImaging(object):
             with tempfile.NamedTemporaryFile() as profile:
                 self._create_profile(REG_CONF_FILE,
                                      dest=profile.name,
-                                     general=dict(technique='mock'))
+                                     general=dict(technique='Mock'))
                 profile.flush()
                 # Upload the registration profile.
                 xnat.upload(reg, profile.name, name='registration.cfg')
@@ -132,7 +224,7 @@ class TestImaging(object):
             with tempfile.NamedTemporaryFile() as profile:
                 self._create_profile(MODELING_CONF_FILE,
                                      dest=profile.name,
-                                     general=dict(technique='mock'),
+                                     general=dict(technique='Mock'),
                                      source=dict(resource=REG_RESOURCE))
                 profile.flush()
                 # Upload the modeling profile.
