@@ -40,7 +40,7 @@ We recommend the Anaconda_ environment for scientific packages and pip_
 for the remaining Python packages. Install ``qipipe`` using the
 following procedure:
 
-1. Install and activate an Anaconda_ environment as described in the
+1. Install and activate a qixnat_ Anaconda_ environment as described in the
    `qixnat Installation Instructions`_.
 
 2. Install the ``qipipe`` dependencies hosted by Anaconda::
@@ -207,6 +207,8 @@ The release is then published as follows:
 .. _pip: https://pypi.python.org/pypi/pip
 
 .. _PyPI: https://pypi.python.org/pypi
+
+.. _qixnat: http://qixnat.readthedocs.org/en/latest/
 
 .. _qixnat Installation Instructions: http://qixnat.readthedocs.org/en/latest/#installation
 
