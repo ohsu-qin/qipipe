@@ -4,6 +4,7 @@ scipy
 mpi4py
 matplotlib
 traits
+ndg-httpsclient
 networkx
 openpyxl
 pyasn1
