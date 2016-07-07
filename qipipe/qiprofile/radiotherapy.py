@@ -4,7 +4,7 @@ information from a Radiotherapy Excel worksheet.
 """
 
 import datetime
-from qiprofile_rest_client.model.clinical import (Dosage, Radiation)
+from qirest_client.model.clinical import (Dosage, Radiation)
 from .dosage import (DosageWorksheet, DosageUpdate)
 from . import parse
 

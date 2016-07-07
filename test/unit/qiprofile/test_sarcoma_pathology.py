@@ -4,9 +4,9 @@ import shutil
 from bunch import Bunch
 from datetime import datetime
 from nose.tools import (assert_equal, assert_is_not_none, assert_is_instance)
-from qiprofile_rest_client.model.subject import Subject
-from qiprofile_rest_client.model.common import TumorExtent
-from qiprofile_rest_client.model.clinical import (
+from qirest_client.model.subject import Subject
+from qirest_client.model.common import TumorExtent
+from qirest_client.model.clinical import (
     Biopsy, SarcomaPathology, NecrosisPercentValue, TNM, TumorLocation,
     FNCLCCGrade
 )

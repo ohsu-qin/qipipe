@@ -8,8 +8,8 @@ from qiutil.file import splitexts
 from qiutil.collections import concat
 from qiutil.ast_config import read_config
 from qixnat.helpers import (xnat_path, xnat_name, parse_xnat_date)
-from qiprofile_rest_client.helpers import database
-from qiprofile_rest_client.model.imaging import (
+from qirest_client.helpers import database
+from qirest_client.model.imaging import (
     Session, SessionDetail, Scan, Volume, ScanProtocol, Registration,
     RegistrationProtocol, Modeling, ModelingProtocol
 )
@@ -157,12 +157,13 @@ class Updater(object):
         # The corresponding qiprofile ScanProtocol.
         protocol = database.get_or_create(ScanProtocol, pcl_key)
         
-        # The scan volumes.
-        rsc = xnat_scan.resource('NIFTI')
+        # There must be a time series.
+        rsc = xnat_scan.resource('scan_ts')
         if not rsc.exists():
-            raise ImagingUpdateError("The XNAT scan %s does not have a NIFTI"
+            raise ImagingUpdateError("The XNAT scan %s does not have a time series"
                                      " resource" % xnat_path(xnat_scan))
-        volumes = [Volume(name=xnat_name(f)) for f in rsc.files()]
+        time_series_file = next(f for f in rsc.files())
+        time_series = TimeSeries(name=xnat_name(time_series_file)
         
         # There must be a bolus arrival.
         if not self.bolus_arrival_index:
@@ -179,7 +180,7 @@ class Updater(object):
                          if xnat_name(rsc).startswith(REG_PREFIX)]
         
         # Return the new qiprofile Scan object.
-        return Scan(number=number, protocol=protocol, volumes=volumes,
+        return Scan(number=number, protocol=protocol, time_series=time_series,
                     bolus_arrival_index=self.bolus_arrival_index,
                     rois=rois, registrations=registrations)
     
@@ -258,13 +259,12 @@ class Updater(object):
         key = dict(technique=technique, configuration=cfg)
         protocol = database.get_or_create(RegistrationProtocol, key)
         
-        # The registration volumes.
-        file_names = (xnat_name(f) for f in resource.files())
-        volumes = [Volume(name=name) for name in file_names
-                   if name.startswith('volume')]
+        # There must be a time series.
+        time_series_file = next(f for f in resource.files() if f.label().ends_with('_ts.nii.gz'))
+        time_series = TimeSeries(name=xnat_name(time_series_file))
         
         # Return the new qiprofile Registration object.
-        return Registration(protocol=protocol, volumes=volumes,
+        return Registration(protocol=protocol, time_series=time_series,
                             resource=xnat_name(resource))
     
     def _create_modeling(self, resource, scans):

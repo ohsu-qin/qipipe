@@ -27,4 +27,4 @@ six
 qiutil
 qidicom
 qixnat
-qiprofile-rest-client
+qirest-client

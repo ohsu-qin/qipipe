@@ -4,7 +4,7 @@ information from the demographics Excel workbook file.
 """
 
 import re
-from qiprofile_rest_client.model.subject import Subject
+from qirest_client.model.subject import Subject
 from .xls import Worksheet
 from . import parse
 

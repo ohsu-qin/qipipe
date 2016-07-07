@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
+5.6.5 / 2016-07-06
+------------------
+Change qiprofile-rest to qirest.
+
 5.6.4 / 2015-11-30
 ------------------
 Add ANTs affine initializer.

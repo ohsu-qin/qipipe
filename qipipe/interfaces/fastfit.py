@@ -1,6 +1,6 @@
 """
-OHSU - This module wraps the proprietary OHSU AIRC ``fastfit`` software.
-``fastfit`` optimizes the input pharmacokinetic model.
+OHSU - This module wraps the proprietary OHSU AIRC ``fastfit``
+software. ``fastfit`` optimizes the input pharmacokinetic model.
 
 :Note: this interface is copied from the AIRC cluster file
     ``/usr/global/scripts/fastfit_iface.py``. It is included
@@ -20,10 +20,10 @@ import os
 from os import path
 from glob import glob
 import traits.api as traits
-from nipype.interfaces.base import (DynamicTraitedSpec,
-                                    MpiCommandLine,
-                                    MpiCommandLineInputSpec,
-                                    isdefined)
+from nipype.interfaces.base import (
+    DynamicTraitedSpec, MpiCommandLine, MpiCommandLineInputSpec,
+    isdefined
+)
 from nipype.interfaces.traits_extension import Undefined
 # Tolerate import even when the proprietary OHSU fastfit modeling
 # tool is not available. This allows import of the modeling module
@@ -69,11 +69,9 @@ class Fastfit(MpiCommandLine):
     """
     
     # Note: a local fastfit build results in MPICOMM errors.
-    # The work-around is to specify the full path of the official build.
-    # In that case, a local fastfit build is sufficient to run this interface,
-    # but the local fastfit executable is ignored in preference for the
-    # official build.
-    _cmd = '/usr/global/bin/fastfit'
+    # The work-around is to specify a fastfit wrapper that loads a
+    # virtual environment before calling the global fastfit.
+    _cmd = 'global_fastfit'
     
     input_spec = FastfitInputSpec
     
@@ -82,6 +80,15 @@ class Fastfit(MpiCommandLine):
     def __init__(self, min_outs=None, **inputs):
         super(Fastfit, self).__init__(**inputs)
         self._min_outs = min_outs
+
+    # Note: nipype MpiCommandLine calls mpiexec, which resolves to the
+    # local build mpiexec. This results in MPICOMM errors, as described
+    # in the _cmd note above. The work-around is to replace mpiexec
+    # with the absolute path of the official mpiexec.
+    @property
+    def cmdline(self):
+        result = super(Fastfit, self).cmdline
+        return result.replace('mpiexec', '/usr/global/bin/mpiexec')
     
     def _format_arg(self, name, spec, value):
         if name == 'optional_outs':

@@ -8,8 +8,8 @@ from mongoengine import connect
 from nose.tools import (assert_is_not_none, assert_equal)
 from qiutil.ast_config import read_config
 import qixnat
-from qiprofile_rest_client.helpers import database
-from qiprofile_rest_client.model.subject import Subject
+from qirest_client.helpers import database
+from qirest_client.model.subject import Subject
 from qipipe.helpers import metadata
 from qipipe.pipeline.registration import REG_CONF_FILE
 from qipipe.pipeline.modeling import (MODELING_CONF_FILE, BOLERO_CONF_SECTIONS)

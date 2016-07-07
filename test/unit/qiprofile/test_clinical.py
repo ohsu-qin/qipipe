@@ -5,7 +5,7 @@ from mongoengine.connection import get_db
 from nose.tools import (assert_true, assert_equal, assert_in,
                         assert_is_none, assert_is_not_none,
                         assert_is_instance)
-from qiprofile_rest_client.model.subject import Subject
+from qirest_client.model.subject import Subject
 from qipipe.qiprofile import clinical
 from ...helpers.logging import logger
 from ... import PROJECT

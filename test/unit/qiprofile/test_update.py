@@ -2,7 +2,7 @@ from datetime import datetime
 from bunch import Bunch
 from mongoengine import connect
 from nose.tools import assert_equal
-from qiprofile_rest_client.model.subject import Subject
+from qirest_client.model.subject import Subject
 from qipipe.qiprofile import demographics
 from ...helpers.logging import logger
 from ... import PROJECT

@@ -4,7 +4,7 @@ from the pathology Excel workbook file.
 """
 import six
 import numbers
-from qiprofile_rest_client.model.clinical import (
+from qirest_client.model.clinical import (
     SarcomaPathology, FNCLCCGrade, NecrosisPercentValue,
     NecrosisPercentRange, necrosis_percent_as_score
 )
