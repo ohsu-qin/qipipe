@@ -19,7 +19,7 @@ Feature List
 ************
 1. Recognizes new study images.
 
-2. Stages images for submission to 
+2. Stages images for submission to
    `The Cancer Imaging Archive`_ (TCIA) `QIN collection`_.
 
 3. Masks images to subtract extraneous image content.
@@ -79,7 +79,7 @@ following procedure:
   and refresh your environment::
 
        . $HOME/.bash_profile
- 
+
 
 *****
 Usage
@@ -132,6 +132,12 @@ Documentation can be generated locally as follows:
 * Run the following in the ``doc`` subdirectory::
 
       make html
+
+Read The Docs builds occur in a limited context that sometimes fails
+on dependencies, e.g. when an install a requires C extension. In that
+case, the project has a ``requirements_read_the_doc.txt`` that
+eliminates the problematic dependency and specify the requirements
+file in the Read The Docs project Advance Settings.
 
 Release
 -------
