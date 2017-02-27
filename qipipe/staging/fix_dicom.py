@@ -19,35 +19,35 @@ COMMENT_PREFIX = re.compile('^TTC \d+(\/.\d*)? sec')
 def fix_dicom_headers(collection, subject, *in_files, **opts):
     """
     Fix the given input DICOM files as follows:
-    
+
     * Replace the ``Patient ID`` value with the subject number, e.g.
         ``Sarcoma001``
-    
+
     * Add the ``Body Part Examined`` tag
-    
+
     * Anonymize the ``Patient's Birth Date`` tag
-    
+
     * Standardize the file name
-    
+
     *OHSU* - The ``Body Part Examined`` tag is set as follows:
-    
+
     * If the collection is ``Sarcoma``, then the body part is the
         :meth:`qipipe.staging.sarcoma_config.sarcoma_location`.
-    
+
     * Otherwise, the body part is the capitalized collection name, e.g.
         ``BREAST``.
-    
+
     *OHSU* - Remove extraneous ``Image Comments`` tag value content
     which might contain PHI.
-    
+
     The output file name is standardized as follows:
-    
+
     * The file name is lower-case
-    
+
     * The file extension is ``.dcm``
-    
+
     * Each non-word character is replaced by an underscore
-    
+
     :param collection: the collection name
     :param subject: the input subject name
     :param opts: the following keyword arguments:
@@ -67,6 +67,9 @@ def fix_dicom_headers(collection, subject, *in_files, **opts):
                          ImageComments=_scrub_comment)
     # The destination directory.
     dest = opts.get('dest', os.getcwd())
+    # Make the destination directory, if necessary.
+    if not os.path.exists(dest):
+        os.makedirs(dest)
     # The destination file namer.
     file_namer = functools.partial(_dest_file_name, dest=dest)
     logger(__name__).debug("Replacing the following DICOM tags: %s" %
@@ -78,7 +81,7 @@ def fix_dicom_headers(collection, subject, *in_files, **opts):
         editor.edit(ds)
         dcm_files.append(ds.filename)
     logger(__name__).debug("Changed the DICOM tag values.")
-    
+
     # Return the output file names.
     return [file_namer(f) for f in dcm_files]
 
@@ -93,7 +96,7 @@ def _anonymize_date(date):
     phi = datetime.strptime(date, DATE_FMT)
     # The anonymized date.
     anon = dates.anonymize(phi)
-    
+
     # Return the anonymized date as a string.
     return anon.strftime(DATE_FMT)
 
@@ -104,14 +107,14 @@ def _scrub_comment(comment):
     :return: the scrubbed comment
     """
     match = COMMENT_PREFIX.match(comment)
-    
+
     return match.group(0) if match else comment
 
 
 def _dest_file_name(in_file, dest):
     """
     Standardizes the given input file name.
-    
+
     :param in_file: the input file name
     :param dest: the destination directory
     :return: the target output file name
@@ -123,5 +126,5 @@ def _dest_file_name(in_file, dest):
     _, ext = os.path.splitext(fname)
     if not ext:
         fname = fname + '.dcm'
-    
+
     return os.path.join(dest, fname)
