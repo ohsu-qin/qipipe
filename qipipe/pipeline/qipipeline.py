@@ -352,7 +352,7 @@ class QIPipelineWorkflow(WorkflowBase):
             class:`qipipe.pipeline.modeling.ModelingWorkflow` technique
         """
         super(QIPipelineWorkflow, self).__init__(
-            project=project, logger=logger(__name__), **opts
+            project=project, name=__name__, **opts
         )
 
         reg_tech_opt = opts.get('registration_technique')
@@ -1180,4 +1180,3 @@ def roi(project, subject, session, scan, time_series, in_rois, opts):
 
     # Return the volume index.
     return roi_volume_nbr - 1
-    
