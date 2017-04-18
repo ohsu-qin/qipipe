@@ -3,7 +3,7 @@ This module updates the qiprofile database Subject drug dosage
 information from a Chemotherapy Excel worksheet.
 """
 import datetime
-from qiprofile_rest_client.model.clinical import (Treatment, Dosage)
+from qirest_client.model.clinical import (Treatment, Dosage)
 from .xls import Worksheet
 from . import parse
 

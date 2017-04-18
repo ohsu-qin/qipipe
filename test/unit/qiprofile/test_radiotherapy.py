@@ -2,8 +2,8 @@ from bunch import Bunch
 from datetime import datetime
 from nose.tools import (assert_equal, assert_in, assert_true,
                         assert_is_none, assert_is_not_none)
-from qiprofile_rest_client.model.subject import Subject
-from qiprofile_rest_client.model.clinical import (Treatment, Radiation, Dosage)
+from qirest_client.model.subject import Subject
+from qirest_client.model.clinical import (Treatment, Radiation, Dosage)
 from qipipe.qiprofile import (xls, radiotherapy)
 from ... import PROJECT
 from . import BREAST_FIXTURE

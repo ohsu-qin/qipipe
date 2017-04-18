@@ -45,10 +45,10 @@ class TestROI(object):
         #   The work-around is to filter this warning in a context.
         #
         # Uncomment to display the ROI convex hull.
-        # import warnings
-        # with warnings.catch_warnings():
-        #    warnings.simplefilter(action='ignore', category=FutureWarning)
-        #    self.roi.extent.show()
+        import warnings
+        with warnings.catch_warnings():
+           warnings.simplefilter(action='ignore', category=FutureWarning)
+           self.roi.extent.show()
 
 
 if __name__ == "__main__":

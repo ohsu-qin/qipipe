@@ -3,7 +3,7 @@ This module updates the qiprofile database Subject chemotherapy protocol
 information from a Chemotherapy Excel worksheet.
 """
 
-from qiprofile_rest_client.model.clinical import (Dosage, Drug)
+from qirest_client.model.clinical import (Dosage, Drug)
 from .dosage import (DosageWorksheet, DosageUpdate)
 from . import parse
 

@@ -1,7 +1,7 @@
-nibabel>=2.0.1
-qiutil>=2.2.12
-qidicom>=2.3.11
-qixnat>=4.2.1
-qiprofile-rest-client>=5.10.1
+nibabel~=2.0
+qiutil~=2.2
+qidicom~=2.3
+qixnat~=4.2
+qirest-client~=6.1
 git+git://github.com/moloney/dcmstack.git#egg=dcmstack
 git+git://github.com/FredLoney/nipype.git#egg=nipype

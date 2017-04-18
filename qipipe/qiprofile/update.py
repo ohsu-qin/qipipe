@@ -1,6 +1,6 @@
-from qiprofile_rest_client.helpers import database
-from qiprofile_rest_client.model.subject import Subject
-from qiprofile_rest_client.model.imaging import Session
+from qirest_client.helpers import database
+from qirest_client.model.subject import Subject
+from qirest_client.model.imaging import Session
 from . import (clinical, imaging)
 
 

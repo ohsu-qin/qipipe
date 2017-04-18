@@ -89,10 +89,10 @@ class Fastfit(MpiCommandLine):
     # local build mpiexec. This results in MPICOMM errors, as described
     # in the _cmd note above. The work-around is to replace mpiexec
     # with the absolute path of the official mpiexec.
-    #@property
-    #def cmdline(self):
-    #    result = super(Fastfit, self).cmdline
-    #    return result.replace('mpiexec', '/usr/global/bin/mpiexec')
+    @property
+    def cmdline(self):
+        result = super(Fastfit, self).cmdline
+        return result.replace('mpiexec', '/usr/global/bin/mpiexec')
     
     def _format_arg(self, name, spec, value):
         if name == 'optional_outs':

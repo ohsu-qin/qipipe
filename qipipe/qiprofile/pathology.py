@@ -3,8 +3,8 @@ This module updates the qiprofile database Subject pathology information
 from the pathology Excel workbook file.
 """
 from bunch import bunchify
-from qiprofile_rest_client.model.common import (Encounter, TumorExtent)
-from qiprofile_rest_client.model.clinical import (
+from qirest_client.model.common import (Encounter, TumorExtent)
+from qirest_client.model.clinical import (
     Biopsy, Surgery, PathologyReport, TNM, TumorLocation
 )
 from . import parse
@@ -45,7 +45,7 @@ The following parser associations:
 * *subject_number* is an int
 * *intervention_type* converts the string to an Encounter subclass
 * *body_part* is capitalized
-* *size* is a :class:`qiprofile_rest_client.clinical.TNM.Size` object
+* *size* is a :class:`qirest_client.clinical.TNM.Size` object
 """
 
 SHEET = 'Pathology'

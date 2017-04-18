@@ -3,7 +3,7 @@ from bunch import Bunch
 from mongoengine import (connect, ValidationError)
 from nose.tools import (assert_equal, assert_in, assert_is_not_none,
                         assert_is_instance)
-from qiprofile_rest_client.model.subject import Subject
+from qirest_client.model.subject import Subject
 from qipipe.qiprofile import (xls, demographics)
 from ...helpers.logging import logger
 from ... import PROJECT

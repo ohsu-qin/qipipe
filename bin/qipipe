@@ -9,6 +9,7 @@ import shutil
 import imp
 import argparse
 from qipipe.helpers import command
+from qipipe.helpers.mock_logger import MockLogger
 
 NIPYPE_LOG_DIR_ENV_VAR = 'NIPYPE_LOG_DIR'
 """The environment variable used by Nipype to set the log directory."""
@@ -46,6 +47,14 @@ def main(argv=sys.argv):
             os.makedirs(log_dir)
         # Set the Nipype log directory environment variable.
         os.environ[NIPYPE_LOG_DIR_ENV_VAR] = log_dir
+    else:
+        # Log to stdout to work around the Nipype bug described in
+        # the MockLogger apidoc.
+        mock_log_opts = {}
+        level = log_opts.get('log_level')
+        if level:
+            mock_log_opts['level'] = level
+        opts['logger'] = MockLogger(**mock_log_opts)
 
     # Import the qipipe pipeline module after configuring the logger
     # above, since importing any nipype module writes to the log.

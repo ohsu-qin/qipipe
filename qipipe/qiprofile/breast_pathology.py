@@ -2,7 +2,7 @@
 This module updates the qiprofile database Subject pathology information
 from the pathology Excel workbook file.
 """
-from qiprofile_rest_client.model.clinical import (
+from qirest_client.model.clinical import (
     Surgery, BreastSurgery, BreastPathology, ModifiedBloomRichardsonGrade,
     ResidualCancerBurden, HormoneReceptorStatus, BreastGeneticExpression
 )
