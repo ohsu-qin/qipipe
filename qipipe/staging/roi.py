@@ -81,8 +81,9 @@ def iter_roi(glob_pat, regex, input_dir):
         param_file_pat = "%s/*.par" % roi_dir
         param_file_names = glob.glob(param_file_pat)
         if not param_file_names:
+            abs_roi_dir = os.path.abspath(roi_dir)
             raise ROIError("The ROI slice directory does not have" +
-                           "have a parameter file: %s" % roi_dir)
+                           " a parameter file: %s" % abs_roi_dir)
         if len(param_file_names) > 1:
             raise ROIError("The ROI slice directory has more than" +
                            "one parameter file: %s" % roi_dir)
