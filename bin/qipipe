@@ -48,8 +48,8 @@ def main(argv=sys.argv):
         # Set the Nipype log directory environment variable.
         os.environ[NIPYPE_LOG_DIR_ENV_VAR] = log_dir
     else:
-        # Log to stdout to work around the Nipype bug described in
-        # the MockLogger apidoc.
+        # Print log messages to stdout to work around the Nipype
+        # bug described in the MockLogger apidoc.
         mock_log_opts = {}
         level = log_opts.get('log_level')
         if level:
