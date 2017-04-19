@@ -76,14 +76,16 @@ def iter_roi(glob_pat, regex, input_dir):
             lesion_s = None
         lesion = int(lesion_s) if lesion_s else 1
 
+        # Prepend the full input directory to the file match.
+        abs_input_dir = os.path.abspath(input_dir)
+        file_path = '/'.join([abs_input_dir, file_name])
         # The volume and slice are in the companion parameters file.
-        roi_dir, _ = os.path.split(file_name)
+        roi_dir, _ = os.path.split(file_path)
         param_file_pat = "%s/*.par" % roi_dir
         param_file_names = glob.glob(param_file_pat)
         if not param_file_names:
-            abs_roi_dir = os.path.abspath(roi_dir)
             raise ROIError("The ROI slice directory does not have" +
-                           " a parameter file: %s" % abs_roi_dir)
+                           " a parameter file: %s" % roi_dir)
         if len(param_file_names) > 1:
             raise ROIError("The ROI slice directory has more than" +
                            "one parameter file: %s" % roi_dir)
@@ -104,18 +106,22 @@ def iter_roi(glob_pat, regex, input_dir):
                            " the parameter file: %s" % param_file_name)
         volume_nbr = int(volume_nbr_s)
 
-        # Prepend the base directory to the matching file path.
-        path = os.path.join(input_dir, file_name)
+        yield LesionROI(lesion, volume_nbr, slice_seq_nbr, file_path)
 
-        yield LesionROI(lesion, volume_nbr, slice_seq_nbr,
-                        os.path.abspath(path))
+def _collect_parameters(param_file_name):
+    """
+    Parses the parameters from the ``.par`` file.
 
-def _collect_parameters(s, params):
-        params = {}
-        with open(param_file_name) as f:
-            lines = f.readlines()
-            for line in lines:
-                match = PARAM_REGEX.match(s)
-                if match:
-                    params.groups[match.key] = match.value
-        return params
+    :param param_file_name: the paramter file location
+    :return: the parameter {name: value} dictionary
+    """
+    params = {}
+    with open(param_file_name) as f:
+        lines = f.readlines()
+        for line in lines:
+            match = PARAM_REGEX.match(line)
+            if match:
+                key = match.group('key')
+                value = match.group('value')
+                params[key] = value
+    return params
