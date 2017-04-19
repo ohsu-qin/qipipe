@@ -29,7 +29,7 @@ def version(package):
        (.+)          # The version string capture group
        ['\"]         # Trailing quote
     """, re.VERBOSE)
-    
+
     with open(os.path.join(package, '__init__.py')) as f:
        match = REGEXP.search(f.read())
        if not match:
@@ -47,9 +47,16 @@ def dependency_links():
     Returns the non-PyPI ``qipipe`` requirements in
     ``constraints.txt`` which match the :const:`VCS_RQMT_PAT`
     pattern.
-    
+
     :return: the non-PyPI package specifications
     """
+    # FIXME - broken: install from PyPi fails on dcmstack.
+    # Work-around is to clone qipipe repo and install with
+    # --constraint constraints.txt option, as described in
+    # doc/index.rst.
+    #
+    # TODO - revisit this yet again and eliminate doc step
+    # if fixed.
     with open('constraints.txt') as f:
         rqmts = f.read().splitlines()
         # Match on git dependency links. Not a general solution, but

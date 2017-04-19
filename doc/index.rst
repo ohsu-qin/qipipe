@@ -49,11 +49,17 @@ following procedure:
          - https://www.github.com/ohsu-qin/qipipe/raw/master/requirements_conda.txt \
          | xargs conda install --yes
 
-3. Install the ``qipipe`` package using pip::
+3. Download the ``qipipe`` constraints file::
 
-       pip install qipipe
+       wget -q --no-check-certificate -O \
+         - https://www.github.com/ohsu-qin/qipipe/raw/master/constraints.txt \
+         > /tmp/constraints.txt
 
-4. For ANTS_ registration, build the ants package from source using
+4. Install the ``qipipe`` package using pip::
+
+       pip install qipipe --constraint /tmp/constraints.txt
+
+5. For ANTS_ registration, build the ants package from source using
    the `ANTS Compile Instructions`_::
 
        pushd ~/workspace
