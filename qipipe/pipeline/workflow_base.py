@@ -103,6 +103,7 @@ class WorkflowBase(object):
         else:
             name = opts.get('name', 'qiprofile')
             _logger = logger(name)
+            _logger.debug("Created logger.")
         self.logger = _logger
         """This workflow's logger."""
 
