@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
+5.6.8 / 2016-04-19
+------------------
+Log through a qipipe logger facade.
+
 5.6.7 / 2016-04-19
 ------------------
 Remove FixDicom entry from config defaults.
