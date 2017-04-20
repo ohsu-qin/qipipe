@@ -57,7 +57,7 @@ following procedure:
 
 4. Install the ``qipipe`` package using pip::
 
-       pip install qipipe --constraint /tmp/constraints.txt
+       pip install qipipe --constraint /tmp/constraints.txt && rm /tmp/constraints.txt
 
 5. For ANTS_ registration, build the ants package from source using
    the `ANTS Compile Instructions`_::

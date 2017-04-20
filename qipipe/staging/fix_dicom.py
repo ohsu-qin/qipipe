@@ -3,7 +3,7 @@ import re
 from datetime import datetime
 import functools
 import dicom
-from qiutil.logging import logger
+from ..helpers.logging import logger
 from qiutil import dates
 from qidicom import (meta, writer)
 from .sarcoma_config import sarcoma_location

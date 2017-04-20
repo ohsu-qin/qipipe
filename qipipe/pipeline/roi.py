@@ -9,7 +9,7 @@ from nipype.pipeline import engine as pe
 from nipype.interfaces.dcmstack import MergeNifti
 from nipype.interfaces.utility import (IdentityInterface, Function)
 import qiutil
-from qiutil.logging import logger
+from ..helpers.logging import logger
 from ..interfaces import (ConvertBoleroMask, XNATUpload)
 from .workflow_base import WorkflowBase
 from .pipeline_error import PipelineError

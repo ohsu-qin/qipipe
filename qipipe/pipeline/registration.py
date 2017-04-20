@@ -9,7 +9,7 @@ from nipype.interfaces.ants import (AverageImages, Registration,
 from nipype.interfaces import fsl
 from nipype.interfaces.dcmstack import CopyMeta
 import qiutil
-from qiutil.logging import logger
+from ..helpers.logging import logger
 from ..interfaces import (Copy, XNATUpload)
 from ..interfaces.ants import AffineInitializer
 from ..helpers import bolus_arrival

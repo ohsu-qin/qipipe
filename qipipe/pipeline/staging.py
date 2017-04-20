@@ -6,7 +6,7 @@ from nipype.interfaces.dcmstack import DcmStack
 from ..interfaces import (Gate, FixDicom, Compress, XNATFind, XNATUpload)
 import qixnat
 from .workflow_base import WorkflowBase
-from qiutil.logging import logger
+from ..helpers.logging import logger
 from ..staging import iterator
 
 SCAN_METADATA_RESOURCE = 'metadata'

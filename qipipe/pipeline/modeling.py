@@ -9,7 +9,7 @@ if not on_rtd:
     from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
     from ..helpers.bolus_arrival import bolus_arrival_index, BolusArrivalError
 import qiutil
-from qiutil.logging import logger
+from ..helpers.logging import logger
 from ..helpers.constants import CONF_DIR
 from ..interfaces import (Gate, XNATUpload, XNATFind)
 from .workflow_base import WorkflowBase

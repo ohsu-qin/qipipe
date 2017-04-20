@@ -4,7 +4,7 @@ import tempfile
 import pprint
 import networkx as nx
 import qixnat
-from qiutil.logging import logger
+from ..helpers.logging import logger
 from qiutil.collections import EMPTY_DICT
 from qiutil.ast_config import read_config
 from ..helpers.constants import CONF_DIR
@@ -95,15 +95,16 @@ class WorkflowBase(object):
         self.project = project
         """The XNAT project name."""
 
+        name = opts.get('name', 'qiprofile')
         logger_opt = opts.get('logger')
         if logger_opt:
             _logger = logger_opt
         elif parent:
             _logger = parent.logger
+            _logger.debug("%s is using the parent workflow logger." % name)
         else:
-            name = opts.get('name', 'qiprofile')
             _logger = logger(name)
-            _logger.debug("Created logger.")
+            _logger.debug("Created %s logger." % name)
         self.logger = _logger
         """This workflow's logger."""
 

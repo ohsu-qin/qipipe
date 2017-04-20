@@ -6,7 +6,7 @@ import os
 import re
 import glob
 from collections import defaultdict
-from qiutil.logging import logger
+from ..helpers.logging import logger
 import qixnat
 import qidicom.hierarchy
 from .. import staging
