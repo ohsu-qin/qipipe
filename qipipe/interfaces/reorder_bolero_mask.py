@@ -32,11 +32,16 @@ class ReorderBoleroMask(CommandLine):
     output_spec = ReorderBoleroMaskOutputSpec
 
     def __init__(self, **inputs):
-        # There must be an output file.
-        if not inputs.get('out_file'):
-            in_file = inputs['in_file']
-            inputs['out_file'] = self._default_output_file_name(in_file)
         super(ReorderBoleroMask, self).__init__(**inputs)
+
+    def run(self, **inputs):
+        if not inputs.get('out_file'):
+            in_file = inputs.get('in_file')
+            # in_file is mandatory, but let that be checked by the
+            # base class and the appropriate error thrown there.
+            if in_file:
+                inputs['out_file'] = self._default_output_file_name(in_file)
+        super(ReorderBoleroMask, self).run(**inputs)
 
     def _list_outputs(self):
         outputs = self._outputs().get()
