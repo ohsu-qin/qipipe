@@ -23,9 +23,9 @@ from ..staging import image_collection
 from ..staging.iterator import iter_stage
 from ..staging.map_ctp import map_ctp
 from ..staging.ohsu import MULTI_VOLUME_SCAN_NUMBERS
+from ..staging.roi import LesionROI
 from .modeling import (ModelingWorkflow, MODELING_CONF_FILE)
 from .mask import MaskWorkflow
-from .roi import ROIWorkflow
 from ..helpers.constants import (SCAN_TS_RSC, MASK_RSC)
 from ..interfaces import (XNATDownload, XNATUpload)
 
@@ -1031,7 +1031,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 if self.workflow.get_node('roi'):
                     opts = dict(base_dir=self.workflow.base_dir, dry_run=True)
                     # A dummy (lesion, slice index, in_file) ROI input tuple.
-                    inputs = [(1, 1, path)]
+                    inputs = [LesionROI(1, 1, 1, path)]
                     roi('Dummy', 'Dummy', 'Dummy', 1, path, inputs, opts)
             finally:
                 os.remove(path)
@@ -1165,7 +1165,7 @@ def roi(project, subject, session, scan, time_series, in_rois, opts):
     :param session: the session name
     :param scan: the scan number
     :param time_series: the scan 4D time series
-    :param in_rois: the :meth:`qipipe.pipeline.roi.run` input tuples
+    :param in_rois: the :meth:`qipipe.pipeline.roi.run` input ROI specs
     :param opts: the :meth:`qipipe.pipeline.roi.run` keyword options
     :return: the ROI volume index
     """
@@ -1173,10 +1173,8 @@ def roi(project, subject, session, scan, time_series, in_rois, opts):
 
     roi.run(project, subject, session, scan, time_series, *in_rois, **opts)
 
-    # Get the ROI volume index from any input tuple.
-    roi_volume_nbr = in_rois[0].get('volume')
-    if not roi_volume_nbr:
-        raise PipelineError("The ROI input does not have a volume number")
+    # Get the ROI volume index from any input spec.
+    roi_volume_nbr = in_rois[0].volume
 
     # Return the volume index.
     return roi_volume_nbr - 1
