@@ -8,11 +8,8 @@ import os
 import shutil
 import imp
 import argparse
-from qipipe.helpers import command
-from qipipe.helpers.mock_logger import MockLogger
-
-NIPYPE_LOG_DIR_ENV_VAR = 'NIPYPE_LOG_DIR'
-"""The environment variable used by Nipype to set the log directory."""
+from qiutil import command
+from qipipe.helpers import logging
 
 
 def main(argv=sys.argv):
@@ -21,40 +18,7 @@ def main(argv=sys.argv):
     # Break out the logging options.
     log_opts = {k: opts.pop(k) for k in ['log', 'log_level'] if k in opts}
     # Configure the logger.
-    command.configure_log(**log_opts)
-    # The log file option.
-    log_file_opt = opts.get('log')
-    # Set the Nipype log directory environment variable before importing
-    # any nipype module. The code below works around the following Nipype
-    # bug:
-    # * Nipype requires a log directory. If the Nipype log directory is
-    #   set to /dev/null, then Nipype raises an error. The work-around
-    #   is to set the NIPYPE_LOG_DIR environment variable to a new temp
-    #   directory.
-    #
-    # The temp log directory that stands in for a /dev/null log file
-    # option.
-    temp_log_dir = None
-    if log_file_opt:
-        log_file = os.path.abspath(log_file_opt)
-        if log_file == '/dev/null':
-            # Work around the Nipype bug described above.
-            temp_log_dir = log_dir = tempfile.mkdtemp(prefix='qipipe_')
-        else:
-            log_dir = os.path.dirname(log_file)
-        # Make the log file parent directory, if necessary.
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
-        # Set the Nipype log directory environment variable.
-        os.environ[NIPYPE_LOG_DIR_ENV_VAR] = log_dir
-    else:
-        # Print log messages to stdout to work around the Nipype
-        # bug described in the MockLogger apidoc.
-        mock_log_opts = {}
-        level = log_opts.get('log_level')
-        if level:
-            mock_log_opts['level'] = level
-        opts['logger'] = MockLogger(**mock_log_opts)
+    logging.configure(**log_opts)
 
     # Import the qipipe pipeline module after configuring the logger
     # above, since importing any nipype module writes to the log.
@@ -65,12 +29,7 @@ def main(argv=sys.argv):
         opts['distributable'] = False
 
     # Run the QIN workflow.
-    try:
-        qip.run(*inputs, **opts)
-    finally:
-        # Clean up.
-        if temp_log_dir:
-            shutil.rmtree(temp_log_dir)
+    qip.run(*inputs, **opts)
 
     return 0
 

@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from bunch import bunchify
 import inflection
-from qiutil.logging import logger
+from ..helpers.logging import logger
 from . import parse
 
 

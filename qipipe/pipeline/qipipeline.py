@@ -14,7 +14,7 @@ if not on_rtd:
         from nipype.interfaces.dcmstack import MergeNifti
 import qixnat
 from qixnat.helpers import path_hierarchy
-from qiutil.logging import logger
+from ..helpers.logging import logger
 from . import (staging, registration, modeling)
 from .pipeline_error import PipelineError
 from .workflow_base import WorkflowBase

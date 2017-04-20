@@ -6,7 +6,7 @@ import sys
 import os
 import re
 from .ctp_config import ctp_collection_for_name
-from qiutil.logging import logger
+from ..helpers.logging import logger
 from .staging_error import StagingError
 
 # OHSU - this is OHSU-specific.
