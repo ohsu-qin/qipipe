@@ -10,7 +10,7 @@ from nipype.interfaces.dcmstack import MergeNifti
 from nipype.interfaces.utility import (IdentityInterface, Function)
 import qiutil
 from ..helpers.logging import logger
-from ..interfaces import (ConvertBoleroMask, XNATUpload)
+from ..interfaces import (ConvertBoleroMask, ReorderBoleroMask, XNATUpload)
 from .workflow_base import WorkflowBase
 from .pipeline_error import PipelineError
 
@@ -199,7 +199,7 @@ class ROIWorkflow(WorkflowBase):
 
         # Reorder the mask slice.
         reorder = pe.Node(ReorderBoleroMask(), name='reorder')
-        exec_wf.connect(convert, 'out_file', convert, 'in_file')
+        exec_wf.connect(convert, 'out_file', reorder, 'in_file')
 
         # Merge the slices.
         merge = pe.JoinNode(MergeNifti(), joinsource='iter_slice',
