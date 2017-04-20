@@ -74,7 +74,7 @@ def configure(**opts):
     # Print a log message.
     log_dest = log_file_opt if log_file_opt else 'stdout'
     factory(__name__).info("Logging qipipe to %s." % log_dest)
-    factory(__name__).info("Logging nipype to the %s/log directory." %
+    factory(__name__).info("Logging nipype to the %s directory." %
                            log_dir)
 
     return factory
