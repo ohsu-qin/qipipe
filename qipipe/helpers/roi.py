@@ -9,6 +9,10 @@ import matplotlib.pyplot as plt
 from qiutil.collections import concat
 
 
+class ExtentError(Exception):
+    pass
+
+
 def reorder_bolero_mask(in_file, out_file=None):
     """
     Since the OHSU Bolero ROI is drawn over DICOM slice
