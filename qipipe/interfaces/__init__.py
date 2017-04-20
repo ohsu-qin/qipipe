@@ -4,7 +4,7 @@ As a convenience, this  ``interfaces`` module imports all of the
 non-proprietary interface classes. The proprietary interface class
 :class:`qipipe.interfaces.fastfit.Fastfit` must be imported
 separately from the :mod:`qipipe.interfaces.fastfit` module, e.g.::
-    
+
     from qipipe.interfaces.fastfit import Fastfit
 
 Importing ``fastfit`` in an environment that does not provide the
@@ -25,6 +25,7 @@ from .map_ctp import MapCTP
 from .move import Move
 from .mri_volcluster import MriVolCluster
 from .preview import Preview
+from .reorder_bolero_mask import ReorderBoleroMask
 from .unpack import Unpack
 from .uncompress import Uncompress
 from .xnat_copy import XNATCopy
