@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
+5.6.9 / 2016-04-19
+------------------
+Default nipype log directory is ./log.
+
 5.6.8 / 2016-04-19
 ------------------
 Log through a qipipe logger facade.

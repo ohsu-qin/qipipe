@@ -65,7 +65,7 @@ def configure(**opts):
     #   logs to the default log file ./log/pypeline.log, but also
     #   logs to stdout, which stomps on the qipipe logging.
     if not log_dir:
-        log_dir = os.getcwd()
+        log_dir = '/'.join(os.getcwd(), 'log')
     # Set the Nipype log directory environment variable.
     os.environ[NIPYPE_LOG_DIR_ENV_VAR] = log_dir
 
