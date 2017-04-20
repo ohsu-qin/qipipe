@@ -92,7 +92,7 @@ def logger(name):
     :return: the logger facade
     """
     # Make a default logger factory on demand.
-    if not logger._factory:
+    if not hasattr(logger, '_factory'):
         logger._factory = configure()
 
     return logger._factory(name)
