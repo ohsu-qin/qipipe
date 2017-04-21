@@ -23,7 +23,7 @@ def configure(**opts):
     - Otherwise, the logger delegates to a mock logger that
       writes to stdout.
 
-    :Note: In a cluster environment, Nipype kill the dispatched job
+    :Note: In a cluster environment, Nipype kills the dispatched job
     log config. Logging falls back to the default. For this reason,
     the default mock logger level is ``DEBUG`` rather than ``INFO``.
     The dispatched node's log is the stdout captured in the file
