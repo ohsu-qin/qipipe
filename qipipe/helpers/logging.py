@@ -23,6 +23,13 @@ def configure(**opts):
     - Otherwise, the logger delegates to a mock logger that
       writes to stdout.
 
+    :Note: In a cluster environment, Nipype kill the dispatched job
+    log config. Logging falls back to the default. For this reason,
+    the default mock logger level is ``DEBUG`` rather than ``INFO``.
+    The dispatched node's log is the stdout captured in the file
+    *work*\ ``/batch/``\ *node_name*\ ``.o``\ *node_id*, where
+    *work* the execution work directory.
+
     :param opts: the ``qiutil.command.configure_log`` options
     :return: the logger factory
     """
@@ -73,7 +80,9 @@ def configure(**opts):
     logger._factory = factory
     # Print a log message.
     log_dest = log_file_opt if log_file_opt else 'stdout'
-    factory(__name__).info("Logging qipipe to %s." % log_dest)
+    log_level = opts.get('log_level', 'DEBUG')
+    factory(__name__).info("Logging qipipe to %s with level %s." %
+                           (log_dest, log_level))
     factory(__name__).info("Logging nipype to the %s directory." %
                            log_dir)
 
@@ -131,7 +140,7 @@ class MockLogger(object):
 class MockLogWriter(object):
     def __init__(self, level=None):
         if not level:
-            level = 'INFO'
+            level = 'DEBUG'
         self.level_s = level
         self.level = getattr(logging, self.level_s)
 
