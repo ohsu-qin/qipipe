@@ -1,8 +1,12 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
+5.6.11 / 2016-04-28
+-------------------
+Break up staging into smaller steps.
+
 5.6.10 / 2016-04-20
-------------------
+-------------------
 Fix ROI workflow.
 
 5.6.9 / 2016-04-19
