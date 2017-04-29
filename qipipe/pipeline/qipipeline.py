@@ -18,7 +18,7 @@ from ..helpers.logging import logger
 from . import (staging, registration, modeling)
 from .pipeline_error import PipelineError
 from .workflow_base import WorkflowBase
-from .staging import StagingWorkflow
+from . import staging
 from ..staging import image_collection
 from ..staging.iterator import iter_stage
 from ..staging.map_ctp import map_ctp
@@ -98,8 +98,6 @@ def _run_with_dicom_input(actions, *inputs, **opts):
     project = opts.pop('project', None)
     if not project:
         raise ArgumentError('The staging pipeline project option is missing.')
-    # The target directory.
-    dest = opts.get('dest', None)
 
     # The set of input subjects is used to build the CTP mapping file
     # after the workflow is completed, if staging is enabled.
@@ -124,7 +122,7 @@ def _run_with_dicom_input(actions, *inputs, **opts):
         wf_gen = QIPipelineWorkflow(project, wf_actions, collection=collection,
                                     **wf_opts)
         # Run the workflow on the scan.
-        wf_gen.run_with_dicom_input(wf_actions, scan_input, dest)
+        wf_gen.run_with_dicom_input(wf_actions, collection, scan_input)
 
     # If staging is enabled, then make the TCIA subject map.
     if 'stage' in actions:
@@ -307,15 +305,6 @@ class QIPipelineWorkflow(WorkflowBase):
 
     - *scan*: the scan number
 
-    In addition, if the staging or registration workflow is enabled
-    then the *iter_volume* node iterables input includes the
-    following fields:
-
-    - *volume*: the scan number
-
-    - *dest*: the target staging directory, if the staging
-      workflow is enabled
-
     The constituent workflows are combined as follows:
 
     - The staging workflow input is the workflow input.
@@ -337,6 +326,7 @@ class QIPipelineWorkflow(WorkflowBase):
         :param actions: the actions to perform
         :param opts: the :class:`qipipe.staging.WorkflowBase`
             initialization options as well as the following keyword arguments:
+        :keyword dest: the staging destination directory
         :keyword collection: the image collection name
         :keyword mask: the XNAT mask resource name
         :keyword registration_resource: the XNAT registration resource
@@ -354,6 +344,8 @@ class QIPipelineWorkflow(WorkflowBase):
         super(QIPipelineWorkflow, self).__init__(
             project=project, name=__name__, **opts
         )
+
+        self.collection = opts.get('collection')
 
         reg_tech_opt = opts.get('registration_technique')
         if reg_tech_opt:
@@ -398,29 +390,42 @@ class QIPipelineWorkflow(WorkflowBase):
         :meth:`run_with_scan_download` method.
         """
 
-    def run_with_dicom_input(self, actions, scan_input, dest=None):
+    def run_with_dicom_input(self, actions, collection, scan_input):
         """
         :param actions: the workflow actions to perform
-        :param scan_input: the :class:`qipipe.staging.iterator.ScanInput`
+        :param scan_input: the {subject, session, scan, dicom, roi}
             object
         :param dest: the TCIA staging destination directory (default is
             the current working directory)
         """
         # Set the workflow input.
         input_spec = self.workflow.get_node('input_spec')
-        input_spec.inputs.collection = scan_input.collection
+        input_spec.inputs.collection = collection
         input_spec.inputs.subject = scan_input.subject
         input_spec.inputs.session = scan_input.session
         input_spec.inputs.scan = scan_input.scan
+        input_spec.inputs.in_dir = scan_input.dicom
         input_spec.inputs.registered = []
 
-        # If staging is enabled, then set the staging iterables.
-        if 'stage' in actions:
-            staging.set_workflow_iterables(self.workflow, scan_input, dest)
-
         # If roi is enabled and has input, then set the roi function inputs.
-        if 'roi' in actions and scan_input.iterators.roi:
-            self._set_roi_inputs(*scan_input.iterators.roi)
+        if 'roi' in actions:
+            roi_dir = scan_input.roi
+            if not roi_dir:
+                raise PipelineError("ROI directory was not detected for" +
+                                    " %s %s scan %d" % (scan_input.subject,
+                                    scan_input.session, scan_input.scan))
+            roi_regex = self.collection.patterns.roi.regex
+            if roi_regex:
+                roi_files = [f for f in os.listdir(roi_dir)
+                             if roi_regex.match(f)]
+            else:
+                roi_files = os.listdir(roi_dir)
+            if not roi_files:
+                raise PipelineError("No ROI file was detected in the" +
+                                    " %s %s scan %d directory %s" %
+                                    (scan_input.subject, scan_input.session,
+                                     scan_input.scan, roi_dir))
+            self._set_roi_inputs(*roi_files)
         # Execute the workflow.
         self.logger.debug("Running the pipeline on %s %s scan %d." %
                            (scan_input.subject, scan_input.session,
@@ -536,7 +541,6 @@ class QIPipelineWorkflow(WorkflowBase):
         # Set the roi function inputs.
         roi_node = self.workflow.get_node('roi')
         roi_node.inputs.in_rois = inputs
-        roi_node.inputs.opts = dict(base_dir=self.base_dir)
 
     def _partition_registered(self, xnat, project, subject, session, scan,
                               files):
@@ -607,6 +611,9 @@ class QIPipelineWorkflow(WorkflowBase):
         reg_tech_opt = opts.get('registration_technique')
         mdl_tech_opt = opts.get('modeling_technique')
 
+        # The staging options.
+        dest_opt = opts.get('dest')
+
         if 'model' in actions:
             mdl_wf_gen = ModelingWorkflow(parent=self, technique=mdl_tech_opt,
                                           resource=self.modeling_resource)
@@ -618,7 +625,7 @@ class QIPipelineWorkflow(WorkflowBase):
         # The registration workflow node.
         if 'register' in actions:
             reg_inputs = ['technique', 'project', 'subject', 'session',
-                          'scan', 'resource', 'volume_index',
+                          'scan', 'resource', 'bolus_arrival_index',
                           'in_files', 'mask', 'opts']
             # The registration function keyword options.
             if not self.registration_technique:
@@ -629,11 +636,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # than delegating to this qipipeline workflow as the
             # parent, since Nipype Function arguments must be
             # primitive.
-            reg_opts = dict(
-                base_dir=self.base_dir,
-                distributable=self.is_distributable,
-                dry_run=self.dry_run
-            )
+            reg_opts = dict(parent=self)
             if 'recursive_registration' in opts:
                 reg_opts['recursive'] = opts['recursive_registration']
             # The registration function.
@@ -659,8 +662,7 @@ class QIPipelineWorkflow(WorkflowBase):
                                function=roi)
             roi_node = pe.Node(roi_xfc, name='roi')
             roi_node.inputs.project = self.project
-            roi_node.opts = dict(base_dir=self.base_dir,
-                                 distributable=self.is_distributable)
+            roi_node.inputs.opts = dict(parent=self)
             self.logger.info("Enabled ROI conversion.")
         else:
             roi_node = None
@@ -672,8 +674,7 @@ class QIPipelineWorkflow(WorkflowBase):
             if not collection_opt:
                 raise ArgumentError("The mask workflow collection option is"
                                     " missing")
-            coll = image_collection.with_name(collection_opt)
-            crop_posterior = coll.crop_posterior
+            crop_posterior = self.collection.crop_posterior
             mask_wf_gen = MaskWorkflow(parent=self,
                                        crop_posterior=crop_posterior)
             mask_wf = mask_wf_gen.workflow
@@ -684,25 +685,33 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # The staging workflow.
         if 'stage' in actions:
-            stg_wf_gen = StagingWorkflow(parent=self)
-            stg_wf = stg_wf_gen.workflow
+            stg_inputs = ['collection', 'subject', 'session', 'scan',
+                          'in_dir', 'opts']
+            stg_xfc = Function(input_names=stg_inputs,
+                               output_names=['out_files'],
+                               function=stage)
+            stg_node = pe.Node(stg_xfc, name='stage')
+            # The target directory.
+            if dest_opt:
+                dest = os.abspath(dest_opt)
+            else:
+                dest = os.getcwd()
+            stg_node.inputs.opts = dict(parent=self, dest=dest)
             self.logger.info("Enabled staging.")
         else:
-            stg_wf = None
+            stg_node = None
             self.logger.info("Skipping staging.")
 
         # Validate that there is at least one constituent workflow.
-        if not any([stg_wf, roi_node, reg_node, mdl_wf]):
+        if not any([stg_node, roi_node, reg_node, mdl_wf]):
             raise ArgumentError("No workflow was enabled.")
 
         # The workflow input fields.
         input_fields = ['subject', 'session', 'scan']
-        iter_volume_fields = ['volume']
         # The staging workflow has additional input fields.
         # Partial registration requires the unregistered volumes input.
-        if stg_wf:
-            input_fields.append('collection')
-            iter_volume_fields.append('dest')
+        if stg_node:
+            input_fields.extend(['collection', 'in_dir'])
         elif reg_node:
             input_fields.append('registered')
 
@@ -717,27 +726,13 @@ class QIPipelineWorkflow(WorkflowBase):
         model_reg = reg_node or reg_ts_name_opt
         model_scan = not model_reg
         model_vol = model_scan and not scan_ts_rsc_opt
-        if stg_wf or reg_node or mask_wf or (mdl_wf and model_vol):
-            iter_volume_xfc = IdentityInterface(fields=iter_volume_fields)
-            iter_volume = pe.Node(iter_volume_xfc, name='iter_volume')
-        # Staging requires a DICOM iterator node.
-        if stg_wf:
-            iter_dicom_xfc = IdentityInterface(fields=['volume', 'dicom_file'])
-            iter_dicom = pe.Node(iter_dicom_xfc, name='iter_dicom')
-            exec_wf.connect(iter_volume, 'volume', iter_dicom, 'volume')
 
         # Stitch together the workflows:
 
         # If staging is enabled, then stage the DICOM input.
-        if stg_wf:
+        if stg_node:
             for field in input_spec.inputs.copyable_trait_names():
-                exec_wf.connect(input_spec, field,
-                                stg_wf, 'input_spec.' + field)
-            for field in iter_volume.inputs.copyable_trait_names():
-                exec_wf.connect(iter_volume, field,
-                                stg_wf, 'iter_volume.' + field)
-            exec_wf.connect(iter_dicom, 'dicom_file',
-                            stg_wf, 'iter_dicom.dicom_file')
+                exec_wf.connect(input_spec, field, stg_node, field)
 
         # Some workflows require the scan volumes, as follows:
         # * If staging is enabled, then collect the staged NIfTI
@@ -751,11 +746,8 @@ class QIPipelineWorkflow(WorkflowBase):
         # Otherwise, there is no staged node.
         staged = None
         if reg_node or roi_node or mask_wf or (mdl_wf and not model_reg):
-            if stg_wf:
-                staged = pe.JoinNode(IdentityInterface(fields=['out_files']),
-                                    joinsource='iter_volume', name='staged')
-                exec_wf.connect(stg_wf, 'output_spec.image',
-                                staged, 'out_files')
+            if stg_node:
+                staged = stg_node
             elif reg_node or not scan_ts_rsc_opt:
                 dl_scan_xfc = XNATDownload(project=self.project,
                                            resource='NIFTI')
@@ -784,9 +776,8 @@ class QIPipelineWorkflow(WorkflowBase):
                 if not collection:
                     raise ArgumentError('The scan time series pipeline'
                                         ' collection option is missing.')
-                coll = image_collection.with_name(collection)
                 # The volume grouping tag.
-                vol_tag = coll.patterns.volume
+                vol_tag = self.collection.patterns.volume
                 if not vol_tag:
                     raise ArgumentError('The scan time series pipeline'
                                         ' collection volume tag is missing.')
@@ -859,7 +850,7 @@ class QIPipelineWorkflow(WorkflowBase):
 
             # If the registration input files were downloaded from
             # XNAT, then select only the unregistered files.
-            if stg_wf:
+            if stg_node:
                 exec_wf.connect(staged, 'out_files', reg_node, 'in_files')
             else:
                 exc_regd_xfc = Function(input_names=['in_files', 'exclusions'],
@@ -886,11 +877,11 @@ class QIPipelineWorkflow(WorkflowBase):
             # the ROI volume. Otherwise, use the bolus arrival volume.
             if roi_node:
                 exec_wf.connect(roi_node, 'volume_index',
-                                reg_node, 'volume_index')
+                                reg_node, 'bolus_arrival_index')
                 self.logger.debug('Connected ROI to registration.')
             else:
                 exec_wf.connect(bolus_arv, 'bolus_arrival_index',
-                                reg_node, 'volume_index')
+                                reg_node, 'bolus_arrival_index')
                 self.logger.debug('Connected bolus arrival to registration.')
 
         # If the modeling workflow is enabled, then model the scan or
@@ -1022,14 +1013,18 @@ class QIPipelineWorkflow(WorkflowBase):
             # Make a dummy empty file for simulating called workflows.
             _, path = tempfile.mkstemp()
             try:
+                # If staging is enabled, then simulate it.
+                if self.workflow.get_node('stage'):
+                    opts = dict(parent=self)
+                    stage('Breast', 'Dummy', 'Dummy', 1, path, opts)
                 # If registration is enabled, then simulate it.
                 if self.workflow.get_node('register'):
-                    opts = dict(base_dir=self.workflow.base_dir, dry_run=True)
+                    opts = dict(parent=self)
                     register('Dummy', 'Dummy', 'Dummy', 1, 0, path, [path],
                              opts)
                 # If ROI is enabled, then simulate it.
                 if self.workflow.get_node('roi'):
-                    opts = dict(base_dir=self.workflow.base_dir, dry_run=True)
+                    opts = dict(parent=self)
                     # A dummy (lesion, slice index, in_file) ROI input tuple.
                     inputs = [LesionROI(1, 1, 1, path)]
                     roi('Dummy', 'Dummy', 'Dummy', 1, path, inputs, opts)
@@ -1071,8 +1066,27 @@ def bolus_arrival_index_or_zero(time_series):
         return 0
 
 
+def stage(collection, subject, session, scan, in_dir, opts):
+    """
+    Runs the staging workflow on the given session scan images.
+
+    :Note: see the :meth:`register` note.
+
+    :param collection: the collection name
+    :param subject: the subject name
+    :param session: the session name
+    :param scan: the scan number
+    :param in_dir: the :meth:`qipipe.pipeline.staging.run` input DICOM directory
+    :param opts: the :meth:`qipipe.pipeline.staging.run` keyword options
+    :return: the 3D volume files
+    """
+    from qipipe.pipeline import staging
+
+    return staging.run(collection, subject, session, scan, in_dir, **opts)
+
+
 def _register(technique, project, subject, session, scan, resource,
-             volume_index, mask, in_files, opts):
+              bolus_arrival_index, mask, in_files, opts):
     """
     A stub for the :meth:`register` method.
 
@@ -1085,11 +1099,11 @@ def _register(technique, project, subject, session, scan, resource,
     from qipipe.pipeline.qipipeline import register
 
     return register(technique, project, subject, session, scan, resource,
-                    volume_index, mask, *in_files, **opts)
+                    bolus_arrival_index, mask, *in_files, **opts)
 
 
 def register(technique, project, subject, session, scan, resource,
-             volume_index, mask, *in_files, **opts):
+             bolus_arrival_index, mask, *in_files, **opts):
     """
     Runs the registration workflow on the given session scan images.
 
@@ -1099,7 +1113,7 @@ def register(technique, project, subject, session, scan, resource,
     :param session: the session name
     :param scan: the scan number
     :param resource: the registration resource name
-    :param volume_index: the bolus uptake volume index
+    :param bolus_arrival_index: the bolus uptake volume index
     :param mask: the required scan mask file
     :param in_files: the input session scan 3D NIfTI images
     :param opts: the :meth:`qipipe.pipeline.registration.run` keyword
@@ -1123,10 +1137,10 @@ def register(technique, project, subject, session, scan, resource,
     # The input scan files sorted by volume number.
     volumes = sorted(in_files, key=_extract_volume_number)
     # The files up to and including bolus arrival are not realigned.
-    start = volume_index + 1
+    start = bolus_arrival_index + 1
     unrealigned = volumes[:start]
     # The bolus arrival is the initial fixed image.
-    ref_0 = volumes[volume_index]
+    ref_0 = volumes[bolus_arrival_index]
     # The files to realign.
     reg_inputs = volumes[start:]
 
@@ -1152,6 +1166,7 @@ def _extract_volume_number(location):
         raise ArgumentError("The volume file name without directory does"
                             " not begin with volume<number>: %s" % fname)
     return int(match.group(1))
+
 
 
 def roi(project, subject, session, scan, time_series, in_rois, opts):
