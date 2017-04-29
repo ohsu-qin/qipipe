@@ -8,17 +8,13 @@ The following OHSU QIN scan numbers are captured:
     * 6: PD
 These scans have DICOM files specified by the
 :attr:`qipipe.staging.image_collection.Collection.patterns`
-:attr:`qipipe.staging.image_collection.Patterns.scan`
-:attr:`qipipe.staging.image_collection.ScanPatterns.dicom`
-attribute. The T1 scan has ROI files as well, specified by the
-:attr:`qipipe.staging.image_collection.ScanPatterns.roi`
-:attr:`qipipe.staging.image_collection.ROIPatterns.glob` and
-:attr:`qipipe.staging.image_collection.ROIPatterns.regex` attributes
+``dicom`` attribute. The T1 scan has ROI files as well, specified
+by the patterns ``roi.glob`` and ``roi.regex`` attributes.
 """
 
 import re
-from bunch import bunchify
-from .image_collection import (Collection, ScanPatterns, ROIPatterns)
+from bunch import (Bunch, bunchify)
+from .image_collection import Collection
 from .staging_error import StagingError
 
 MULTI_VOLUME_SCAN_NUMBERS = [1]
@@ -70,29 +66,29 @@ The Sarcoma session directory match pattern. The variations
 Sarcoma Session03.
 """
 
-T1_PAT = '*concat*/*'
+T1_PAT = '*concat*'
 """The T1 DICOM file match pattern."""
 
-BREAST_T2_PAT = '*sorted/2_tirm_tra_bilat/*'
+BREAST_T2_PAT = '*sorted/2_tirm_tra_bilat'
 """The Breast T2 DICOM file match pattern."""
 
-SARCOMA_T2_PAT = '*T2*/*'
+SARCOMA_T2_PAT = '*T2*'
 """The Sarcoma T2 DICOM file match pattern."""
 
-BREAST_DW_PAT = '*sorted/*Diffusion/*'
+BREAST_DW_PAT = '*sorted/*Diffusion'
 """The Breast DW DICOM file match pattern."""
 
-SARCOMA_DW_PAT = '*Diffusion/*'
+SARCOMA_DW_PAT = '*Diffusion'
 """The Sarcoma DW DICOM file match pattern."""
 
-BREAST_PD_PAT = '*sorted/*PD*/*'
+BREAST_PD_PAT = '*sorted/*PD*'
 """The Breast pseudo-proton density DICOM file match pattern."""
 
-BREAST_ROI_PAT = 'processing/R10_0.[456]*/slice*/*.bqf'
+BREAST_ROI_PAT = 'processing/R10_0.[456]*/slice*'
 """
 The Breast ROI glob filter. The ``.bqf`` ROI files are in the
 following session subdirectory:
-    
+
     processing/<R10 directory>/slice<slice index>/
 """
 
@@ -114,11 +110,11 @@ BREAST_ROI_REGEX = re.compile("""
 The Breast ROI .bqf ROI file match pattern.
 """
 
-SARCOMA_ROI_PAT = 'Breast processing results/multi_slice/slice*/*.bqf'
+SARCOMA_ROI_PAT = 'Breast processing results/multi_slice/slice*'
 """
 The Sarcoma ROI glob filter. The ``.bqf`` ROI files are in the
 session subdirectory:
-    
+
     results/<ROI directory>/slice<slice index>/
 """
 
@@ -134,12 +130,12 @@ The Sarcoma ROI .bqf ROI file match pattern.
 
 :Note: The Sarcoma ROI directories are inconsistently named, with several
     alternatives and duplicates.
-    
+
     TODO - clarify which of the Sarcoma ROI naming variations should be used.
 
 :Note: There are no apparent lesion number indicators in the Sarcoma ROI
     input.
-    
+
     TODO - confirm that there is no Sarcoma lesion indicator.
 """
 
@@ -157,11 +153,11 @@ selected as the volume number identifier.
 
 def _create_breast_collection():
     """:return: the OHSU AIRC Breast collection"""
-    roi = ROIPatterns(glob=BREAST_ROI_PAT, regex=BREAST_ROI_REGEX)
-    t1 = ScanPatterns(dicom=T1_PAT, roi=roi)
-    t2 = ScanPatterns(dicom=BREAST_T2_PAT)
-    dwi = ScanPatterns(dicom=BREAST_DW_PAT)
-    pd = ScanPatterns(dicom=BREAST_PD_PAT)
+    roi = Bunch(glob=BREAST_ROI_PAT, regex=BREAST_ROI_REGEX)
+    t1 = Bunch(dicom=T1_PAT, roi=roi)
+    t2 = Bunch(dicom=BREAST_T2_PAT)
+    dwi = Bunch(dicom=BREAST_DW_PAT)
+    pd = Bunch(dicom=BREAST_PD_PAT)
     scan_types = {1: 'T1', 2: 'T2', 4: 'DW', 6: 'PD'}
     scan = {1: t1, 2: t2, 4: dwi, 6: pd}
     opts = dict(crop_posterior=True, scan_types=scan_types,
@@ -172,10 +168,10 @@ def _create_breast_collection():
 
 def _create_sarcoma_collection():
     """:return: the OHSU AIRC Sarcoma collection"""
-    roi = ROIPatterns(glob=SARCOMA_ROI_PAT, regex=SARCOMA_ROI_REGEX)
-    t1 = ScanPatterns(dicom=T1_PAT, roi=roi)
-    t2 = ScanPatterns(dicom=SARCOMA_T2_PAT)
-    dw = ScanPatterns(dicom=SARCOMA_DW_PAT)
+    roi = Bunch(glob=SARCOMA_ROI_PAT, regex=SARCOMA_ROI_REGEX)
+    t1 = Bunch(dicom=T1_PAT, roi=roi)
+    t2 = Bunch(dicom=SARCOMA_T2_PAT)
+    dw = Bunch(dicom=SARCOMA_DW_PAT)
     scan_types = {1: 'T1', 2: 'T2', 4: 'DW'}
     scan = {1: t1, 2: t2, 4: dw}
     opts = dict(scan_types=scan_types, subject=SARCOMA_SUBJECT_REGEX,
