@@ -679,7 +679,7 @@ class QIPipelineWorkflow(WorkflowBase):
         if (reg_node or mdl_wf) and not mask_rsc_opt:
             if self.collection:
                 crop_posterior = self.collection.crop_posterior
-            else
+            else:
                 crop_posterior = False
             mask_wf_gen = MaskWorkflow(parent=self,
                                        crop_posterior=crop_posterior)
