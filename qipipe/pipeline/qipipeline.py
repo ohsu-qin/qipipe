@@ -350,7 +350,7 @@ class QIPipelineWorkflow(WorkflowBase):
 
         collOpt = opts.get('collection')
         if collOpt:
-            self.collection = image_collection.with_name(collection)
+            self.collection = image_collection.with_name(collOpt)
 
         reg_tech_opt = opts.get('registration_technique')
         if reg_tech_opt:
