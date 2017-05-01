@@ -327,8 +327,8 @@ class QIPipelineWorkflow(WorkflowBase):
         :param opts: the :class:`qipipe.staging.WorkflowBase`
             initialization options as well as the following keyword arguments:
         :keyword dest: the staging destination directory
-        :keyword collection: the image collection name
         :keyword mask: the XNAT mask resource name
+        :keyword collection: the image collection name
         :keyword registration_resource: the XNAT registration resource
             name
         :keyword registration_technique: the
@@ -340,12 +340,17 @@ class QIPipelineWorkflow(WorkflowBase):
         :keyword modeling_resource: the modeling resource name
         :keyword modeling_technique: the
             class:`qipipe.pipeline.modeling.ModelingWorkflow` technique
+        :keyword scan_time_series: the scan time series resource name
+        :keyword realigned_time_series: the registered time series resource
+            name
         """
         super(QIPipelineWorkflow, self).__init__(
             project=project, name=__name__, **opts
         )
 
-        self.collection = opts.get('collection')
+        collOpt = opts.get('collection')
+        if collOpt:
+            self.collection = image_collection.with_name(collection)
 
         reg_tech_opt = opts.get('registration_technique')
         if reg_tech_opt:
@@ -414,11 +419,13 @@ class QIPipelineWorkflow(WorkflowBase):
                 raise PipelineError("ROI directory was not detected for" +
                                     " %s %s scan %d" % (scan_input.subject,
                                     scan_input.session, scan_input.scan))
-            roi_regex = self.collection.patterns.roi.regex
-            if roi_regex:
-                roi_files = [f for f in os.listdir(roi_dir)
-                             if roi_regex.match(f)]
-            else:
+            roi_files = None
+            if self.collection:
+                roi_regex = self.collection.patterns.roi.regex
+                if roi_regex:
+                    roi_files = [f for f in os.listdir(roi_dir)
+                                 if roi_regex.match(f)]
+            if not roi_files:
                 roi_files = os.listdir(roi_dir)
             if not roi_files:
                 raise PipelineError("No ROI file was detected in the" +
@@ -670,11 +677,10 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # Registration and modeling require a mask.
         if (reg_node or mdl_wf) and not mask_rsc_opt:
-            collection_opt = opts.get('collection')
-            if not collection_opt:
-                raise ArgumentError("The mask workflow collection option is"
-                                    " missing")
-            crop_posterior = self.collection.crop_posterior
+            if self.collection:
+                crop_posterior = self.collection.crop_posterior
+            else
+                crop_posterior = False
             mask_wf_gen = MaskWorkflow(parent=self,
                                        crop_posterior=crop_posterior)
             mask_wf = mask_wf_gen.workflow
@@ -777,7 +783,10 @@ class QIPipelineWorkflow(WorkflowBase):
                     raise ArgumentError('The scan time series pipeline'
                                         ' collection option is missing.')
                 # The volume grouping tag.
-                vol_tag = self.collection.patterns.volume
+                if self.collection:
+                    vol_tag = self.collection.patterns.volume
+                else:
+                    vol_tag = None
                 if not vol_tag:
                     raise ArgumentError('The scan time series pipeline'
                                         ' collection volume tag is missing.')
