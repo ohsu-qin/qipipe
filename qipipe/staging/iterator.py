@@ -200,8 +200,9 @@ class VisitIterator(object):
                                       " in %s." % (sbj, sess, sess_dir))
 
     def _scan_directories(self, patterns, input_dir):
-        # The DICOM directory.
+        # The DICOM directory pattern.
         dcm_pat = "%s/%s" % (input_dir, patterns.dicom)
+        # The DICOM directory matches.
         dcm_match = glob.glob(dcm_pat)
         # If no DICOM directory, then the scan will be ignored.
         if dcm_match:
@@ -219,7 +220,9 @@ class VisitIterator(object):
         roi_dir = None
         # The ROI glob pattern.
         if hasattr(patterns, 'roi'):
-            roi_pat = patterns.roi.glob
+            # The ROI directory pattern.
+            roi_pat = "%s/%s" % (input_dir, patterns.roi.glob)
+            # The ROI directory matches.
             roi_match = glob.glob(roi_pat)
             if roi_match:
                 if len(roi_match) > 1:
@@ -227,6 +230,10 @@ class VisitIterator(object):
                                        " not supported: %s" % roi_match)
                 roi_dir = roi_match[0]
                 self.logger.debug("Discovered ROI directory %s." % roi_dir)
+            else:
+                self.logger.debug("No directory was found matching the" +
+                                  " ROI pattern %s." % roi_pat)
+
 
         return Bunch(dicom=dcm_dir, roi=roi_dir)
 
