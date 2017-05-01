@@ -223,8 +223,8 @@ class VisitIterator(object):
             # The ROI directory pattern.
             roi_pat = "%s/%s" % (input_dir, patterns.roi.glob)
             # The ROI directory matches.
-            roi_match = glob.glob(roi_pat)
-            if roi_match:
+            roi_dirs = glob.glob(roi_pat)
+            if roi_dirs:
                 self.logger.debug("Discovered ROI directories %s." % roi_dirs)
             else:
                 self.logger.debug("No directory was found matching the" +
