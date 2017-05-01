@@ -210,14 +210,14 @@ class VisitIterator(object):
                 raise StagingError("Multiple DICOM directories are" +
                                    " not supported: %s" % dcm_match)
             dcm_dir = dcm_match[0]
-            self.logger.debug("Discovered DICOM directory %s." % dcm_dir)
+            self.logger.debug("Discovered DICOM directories %s." % dcm_dir)
         else:
             dcm_dir = None
             self.logger.debug("No directory matches the DICOM" +
                               " pattern %s." % dcm_pat)
 
         # The ROI directory is optional.
-        roi_dir = None
+        roi_dirs = None
         # The ROI glob pattern.
         if hasattr(patterns, 'roi'):
             # The ROI directory pattern.
@@ -225,17 +225,13 @@ class VisitIterator(object):
             # The ROI directory matches.
             roi_match = glob.glob(roi_pat)
             if roi_match:
-                if len(roi_match) > 1:
-                    raise StagingError("Multiple ROI directories are" +
-                                       " not supported: %s" % roi_match)
-                roi_dir = roi_match[0]
-                self.logger.debug("Discovered ROI directory %s." % roi_dir)
+                self.logger.debug("Discovered ROI directories %s." % roi_dirs)
             else:
                 self.logger.debug("No directory was found matching the" +
                                   " ROI pattern %s." % roi_pat)
 
 
-        return Bunch(dicom=dcm_dir, roi=roi_dir)
+        return Bunch(dicom=dcm_dir, roi=roi_dirs)
 
     def _match_subject_number(self, path):
         """

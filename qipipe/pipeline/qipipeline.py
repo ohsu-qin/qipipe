@@ -409,13 +409,13 @@ class QIPipelineWorkflow(WorkflowBase):
         input_spec.inputs.subject = scan_input.subject
         input_spec.inputs.session = scan_input.session
         input_spec.inputs.scan = scan_input.scan
-        input_spec.inputs.in_dir = scan_input.dicom
+        input_spec.inputs.in_dirs = scan_input.dicom
         input_spec.inputs.registered = []
 
         # If roi is enabled and has input, then set the roi function inputs.
         if 'roi' in actions:
-            roi_dir = scan_input.roi
-            if not roi_dir:
+            roi_dirs = scan_input.roi
+            if not roi_dirs:
                 raise PipelineError("ROI directory was not detected for" +
                                     " %s %s scan %d" % (scan_input.subject,
                                     scan_input.session, scan_input.scan))
@@ -423,8 +423,11 @@ class QIPipelineWorkflow(WorkflowBase):
             if self.collection:
                 roi_regex = self.collection.patterns.roi.regex
                 if roi_regex:
-                    roi_files = [f for f in os.listdir(roi_dir)
-                                 if roi_regex.match(f)]
+                    contents = (os.listdir(d) for d in roi_dirs)
+                    matcher = lambda d: (f for f in os.listdir(d)
+                                         if roi_regex.match(f))
+                    collect = lambda accum, files: accum.extend(files)
+                    roi_files = reduce(collect, contents, [])
             if not roi_files:
                 roi_files = os.listdir(roi_dir)
             if not roi_files:
@@ -692,7 +695,7 @@ class QIPipelineWorkflow(WorkflowBase):
         # The staging workflow.
         if 'stage' in actions:
             stg_inputs = ['collection', 'subject', 'session', 'scan',
-                          'in_dir', 'opts']
+                          'in_dirs', 'opts']
             stg_xfc = Function(input_names=stg_inputs,
                                output_names=['out_files'],
                                function=stage)
@@ -717,7 +720,7 @@ class QIPipelineWorkflow(WorkflowBase):
         # The staging workflow has additional input fields.
         # Partial registration requires the unregistered volumes input.
         if stg_node:
-            input_fields.extend(['collection', 'in_dir'])
+            input_fields.extend(['collection', 'in_dirs'])
         elif reg_node:
             input_fields.append('registered')
 
@@ -1075,7 +1078,7 @@ def bolus_arrival_index_or_zero(time_series):
         return 0
 
 
-def stage(collection, subject, session, scan, in_dir, opts):
+def stage(collection, subject, session, scan, in_dirs, opts):
     """
     Runs the staging workflow on the given session scan images.
 
@@ -1085,13 +1088,13 @@ def stage(collection, subject, session, scan, in_dir, opts):
     :param subject: the subject name
     :param session: the session name
     :param scan: the scan number
-    :param in_dir: the :meth:`qipipe.pipeline.staging.run` input DICOM directory
+    :param in_dirs: the input DICOM directories
     :param opts: the :meth:`qipipe.pipeline.staging.run` keyword options
     :return: the 3D volume files
     """
     from qipipe.pipeline import staging
 
-    return staging.run(collection, subject, session, scan, in_dir, **opts)
+    return staging.run(collection, subject, session, scan, *in_dirs, **opts)
 
 
 def _register(technique, project, subject, session, scan, resource,

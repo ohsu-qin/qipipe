@@ -6,13 +6,13 @@ from . import (image_collection, iterator)
 from .staging_error import StagingError
 
 
-def sort(collection, scan, in_dir):
+def sort(collection, scan, *in_dirs):
     """
     Groups the DICOM files in the given location by volume.
 
     :param collection: the collection name
     :param scan: the scan number
-    :param in_dir: the input DICOM directory
+    :param in_dirs: the input DICOM directories
     :return: the {volume: files} dictionary
     """
     # Get the collection pattern.
@@ -23,18 +23,18 @@ def sort(collection, scan, in_dir):
                            " scan %d" %(collection, scan))
     tag = coll.patterns.volume
 
-    return _sort(in_dir, tag);
+    return _sort(tag, *in_dirs);
 
 
-def _sort(in_dir, tag):
+def _sort(tag, *in_dirs):
     """
-    :param in_dir: the input DICOM directory
     :param tag: the DICOM meta-data volume tag
+    :param in_dirs: the input DICOM directories
     :return: the {volume: files} dictionary
     """
     _logger = logger(__name__)
-    _logger.debug("Sorting the DICOM files in %s..." % in_dir)
-    vol_dict = qidicom.hierarchy.group_by(tag, in_dir)
+    _logger.debug("Sorting the DICOM files in %s..." % in_dirs)
+    vol_dict = qidicom.hierarchy.group_by(tag, *in_dirs)
     file_cnt = sum((len(files) for files in vol_dict.itervalues()))
     _logger.debug("Sorted %d DICOM files into %d volumes." %
                   (file_cnt, len(vol_dict)))

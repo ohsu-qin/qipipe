@@ -21,7 +21,7 @@ SCAN_CONF_FILE = 'scan.cfg'
 """The XNAT scan configuration file name."""
 
 
-def run(collection, subject, session, scan, in_dir, **opts):
+def run(collection, subject, session, scan, *in_dirs, **opts):
     """
     Runs the staging workflow on the given DICOM input directory.
     The return value is a {volume: file} dictionary, where *volume*
@@ -31,7 +31,7 @@ def run(collection, subject, session, scan, in_dir, **opts):
     :param subject: the subject name
     :param session: the session name
     :param scan: the scan number
-    :param in_dir: the input DICOM file directory
+    :param in_dirs: the input DICOM file directories
     :param opts: the :class:`StagingWorkflow` initializer options
     :return: the {volume: file} dictionary
     """
@@ -43,9 +43,9 @@ def run(collection, subject, session, scan, in_dir, **opts):
     elif not os.path.exists(dest):
         os.makedirs(dest)
     _logger.debug("Staging the %s %s scan %d files in %s..." %
-                  (subject, session, scan, in_dir))
+                  (subject, session, scan, in_dirs))
     # Sort the volumes.
-    vol_dcm_dict = sort(collection, scan, in_dir)
+    vol_dcm_dict = sort(collection, scan, in_dirs)
     # Stage the volumes.
     vol_dirs = []
     vol_file_dict = {}
