@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
+5.6.12 / 2016-05-01
+-------------------
+Give stage more resources.
+
 5.6.11 / 2016-04-28
 -------------------
 Break up staging into smaller steps.
