@@ -437,9 +437,9 @@ class QIPipelineWorkflow(WorkflowBase):
                     roi_files.extend(files)
             if not roi_files:
                 raise PipelineError("No ROI file was detected in the" +
-                                    " %s %s scan %d directory %s" %
+                                    " %s %s scan %d directories %s" %
                                     (scan_input.subject, scan_input.session,
-                                     scan_input.scan, roi_dir))
+                                     scan_input.scan, roi_dirs))
             self._set_roi_inputs(*roi_files)
         # Execute the workflow.
         self.logger.debug("Running the pipeline on %s %s scan %d." %
