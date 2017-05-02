@@ -232,7 +232,6 @@ class VisitIterator(object):
                 self.logger.debug("No directory was found matching the" +
                                   " ROI pattern %s." % roi_pat)
 
-
         return Bunch(dicom=dcm_dir, roi=roi_dirs)
 
     def _match_subject_number(self, path):
