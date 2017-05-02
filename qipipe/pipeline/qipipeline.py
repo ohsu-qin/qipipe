@@ -419,22 +419,23 @@ class QIPipelineWorkflow(WorkflowBase):
                 raise PipelineError("ROI directory was not detected for" +
                                     " %s %s scan %d" % (scan_input.subject,
                                     scan_input.session, scan_input.scan))
-            roi_files = None
+            roi_files = []
             if self.collection:
                 scan_pats = self.collection.patterns.scan[scan_input.scan]
+                # 
                 if not scan_pats:
                     raise PipelineError("Scan patterns were not found for" +
                                         " %s %s scan %d" % (scan_input.subject,
                                         scan_input.session, scan_input.scan))
                 roi_regex = scan_pats.roi.regex
-                if roi_regex:
-                    contents = (os.listdir(d) for d in roi_dirs)
-                    matcher = lambda d: (f for f in os.listdir(d)
-                                         if roi_regex.match(f))
-                    collect = lambda accum, files: accum.extend(files)
-                    roi_files = reduce(collect, contents, [])
-            if not roi_files:
-                roi_files = os.listdir(roi_dir)
+                for dirs in roi_dirs:
+                    candidates = (os.listdir(d) for d in roi_dirs)
+                    if roi_regex:
+                        files = (f for f in candidates
+                                 if roi_regex.match(f))
+                    else:
+                        files = candidates
+                    roi_files.extend(files)
             if not roi_files:
                 raise PipelineError("No ROI file was detected in the" +
                                     " %s %s scan %d directory %s" %
