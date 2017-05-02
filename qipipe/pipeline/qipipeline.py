@@ -427,9 +427,8 @@ class QIPipelineWorkflow(WorkflowBase):
                                         " %s %s scan %d" % (scan_input.subject,
                                         scan_input.session, scan_input.scan))
                 roi_regex = scan_pats.roi.regex
-                for roi_dir in roi_dirs:
-                    prepend = lambda f: "%s/%s" % (roi_dir, f)
-                    candidates = os.listdir(roi_dir).map(prepend)
+                for d in roi_dirs:
+                    candidates = ('/'.join([d, f]) for f in os.listdir(d))
                     if roi_regex:
                         files = (f for f in candidates
                                  if roi_regex.match(f))
