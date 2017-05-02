@@ -429,7 +429,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 regex = scan_pats.roi.regex
                 for d in roi_dirs:
                     candidates = ('/'.join([d, f]) for f in os.listdir(d))
-                    if roi_regex:
+                    if regex:
                         files = (f for f in candidates if regex.match(f))
                     else:
                         files = candidates
