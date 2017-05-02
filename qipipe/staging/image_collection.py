@@ -43,7 +43,16 @@ class Collection(object):
         """
 
         self.patterns = Bunch(**opts)
-        """The file and DICOM meta-data patterns."""
+        """
+        The DICOM and ROI meta-data patterns. This ``patterns``
+        attribute consists of the entries ``dicom`` and ``roi``,
+        Each of these fields has a mandatory ``glob`` entry and
+        an optional ``regex`` entry. The ``glob`` entry matches
+        the scan subdirectory containing the DICOM or ROI files.
+        The ``regex`` entry matches the DICOM or ROI files in the
+        subdirectory. The default in the absence of a ``regex``
+        entry is to include all files in the subdirectory.
+        """
 
         # The scan pattern key is the scan number.
         if self.patterns.scan:
