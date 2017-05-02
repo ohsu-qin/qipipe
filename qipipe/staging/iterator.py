@@ -148,7 +148,9 @@ class VisitIterator(object):
         if self.scan:
             # Filter on only the specified scan.
             if self.scan not in all_scan_pats:
-                raise StagingError("The %s scan %d is not supported." %
+                raise StagingError("The %s scan %d is not supported" +
+                                   " with an image collection DICOM" +
+                                   " pattern" %
                                    (self.collection.name, self.scan))
             scan_pats = {self.scan: all_scan_pats[self.scan]}
         else:
