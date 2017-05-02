@@ -67,22 +67,22 @@ Sarcoma Session03.
 """
 
 T1_PAT = '*concat*'
-"""The T1 DICOM file match pattern."""
+"""The T1 DICOM directory match pattern."""
 
 BREAST_T2_PAT = '*sorted/2_tirm_tra_bilat'
-"""The Breast T2 DICOM file match pattern."""
+"""The Breast T2 DICOM directory match pattern."""
 
 SARCOMA_T2_PAT = '*T2*'
-"""The Sarcoma T2 DICOM file match pattern."""
+"""The Sarcoma T2 DICOM directory match pattern."""
 
 BREAST_DW_PAT = '*sorted/*Diffusion'
-"""The Breast DW DICOM file match pattern."""
+"""The Breast DW DICOM directory match pattern."""
 
 SARCOMA_DW_PAT = '*Diffusion'
-"""The Sarcoma DW DICOM file match pattern."""
+"""The Sarcoma DW DICOM directory match pattern."""
 
 BREAST_PD_PAT = '*sorted/*PD*'
-"""The Breast pseudo-proton density DICOM file match pattern."""
+"""The Breast pseudo-proton density DICOM directory match pattern."""
 
 BREAST_ROI_PAT = 'processing/R10_0.[456]*/slice*'
 """
@@ -93,6 +93,7 @@ following session subdirectory:
 """
 
 BREAST_ROI_REGEX = re.compile("""
+    ^.*                         # The optional parent scan directory
     processing/                 # The visit processing subdirectory
     R10_0\.[456]                # The R10 series subdirectory
      (_L                        # The optional lesion modifier
@@ -104,7 +105,7 @@ BREAST_ROI_REGEX = re.compile("""
      /                          # End of the slice subdirectory
     (?P<fname>                  # The ROI file base name
      .*\.bqf                    # The ROI file extension
-    )                           # End of the ROI file name
+    )$                          # End of the ROI file name
 """, re.VERBOSE)
 """
 The Breast ROI .bqf ROI file match pattern.
@@ -119,11 +120,14 @@ session subdirectory:
 """
 
 SARCOMA_ROI_REGEX = re.compile("""
+    ^.*                         # The optional parent scan directory
     results/                    # The visit processing subdirectory
     ROI_ave(rage)?/             # The ROI subdirectory
-    taui_.*d001/                 # An intermediate sudirectory
+    taui_.*d001/                # An intermediate sudirectory
     slice(?P<slice_sequence_number>\d+)/  # The slice subdirectory
-    (?P<fname>.*\.bqf)          # The ROI file base name
+    (?P<fname>                  # The ROI file base name
+     .*\.bqf                    # The ROI file extension
+    )$                          # End of the ROI file name
 """, re.VERBOSE)
 """
 The Sarcoma ROI .bqf ROI file match pattern.
