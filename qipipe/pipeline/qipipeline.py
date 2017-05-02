@@ -422,7 +422,6 @@ class QIPipelineWorkflow(WorkflowBase):
             roi_files = []
             if self.collection:
                 scan_pats = self.collection.patterns.scan[scan_input.scan]
-                # 
                 if not scan_pats:
                     raise PipelineError("Scan patterns were not found for" +
                                         " %s %s scan %d" % (scan_input.subject,
