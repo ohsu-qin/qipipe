@@ -126,7 +126,7 @@ def _run_with_dicom_input(actions, *inputs, **opts):
 
     # If staging is enabled, then make the TCIA subject map.
     if 'stage' in actions:
-        map_ctp(collection, *subjects, dest=dest)
+        map_ctp(collection, *subjects, dest=wf_gen.dest)
 
 
 def _filter_actions(scan_input, actions):
@@ -707,10 +707,10 @@ class QIPipelineWorkflow(WorkflowBase):
             stg_node = pe.Node(stg_xfc, name='stage')
             # The target directory.
             if dest_opt:
-                dest = os.abspath(dest_opt)
+                self.dest = os.abspath(dest_opt)
             else:
-                dest = os.getcwd()
-            stg_node.inputs.opts = dict(parent=self, dest=dest)
+                self.dest = os.getcwd()
+            stg_node.inputs.opts = dict(parent=self, dest=self.dest)
             self.logger.info("Enabled staging.")
         else:
             stg_node = None
@@ -1033,7 +1033,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 # If staging is enabled, then simulate it.
                 if self.workflow.get_node('stage'):
                     opts = dict(parent=self)
-                    stage('Breast', 'Dummy', 'Dummy', 1, path, opts)
+                    stage('Breast', 'Dummy', 'Dummy', 1, [path], opts)
                 # If registration is enabled, then simulate it.
                 if self.workflow.get_node('register'):
                     opts = dict(parent=self)
@@ -1044,7 +1044,7 @@ class QIPipelineWorkflow(WorkflowBase):
                     opts = dict(parent=self)
                     # A dummy (lesion, slice index, in_file) ROI input tuple.
                     inputs = [LesionROI(1, 1, 1, path)]
-                    roi('Dummy', 'Dummy', 'Dummy', 1, path, inputs, opts)
+                    roi('Dummy', 'Dummy', 'Dummy', 1, [path], inputs, opts)
             finally:
                 os.remove(path)
 
