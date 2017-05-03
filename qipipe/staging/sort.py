@@ -23,7 +23,7 @@ def sort(collection, scan, *in_dirs):
                            " scan %d" %(collection, scan))
     tag = coll.patterns.volume
 
-    return _sort(tag, *in_dirs);
+    return _sort(tag, *in_dirs)
 
 
 def _sort(tag, *in_dirs):
@@ -33,7 +33,8 @@ def _sort(tag, *in_dirs):
     :return: the {volume: files} dictionary
     """
     _logger = logger(__name__)
-    _logger.debug("Sorting the DICOM files in %s..." % in_dirs)
+    in_dirs_s = in_dirs[0] if len(in_dirs) == 1 else [d for d in in_dirs]
+    _logger.debug("Sorting the DICOM files in %s..." % in_dirs_s)
     vol_dict = qidicom.hierarchy.group_by(tag, *in_dirs)
     file_cnt = sum((len(files) for files in vol_dict.itervalues()))
     _logger.debug("Sorted %d DICOM files into %d volumes." %
