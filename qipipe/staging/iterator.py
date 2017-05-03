@@ -205,16 +205,12 @@ class VisitIterator(object):
         # The DICOM directory pattern.
         dcm_pat = "%s/%s" % (input_dir, patterns.dicom)
         # The DICOM directory matches.
-        dcm_match = glob.glob(dcm_pat)
+        dcm_dirs = glob.glob(dcm_pat)
         # If no DICOM directory, then the scan will be ignored.
-        if dcm_match:
-            if len(dcm_match) > 1:
-                raise StagingError("Multiple DICOM directories are" +
-                                   " not supported: %s" % dcm_match)
-            dcm_dir = dcm_match[0]
-            self.logger.debug("Discovered DICOM directories %s." % dcm_dir)
+        if dcm_dirs:
+            self.logger.debug("Discovered DICOM directories %s." % dcm_dirs)
         else:
-            dcm_dir = None
+            dcm_dirs = None
             self.logger.debug("No directory matches the DICOM" +
                               " pattern %s." % dcm_pat)
 
@@ -232,7 +228,7 @@ class VisitIterator(object):
                 self.logger.debug("No directory was found matching the" +
                                   " ROI pattern %s." % roi_pat)
 
-        return Bunch(dicom=dcm_dir, roi=roi_dirs)
+        return Bunch(dicom=dcm_dirs, roi=roi_dirs)
 
     def _match_subject_number(self, path):
         """
