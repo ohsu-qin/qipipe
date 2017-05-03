@@ -42,10 +42,12 @@ def run(collection, subject, session, scan, *in_dirs, **opts):
         dest = os.getcwd()
     elif not os.path.exists(dest):
         os.makedirs(dest)
+
+    in_dirs_s = in_dirs[0] if len(in_dirs) == 1 else [d for d in in_dirs]
     _logger.debug("Staging the %s %s scan %d files in %s..." %
-                  (subject, session, scan, in_dirs))
+                  (subject, session, scan, in_dirs_s))
     # Sort the volumes.
-    vol_dcm_dict = sort(collection, scan, in_dirs)
+    vol_dcm_dict = sort(collection, scan, *in_dirs)
     # Stage the volumes.
     vol_dirs = []
     vol_file_dict = {}
