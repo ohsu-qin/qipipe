@@ -1,9 +1,9 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
-5.6.12 / 2016-05-01
+5.7.1 / 2016-05-03
 -------------------
-Give stage more resources.
+Allow multiple DICOM and ROI input directories.
 
 5.6.11 / 2016-04-28
 -------------------
