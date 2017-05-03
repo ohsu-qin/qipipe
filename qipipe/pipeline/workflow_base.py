@@ -69,6 +69,7 @@ class WorkflowBase(object):
     def __init__(self, **opts):
         """
         Initializes this workflow wrapper object.
+        The *parent* option obviates the other options.
 
         :param opts: the following keyword arguments:
         :keyword project: the :attr:`project`
@@ -76,7 +77,7 @@ class WorkflowBase(object):
         :keyword parent: the parent workflow for a child workflow
         :keyword name: the workflow name, used for logging
         :keyword base_dir: the :attr:`base_dir`
-        :keyword config: the optional workflow node :attr:`configuration`
+        :keyword config_dir: the optional workflow node :attr:`configuration`
             file location or dictionary
         :keyword dry_run: the :attr:`dry_run` flag
         :keyword distributable: the :attr:`distributable` flag
@@ -182,6 +183,25 @@ class WorkflowBase(object):
         self.logger.debug("The %s workflow graph is depicted at %s.png." %
                          (workflow.name, fname))
 
+    def _child_options(self):
+        """
+        Collects the following options for creating a child workflow:
+        * project
+        * base_dir
+        * config_dir
+        * dry_run
+        * distributable
+
+        :return: the options sufficient to create a child workflow
+        """
+        return dict(
+            project=self.project,
+            base_dir=self.base_dir,
+            config_dir=self.config_dir,
+            dry_run=self.dry_run,
+            distributable=self.is_distributable
+        )
+
     def _load_configuration(self):
         """
         Loads the workflow configuration, as described in
@@ -235,7 +255,6 @@ class WorkflowBase(object):
                 cfg_files.append(os.path.abspath(cfg_file))
 
         return cfg_files
-
 
     def _download_scans(self, xnat, subject, session, dest):
         """

@@ -710,7 +710,17 @@ class QIPipelineWorkflow(WorkflowBase):
                 self.dest = os.abspath(dest_opt)
             else:
                 self.dest = os.getcwd()
-            stg_node.inputs.opts = dict(parent=self, dest=self.dest)
+            # It would be preferable to pass this QIPipelineWorkflow
+            # in the *parent* option, but that induces the following
+            # Nipype bug:
+            # * A node input which includes a compiled regex
+            #   results in the Nipype run error:
+            #     TypeError: cannot deepcopy this pattern object
+            # The work-around is to break out the separate
+            # simple options that the WorkflowBase constructor
+            # extracts from the parent.
+            child_opts = self._child_options()
+            stg_node.inputs.opts = dict(dest=self.dest, **child_opts)
             self.logger.info("Enabled staging.")
         else:
             stg_node = None
@@ -1020,8 +1030,8 @@ class QIPipelineWorkflow(WorkflowBase):
 
     def _run_workflow(self, workflow):
         """
-        Overrides the superclass method to build the workflow if the
-        *dry_run* instance variable flag is set.
+        Overrides the superclass method to build the child workflows
+        if the *dry_run* instance variable flag is set.
 
         :param workflow: the workflow to run
         """
@@ -1029,19 +1039,17 @@ class QIPipelineWorkflow(WorkflowBase):
         if self.dry_run:
             # Make a dummy empty file for simulating called workflows.
             _, path = tempfile.mkstemp()
+            opts = self._child_options()
             try:
                 # If staging is enabled, then simulate it.
                 if self.workflow.get_node('stage'):
-                    opts = dict(parent=self)
                     stage('Breast', 'Dummy', 'Dummy', 1, [path], opts)
                 # If registration is enabled, then simulate it.
                 if self.workflow.get_node('register'):
-                    opts = dict(parent=self)
                     register('Dummy', 'Dummy', 'Dummy', 1, 0, path, [path],
                              opts)
                 # If ROI is enabled, then simulate it.
                 if self.workflow.get_node('roi'):
-                    opts = dict(parent=self)
                     # A dummy (lesion, slice index, in_file) ROI input tuple.
                     inputs = [LesionROI(1, 1, 1, path)]
                     roi('Dummy', 'Dummy', 'Dummy', 1, [path], inputs, opts)
