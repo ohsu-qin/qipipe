@@ -205,7 +205,6 @@ class StagingWorkflow(WorkflowBase):
         """
         super(StagingWorkflow, self).__init__(logger=logger(__name__), **opts)
 
-
         # Make the workflow.
         self.workflow = self._create_workflow()
         """
