@@ -676,8 +676,7 @@ class QIPipelineWorkflow(WorkflowBase):
                                output_names=['volume'],
                                function=roi)
             roi_node = pe.Node(roi_xfc, name='roi')
-            roi_node.inputs.project = self.project
-            roi_node.inputs.opts = dict(parent=self)
+            roi_node.inputs.opts = self._child_options()
             self.logger.info("Enabled ROI conversion.")
         else:
             roi_node = None
