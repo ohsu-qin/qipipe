@@ -21,11 +21,10 @@ ROI_FNAME_PAT = "lesion%d"
 """The ROI file name pattern."""
 
 
-def run(project, subject, session, scan, time_series, *inputs, **opts):
+def run(subject, session, scan, time_series, *inputs, **opts):
     """
     Runs the ROI workflow on the given session ROI mask files.
 
-    :param project: the project name
     :param subject: the subject name
     :param session: the session name
     :param scan: the scan number
@@ -36,7 +35,7 @@ def run(project, subject, session, scan, time_series, *inputs, **opts):
     :return: the :meth:`ROIWorkflow.run` result
     """
     # Make the workflow.
-    roi_wf = ROIWorkflow(project=project, **opts)
+    roi_wf = ROIWorkflow(**opts)
     # Run the workflow.
     return roi_wf.run(subject, session, scan, time_series, *inputs)
 

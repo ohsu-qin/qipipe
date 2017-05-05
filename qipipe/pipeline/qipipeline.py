@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 import tempfile
 import logging
 # The ReadTheDocs build does not include nipype.
@@ -76,8 +77,8 @@ def run(*inputs, **opts):
     elif 'roi' in actions:
         # The non-staging ROI action must be performed alone.
         if len(actions) > 1:
-            raise ArgumentError("The ROI pipeline can only be run with"
-                                " staging or stand-alone")
+            raise ValueError("The ROI pipeline can only be run"
+                             " with staging or stand-alone")
         _run_with_dicom_input(actions, *inputs, **opts)
     else:
         # Run downstream actions with XNAT session input.
@@ -93,11 +94,13 @@ def _run_with_dicom_input(actions, *inputs, **opts):
     # The required image collection name.
     collection = opts.pop('collection', None)
     if not collection:
-        raise ArgumentError('The staging pipeline collection option is missing.')
+        raise ArgumentError('The staging pipeline collection option'
+                            ' is missing.')
     # The required XNAT project name.
     project = opts.pop('project', None)
     if not project:
-        raise ArgumentError('The staging pipeline project option is missing.')
+        raise ArgumentError('The staging pipeline project option'
+                            ' is missing.')
 
     # The set of input subjects is used to build the CTP mapping file
     # after the workflow is completed, if staging is enabled.
@@ -415,17 +418,17 @@ class QIPipelineWorkflow(WorkflowBase):
         # If roi is enabled and has input, then set the roi function inputs.
         if 'roi' in actions:
             roi_dirs = scan_input.roi
-            if not roi_dirs:
-                raise PipelineError("ROI directory was not detected for" +
-                                    " %s %s scan %d" % (scan_input.subject,
-                                    scan_input.session, scan_input.scan))
-            roi_files = []
-            if self.collection:
+            if roi_dirs:
+                roi_files = []
+                if not self.collection:
+                    raise PipelineError("ROI workflow requires the"
+                                        " collection option")
                 scan_pats = self.collection.patterns.scan[scan_input.scan]
                 if not scan_pats:
-                    raise PipelineError("Scan patterns were not found for" +
-                                        " %s %s scan %d" % (scan_input.subject,
-                                        scan_input.session, scan_input.scan))
+                    raise PipelineError("Scan patterns were not found"
+                                        " for %s %s scan %d" % (
+                                        scan_input.subject, scan_input.session,
+                                        scan_input.scan))
                 regex = scan_pats.roi.regex
                 for d in roi_dirs:
                     candidates = ('/'.join([d, f]) for f in os.listdir(d))
@@ -434,19 +437,28 @@ class QIPipelineWorkflow(WorkflowBase):
                     else:
                         files = candidates
                     roi_files.extend(files)
-            if not roi_files:
-                raise PipelineError("No ROI file was detected in the" +
-                                    " %s %s scan %d directories %s" +
-                                    " matching pattern %s" %
-                                    (scan_input.subject, scan_input.session,
-                                     scan_input.scan, roi_dirs, regex.pattern))
-            self._set_roi_inputs(*roi_files)
+                if roi_files:
+                    self.logger.info(
+                        "%d %s %s scan %d ROI files were discovered." %
+                        (len(roi_files), scan_input.subject,
+                         scan_input.session, scan_input.scan)
+                    )
+                    self._set_roi_inputs(*roi_files)
+                else:
+                    self.logger.info("No ROI file was detected for"
+                                      " %s %s scan %d." %
+                                      (scan_input.subject, scan_input.session,
+                                       scan_input.scan))
+            else:
+                self.logger.info("ROI directory was not detected for"
+                                  " %s %s scan %d" % (scan_input.subject,
+                                  scan_input.session, scan_input.scan))
         # Execute the workflow.
-        self.logger.debug("Running the pipeline on %s %s scan %d." %
+        self.logger.info("Running the pipeline on %s %s scan %d." %
                            (scan_input.subject, scan_input.session,
                             scan_input.scan))
         self._run_workflow(self.workflow)
-        self.logger.debug("Completed pipeline execution on %s %s scan %d." %
+        self.logger.info("Completed pipeline execution on %s %s scan %d." %
                            (scan_input.subject, scan_input.session,
                             scan_input.scan))
 
@@ -639,9 +651,8 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # The registration workflow node.
         if 'register' in actions:
-            reg_inputs = ['technique', 'project', 'subject', 'session',
-                          'scan', 'resource', 'bolus_arrival_index',
-                          'in_files', 'mask', 'opts']
+            reg_inputs = ['subject', 'session','scan', 'reference_index',
+                          'mask', 'in_files', 'opts']
             # The registration function keyword options.
             if not self.registration_technique:
                 raise ArgumentError('Missing the registration technique')
@@ -651,7 +662,9 @@ class QIPipelineWorkflow(WorkflowBase):
             # than delegating to this qipipeline workflow as the
             # parent, since Nipype Function arguments must be
             # primitive.
-            reg_opts = dict(parent=self)
+            reg_opts = self._child_options()
+            reg_opts['resource'] = self.registration_resource
+            reg_opts['technique'] = self.registration_technique
             if 'recursive_registration' in opts:
                 reg_opts['recursive'] = opts['recursive_registration']
             # The registration function.
@@ -659,25 +672,25 @@ class QIPipelineWorkflow(WorkflowBase):
                                output_names=['out_files'],
                                function=_register)
             reg_node = pe.Node(reg_xfc, name='register')
-            reg_node.inputs.project = self.project
-            reg_node.inputs.technique = self.registration_technique
-            reg_node.inputs.resource = self.registration_resource
             reg_node.inputs.opts = reg_opts
-            self.logger.info("Enabled registration.")
+            self.logger.info("Enabled registration with options %s." %
+                             reg_opts)
         else:
             self.logger.info("Skipping registration.")
             reg_node = None
 
         # The ROI workflow node.
         if 'roi' in actions:
-            roi_inputs = ['project', 'subject', 'session', 'scan',
-                          'time_series', 'in_rois', 'opts']
+            roi_inputs = ['subject', 'session', 'scan', 'time_series',
+                          'in_rois', 'opts']
             roi_xfc = Function(input_names=roi_inputs,
                                output_names=['volume'],
                                function=roi)
             roi_node = pe.Node(roi_xfc, name='roi')
-            roi_node.inputs.opts = self._child_options()
-            self.logger.info("Enabled ROI conversion.")
+            roi_opts = self._child_options()
+            roi_node.inputs.opts = roi_opts
+            self.logger.info("Enabled ROI conversion with options %s." %
+                             roi_opts)
         else:
             roi_node = None
             self.logger.info("Skipping ROI conversion.")
@@ -688,18 +701,19 @@ class QIPipelineWorkflow(WorkflowBase):
                 crop_posterior = self.collection.crop_posterior
             else:
                 crop_posterior = False
-            mask_wf_gen = MaskWorkflow(parent=self,
-                                       crop_posterior=crop_posterior)
+            mask_opts = self._child_options()
+            mask_opts['crop_posterior'] = crop_posterior
+            mask_wf_gen = MaskWorkflow(**mask_opts)
             mask_wf = mask_wf_gen.workflow
-            self.logger.info("Enabled scan mask creation.")
+            self.logger.info("Enabled scan mask creation with options %s." %
+                             mask_opts)
         else:
             mask_wf = None
             self.logger.info("Skipping scan mask creation.")
 
         # The staging workflow.
         if 'stage' in actions:
-            stg_inputs = ['collection', 'subject', 'session', 'scan',
-                          'in_dirs', 'opts']
+            stg_inputs = ['subject', 'session', 'scan', 'in_dirs', 'opts']
             stg_xfc = Function(input_names=stg_inputs,
                                output_names=['out_files'],
                                function=stage)
@@ -718,9 +732,10 @@ class QIPipelineWorkflow(WorkflowBase):
             # The work-around is to break out the separate
             # simple options that the WorkflowBase constructor
             # extracts from the parent.
-            child_opts = self._child_options()
-            stg_node.inputs.opts = dict(dest=self.dest, **child_opts)
-            self.logger.info("Enabled staging.")
+            stg_opts = self._child_options()
+            stg_opts['dest'] = self.dest
+            stg_node.inputs.opts = stg_opts
+            self.logger.info("Enabled staging with options %s" % stg_opts)
         else:
             stg_node = None
             self.logger.info("Skipping staging.")
@@ -734,7 +749,7 @@ class QIPipelineWorkflow(WorkflowBase):
         # The staging workflow has additional input fields.
         # Partial registration requires the unregistered volumes input.
         if stg_node:
-            input_fields.extend(['collection', 'in_dirs'])
+            input_fields.extend(['in_dirs'])
         elif reg_node:
             input_fields.append('registered')
 
@@ -848,13 +863,19 @@ class QIPipelineWorkflow(WorkflowBase):
                                 mask_wf, 'input_spec.time_series')
                 self.logger.debug('Connected scan time series to mask.')
 
-            # Compute the bolus arrival from the scan time series.
-            bolus_arv_xfc = Function(input_names=['time_series'],
-                                     output_names=['bolus_arrival_index'],
-                                     function=bolus_arrival_index_or_zero)
-            bolus_arv = pe.Node(bolus_arv_xfc, name='bolus_arrival_index')
-            exec_wf.connect(scan_ts, 'out_file', bolus_arv, 'time_series')
-            self.logger.debug('Connected scan time series to bolus arrival.')
+            # Registration requires a fixed volume index to register against.
+            # If there is a ROI workflow, then the ROI volume serves as
+            # the fixed volume. Otherwise, the computed bolus arrival is
+            # the fixed volume. Modeling always requires the bolus arrival.
+            if mdl_wf or not roi_node:
+                # Compute the bolus arrival from the scan time series.
+                bolus_arv_xfc = Function(input_names=['time_series'],
+                                         output_names=['bolus_arrival_index'],
+                                         function=bolus_arrival_index_or_zero)
+                bolus_arv = pe.Node(bolus_arv_xfc, name='bolus_arrival_index')
+                exec_wf.connect(scan_ts, 'out_file', bolus_arv, 'time_series')
+                self.logger.debug('Connected the scan time series to the bolus'
+                                  ' arrival calculation.')
 
         # If ROI is enabled, then convert the ROIs.
         if roi_node:
@@ -902,12 +923,13 @@ class QIPipelineWorkflow(WorkflowBase):
             # If the ROI workflow is enabled, then register against
             # the ROI volume. Otherwise, use the bolus arrival volume.
             if roi_node:
-                exec_wf.connect(roi_node, 'volume_index',
-                                reg_node, 'bolus_arrival_index')
-                self.logger.debug('Connected ROI to registration.')
+                exec_wf.connect(roi_node, 'volume',
+                                reg_node, 'reference_index')
+                self.logger.debug('Connected ROI volume to registration'
+                                  'bolus arrival.')
             else:
                 exec_wf.connect(bolus_arv, 'bolus_arrival_index',
-                                reg_node, 'bolus_arrival_index')
+                                reg_node, 'reference_index')
                 self.logger.debug('Connected bolus arrival to registration.')
 
         # If the modeling workflow is enabled, then model the scan or
@@ -992,9 +1014,10 @@ class QIPipelineWorkflow(WorkflowBase):
                         ' was specified.')
 
                 # Upload the realigned time series to XNAT.
-                upload_reg_ts_xfc = XNATUpload(project=self.project,
-                                               resource=self.registration_resource,
-                                               modality='MR')
+                upload_reg_ts_xfc = XNATUpload(
+                    project=self.project, resource=self.registration_resource,
+                    modality='MR'
+                )
                 upload_reg_ts = pe.Node(upload_reg_ts_xfc,
                                         name='upload_reg_time_series')
                 exec_wf.connect(input_spec, 'subject',
@@ -1037,23 +1060,32 @@ class QIPipelineWorkflow(WorkflowBase):
         super(QIPipelineWorkflow, self)._run_workflow(workflow)
         if self.dry_run:
             # Make a dummy empty file for simulating called workflows.
-            _, path = tempfile.mkstemp()
+            dummy_dir = tempfile.mkdtemp()
+            dummy_volume = "%s/volume001.nii.gz" % dummy_dir
+            open(dummy_volume, 'a')
+            _, dummy_file = tempfile.mkstemp(dir=dummy_dir)
             opts = self._child_options()
             try:
                 # If staging is enabled, then simulate it.
                 if self.workflow.get_node('stage'):
-                    stage('Breast', 'Dummy', 'Dummy', 1, [path], opts)
+                    input_spec = self.workflow.get_node('input_spec')
+                    in_dirs = input_spec.inputs.in_dirs
+                    stg_opts = dict(collection=self.collection.name,
+                                    dest=dummy_dir, **opts)
+                    stage('Breast001', 'Session01', 1, in_dirs, stg_opts)
                 # If registration is enabled, then simulate it.
                 if self.workflow.get_node('register'):
-                    register('Dummy', 'Dummy', 'Dummy', 1, 0, path, [path],
-                             opts)
+                    reg_opts = dict(technique='ANTs', **opts)
+                    registration.run('Breast001', 'Session01', 1,
+                                     dummy_volume, dummy_volume, **reg_opts)
                 # If ROI is enabled, then simulate it.
                 if self.workflow.get_node('roi'):
                     # A dummy (lesion, slice index, in_file) ROI input tuple.
-                    inputs = [LesionROI(1, 1, 1, path)]
-                    roi('Dummy', 'Dummy', 'Dummy', 1, [path], inputs, opts)
+                    inputs = [LesionROI(1, 1, 1, dummy_file)]
+                    roi('Breast001', 'Session01', 1, [dummy_file], inputs,
+                        opts)
             finally:
-                os.remove(path)
+                shutil.rmtree(dummy_dir)
 
 
 def exclude_files(in_files, exclusions):
@@ -1090,13 +1122,12 @@ def bolus_arrival_index_or_zero(time_series):
         return 0
 
 
-def stage(collection, subject, session, scan, in_dirs, opts):
+def stage(subject, session, scan, in_dirs, opts):
     """
     Runs the staging workflow on the given session scan images.
 
     :Note: see the :meth:`register` note.
 
-    :param collection: the collection name
     :param subject: the subject name
     :param session: the session name
     :param scan: the scan number
@@ -1106,13 +1137,17 @@ def stage(collection, subject, session, scan, in_dirs, opts):
     """
     from qipipe.pipeline import staging
 
-    return staging.run(collection, subject, session, scan, *in_dirs, **opts)
+    return staging.run(subject, session, scan, *in_dirs, **opts)
 
 
-def _register(technique, project, subject, session, scan, resource,
-              bolus_arrival_index, mask, in_files, opts):
+def _register(subject, session, scan, reference_index, mask, in_files,
+              opts):
     """
     A stub for the :meth:`register` method.
+
+    :Note: The *mask* parameter is a registration option, but can't
+      be included in the *opts* parameter, since it is an upstream
+      workflow node connection point.
 
     :Note: contrary to Python convention, the opts method parameter
       is a required dictionary rather than a keyword aggregate (i.e.,
@@ -1122,23 +1157,18 @@ def _register(technique, project, subject, session, scan, resource,
     """
     from qipipe.pipeline.qipipeline import register
 
-    return register(technique, project, subject, session, scan, resource,
-                    bolus_arrival_index, mask, *in_files, **opts)
+    return register(subject, session, scan, reference_index, *in_files,
+                    mask=mask, **opts)
 
 
-def register(technique, project, subject, session, scan, resource,
-             bolus_arrival_index, mask, *in_files, **opts):
+def register(subject, session, scan, reference_index, *in_files, **opts):
     """
     Runs the registration workflow on the given session scan images.
 
-    :param technique: the registration technique
-    :param project: the project name
     :param subject: the subject name
     :param session: the session name
     :param scan: the scan number
-    :param resource: the registration resource name
-    :param bolus_arrival_index: the bolus uptake volume index
-    :param mask: the required scan mask file
+    :param reference_index: the index of the file to register against
     :param in_files: the input session scan 3D NIfTI images
     :param opts: the :meth:`qipipe.pipeline.registration.run` keyword
         options
@@ -1146,60 +1176,103 @@ def register(technique, project, subject, session, scan, resource,
     """
     # Note: There is always a mask and resource argument. The mask
     # file and resource name are either specified as an input or
-    # built by the workflow. The mask and resource is optional in
-    # the registration run function. Therefore, the registration
-    # run keyword options include the mask and resource, as well
-    # as any other options passed from the Function node.
-    if not mask:
-        raise ArgumentError("The register method is missing the mask")
-    if not resource:
-        raise ArgumentError("The register method is missing the"
+    # built by the workflow. The mask and resource are options in
+    # the registration run function. Therefore, we check that the
+    # options are set here.
+    if not opts.get('mask'):
+        raise PipelineError("The register method is missing the mask")
+    if not opts.get('resource'):
+        raise PipelineError("The register method is missing the"
                             " XNAT registration resource name")
-    reg_opts = dict(mask=mask, resource=resource)
-    reg_opts.update(opts)
 
     # The input scan files sorted by volume number.
     volumes = sorted(in_files, key=_extract_volume_number)
-    # The files up to and including bolus arrival are not realigned.
-    start = bolus_arrival_index + 1
-    unrealigned = volumes[:start]
-    # The bolus arrival is the initial fixed image.
-    ref_0 = volumes[bolus_arrival_index]
-    # The files to realign.
-    reg_inputs = volumes[start:]
+    # The initial fixed image.
+    reference = volumes[reference_index]
 
-    # Register the files.
-    realigned = registration.run(technique, project, subject, session, scan,
-                                 ref_0, *reg_inputs, **reg_opts)
-    # Upload the unrealigned images into the XNAT registration
-    # resource.
-    upload_unreg = XNATUpload(project=project, subject=subject,
-                              session=session, scan=scan,
-                              resource=resource, in_files=unrealigned,
-                              modality='MR')
-    upload_unreg.run()
+    # Register the files after the reference point.
+    ref_successor = reference_index + 1
+    after = volumes[ref_successor:]
+    post = registration.run(subject, session, scan, reference,
+                            *after, **opts)
+    # Register the files before the reference point in
+    # reverse order in case the recursive flag is set.
+    before = volumes[:reference_index]
+    before.reverse()
+    pre = registration.run(subject, session, scan, reference,
+                           *before, **opts)
+    # Restore the original sort order.
+    pre.reverse()
+    # The registration result in sort order.
+    output = pre + [reference] + post
 
-    # Return the unregistered and registered result.
-    return unrealigned + realigned
+    # Infer the project from the options.
+    prj_opt = opts.get('project')
+    if prj_opt:
+        project = prj_opt
+    else:
+        parent_wf = opts.get('parent')
+        if parent_wf:
+            project = parent_wf.project
+        else:
+            raise PipelineError("The registration project could not"
+                                " be determined from the options")
+    # Get the resource from the options.
+    resource = opts.get('resource')
+    if not resource:
+        raise PipelineError("The registration resource option was not found")
+
+    # Upload the registration profile and the unrealigned image into the
+    # XNAT registration resource. The profile is in the same directory as
+    # the realigned images.
+    reg_dir, _ = os.path.split(output[ref_successor])
+    prf_match = glob.glob("%s/*.cfg" % reg_dir)
+    if not prf_match:
+        raise PipelineError("The registration profile was not found in"
+                            " the registration destination directory %s" %
+                            reg_dir)
+    if len(prf_match) > 1:
+        raise PipelineError("More than one .cfg file was found in the"
+                            " registration destination directory %s" %
+                            reg_dir)
+    profile = prf_match[0]
+    _, prf_base = os.path.split(profile)
+    _, ref_base = os.path.split(reference)
+    in_files = [profile, reference]
+    logger(__name__).debug(
+        "Uploading the registration profile %s and fixed reference image"
+        " %s to %s %s scan %d resource %s from %s..." %
+        (prf_base, ref_base, subject, session, scan, resource, reg_dir)
+    )
+    upload = XNATUpload(project=project, subject=subject, session=session,
+                        scan=scan, resource=resource, in_files=in_files,
+                        modality='MR')
+    upload.run()
+    logger(__name__).info(
+        "Uploaded the %s %s scan %d registration result to resource"
+        " %s." % (subject, session, scan, resource)
+    )
+
+    # Return the registeration result.
+    return output
 
 
 def _extract_volume_number(location):
     _, fname = os.path.split(location)
     match = VOLUME_FILE_PAT.match(fname)
     if not match:
-        raise ArgumentError("The volume file name without directory does"
-                            " not begin with volume<number>: %s" % fname)
+        raise ArgumentError("The volume file base name does not match"
+                            " pattern %s: %s" %
+                            (VOLUME_FILE_PAT.pattern, fname))
     return int(match.group(1))
 
 
-
-def roi(project, subject, session, scan, time_series, in_rois, opts):
+def roi(subject, session, scan, time_series, in_rois, opts):
     """
     Runs the ROI workflow on the given session scan images.
 
     :Note: see the :meth:`register` note.
 
-    :param project: the project name
     :param subject: the subject name
     :param session: the session name
     :param scan: the scan number
@@ -1210,7 +1283,7 @@ def roi(project, subject, session, scan, time_series, in_rois, opts):
     """
     from qipipe.pipeline import roi
 
-    roi.run(project, subject, session, scan, time_series, *in_rois, **opts)
+    roi.run(subject, session, scan, time_series, *in_rois, **opts)
 
     # Get the ROI volume index from any input spec.
     roi_volume_nbr = in_rois[0].volume
