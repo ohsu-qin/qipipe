@@ -116,14 +116,14 @@ SARCOMA_ROI_PAT = 'Breast processing results/multi_slice/slice*'
 The Sarcoma ROI glob filter. The ``.bqf`` ROI files are in the
 session subdirectory:
 
-    results/<ROI directory>/slice<slice index>/
+    Breast processing results/<ROI directory>/slice<slice index>/
+
+(Yes, the Sarcoma processing results is in the "Breast processing
+results" subdirectory)!
 """
 
 SARCOMA_ROI_REGEX = re.compile("""
-    ^.*                         # The optional parent scan directory
-    results/                    # The visit processing subdirectory
-    ROI_ave(rage)?/             # The ROI subdirectory
-    taui_.*d001/                # An intermediate sudirectory
+    ^.*                         # The slice parent directory
     slice(?P<slice_sequence_number>\d+)/  # The slice subdirectory
     (?P<fname>                  # The ROI file base name
      .*\.bqf                    # The ROI file extension
