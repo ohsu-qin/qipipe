@@ -1061,11 +1061,15 @@ class QIPipelineWorkflow(WorkflowBase):
         """
         super(QIPipelineWorkflow, self)._run_workflow(workflow)
         if self.dry_run:
-            # Make a dummy empty file for simulating called workflows.
+            # Make a dummy temp directory and files for simulating
+            # the called workflows. These workflows inherit the
+            # dry_run flag from this parent workflow and only go
+            # through the motions of execution.
             dummy_dir = tempfile.mkdtemp()
             dummy_volume = "%s/volume001.nii.gz" % dummy_dir
-            open(dummy_volume, 'a')
-            _, dummy_file = tempfile.mkstemp(dir=dummy_dir)
+            open(dummy_volume, 'a').close()
+            _, dummy_roi = tempfile.mkstemp(dir=dummy_dir, pre='roi')
+            _, dummy_ts = tempfile.mkstemp(dir=dummy_dir, pre='ts')
             opts = self._child_options()
             try:
                 # If staging is enabled, then simulate it.
@@ -1083,9 +1087,8 @@ class QIPipelineWorkflow(WorkflowBase):
                 # If ROI is enabled, then simulate it.
                 if self.workflow.get_node('roi'):
                     # A dummy (lesion, slice index, in_file) ROI input tuple.
-                    inputs = [LesionROI(1, 1, 1, dummy_file)]
-                    roi('Breast001', 'Session01', 1, [dummy_file], inputs,
-                        opts)
+                    inputs = [LesionROI(1, 1, 1, dummy_roi)]
+                    roi('Breast001', 'Session01', 1, dummy_ts, inputs, opts)
             finally:
                 shutil.rmtree(dummy_dir)
 
