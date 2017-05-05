@@ -84,10 +84,10 @@ def iter_roi(glob_pat, regex, input_dir):
         param_file_pat = "%s/*.par" % roi_dir
         param_file_names = glob.glob(param_file_pat)
         if not param_file_names:
-            raise ROIError("The ROI slice directory does not have" +
+            raise ROIError("The ROI slice directory does not have"
                            " a parameter file: %s" % roi_dir)
         if len(param_file_names) > 1:
-            raise ROIError("The ROI slice directory has more than" +
+            raise ROIError("The ROI slice directory has more than"
                            "one parameter file: %s" % roi_dir)
         param_file_name = param_file_names[0]
         params = _collect_parameters(param_file_name)
@@ -95,14 +95,14 @@ def iter_roi(glob_pat, regex, input_dir):
         # If there is no slice number, then complain.
         slice_seq_nbr_s = params.get('CurrentSlice')
         if not slice_seq_nbr_s:
-            raise ROIError("The ROI slice could not be determined from" +
+            raise ROIError("The ROI slice could not be determined from"
                            " the parameter file: %s" % param_file_name)
         slice_seq_nbr = int(slice_seq_nbr_s)
 
         # If there is no volume number, then complain.
         volume_nbr_s = params.get('CurrentTimePt')
         if not volume_nbr_s:
-            raise ROIError("The ROI volume could not be determined from" +
+            raise ROIError("The ROI volume could not be determined from"
                            " the parameter file: %s" % param_file_name)
         volume_nbr = int(volume_nbr_s)
 

@@ -291,14 +291,14 @@ class WorkflowBase(object):
         else:
             workflow.base_dir = self.base_dir
 
-        # Run the workflow.
-        self.logger.debug("Executing the %s workflow in %s..." %
-                           (workflow.name, workflow.base_dir))
         if self.dry_run:
-            self.logger.debug("Skipped workflow %s job submission,"
+            self.logger.debug("Skipped workflow %s execution,"
                                " since the dry run flag is set." %
                                workflow.name)
         else:
+            # Run the workflow.
+            self.logger.debug("Executing the %s workflow in %s..." %
+                              (workflow.name, workflow.base_dir))
             with qixnat.connect(cachedir=workflow.base_dir):
                 workflow.run(**opts)
 

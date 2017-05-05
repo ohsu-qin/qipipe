@@ -21,19 +21,18 @@ SCAN_CONF_FILE = 'scan.cfg'
 """The XNAT scan configuration file name."""
 
 
-def run(collection, subject, session, scan, *in_dirs, **opts):
+def run(subject, session, scan, *in_dirs, **opts):
     """
     Runs the staging workflow on the given DICOM input directory.
     The return value is a {volume: file} dictionary, where *volume*
     is the volume number and *file* is the 3D NIfTI volume file.
 
-    :param collection: the collection name
     :param subject: the subject name
     :param session: the session name
     :param scan: the scan number
     :param in_dirs: the input DICOM file directories
     :param opts: the :class:`StagingWorkflow` initializer options
-    :return: the {volume: file} dictionary
+    :return: the compressed 3D volume NIfTI files
     """
     # The target directory for the fixed, compressed DICOM files.
     _logger = logger(__name__)
@@ -46,11 +45,24 @@ def run(collection, subject, session, scan, *in_dirs, **opts):
     in_dirs_s = in_dirs[0] if len(in_dirs) == 1 else [d for d in in_dirs]
     _logger.debug("Staging the %s %s scan %d files in %s..." %
                   (subject, session, scan, in_dirs_s))
+    # We need the collection up front before creating the workflow, so
+    # we can't follow the roi or registration idiom of delegating to the
+    # workflow constructor to determine the collection.
+    coll_opt = opts.get('collection')
+    if coll_opt:
+        collection = coll_opt
+    else:
+        parent_wf = opts.get('parent')
+        if parent_wf:
+            collection = parent_wf.collection
+        else:
+            raise PipelineError("The staging collection could not be"
+                                " determined from the options")
     # Sort the volumes.
     vol_dcm_dict = sort(collection, scan, *in_dirs)
     # Stage the volumes.
     vol_dirs = []
-    vol_file_dict = {}
+    vol_files = []
     project = None
     for volume, in_files in vol_dcm_dict.iteritems():
         # Put the compressed DICOM files in an empty volume
@@ -77,9 +89,10 @@ def run(collection, subject, session, scan, *in_dirs, **opts):
         # work area directly instead.
         vol_file = ("%s/staging/stack/volume%03d.nii.gz" %
                     (stg_wf.base_dir, volume))
-        if not os.path.exists(vol_file):
+        if os.path.exists(vol_file):
+            vol_files.append(vol_file)
+        elif not stg_wf.dry_run:
             raise PipelineError("Volume file not found: %s" % vol_file)
-        vol_file_dict[volume] = vol_file
     _logger.debug("Staged %d volumes in %s." % (len(vol_dcm_dict), dest))
     # The compressed DICOM files. The scan_files must be collected into
     # an array rather than iterated from a generator to work around the
@@ -100,7 +113,7 @@ def run(collection, subject, session, scan, *in_dirs, **opts):
         _logger.debug("Uploaded the %s %s scan %d staged DICOM files to XNAT." %
                       (subject, session, scan))
 
-    return vol_file_dict
+    return vol_files
 
 
 class StagingWorkflow(WorkflowBase):

@@ -141,26 +141,25 @@ class MockLogWriter(object):
     def __init__(self, level=None):
         if not level:
             level = 'DEBUG'
-        self.level_s = level
-        self.level = getattr(logging, self.level_s)
+        self.level = getattr(logging, level)
 
     def info(self, name, message):
         if self.level <= logging.INFO:
-            self._write(name, message)
-
-    def error(self, name, message):
-        if self.level <= logging.ERROR:
-            self._write(name, message)
-
-    def warn(self, name, message):
-        if self.level <= logging.WARN:
-            self._write(name, message)
+            self._write(name, 'INFO', message)
 
     def debug(self, name, message):
         if self.level <= logging.DEBUG:
-            self._write(name, message)
+            self._write(name, 'DEBUG', message)
 
-    def _write(self, name, message):
+    def warn(self, name, message):
+        if self.level <= logging.WARN:
+            self._write(name, 'WARN', message)
+
+    def error(self, name, message):
+        if self.level <= logging.ERROR:
+            self._write(name, 'ERROR', message)
+
+    def _write(self, name, level, message):
         dt = datetime.now().strftime("%M/%D/%Y %H:%M:%S")
-        print "%s %s %s %s" % (dt, name, self.level_s, message)
+        print "%s %s %s %s" % (dt, name, level, message)
         sys.stdout.flush()

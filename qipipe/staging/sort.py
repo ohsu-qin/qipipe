@@ -19,7 +19,7 @@ def sort(collection, scan, *in_dirs):
     coll = image_collection.with_name(collection)
     scan_patterns = coll.patterns.scan.get(scan)
     if not scan_patterns:
-        raise StagingError("There is no pattern for collection %s" +
+        raise StagingError("There is no pattern for collection %s"
                            " scan %d" %(collection, scan))
     tag = coll.patterns.volume
 
