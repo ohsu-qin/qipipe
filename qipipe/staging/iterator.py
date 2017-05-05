@@ -71,9 +71,9 @@ def iter_stage(project, collection, *inputs, **opts):
                 if scan_dirs.dicom:
                     _logger.debug("Staging %s %s scan %d..." % (sbj, sess, scan))
                     yield Bunch(subject=sbj, session=sess, scan=scan, **scan_dirs)
-                    _logger.debug("Staged %s %s scan %d." % (sbj, sess, scan))
+                    _logger.info("Staged %s %s scan %d." % (sbj, sess, scan))
                 else:
-                    _logger.debug("Skipping %s %s scan %d since no DICOM files"
+                    _logger.info("Skipping %s %s scan %d since no DICOM files"
                                   " were found for this scan." %
                                   (sbj, sess, scan))
 
@@ -148,8 +148,8 @@ class VisitIterator(object):
         if self.scan:
             # Filter on only the specified scan.
             if self.scan not in all_scan_pats:
-                raise StagingError("The %s scan %d is not supported" +
-                                   " with an image collection DICOM" +
+                raise StagingError("The %s scan %d is not supported"
+                                   " with an image collection DICOM"
                                    " pattern" %
                                    (self.collection.name, self.scan))
             scan_pats = {self.scan: all_scan_pats[self.scan]}
@@ -194,11 +194,11 @@ class VisitIterator(object):
                             scan_dict[scan] = scan_dirs
                 if scan_dict:
                     scans = scan_dict.keys()
-                    self.logger.debug("Discovered %s %s scans %s in %s." %
+                    self.logger.info("Discovered %s %s scans %s in %s." %
                                       (sbj, sess, scans, sess_dir))
                     yield sbj, sess, scan_dict
                 else:
-                    self.logger.debug("No %s %s scans were discovered"
+                    self.logger.info("No %s %s scans were discovered"
                                       " in %s." % (sbj, sess, sess_dir))
 
     def _scan_directories(self, patterns, input_dir):
@@ -211,11 +211,11 @@ class VisitIterator(object):
             self.logger.debug("Discovered DICOM directories %s." % dcm_dirs)
         else:
             dcm_dirs = None
-            self.logger.debug("No directory matches the DICOM" +
-                              " pattern %s." % dcm_pat)
+            self.logger.debug("No directory matches the DICOM pattern %s." %
+                              dcm_pat)
 
         # The ROI directory is optional.
-        roi_dirs = None
+        roi_dirs = []
         # The ROI glob pattern.
         if hasattr(patterns, 'roi'):
             # The ROI directory pattern.
@@ -223,9 +223,10 @@ class VisitIterator(object):
             # The ROI directory matches.
             roi_dirs = glob.glob(roi_pat)
             if roi_dirs:
-                self.logger.debug("Discovered ROI directories %s." % roi_dirs)
+                self.logger.debug("Discovered %d ROI directories." %
+                                  len(roi_dirs))
             else:
-                self.logger.debug("No directory was found matching the" +
+                self.logger.debug("No directory was found matching the"
                                   " ROI pattern %s." % roi_pat)
 
         return Bunch(dicom=dcm_dirs, roi=roi_dirs)
