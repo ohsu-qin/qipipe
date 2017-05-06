@@ -736,6 +736,9 @@ class QIPipelineWorkflow(WorkflowBase):
             # extracts from the parent.
             stg_opts = self._child_options()
             stg_opts['dest'] = self.dest
+            if not self.collection:
+                raise PipelineError("Staging requires the collection option")
+            stg_opts['collection'] = self.collection.name
             stg_node.inputs.opts = stg_opts
             self.logger.info("Enabled staging with options %s" % stg_opts)
         else:
