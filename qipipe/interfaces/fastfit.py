@@ -98,8 +98,9 @@ class Fastfit(MpiCommandLine):
 
         # MpiCommandLine wraps the command in a call to mpiexec.
         # In the OHSU AIRC context, the only mpiexec which can
-        # run fastfit is in /usr/global/bin. Another mpiexec is
-        # built locally.
+        # run fastfit is in /usr/global/bin. Anaconda installs its
+        # own mpiexec, which cannot be used because of a loadlib
+        # incompatibility.
         return result.replace('mpiexec', '/usr/global/bin/mpiexec')
 
     def _format_arg(self, name, spec, value):
