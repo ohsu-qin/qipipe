@@ -88,7 +88,7 @@ class Fastfit(MpiCommandLine):
         # Delay until this last possible moment the fastfit existence
         # check. This delay allows Fastfit interface creation without
         # the fastfit executable, e.g. in a dry run.
-        matches = which('fastfit'):
+        matches = which('fastfit')
         if matches:
             logger(__name__).debug("The fastfit executable is %s" %
                                    matches[0])
