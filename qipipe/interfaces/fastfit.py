@@ -133,11 +133,9 @@ class Fastfit(MpiCommandLine):
             # only.
             #
             # model_mods, _, _ = get_available_models()
-            model_mods = {
-                'fxr.model': {
-                    'optimization_params': ('k_trans', 'v_e', 'tau_i')
-                }
-            }
+            from bunch import Bunch
+            fxr = Bunch(optimization_params=('k_trans', 'v_e', 'tau_i')
+            model_mods = {'fxr.model': fxr}
             model = model_mods[self.inputs.model_name]
             self._opt_params = model.optimization_params
             if (not self._min_outs is None and
