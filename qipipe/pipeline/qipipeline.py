@@ -1071,8 +1071,8 @@ class QIPipelineWorkflow(WorkflowBase):
             dummy_dir = tempfile.mkdtemp()
             dummy_volume = "%s/volume001.nii.gz" % dummy_dir
             open(dummy_volume, 'a').close()
-            _, dummy_roi = tempfile.mkstemp(dir=dummy_dir, pre='roi')
-            _, dummy_ts = tempfile.mkstemp(dir=dummy_dir, pre='ts')
+            _, dummy_roi = tempfile.mkstemp(dir=dummy_dir, prefix='roi')
+            _, dummy_ts = tempfile.mkstemp(dir=dummy_dir, prefix='ts')
             opts = self._child_options()
             try:
                 # If staging is enabled, then simulate it.
