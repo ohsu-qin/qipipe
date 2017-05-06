@@ -128,7 +128,16 @@ class Fastfit(MpiCommandLine):
 
         #If the model name is static, we can find the outputs
         if isdefined(self.inputs.model_name):
-            model_mods, builtin_models, user_models = get_available_models()
+            # FIXME - The code commented out below no longer works.
+            # Hard-code the work-around below for the fxr.model
+            # only.
+            #
+            # model_mods, _, _ = get_available_models()
+            model_mods = {
+                'fxr.model': {
+                    'optimization_params': ('k_trans', 'v_e', 'tau_i')
+                }
+            }
             model = model_mods[self.inputs.model_name]
             self._opt_params = model.optimization_params
             if (not self._min_outs is None and
