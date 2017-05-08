@@ -64,6 +64,8 @@ def run(subject, session, scan, *in_dirs, **opts):
     vol_dirs = []
     vol_files = []
     project = None
+    # The volume workflows run in a subdirectory.
+    base_dir = opts.pop('base_dir', os.getcwd())
     for volume, in_files in vol_dcm_dict.iteritems():
         # Put the compressed DICOM files in an empty volume
         # subdirectory.
@@ -72,8 +74,11 @@ def run(subject, session, scan, *in_dirs, **opts):
             shutil.rmtree(vol_dest)
         os.mkdir(vol_dest)
         vol_dirs.append(vol_dest)
+        # The workflow runs in a subdirectory.
+        vol_base_dir = '/'.join([base_dir, 'volume', str(volume)])
+        os.makedirs(vol_base_dir)
         # Make the workflow.
-        stg_wf = StagingWorkflow(**opts)
+        stg_wf = StagingWorkflow(base_dir=vol_base_dir, **opts)
         # Capture the project for later.
         if not project:
             project = stg_wf.project
