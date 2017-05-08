@@ -39,7 +39,7 @@ class WorkflowBase(object):
     files followed by the workflow-specific configuration files.
     """
 
-    CLASS_NAME_PAT = re.compile("^(\w+)Workflow$")
+    CLASS_NAME_PAT = re.compile("^(?P<name>\w+)Workflow$")
     """The workflow wrapper class name matcher."""
 
     INTERFACE_PREFIX_PAT = re.compile('(\w+\.)+interfaces?\.?')
@@ -217,7 +217,7 @@ class WorkflowBase(object):
             raise NameError("The workflow wrapper class does not match the"
                             " standard workflow class name pattern: %s" %
                             self.__class__.__name__)
-        name = match.group(1)
+        name = match.group('name')
 
         # The default configuration files.
         def_cfg_files = self._configuration_files('default')
