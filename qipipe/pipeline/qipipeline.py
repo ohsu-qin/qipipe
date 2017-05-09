@@ -531,14 +531,14 @@ class QIPipelineWorkflow(WorkflowBase):
                                    " volumes:" %
                                    (len(unregistered), project, subject,
                                     session, scan))
-                self.logger.debug("%s" % unregistered)
+                self.logger.debug("%s" % sorted(unregistered))
         elif unregistered and is_existing_registration_resource:
             self.logger.error("The pipeline %s %s %s Scan %d register"
                                 " action is not specified but there are"
                                 "  %d unregistered volumes:" %
                                 (project, subject, session, scan,
                                  len(unregistered)))
-            self.logger.error("%s" % unregistered)
+            self.logger.error("%s" % sorted(unregistered))
             raise ArgumentError("The pipeline %s %s %s Scan %d register"
                                 " action is not specified but there are"
                                 " unregistered volumes" %
@@ -547,7 +547,7 @@ class QIPipelineWorkflow(WorkflowBase):
             self.logger.debug("Processing %d %s %s %s Scan %d volumes:" %
                                (len(unregistered), project, subject, session,
                                 scan))
-            self.logger.debug("%s" % unregistered)
+            self.logger.debug("%s" % sorted(unregistered))
 
         # Set the workflow input.
         input_spec = self.workflow.get_node('input_spec')
