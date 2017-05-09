@@ -883,7 +883,7 @@ class QIPipelineWorkflow(WorkflowBase):
             #   volume.
             compute_reg_reference = (
                 reg_node and not roi_node
-                and reg_node.inputs.reference == None
+                and not reg_node.inputs.reference_index
             )
             # Modeling always requires the bolus arrival.
             if mdl_wf or compute_reg_reference:
@@ -941,7 +941,7 @@ class QIPipelineWorkflow(WorkflowBase):
 
             # If the ROI workflow is enabled, then register against
             # the ROI volume. Otherwise, use the bolus arrival volume.
-            if reg_node.inputs.reference_index == None:
+            if reg_node.inputs.reference_index:
                 if roi_node:
                     exec_wf.connect(roi_node, 'volume',
                                     reg_node, 'reference_index')
