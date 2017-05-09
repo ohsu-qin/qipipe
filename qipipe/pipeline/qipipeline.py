@@ -675,11 +675,11 @@ class QIPipelineWorkflow(WorkflowBase):
                                function=_register)
             reg_node = pe.Node(reg_xfc, name='register')
             reg_node.inputs.opts = reg_opts
-            reference = opts.pop('registration_reference', None)
-            if reference:
-                reg_node.inputs.reference_index = reference
+            reg_ref_opt = opts.pop('registration_reference', None)
+            if reg_ref_opt:
+                reg_node.inputs.reference_index = int(reg_ref_opt)
                 self.logger.debug("The registration reference is %d." %
-                                  reference)
+                                  reg_node.inputs.reference_index)
             self.logger.info("Enabled registration with options %s." %
                              reg_opts)
         else:
