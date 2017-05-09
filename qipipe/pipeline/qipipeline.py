@@ -520,7 +520,6 @@ class QIPipelineWorkflow(WorkflowBase):
                                        " Scan %d volumes:" %
                                        (len(registered), project, subject,
                                         session, scan))
-                    if
                     self.logger.debug("%s" % registered)
                 else:
                     self.logger.debug("Skipping %s %s %s Scan %d"
