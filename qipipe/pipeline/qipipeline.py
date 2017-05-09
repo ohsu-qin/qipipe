@@ -881,8 +881,10 @@ class QIPipelineWorkflow(WorkflowBase):
             #   volume serves as the fixed volume.
             # * Otherwise, the computed bolus arrival is the fixed
             #   volume.
-            compute_reg_reference = reg_node and not roi_node
-                                    and reg_node.inputs.reference == None
+            compute_reg_reference = (
+                reg_node and not roi_node
+                and reg_node.inputs.reference == None
+            )
             # Modeling always requires the bolus arrival.
             if mdl_wf or compute_reg_reference:
                 # Compute the bolus arrival from the scan time series.
