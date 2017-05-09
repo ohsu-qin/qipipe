@@ -941,7 +941,7 @@ class QIPipelineWorkflow(WorkflowBase):
 
             # If the ROI workflow is enabled, then register against
             # the ROI volume. Otherwise, use the bolus arrival volume.
-            if reg_node.inputs.reference_index:
+            if not reg_node.inputs.reference_index:
                 if roi_node:
                     exec_wf.connect(roi_node, 'volume',
                                     reg_node, 'reference_index')
