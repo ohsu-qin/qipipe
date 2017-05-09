@@ -1123,8 +1123,8 @@ def exclude_files(in_files, exclusions):
     exclusions = set(exclusions)
 
     # Filter the input files.
-    return [location for location in in_files
-            if os.path.split(location)[1] not in exclusions]
+    return [f for f in in_files
+            if os.path.split(f)[1] not in exclusions]
 
 
 def bolus_arrival_index_or_zero(time_series):
