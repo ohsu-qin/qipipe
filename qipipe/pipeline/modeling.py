@@ -243,7 +243,7 @@ class ModelingWorkflow(WorkflowBase):
         :return: the modeling result XNAT resource name
         """
         resource = opts.get('resource', 'NIFTI')
-        self.logger.debug("Modeling the %s %s Scan %d time series %s..." %
+        self.logger.debug("Modeling the %s %s scan %d time series %s..." %
             (subject, session, scan, time_series))
 
         # Determine the bolus uptake. If it could not be determined,

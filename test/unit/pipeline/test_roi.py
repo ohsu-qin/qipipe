@@ -70,7 +70,7 @@ class TestROIWorkflow(VolumeTestBase):
                         scan_input.session == session and
                         scan_input.scan == scan)
         scan_input = next(scan_iter, None)
-        assert_is_not_none(scan_input, "%s %s Scan %d not found in staging:" %
+        assert_is_not_none(scan_input, "%s %s scan %d not found in staging:" %
                                        (subject, session, scan))
         roi_inputs = scan_input.iterators.roi
         if not roi_inputs:
@@ -100,13 +100,13 @@ class TestROIWorkflow(VolumeTestBase):
             result = roi.run(project, subject, session, scan, time_series,
                              *roi_inputs, base_dir=self.base_dir,
                               config_dir=CONF_DIR)
-            assert_is_not_none(result, "The %s %s Scan %d ROI pipeline did not"
+            assert_is_not_none(result, "The %s %s scan %d ROI pipeline did not"
                                        " run" % (subject, session, scan))
             # Find the ROI resource.
             rsc = xnat.find_one(project, subject, session, scan=scan,
                                 resource=result)
             try:
-                assert_is_not_none(rsc, "The %s %s Scan %d %s resource was not"
+                assert_is_not_none(rsc, "The %s %s scan %d %s resource was not"
                                         " created" %
                                         (subject, session, scan, result))
             finally:

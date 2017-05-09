@@ -58,7 +58,7 @@ class TestMaskWorkflow(VolumeTestBase):
             rsc = xnat.find_one(project, subject, session, scan=scan,
                                 resource=result)
             try:
-                assert_is_not_none(rsc, "The %s %s Scan %d %s resource was not"
+                assert_is_not_none(rsc, "The %s %s scan %d %s resource was not"
                                         " created" %
                                         (subject, session, scan, result))
             finally:

@@ -87,7 +87,7 @@ class TestRegistrationWorkflow(VolumeTestBase):
         # Verify that the XNAT resource object was created.
         rsc = xnat.find_one(PROJECT, subject, session, scan=scan,
                             resource=RESOURCE)
-        assert_is_not_none(rsc,  "The %s %s Scan %d %s XNAT registration"
+        assert_is_not_none(rsc,  "The %s %s scan %d %s XNAT registration"
                                  " resource object was not created" %
                                  (subject, session, scan, RESOURCE))
         
@@ -100,13 +100,13 @@ class TestRegistrationWorkflow(VolumeTestBase):
                       " the profile %s" %
                       (xnat_path(rsc), registration.REG_CONF_FILE))
         assert_equal(out_dirs, set([self.dest]),
-                     "The %s %s Scan %d %s registration result directory"
+                     "The %s %s scan %d %s registration result directory"
                       " is incorrect - expected: %s, found: %s" %
                       (subject, session, scan, RESOURCE, self.dest, out_dirs))
         rsc_img_files = {f for f in rsc_files
                          if f != registration.REG_CONF_FILE}
         assert_equal(out_files, rsc_img_files,
-                     "The %s %s Scan %d %s XNAT registration image file"
+                     "The %s %s scan %d %s XNAT registration image file"
                      " names are incorrect - expected: %s, found: %s" %
                      (subject, session, scan, RESOURCE, rsc_img_files, out_files))
         
@@ -114,7 +114,7 @@ class TestRegistrationWorkflow(VolumeTestBase):
         dest_files = (os.path.join(self.dest, location)
                       for location in os.listdir(self.dest))
         assert_equal(set(dest_files), set(result),
-                     "The %s %s Scan %d %s XNAT registration result is"
+                     "The %s %s scan %d %s XNAT registration result is"
                      " incorrect: %s" %
                      (subject, session, scan, RESOURCE, result))
 
