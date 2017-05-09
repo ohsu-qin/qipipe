@@ -520,6 +520,7 @@ class QIPipelineWorkflow(WorkflowBase):
                                        " Scan %d volumes:" %
                                        (len(registered), project, subject,
                                         session, scan))
+                    if
                     self.logger.debug("%s" % registered)
                 else:
                     self.logger.debug("Skipping %s %s %s Scan %d"
@@ -675,6 +676,11 @@ class QIPipelineWorkflow(WorkflowBase):
                                function=_register)
             reg_node = pe.Node(reg_xfc, name='register')
             reg_node.inputs.opts = reg_opts
+            reference = opts.pop('registration_reference', None)
+            if reference:
+                reg_node.inputs.reference_index = reference
+                self.logger.debug("The registration reference is %d." %
+                                  reference)
             self.logger.info("Enabled registration with options %s." %
                              reg_opts)
         else:
@@ -868,11 +874,18 @@ class QIPipelineWorkflow(WorkflowBase):
                                 mask_wf, 'input_spec.time_series')
                 self.logger.debug('Connected scan time series to mask.')
 
-            # Registration requires a fixed volume index to register against.
-            # If there is a ROI workflow, then the ROI volume serves as
-            # the fixed volume. Otherwise, the computed bolus arrival is
-            # the fixed volume. Modeling always requires the bolus arrival.
-            if mdl_wf or not roi_node:
+            # Registration requires a fixed reference volume index to
+            # register against, determined as follows:
+            # * If the registration reference option is set, then that
+            #   is used.
+            # * Otherwise, if there is a ROI workflow, then the ROI
+            #   volume serves as the fixed volume.
+            # * Otherwise, the computed bolus arrival is the fixed
+            #   volume.
+            compute_reg_reference = reg_node and not roi_node
+                                    and reg_node.inputs.reference == None
+            # Modeling always requires the bolus arrival.
+            if mdl_wf or compute_reg_reference:
                 # Compute the bolus arrival from the scan time series.
                 bolus_arv_xfc = Function(input_names=['time_series'],
                                          output_names=['bolus_arrival_index'],
@@ -927,15 +940,16 @@ class QIPipelineWorkflow(WorkflowBase):
 
             # If the ROI workflow is enabled, then register against
             # the ROI volume. Otherwise, use the bolus arrival volume.
-            if roi_node:
-                exec_wf.connect(roi_node, 'volume',
-                                reg_node, 'reference_index')
-                self.logger.debug('Connected ROI volume to registration'
-                                  'bolus arrival.')
-            else:
-                exec_wf.connect(bolus_arv, 'bolus_arrival_index',
-                                reg_node, 'reference_index')
-                self.logger.debug('Connected bolus arrival to registration.')
+            if reg_node.inputs.reference_index == None:
+                if roi_node:
+                    exec_wf.connect(roi_node, 'volume',
+                                    reg_node, 'reference_index')
+                    self.logger.debug('Connected ROI volume to registration'
+                                      'bolus arrival.')
+                else:
+                    exec_wf.connect(bolus_arv, 'bolus_arrival_index',
+                                    reg_node, 'reference_index')
+                    self.logger.debug('Connected bolus arrival to registration.')
 
         # If the modeling workflow is enabled, then model the scan or
         # realigned images.

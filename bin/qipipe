@@ -105,6 +105,9 @@ def _parse_arguments():
                         help='the XNAT registration technique'
                              ' (required for registration)',
                         metavar='TECHNIQUE')
+    parser.add_argument('--registration-reference',
+                        help='the XNAT registration reference volume number',
+                        metavar='RESOURCE')
     parser.add_argument('--recursive-registration',
                         help="perform step-wise iterative"
                              " recursive registration",
