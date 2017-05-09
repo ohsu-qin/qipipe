@@ -62,7 +62,7 @@ def run(subject, session, scan, *in_dirs, **opts):
     vol_dcm_dict = sort(collection, scan, *in_dirs)
     # Stage the volumes.
     vol_dirs = []
-    vol_files = []
+    vol_nii_files = []
     project = None
     # The volume workflows run in a subdirectory.
     base_dir = opts.pop('base_dir', os.getcwd())
@@ -95,7 +95,7 @@ def run(subject, session, scan, *in_dirs, **opts):
         vol_file = ("%s/staging/stack/volume%03d.nii.gz" %
                     (stg_wf.base_dir, volume))
         if os.path.exists(vol_file):
-            vol_files.append(vol_file)
+            vol_nii_files.append(vol_file)
         elif not stg_wf.dry_run:
             raise PipelineError("Volume file not found: %s" % vol_file)
     _logger.debug("Staged %d volumes in %s." % (len(vol_dcm_dict), dest))
@@ -103,22 +103,22 @@ def run(subject, session, scan, *in_dirs, **opts):
     # an array rather than iterated from a generator to work around the
     # following Nipype bug:
     # * Nipype does not support an InputMultiPath generator argument.
-    dcm_files = []
+    sess_dcm_files = []
     for vol_dir in vol_dirs:
-        vol_files = glob.glob("%s/*" % vol_dir)
-        dcm_files.extend(vol_files)
-    if dcm_files:
+        vol_dcm_files = glob.glob("%s/*" % vol_dir)
+        sess_dcm_files.extend(vol_dcm_files)
+    if sess_dcm_files:
         # Upload the compressed DICOM files in one action.
         upload = XNATUpload(project=project, subject=subject,
                             session=session, scan=scan, resource='DICOM',
-                            modality='MR', in_files=dcm_files)
+                            modality='MR', in_files=sess_dcm_files)
         _logger.debug("Uploading the %s %s scan %d staged DICOM files to XNAT..." %
                       (subject, session, scan))
         upload.run()
         _logger.debug("Uploaded the %s %s scan %d staged DICOM files to XNAT." %
                       (subject, session, scan))
 
-    return vol_files
+    return vol_nii_files
 
 
 class StagingWorkflow(WorkflowBase):
