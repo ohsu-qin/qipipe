@@ -798,7 +798,7 @@ def get_r1_series(time_series, r1_0, **kwargs):
     """
     import os
     import nibabel as nb
-    from dce_to_r1 import dce_to_r1
+    from dce_prep import dce_to_r1
     from dcmstack.dcmmeta import NiftiWrapper
 
     dce_nw = NiftiWrapper(nb.load(time_series), make_empty=True)
