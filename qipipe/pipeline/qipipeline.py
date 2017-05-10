@@ -558,10 +558,11 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # Execute the workflow.
         self._run_workflow(self.workflow)
-        self.logger.debug("Registered %d %s %s %s scan %d volumes:" %
-                           (len(unregistered), project, subject, session,
-                            scan))
-        self.logger.debug("%s" % unregistered)
+        if unregistered:
+            self.logger.debug("Registered %d %s %s %s scan %d volumes:" %
+                               (len(unregistered), project, subject, session,
+                                scan))
+            self.logger.debug("%s" % unregistered)
 
     def _set_roi_inputs(self, *inputs):
         """
