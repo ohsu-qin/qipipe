@@ -1323,7 +1323,7 @@ def roi(subject, session, scan, time_series, in_rois, opts):
     :param time_series: the scan 4D time series
     :param in_rois: the :meth:`qipipe.pipeline.roi.run` input ROI specs
     :param opts: the :meth:`qipipe.pipeline.roi.run` keyword options
-    :return: the ROI volume index
+    :return: the zero-based ROI volume index
     """
     from qipipe.pipeline import roi
 
