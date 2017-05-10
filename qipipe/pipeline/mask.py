@@ -113,7 +113,7 @@ class MaskWorkflow(WorkflowBase):
         input_spec.inputs.time_series = time_series
         if out_file:
             out_file_abs = os.path.abspath(out_file)
-        else
+        else:
             out_file_abs = os.path.join(os.getcwd(), 'mask.nii.gz')
         input_spec.inputs.out_file = out_file_abs
 
