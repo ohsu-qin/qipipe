@@ -678,7 +678,7 @@ class QIPipelineWorkflow(WorkflowBase):
             reg_node.inputs.opts = reg_opts
             reg_ref_opt = opts.pop('registration_reference', None)
             if reg_ref_opt:
-                reg_node.inputs.reference_index = int(reg_ref_opt)
+                reg_node.inputs.reference_index = int(reg_ref_opt) - 1
                 self.logger.debug("The registration reference is %d." %
                                   reg_node.inputs.reference_index)
             self.logger.info("Enabled registration with options %s." %
@@ -1199,7 +1199,8 @@ def register(subject, session, scan, reference_index, *in_files, **opts):
     :param subject: the subject name
     :param session: the session name
     :param scan: the scan number
-    :param reference_index: the index of the file to register against
+    :param reference_index: the zero-based index of the file to
+        register against
     :param in_files: the input session scan 3D NIfTI images
     :param opts: the :meth:`qipipe.pipeline.registration.run` keyword
         options
