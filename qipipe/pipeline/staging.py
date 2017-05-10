@@ -36,11 +36,13 @@ def run(subject, session, scan, *in_dirs, **opts):
     """
     # The target directory for the fixed, compressed DICOM files.
     _logger = logger(__name__)
-    dest = opts.get('dest', os.getcwd())
-    if not dest:
+    dest_opt = opts.get('dest')
+    if dest_opt:
+        dest = os.path.abspath(dest_opt)
+        if not os.path.exists(dest):
+            os.makedirs(dest)
+    else:
         dest = os.getcwd()
-    elif not os.path.exists(dest):
-        os.makedirs(dest)
 
     in_dirs_s = in_dirs[0] if len(in_dirs) == 1 else [d for d in in_dirs]
     _logger.debug("Staging the %s %s scan %d files in %s..." %
