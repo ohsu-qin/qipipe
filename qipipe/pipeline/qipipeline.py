@@ -33,8 +33,8 @@ from ..interfaces import (XNATDownload, XNATUpload)
 SINGLE_VOLUME_ACTIONS = ['stage', 'roi']
 """The workflow actions which apply to a single-volume scan."""
 
-MULTI_VOLUME_ACTIONS = SINGLE_VOLUME_ACTIONS +
-                       ['qiprofile', 'register', 'model']
+MULTI_VOLUME_ACTIONS = (SINGLE_VOLUME_ACTIONS +
+                        ['qiprofile', 'register', 'model'])
 """The workflow actions which apply to a multi-volume scan."""
 
 VOLUME_FILE_PAT = re.compile("volume(\d{3}).nii.gz$")
