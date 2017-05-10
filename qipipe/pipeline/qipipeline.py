@@ -1003,7 +1003,8 @@ class QIPipelineWorkflow(WorkflowBase):
                 # then download the previously realigned images.
                 if reg_rsc_opt:
                     reg_dl_xfc = XNATDownload(project=self.project,
-                                              resource=reg_rsc_opt)
+                                              resource=reg_rsc_opt,
+                                              file='volume*.nii.gz')
                     download_reg = pe.Node(reg_dl_xfc,
                                            name='download_realigned_images')
                     exec_wf.connect(input_spec, 'subject',
