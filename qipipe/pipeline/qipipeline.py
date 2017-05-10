@@ -710,12 +710,15 @@ class QIPipelineWorkflow(WorkflowBase):
                 crop_posterior = False
             mask_opts = self._child_options()
             mask_opts['crop_posterior'] = crop_posterior
-            mask_wf_gen = MaskWorkflow(**mask_opts)
-            mask_wf = mask_wf_gen.workflow
+            mask_inputs = ['subject', 'session', 'scan', 'time_series', 'opts']
+            mask__xfc = Function(input_names=mask_inputs,
+                                 output_names=['out_file'],
+                                 function=mask)
+            mask_node = pe.Node(mask_xfc, name='mask')
             self.logger.info("Enabled scan mask creation with options %s." %
                              mask_opts)
         else:
-            mask_wf = None
+            mask_node = None
             self.logger.info("Skipping scan mask creation.")
 
         # The staging workflow.
@@ -793,7 +796,7 @@ class QIPipelineWorkflow(WorkflowBase):
         # later in the pipeline.
         # Otherwise, there is no staged node.
         staged = None
-        if reg_node or roi_node or mask_wf or (mdl_wf and not model_reg):
+        if reg_node or roi_node or mask_node or (mdl_wf and not model_reg):
             if stg_node:
                 staged = stg_node
             elif reg_node or not scan_ts_rsc_opt:
@@ -805,7 +808,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(input_spec, 'scan', staged, 'scan')
 
         # All downstream actions require a scan time series.
-        if reg_node or mask_wf or roi_node or mdl_wf:
+        if reg_node or mask_node or roi_node or mdl_wf:
             # If there is a scan time series, then download it.
             # Otherwise, if staging is enabled, then stack the resulting
             # staged 3D images into the scan time series.
@@ -862,15 +865,15 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(input_spec, 'session', download_mask, 'session')
                 exec_wf.connect(input_spec, 'scan', download_mask, 'scan')
             else:
-                assert mask_wf, "The mask workflow is missing"
+                assert mask_node, "Mask creation is missing from the workflow"
                 exec_wf.connect(input_spec, 'subject',
-                                mask_wf, 'input_spec.subject')
+                                mask_node, 'subject')
                 exec_wf.connect(input_spec, 'session',
-                                mask_wf, 'input_spec.session')
+                                mask_node, 'session')
                 exec_wf.connect(input_spec, 'scan',
-                                mask_wf, 'input_spec.scan')
+                                mask_node, 'scan')
                 exec_wf.connect(scan_ts, 'out_file',
-                                mask_wf, 'input_spec.time_series')
+                                mask_node, 'time_series')
                 self.logger.debug('Connected scan time series to mask.')
 
             # Registration requires a fixed reference volume index to
@@ -933,8 +936,8 @@ class QIPipelineWorkflow(WorkflowBase):
             self.logger.debug('Connected staging to registration.')
 
             # The mask input.
-            if mask_wf:
-                exec_wf.connect(mask_wf, 'output_spec.mask', reg_node, 'mask')
+            if mask_node:
+                exec_wf.connect(mask_node, 'out_file', reg_node, 'mask')
                 self.logger.debug('Connected mask to registration.')
             else:
                 exec_wf.connect(download_mask, 'out_file', reg_node, 'mask')
@@ -962,8 +965,8 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(input_spec, 'scan',
                             mdl_wf, 'input_spec.scan')
             # The mask input.
-            if mask_wf:
-                exec_wf.connect(mask_wf, 'output_spec.mask',
+            if mask_node:
+                exec_wf.connect(mask_node, 'out_file',
                                 mdl_wf, 'input_spec.mask')
                 self.logger.debug('Connected mask to modeling.')
             else:
@@ -1149,8 +1152,6 @@ def stage(subject, session, scan, in_dirs, opts):
     """
     Runs the staging workflow on the given session scan images.
 
-    :Note: see the :meth:`register` note.
-
     :param subject: the subject name
     :param session: the session name
     :param scan: the scan number
@@ -1188,6 +1189,12 @@ def register(subject, session, scan, reference_index, *in_files, **opts):
     """
     Runs the registration workflow on the given session scan images.
 
+    :Note: There is always a mask and resource argument. The mask
+      file and resource name are either specified as an input or
+      built by the workflow. The mask and resource are options in
+      the registration run function. Therefore, we check that these
+      options are set here.
+
     :param subject: the subject name
     :param session: the session name
     :param scan: the scan number
@@ -1197,11 +1204,6 @@ def register(subject, session, scan, reference_index, *in_files, **opts):
         options
     :return: the realigned image file path array
     """
-    # Note: There is always a mask and resource argument. The mask
-    # file and resource name are either specified as an input or
-    # built by the workflow. The mask and resource are options in
-    # the registration run function. Therefore, we check that the
-    # options are set here.
     if not opts.get('mask'):
         raise PipelineError("The register method is missing the mask")
     if not opts.get('resource'):
@@ -1288,6 +1290,22 @@ def _extract_volume_number(location):
                             " pattern %s: %s" %
                             (VOLUME_FILE_PAT.pattern, fname))
     return int(match.group(1))
+
+
+def mask(subject, session, scan, time_series, opts):
+    """
+    Runs the mask workflow on the given session scan time series.
+
+    :param subject: the subject name
+    :param session: the session name
+    :param scan: the scan number
+    :param time_series: the scan 4D time series
+    :param opts: the :meth:`qipipe.pipeline.mask.run` keyword options
+    :return: the mask file absolute path
+    """
+    from qipipe.pipeline import mask
+
+    return mask.run(subject, session, scan, time_series, **opts)
 
 
 def roi(subject, session, scan, time_series, in_rois, opts):

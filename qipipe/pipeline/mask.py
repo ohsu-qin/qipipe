@@ -20,10 +20,11 @@ def run(project, subject, session, scan, time_series, **opts):
     :param scan: the input scan number
     :param time_series: the input 4D NIfTI time series to mask
     :param opts: additional :class:`MaskWorkflow` initialization parameters
-    :return: the XNAT mask resource name
+    :return: the mask file location
     """
     wf_gen = MaskWorkflow(project=project, **opts)
 
+    # Run the workflow.
     return wf_gen.run(subject, session, scan, time_series)
 
 
@@ -71,11 +72,12 @@ class MaskWorkflow(WorkflowBase):
         """
         super(MaskWorkflow, self).__init__(logger=logger(__name__), **opts)
 
-        crop_posterior = opts.get('crop_posterior', False)
-        self.workflow = self._create_workflow(crop_posterior)
+        wf_kws = ['crop_posterior']
+        wf_opts = {k: opts.pop(k) for k in wf_kws if k in wf_kws}
+        self.workflow = self._create_workflow(**wf_opts)
         """The mask creation workflow."""
 
-    def run(self, subject, session, scan, time_series):
+    def run(self, subject, session, scan, time_series, **opts):
         """
         Runs the mask workflow on the scan NIfTI files for the given
         time series.
@@ -84,33 +86,43 @@ class MaskWorkflow(WorkflowBase):
         :param session: the input session
         :param scan: the input scan number
         :param time_series: the input 3D NIfTI time series to mask
-        :return: the mask XNAT resource name
+        :param opts: the following keyword arguments:
+        :return: the mask file location
         """
         self.logger.debug("Creating the mask for the %s %s scan %d time series"
                            " %s..." % (subject, session, scan, time_series))
-        self.set_inputs(subject, session, scan, time_series)
+        # The target mask file location.
+        out_file = os.path.join(self.base_dir, 'mask.nii.gz')
+        self.set_inputs(subject, session, scan, time_series, out_file)
         # Execute the workflow.
         self._run_workflow(self.workflow)
         self.logger.debug("Created the %s %s scan %s time series %s mask XNAT"
-                           " resource %s." %
-                           (subject, session, scan, time_series, MASK_RSC))
+                           " resource %s in %s." %
+                           (subject, session, scan, time_series, MASK_RSC,
+                            out_file))
 
-        # Return the mask XNAT resource name.
-        return MASK_RSC
+        # Return the mask file location.
+        return out_file
 
-    def set_inputs(self, subject, session, scan, time_series):
+    def set_inputs(self, subject, session, scan, time_series, out_file=None):
         # Set the inputs.
         input_spec = self.workflow.get_node('input_spec')
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
         input_spec.inputs.scan = scan
         input_spec.inputs.time_series = time_series
+        if out_file:
+            out_file_abs = os.path.abspath(out_file)
+        else
+            out_file_abs = os.path.join(os.getcwd(), 'mask.nii.gz')
+        input_spec.inputs.out_file = out_file_abs
 
-    def _create_workflow(self, crop_posterior=False):
+    def _create_workflow(self, **opts):
         """
         Creates the mask workflow.
 
-        :param crop_posterior: flag indicating whether to crop the
+        :param opts: the following options:
+        :option crop_posterior: flag indicating whether to crop the
             image posterior in the mask, e.g. for a breast tumor
             (default False)
         :return: the Workflow object
@@ -129,7 +141,7 @@ class MaskWorkflow(WorkflowBase):
         # If the crop_posterior flag is set, then the cluster mask
         # input is the cropped image. Otherwise, the cluster mask
         # input is the time series.
-        if crop_posterior:
+        if opts.get('crop_posterior'):
             # Take the mean image of the time series.
             mean = pe.Node(fsl.MeanImage(), name='mean')
             workflow.connect(input_spec, 'time_series', mean, 'in_file')
@@ -156,9 +168,9 @@ class MaskWorkflow(WorkflowBase):
         workflow.connect(cluster_mask, 'out_cluster_file', binarize, 'in_file')
 
         # Invert the binary mask.
-        inv_mask_xfc = fsl.maths.MathsCommand(args='-sub 1 -mul -1',
-                                              out_file='mask.nii.gz')
+        inv_mask_xfc = fsl.maths.MathsCommand(args='-sub 1 -mul -1')
         inv_mask = pe.Node(inv_mask_xfc, name='inv_mask')
+        workflow.connect(input_spec, 'out_file', inv_mask, 'out_file')
         workflow.connect(binarize, 'out_file', inv_mask, 'in_file')
 
         # Upload the mask to XNAT.
@@ -170,10 +182,10 @@ class MaskWorkflow(WorkflowBase):
         workflow.connect(input_spec, 'scan', upload_mask, 'scan')
         workflow.connect(inv_mask, 'out_file', upload_mask, 'in_files')
 
-        # The output is the mask file.
-        output_spec = pe.Node(IdentityInterface(fields=['mask']),
+        # The output is the mask file path.
+        output_spec = pe.Node(IdentityInterface(fields=['out_file']),
                                                 name='output_spec')
-        workflow.connect(inv_mask, 'out_file', output_spec, 'mask')
+        workflow.connect(inv_mask, 'out_file', output_spec, 'out_file')
 
         self._configure_nodes(workflow)
 
