@@ -713,9 +713,9 @@ class QIPipelineWorkflow(WorkflowBase):
             mask_opts = self._child_options()
             mask_opts['crop_posterior'] = crop_posterior
             mask_inputs = ['subject', 'session', 'scan', 'time_series', 'opts']
-            mask__xfc = Function(input_names=mask_inputs,
-                                 output_names=['out_file'],
-                                 function=mask)
+            mask_xfc = Function(input_names=mask_inputs,
+                                output_names=['out_file'],
+                                function=mask)
             mask_node = pe.Node(mask_xfc, name='mask')
             self.logger.info("Enabled scan mask creation with options %s." %
                              mask_opts)
