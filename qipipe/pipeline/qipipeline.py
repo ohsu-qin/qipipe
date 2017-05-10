@@ -107,7 +107,15 @@ def _run_with_dicom_input(actions, *inputs, **opts):
     # after the workflow is completed, if staging is enabled.
     subjects = set()
     # Run the workflow on each session and scan.
-    for scan_input in iter_stage(project, collection, *inputs, **opts):
+    # If the only action is ROI, then the input session directories
+    # have already been staged. Therefore, set the skip_existing
+    # flag to False.
+    if actions == ['roi']:
+        iter_opts = opts.copy()
+        iter_opts['skip_existing'] = False
+    else:
+        iter_opts = opts
+    for scan_input in iter_stage(project, collection, *inputs, **iter_opts):
         wf_actions = _filter_actions(scan_input, actions)
         # Capture the subject.
         subjects.add(scan_input.subject)
