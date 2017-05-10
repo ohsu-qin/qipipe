@@ -1,35 +1,39 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
-5.7.2 / 2016-05-05
+5.7.3 / 2017-05-09
+------------------
+Run mask in its own function.
+
+5.7.2 / 2017-05-05
 -------------------
 Standardize subworkflow calls.
 
-5.7.1 / 2016-05-03
+5.7.1 / 2017-05-03
 -------------------
 Allow multiple DICOM and ROI input directories.
 
-5.6.11 / 2016-04-28
+5.6.11 / 2017-04-28
 -------------------
 Break up staging into smaller steps.
 
-5.6.10 / 2016-04-20
+5.6.10 / 2017-04-20
 -------------------
 Fix ROI workflow.
 
-5.6.9 / 2016-04-19
+5.6.9 / 2017-04-19
 ------------------
 Default nipype log directory is ./log.
 
-5.6.8 / 2016-04-19
+5.6.8 / 2017-04-19
 ------------------
 Log through a qipipe logger facade.
 
-5.6.7 / 2016-04-19
+5.6.7 / 2017-04-19
 ------------------
 Remove FixDicom entry from config defaults.
 
-5.6.6 / 2016-04-19
+5.6.6 / 2017-04-19
 ------------------
 Fix ROI staging.
 
