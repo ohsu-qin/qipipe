@@ -546,9 +546,9 @@ class QIPipelineWorkflow(WorkflowBase):
                                 (project, subject, session, scan))
         else:
             self.logger.debug("Processing %d %s %s %s scan %d volumes:" %
-                               (len(unregistered), project, subject, session,
+                               (len(registered), project, subject, session,
                                 scan))
-            self.logger.debug("%s" % sorted(unregistered))
+            self.logger.debug("%s" % sorted(registered))
 
         # Set the workflow input.
         input_spec = self.workflow.get_node('input_spec')
