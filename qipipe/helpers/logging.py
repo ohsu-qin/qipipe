@@ -44,8 +44,11 @@ def configure(**opts):
     #   directory.
     log_dir = None
     if log_file_opt:
-        # Configure the qiutil logger for the qi* modules.
-        qiutil.command.configure_log('qipipe', 'qixnat', 'qidicom',
+        # Configure the qiutil logger for the auxiliary qi* modules.
+        # The non-Nipype log messages will be ignored in a cluster
+        # job context since Nipype stomps on the Python logger, but
+        # we will go through the motions anyway.
+        qiutil.command.configure_log('qixnat', 'qidicom',
                                      'qiutil', **opts)
         log_file = os.path.abspath(log_file_opt)
         if log_file == '/dev/null':
@@ -56,15 +59,6 @@ def configure(**opts):
         # Make the log file parent directory, if necessary.
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
-        factory = qiutil.logging.logger
-    else:
-        # Print log messages to stdout to work around the Nipype
-        # bug described in the logger method apidoc.
-        mock_log_opts = {}
-        level = opts.get('log_level')
-        if level:
-            mock_log_opts['level'] = level
-        factory = MockLoggerFactory(**mock_log_opts).logger
 
     # Nipype always needs a log directory to work around the
     # following Nipype bug:
@@ -76,7 +70,15 @@ def configure(**opts):
     # Set the Nipype log directory environment variable.
     os.environ[NIPYPE_LOG_DIR_ENV_VAR] = log_dir
 
-    # Set the global logger factory.
+    # Print qipipe log messages to stdout to work around the
+    # Nipype bug described in the logger method apidoc.
+    mock_log_opts = {}
+    level = opts.get('log_level')
+    if level:
+        mock_log_opts['level'] = level
+    factory = MockLoggerFactory(**mock_log_opts).logger
+
+    # Set the qipipe logger factory.
     logger._factory = factory
     # Print a log message.
     log_dest = log_file_opt if log_file_opt else 'stdout'
