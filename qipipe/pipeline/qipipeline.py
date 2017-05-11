@@ -448,12 +448,15 @@ class QIPipelineWorkflow(WorkflowBase):
                         (len(roi_inputs), scan_input.subject,
                          scan_input.session, scan_input.scan)
                     )
-                    self._set_roi_inputs(*roi_inputs)
                 else:
                     self.logger.info("No ROI file was detected for"
                                       " %s %s scan %d." %
                                       (scan_input.subject, scan_input.session,
                                        scan_input.scan))
+                # Set the inputs even if none are found. This permits
+                # workflow "execution" of the roi node as a no-op and
+                # avoids a TypeError from the roi() function call.
+                self._set_roi_inputs(*roi_inputs)
             else:
                 self.logger.info("ROI directory was not detected for"
                                   " %s %s scan %d" % (scan_input.subject,
@@ -692,9 +695,9 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # The ROI workflow node.
         if 'roi' in actions:
-            roi_inputs = ['subject', 'session', 'scan', 'time_series',
+            roi_flds = ['subject', 'session', 'scan', 'time_series',
                           'in_rois', 'opts']
-            roi_xfc = Function(input_names=roi_inputs,
+            roi_xfc = Function(input_names=roi_flds,
                                output_names=['volume'],
                                function=roi)
             roi_node = pe.Node(roi_xfc, name='roi')
