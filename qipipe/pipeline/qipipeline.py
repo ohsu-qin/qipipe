@@ -441,7 +441,7 @@ class QIPipelineWorkflow(WorkflowBase):
                                         scan_input.scan))
                 glob = scan_pats.roi.glob
                 regex = scan_pats.roi.regex
-                roi_inputs = iter_roi(glob, regex, *roi_dirs)
+                roi_inputs = list(iter_roi(glob, regex, *roi_dirs))
                 if roi_inputs:
                     self.logger.info(
                         "%d %s %s scan %d ROI files were discovered." %
