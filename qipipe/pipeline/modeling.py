@@ -473,7 +473,7 @@ class ModelingWorkflow(WorkflowBase):
         # The R1 destination directory.
         # Convert the DCE time series to R1 maps.
         r1_series_func = Function(
-            input_names=['time_series', 'r1_0', 'baseline_end', 'mask', 'dest'],
+            input_names=['time_series', 'r1_0', 'base_end', 'mask', 'dest'],
             output_names=['r1_series'], function=get_r1_series
         )
         r1_series = pe.Node(r1_series_func, dest=self.base_dir,
@@ -793,7 +793,7 @@ def get_r1_series(time_series, r1_0, **kwargs):
 
     :param time_series: the modeling input 4D NIfTI image
     :param r1_0: the R1_0 image file path
-    :param kwargs: the ``dce_to_r1`` keyword options
+    :param kwargs: the ``dce_series_to_r1`` keyword options
     :return: the R1_0 series NIfTI image file name
     """
     import os
@@ -801,13 +801,12 @@ def get_r1_series(time_series, r1_0, **kwargs):
     from dce_prep.dce_to_r1 import dce_series_to_r1
     from dcmstack.dcmmeta import NiftiWrapper
 
-    dce_nw = NiftiWrapper(nb.load(time_series), make_empty=True)
-    if not isinstance(r1_0, float):
-        r1_0 = nb.load(r1_0).get_data()
+    dce_series = NiftiWrapper(nb.load(time_series), make_empty=True)
+    r1_0_data = nb.load(r1_0).get_data()
     mask_opt = kwargs.pop('mask', None)
     if mask_opt:
         kwargs['mask'] = nb.load(mask_opt).get_data()
-    r1_series = dce_series_to_r1(dce_nw, r1_0, **kwargs)
+    r1_series = dce_series_to_r1(dce_series, r1_0_data, **kwargs)
 
     cwd = os.getcwd()
     out_nii = nb.Nifti1Image(r1_series, dce_nw.nii_img.get_affine())
