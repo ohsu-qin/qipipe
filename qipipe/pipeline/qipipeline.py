@@ -24,7 +24,7 @@ from ..staging import image_collection
 from ..staging.iterator import iter_stage
 from ..staging.map_ctp import map_ctp
 from ..staging.ohsu import MULTI_VOLUME_SCAN_NUMBERS
-from ..staging.roi import LesionROI
+from ..staging.roi import (iter_roi, LesionROI)
 from .modeling import (ModelingWorkflow, MODELING_CONF_FILE)
 from .mask import MaskWorkflow
 from ..helpers.constants import (SCAN_TS_RSC, MASK_RSC)
@@ -430,7 +430,6 @@ class QIPipelineWorkflow(WorkflowBase):
         if 'roi' in actions:
             roi_dirs = scan_input.roi
             if roi_dirs:
-                roi_files = []
                 if not self.collection:
                     raise PipelineError("ROI workflow requires the"
                                         " collection option")
@@ -440,21 +439,16 @@ class QIPipelineWorkflow(WorkflowBase):
                                         " for %s %s scan %d" % (
                                         scan_input.subject, scan_input.session,
                                         scan_input.scan))
+                glob = scan_pats.roi.glob
                 regex = scan_pats.roi.regex
-                for d in roi_dirs:
-                    candidates = ('/'.join([d, f]) for f in os.listdir(d))
-                    if regex:
-                        files = (f for f in candidates if regex.match(f))
-                    else:
-                        files = candidates
-                    roi_files.extend(files)
-                if roi_files:
+                roi_inputs = iter_rois(glob, regex, *roi_dirs)
+                if roi_inputs:
                     self.logger.info(
                         "%d %s %s scan %d ROI files were discovered." %
-                        (len(roi_files), scan_input.subject,
+                        (len(roi_inputs), scan_input.subject,
                          scan_input.session, scan_input.scan)
                     )
-                    self._set_roi_inputs(*roi_files)
+                    self._set_roi_inputs(*roi_inputs)
                 else:
                     self.logger.info("No ROI file was detected for"
                                       " %s %s scan %d." %

@@ -51,10 +51,10 @@ The regex to parse a parameter file.
 """
 
 
-def iter_roi(glob_pat, regex, input_dir):
+def iter_roi(glob_pat, regex, *in_dirs):
     """
     Iterates over the the OHSU ROI ``.bqf`` mask files in the given
-    input directory. This method is a :class:`LesionROI` generator,
+    input directories. This method is a :class:`LesionROI` generator,
     e.g.::
 
         >>> # Find .bqf files anywhere under /path/to/session/processing.
@@ -63,50 +63,51 @@ def iter_roi(glob_pat, regex, input_dir):
 
     :param glob_pat: the glob match pattern
     :;param regex: the file name match regular expression
-    :param input_dir: the source session directory to search
+    :param in_dirs: the source session directories to search
     :yield: the :class:`LesionROI` objects
     """
     finder = qiutil.file.Finder(glob_pat, regex)
-    for match in finder.match(input_dir):
-        file_name = match.group(0)
-        # If there is no lesion qualifier, then there is only one lesion.
-        try:
-            lesion_s = match.group('lesion')
-        except IndexError:
-            lesion_s = None
-        lesion = int(lesion_s) if lesion_s else 1
+    for in_dir in in_dirs:
+        for match in finder.match(in_dir):
+            file_name = match.group(0)
+            # If there is no lesion qualifier, then there is only one lesion.
+            try:
+                lesion_s = match.group('lesion')
+            except IndexError:
+                lesion_s = None
+            lesion = int(lesion_s) if lesion_s else 1
 
-        # Prepend the full input directory to the file match.
-        abs_input_dir = os.path.abspath(input_dir)
-        file_path = '/'.join([abs_input_dir, file_name])
-        # The volume and slice are in the companion parameters file.
-        roi_dir, _ = os.path.split(file_path)
-        param_file_pat = "%s/*.par" % roi_dir
-        param_file_names = glob.glob(param_file_pat)
-        if not param_file_names:
-            raise ROIError("The ROI slice directory does not have"
-                           " a parameter file: %s" % roi_dir)
-        if len(param_file_names) > 1:
-            raise ROIError("The ROI slice directory has more than"
-                           "one parameter file: %s" % roi_dir)
-        param_file_name = param_file_names[0]
-        params = _collect_parameters(param_file_name)
+            # Prepend the full input directory to the file match.
+            abs_in_dir = os.path.abspath(in_dir)
+            file_path = '/'.join([abs_in_dir, file_name])
+            # The volume and slice are in the companion parameters file.
+            roi_dir, _ = os.path.split(file_path)
+            param_file_pat = "%s/*.par" % roi_dir
+            param_file_names = glob.glob(param_file_pat)
+            if not param_file_names:
+                raise ROIError("The ROI slice directory does not have"
+                               " a parameter file: %s" % roi_dir)
+            if len(param_file_names) > 1:
+                raise ROIError("The ROI slice directory has more than"
+                               "one parameter file: %s" % roi_dir)
+            param_file_name = param_file_names[0]
+            params = _collect_parameters(param_file_name)
 
-        # If there is no slice number, then complain.
-        slice_seq_nbr_s = params.get('CurrentSlice')
-        if not slice_seq_nbr_s:
-            raise ROIError("The ROI slice could not be determined from"
-                           " the parameter file: %s" % param_file_name)
-        slice_seq_nbr = int(slice_seq_nbr_s)
+            # If there is no slice number, then complain.
+            slice_seq_nbr_s = params.get('CurrentSlice')
+            if not slice_seq_nbr_s:
+                raise ROIError("The ROI slice could not be determined from"
+                               " the parameter file: %s" % param_file_name)
+            slice_seq_nbr = int(slice_seq_nbr_s)
 
-        # If there is no volume number, then complain.
-        volume_nbr_s = params.get('CurrentTimePt')
-        if not volume_nbr_s:
-            raise ROIError("The ROI volume could not be determined from"
-                           " the parameter file: %s" % param_file_name)
-        volume_nbr = int(volume_nbr_s)
+            # If there is no volume number, then complain.
+            volume_nbr_s = params.get('CurrentTimePt')
+            if not volume_nbr_s:
+                raise ROIError("The ROI volume could not be determined from"
+                               " the parameter file: %s" % param_file_name)
+            volume_nbr = int(volume_nbr_s)
 
-        yield LesionROI(lesion, volume_nbr, slice_seq_nbr, file_path)
+            yield LesionROI(lesion, volume_nbr, slice_seq_nbr, file_path)
 
 def _collect_parameters(param_file_name):
     """
