@@ -441,6 +441,11 @@ class QIPipelineWorkflow(WorkflowBase):
                                         scan_input.scan))
                 glob = scan_pats.roi.glob
                 regex = scan_pats.roi.regex
+                self.logger.debug(
+                    "Discovering %s %s scan %d ROI files matching %s..." %
+                    (scan_input.subject, scan_input.session, scan_input.scan,
+                     glob)
+                )
                 roi_inputs = list(iter_roi(glob, regex, *roi_dirs))
                 if roi_inputs:
                     self.logger.info(
@@ -955,12 +960,13 @@ class QIPipelineWorkflow(WorkflowBase):
                 if roi_node:
                     exec_wf.connect(roi_node, 'volume',
                                     reg_node, 'reference_index')
-                    self.logger.debug('Connected ROI volume to registration'
-                                      'bolus arrival.')
+                    self.logger.debug('Connected ROI volume to the'
+                                      ' registration reference index.')
                 else:
                     exec_wf.connect(bolus_arv, 'bolus_arrival_index',
                                     reg_node, 'reference_index')
-                    self.logger.debug('Connected bolus arrival to registration.')
+                    self.logger.debug('Connected bolus arrival to the'
+                                      ' registration reference index.')
 
         # If the modeling workflow is enabled, then model the scan or
         # realigned images.
@@ -1333,7 +1339,17 @@ def roi(subject, session, scan, time_series, in_rois, opts):
     """
     from qipipe.pipeline import roi
 
-    roi.run(subject, session, scan, time_series, *in_rois, **opts)
+    # If there are no ROI inputs, then call roi.run() anyway to
+    # create the workflow and print appropriate log messages.
+    # The roi.run() method will return None in that case, and
+    # we will bail out without determining the ROI volume
+    # number.
+    if not roi.run(subject, session, scan, time_series, *in_rois, **opts):
+        logger(__name__).debug("%s %s scan %d has ROI directories but no"
+                               "ROI input files; using the default volume"
+                               " index 0 to allow Nipype to continue." %
+                               (subject, session, scan))
+        return 0
 
     # Get the ROI volume index from any input spec.
     roi_volume_nbr = in_rois[0].volume
