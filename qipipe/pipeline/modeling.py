@@ -798,7 +798,7 @@ def get_r1_series(time_series, r1_0, **kwargs):
     """
     import os
     import nibabel as nb
-    from dce_prep import dce_to_r1
+    from dce_prep.dce_to_r1 import dce_series_to_r1
     from dcmstack.dcmmeta import NiftiWrapper
 
     dce_nw = NiftiWrapper(nb.load(time_series), make_empty=True)
@@ -807,7 +807,7 @@ def get_r1_series(time_series, r1_0, **kwargs):
     mask_opt = kwargs.pop('mask', None)
     if mask_opt:
         kwargs['mask'] = nb.load(mask_opt).get_data()
-    r1_series = dce_to_r1(dce_nw, r1_0, **kwargs)
+    r1_series = dce_series_to_r1(dce_nw, r1_0, **kwargs)
 
     cwd = os.getcwd()
     out_nii = nb.Nifti1Image(r1_series, dce_nw.nii_img.get_affine())
