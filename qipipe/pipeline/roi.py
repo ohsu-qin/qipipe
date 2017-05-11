@@ -99,7 +99,7 @@ class ROIWorkflow(WorkflowBase):
             self.logger.info("Skipping the %s workflow on %s %s scan %d,"
                                "since there are no inputs to convert." %
                                (self.workflow.name, subject, session, scan))
-            return None
+            return
         # Set the inputs.
         self._set_inputs(subject, session, scan, time_series, *inputs)
         # Execute the workflow.
