@@ -96,17 +96,17 @@ class ROIWorkflow(WorkflowBase):
             there were no inputs
         """
         if not inputs:
-            self.logger.debug("Skipping the %s workflow on %s %s scan %d,"
+            self.logger.info("Skipping the %s workflow on %s %s scan %d,"
                                "since there are no inputs to convert." %
                                (self.workflow.name, subject, session, scan))
             return None
         # Set the inputs.
         self._set_inputs(subject, session, scan, time_series, *inputs)
         # Execute the workflow.
-        self.logger.debug("Executing the %s workflow on %s %s scan %d..." %
+        self.logger.info("Executing the %s workflow on %s %s scan %d..." %
                          (self.workflow.name, subject, session, scan))
         self._run_workflow(self.workflow)
-        self.logger.debug("Executed the %s workflow on %s %s scan %d." %
+        self.logger.info("Executed the %s workflow on %s %s scan %d." %
                          (self.workflow.name, subject, session, scan))
 
         # Return the ROI resource name.
