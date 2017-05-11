@@ -27,7 +27,7 @@ class ReorderBoleroMask(CommandLine):
     Interface to the mask reordering utility.
     """
 
-    _cmd = 'bolero_mask_reorder'
+    _cmd = 'reorder_bolero_mask'
     input_spec = ReorderBoleroMaskInputSpec
     output_spec = ReorderBoleroMaskOutputSpec
 
