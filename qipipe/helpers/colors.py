@@ -13,7 +13,7 @@ def create_lookup_table(ncolors, colormap='jet', out_file=None):
     :param ncolors: the number of colors to generate
     :param colormap: the matplotlib colormap name
     :param out_file: the output file path (default is the colormap
-      name followed by ``_colors.txt``in the current directory)
+        name followed by ``_colors.txt`` in the current directory)
     """
     # If there is an output file argument, then ensure that there is an
     # output parent directory. Otherwise, use the default output file.
@@ -60,7 +60,7 @@ def colorize(lut_file, *inputs, **opts):
     3.0, then the a voxel value of 0 is transformed to the first LUT
     color, 3.0 is transformed to the last LUT color, and the
     intermediate values are transformed to intermediate colors.
-    
+
     The voxel -> reference output file name appends ``_color`` to the
     input file basename and preserves the input file extensions, e.g.
     the input file ``k_trans_map.nii.gz`` is transformed to

@@ -6,6 +6,7 @@ The following OHSU QIN scan numbers are captured:
     * 2: T2
     * 4: DW
     * 6: PD
+
 These scans have DICOM files specified by the
 :attr:`qipipe.staging.image_collection.Collection.patterns`
 ``dicom`` attribute. The T1 scan has ROI files as well, specified

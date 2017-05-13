@@ -14,6 +14,7 @@ from .pathology import (PathologyError, PathologyWorksheet, PathologyUpdate)
 COL_ATTRS = {'Tumor Location': 'location'}
 """
 The following special column: attribute associations:
+
 * The ``Tumor Location`` column corresponds to the pathology ``location``
   attribute
 """
@@ -29,7 +30,7 @@ def read(workbook, **condition):
     """
     This is a convenience method that wraps :class:`SarcomaPathologyWorksheet`
     :meth:`qipipe.qiprofile.xls.Worksheet.read`.
-    
+
     :param workbook: the read-only ``openpyxl`` workbook object
     :param condition: the :meth:`qipipe.qiprofile.xls.Worksheet.read`
         filter condition
@@ -38,7 +39,7 @@ def read(workbook, **condition):
     reader = PathologyWorksheet(workbook, SarcomaPathology, FNCLCCGrade,
                                 parsers=dict(PARSERS),
                                 column_attributes=COL_ATTRS)
-    
+
     return reader.read(**condition)
 
 
@@ -46,7 +47,7 @@ def update(subject, rows):
     """
     Updates the given subject data object from the Sarcoma pathology XLS
     rows.
-    
+
     :param subject: the ``Subject`` Mongo Engine database object
         to update
     :param rows: the input pathology :meth:`read` rows list
@@ -68,7 +69,7 @@ def _parse_necrosis_percent(value):
     elif not isinstance(value, six.string_types):
         raise parse.ParseError("The input necrosis percent type is not"
                          " supported: %s (%s)" % (value, value.__class__))
-    
+
     # Parse the string input.
     values = [int(bound) for bound in value.split('-')]
     if len(values) == 1:
@@ -82,7 +83,7 @@ def _parse_necrosis_percent(value):
 
 class SarcomaPathologyUpdate(PathologyUpdate):
     """The Sarcoma pathology update facade."""
-    
+
     def __init__(self, subject):
         """
         :param subject: the ``Subject`` Mongo Engine database object
@@ -92,14 +93,15 @@ class SarcomaPathologyUpdate(PathologyUpdate):
             subject, tumor_type='Sarcoma', pathology_class=SarcomaPathology,
             grade_class=FNCLCCGrade
         )
-    
+
     def pathology_content(self, row):
         """
         Collects the pathology object from the given input row.
         This subclass implementation adds the following items:
+
         * If there are *necrosis_percent* and *tnm* items, then the TNM
           necrosis_score is inferred from the necrosis percent
-        
+
         :param row: the input row
         :return: the {attribute: value} content dictionary
         """
@@ -111,5 +113,5 @@ class SarcomaPathologyUpdate(PathologyUpdate):
             necrosis_pct = content['necrosis_percent']
             tnm = content['tnm']
             tnm.necrosis_score = necrosis_percent_as_score(necrosis_pct)
-        
+
         return content

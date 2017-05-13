@@ -16,15 +16,15 @@ qiprofile
 
 :mod:`clinical`
 ---------------
-.. automodule:: qipipe.pipeline.clinical
+.. automodule:: qipipe.qiprofile.clinical
 
 :mod:`demographics`
 -------------------
-.. automodule:: qipipe.pipeline.v
+.. automodule:: qipipe.qiprofile.demographics
 
 :mod:`dosage`
 -------------
-.. automodule:: qipipe.qiprofile.v
+.. automodule:: qipipe.qiprofile.dosage
 
 :mod:`imaging`
 --------------

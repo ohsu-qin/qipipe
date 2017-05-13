@@ -16,11 +16,11 @@ helpers
 
 :mod:`command`
 --------------
-.. automodule:: qipipe.pipeline.command
+.. automodule:: qipipe.helpers.command
 
 :mod:`constants`
 ----------------
-.. automodule:: qipipe.pipeline.constants
+.. automodule:: qipipe.helpers.constants
 
 :mod:`distributable`
 --------------------
@@ -31,7 +31,7 @@ helpers
 .. automodule:: qipipe.helpers.image
 
 :mod:`metadata`
-------------
+---------------
 .. automodule:: qipipe.helpers.metadata
 
 :mod:`roi`

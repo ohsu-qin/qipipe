@@ -10,8 +10,7 @@ from qiutil.ast_config import read_config
 from qixnat.helpers import (xnat_path, xnat_name, parse_xnat_date)
 from qirest_client.helpers import database
 from qirest_client.model.imaging import (
-    Session, SessionDetail, Scan, Volume, ScanProtocol, Registration,
-    RegistrationProtocol, Modeling, ModelingProtocol
+    Session, SessionDetail, Scan, Protocol, Registration, Modeling
 )
 from ..staging import image_collection
 from ..helpers.constants import (SUBJECT_FMT, SESSION_FMT)
@@ -33,7 +32,7 @@ def update(subject, experiment, **opts):
     """
     Updates the imaging content for the qiprofile REST Subject
     from the XNAT experiment.
-    
+
     :param collection: the :attr:`qipipe.staging.image_collection.name``
     :param subject: the target qiprofile Subject to update
     :param experiment: the XNAT experiment object
@@ -53,24 +52,24 @@ class Updater(object):
         """
         self.subject = subject
         """The target qiprofile Subject to update."""
-        
+
         self.bolus_arrival_index = opts.get('bolus_arrival_index')
         """
         The scan
         :meth:qipipe.pipeline.qipipeline.bolus_arrival_index_or_zero`.
         """
-        
+
         self.roi_centroids = opts.get('roi_centroids')
         """The ROI centroids list in lesion number order."""
-        
+
         self.roi_average_intensities = opts.get('roi_average_intensities')
         """The ROI average signal intensities list in lesion number order."""
-    
+
     def update(self, experiment):
         """
         Updates the imaging content for the qiprofile REST Subject
         from the XNAT experiment.
-        
+
         :param experiment: the XNAT experiment object
         :raise ImagingUpdateError: if the XNAT experiment does not have
             a visit date
@@ -102,42 +101,42 @@ class Updater(object):
         session.detail.save()
         # Save the subject.
         self.subject.save()
-    
+
     def _create_session(self, experiment):
         """
         Makes the qiprofile Session object from the given XNAT experiment.
-        
+
         :param experiment: the XNAT experiment object
         :return: the qiprofile Session object
         """
         # Make the qiprofile scans.
         scans = [self._create_scan(xnat_scan)
                  for xnat_scan in experiment.scans()]
-        
+
         # The modeling resources begin with 'pk_'.
         xnat_mdl_rscs = (rsc for rsc in xnat_scan.resources()
                          if xnat_name(rsc).startswith(MODELING_PREFIX))
         modelings = [self._create_modeling(rsc, scans) for rsc in xnat_mdl_rscs]
-        
+
         # The session detail database object to hold the scans.
         detail = SessionDetail(scans=scans)
         # Save the detail first, since it is not embedded and we need to
         # set the detail reference to make the session.
         detail.save()
-        
+
         # The qiprofile session date is the XNAT experiment date.
         # See the comment in the update method in regards to the
         # type conversion.
         date_s = experiment.attrs.get('date')
         date = parse_xnat_date(date_s)
-        
+
         # Return the new qiprofile Session object.
         return Session(date=date, modelings=modelings, detail=detail)
-    
+
     def _create_scan(self, xnat_scan):
         """
         Makes the qiprofile Session object from the XNAT scan.
-        
+
         :param xnat_scan: the XNAT scan object
         :return: the qiprofile scan object
         """
@@ -156,34 +155,35 @@ class Updater(object):
         pcl_key = dict(technique=scan_type)
         # The corresponding qiprofile ScanProtocol.
         protocol = database.get_or_create(ScanProtocol, pcl_key)
-        
+
         # There must be a time series.
         rsc = xnat_scan.resource('scan_ts')
         if not rsc.exists():
             raise ImagingUpdateError("The XNAT scan %s does not have a time series"
                                      " resource" % xnat_path(xnat_scan))
         time_series_file = next(f for f in rsc.files())
-        time_series = TimeSeries(name=xnat_name(time_series_file)
-        
+        name = xnat_name(time_series_file)
+        time_series = TimeSeries(name=name)
+
         # There must be a bolus arrival.
-        if not self.bolus_arrival_index:
+        if self.bolus_arrival_index == None:
             raise ImagingUpdateError("The XNAT scan %s qiprofile update is"
                                     " missing the bolus arrival" %
                                     xnat_path(xnat_scan))
-        
+
         # The ROIs.
         rois = self._create_rois(xnat_scan)
-        
+
         # The XNAT registration resources begin with reg_.
         registrations = [self._create_registration(rsc)
                          for rsc in xnat_scan.resources()
                          if xnat_name(rsc).startswith(REG_PREFIX)]
-        
+
         # Return the new qiprofile Scan object.
         return Scan(number=number, protocol=protocol, time_series=time_series,
                     bolus_arrival_index=self.bolus_arrival_index,
                     rois=rois, registrations=registrations)
-    
+
     def _create_rois(self, xnat_scan, **opts):
         """
         :param xnat_scan: the XNAT scan object
@@ -234,13 +234,13 @@ class Updater(object):
                     roi_opts['avg_intensity'] = avg_intensity
             roi = Region(mask, **roi_opts)
             rois.append((mask, label_map))
-        
+
         return rois
-    
+
     def _create_registration(self, resource):
         """
         Makes the qiprofile Registration object from the XNAT resource.
-        
+
         :param resource: the XNAT registration resource object
         :return: the qiprofile Registration object
         """
@@ -258,30 +258,30 @@ class Updater(object):
                                      xnat_path(resource))
         key = dict(technique=technique, configuration=cfg)
         protocol = database.get_or_create(RegistrationProtocol, key)
-        
+
         # There must be a time series.
         time_series_file = next(f for f in resource.files() if f.label().ends_with('_ts.nii.gz'))
         time_series = TimeSeries(name=xnat_name(time_series_file))
-        
+
         # Return the new qiprofile Registration object.
         return Registration(protocol=protocol, time_series=time_series,
                             resource=xnat_name(resource))
-    
+
     def _create_modeling(self, resource, scans):
         """
         Creates the qiprofile Modeling object from the given XNAT
         resource object.
-        
+
         :param resource: the modeling source XNAT resource object
         :param scans: the REST Scan list for the current session
         :return: the qiprofile Modeling object
         """
         # The XNAT modeling files.
         xnat_files = resource.files()
-        
+
         # The modeling configuration.
         cfg = self._read_configuration(resource, MODELING_CONF_FILE)
-        
+
         # Tease out the modeling source.
         source_topic = cfg.pop('Source', None)
         if not source_topic:
@@ -307,11 +307,11 @@ class Updater(object):
             scan_nbr = xnat_name(xnat_scan)
             scan = next(s for s in scans if s.number == scan_nbr)
             source = Modeling.Source(scan=scan.protocol)
-        
+
         # The qiprofile ModelingProtocol.
         key = dict(technique='Mock', configuration=cfg)
         protocol = database.get_or_create(ModelingProtocol, key)
-        
+
         # The modeling result files.
         xnat_file_labels = {xnat_name(xnat_file) for xnat_file in xnat_files}
         result = {}
@@ -322,11 +322,11 @@ class Updater(object):
                 # pipeline and here.
                 param_result = Modeling.ParameterResult(filename=fname)
                 result[output] = param_result
-        
+
         # Return the new qiprofile Modeling object.
         return Modeling(protocol=protocol, source=source,
                         resource=xnat_name(resource), result=result)
-    
+
     def _read_configuration(self, resource, name):
         """
         :param resource: the XNAT resource configuration file parent

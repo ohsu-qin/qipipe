@@ -59,21 +59,27 @@ def parse_trailing_number(s):
     if not match:
         raise ParseError("The input string does not have a trailing number:"
                          " %s" % s)
-    
+
     return int(match.group(1))
 
 
 def extract_trailing_number(value):
     """
-    Returns the integer at the end of the given input value, as follows:
-    * If the input value is an integer, then the result is the input
-      value.
-    * Otherwise, if the input value has a string type, then the result
-      is the trailing digits converted to an integer.
+    Returns the integer at the end of the given input value, as
+    follows:
+
+    * If the input value is an integer, then the result is the
+      input value.
+
+    * Otherwise, if the input value has a string type, then the
+      result is the trailing digits converted to an integer.
+
     * Any other value is an error.
-    :param the input integer or string
+
+    :param value: the input integer or string
     :return: the trailing integer
-    :raise ParseError: if the input value type is not int or a string type
+    :raise ParseError: if the input value type is not int or a
+        string type
     """
     if isinstance(value, numbers.Integral):
         return int(value)
@@ -87,11 +93,11 @@ def extract_trailing_number(value):
 def parse_list_string(value):
     """
     Converts a comma-separated list input string to a list, e.g.:
-    
+
     >> from qipipe.qiprofile.parse import parse_list_string
     >> parse_list_string('White, Asian')
     ['White', 'Asian']
-    
+
     :param value: the input value
     :return: the value converted to a list
     """
@@ -104,14 +110,19 @@ def parse_list_string(value):
 def parse_boolean(value):
     """
     Parses the input value as follows:
+
     * If the input value is already a boolean, then return the value
+
     * If the input is None or the empty string, then return None
+
     * Otherwise, if the input is a string which matches
         :const:`TRUE_REGEX`, then return True
+
     * Otherwise, if the input is a string which matches
         :const:`FALSE_REGEX`, then return False
+
     * Any other value is an error.
-    
+
     :param value: the input value
     :return: the value as a boolean
     :raise ParseError: if the value cannot be converted
@@ -136,17 +147,18 @@ def default_parsers(*classes):
     """
     Associates the data model class fields to a parse function composed
     as follows:
-    
+
     * The type cast function in :const:`TYPE_PARSERS`, if present
+
     * The controlled value lookup, if the field has controlled values
-    
+
     :param classes: the data model classes
     :return: the {attribute: function} dictionary
     """
     parsers = {}
     for klass in classes:
         parsers.update(_default_parsers(klass))
-    
+
     return parsers
 
 
@@ -161,7 +173,7 @@ def _default_parsers(klass):
         parser = _default_parser(field)
         if parser:
             parsers[attr] = parser
-    
+
     return parsers
 
 
@@ -171,7 +183,7 @@ def _default_parser(field):
     # Compose CV look-up with type casting, allowing for
     # the possibility that one or both might be missing.
     parsers = [p for p in [cv_parser, type_parser] if p]
-    
+
     return functions.compose(*parsers) if parsers else None
 
 
@@ -179,7 +191,7 @@ def _controlled_value_parser(field):
     """
     Associates the field to :meth:`controlled_value_for`
     if the field has controlled values.
-    
+
     :param field: the data model field
     :return: the parser function, or None if this field does not have
         controlled values
@@ -196,7 +208,7 @@ def _type_value_parser(field):
     * Otherwise, if the field has a :const:`TYPE_PARSERS` association,
       then use the associated parser
     * Ohterwise, no conversion is performed
-    
+
     :param field: the data model field
     :return: the type cast conversion parser function
     """
@@ -222,7 +234,7 @@ def _controlled_value_for(value, field):
     """
     Returns the controlled value which matches the given input value.
     The match is case-insensitive for strings.
-    
+
     :param value: the input value
     :param field: the data model field object
     :return the matching controlled value
@@ -237,7 +249,7 @@ def _controlled_value_for(value, field):
         raise ParseError("The input %s value %s does not match one of"
                         " the supported field choices %s" %
                         (field, value, field.choices))
-    
+
     # Return the controlled value specified by the choice.
     return _choice_controlled_value(choice)
 

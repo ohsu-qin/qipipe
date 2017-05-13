@@ -21,7 +21,7 @@ def iter_stage(project, collection, *inputs, **opts):
     """
     Iterates over the the scans in the given input directories.
     This method is a staging generator which yields a tuple consisting
-    of the {subject, session, scan, dicom, roi} object, e.g.::
+    of the {subject, session, scan, dicom, roi} object.
 
     The input directories conform to the
     :attr:`qipipe.staging.image_collection.Collection.patterns`
