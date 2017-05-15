@@ -67,7 +67,11 @@ def run(subject, session, scan, *in_dirs, **opts):
     vol_nii_files = []
     project = None
     # The volume workflows run in a subdirectory.
-    base_dir = opts.pop('base_dir', os.getcwd())
+    base_dir_opt = opts.pop('base_dir', None)
+    if base_dir_opt:
+        base_dir = os.path.abspath(base_dir_opt)
+    else:
+        base_dir = os.getcwd()
     for volume, in_files in vol_dcm_dict.iteritems():
         # Put the compressed DICOM files in an empty volume
         # subdirectory.
@@ -95,7 +99,7 @@ def run(subject, session, scan, *in_dirs, **opts):
         # Look for the 3D volume output in the workflow base directory
         # work area directly instead.
         vol_file = ("%s/staging/stack/volume%03d.nii.gz" %
-                    (stg_wf.base_dir, volume))
+                    (base_dir, volume))
         if os.path.exists(vol_file):
             vol_nii_files.append(vol_file)
         elif not stg_wf.dry_run:
