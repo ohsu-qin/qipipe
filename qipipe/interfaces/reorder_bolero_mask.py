@@ -10,7 +10,7 @@ from qiutil.file import splitexts
 
 
 class ReorderBoleroMaskInputSpec(CommandLineInputSpec):
-    in_file = traits.Str(desc='mask file', mandatory=True,
+    in_file = traits.Str(desc='Input mask file name', mandatory=True,
                          position=1, argstr='\"%s\"')
     out_file = traits.Str(desc='Output file name', argstr='-o %s')
 
@@ -32,19 +32,20 @@ class ReorderBoleroMask(CommandLine):
         super(ReorderBoleroMask, self).__init__(**inputs)
 
     def run(self, **inputs):
-        self._out_file = inputs.get('out_file')
-        if not self._out_file:
+        if not inputs.get('out_file'):
             in_file = inputs.get('in_file')
-            # in_file is mandatory, but superclass run method check
-            # that and throw the appropriate error.
+            # in_file is mandatory, but let the superclass run
+            # method check that and throw the appropriate error.
             if in_file:
-                self._out_file = self._default_output_file_name(in_file)
+                def_out_file = self._default_output_file_name(in_file)
+                inputs['out_file'] = self.inputs.out_file = def_out_file
+
         super(ReorderBoleroMask, self).run(**inputs)
 
     def _list_outputs(self):
         outputs = self._outputs().get()
         # Expand the output path, if necessary.
-        outputs['out_file'] = os.path.abspath(self._out_file)
+        outputs['out_file'] = os.path.abspath(self.inputs.out_file)
 
         return outputs
 

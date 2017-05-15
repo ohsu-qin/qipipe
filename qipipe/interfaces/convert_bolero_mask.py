@@ -9,7 +9,7 @@ from glob import glob
 import traits.api as traits
 from nipype.interfaces.base import (TraitedSpec, CommandLine,
                                     CommandLineInputSpec)
-from nipype.interfaces.traits_extension import Undefined
+from nipype.interfaces.traits_extension import isdefined
 
 
 class ConvertBoleroMaskInputSpec(CommandLineInputSpec):
@@ -34,23 +34,27 @@ class ConvertBoleroMask(CommandLine):
     """
     Interface to the proprietary OHSU AIRC ``bolero_mask_conv`` utility.
     """
-    
+
     _cmd = 'bolero_mask_conv'
     input_spec = ConvertBoleroMaskInputSpec
     output_spec = ConvertBoleroMaskOutputSpec
-    
+
     def __init__(self, **inputs):
         super(ConvertBoleroMask, self).__init__(**inputs)
-    
+
     def _list_outputs(self):
         outputs = self._outputs().get()
-        
+
         # The default output base name is slice_<slice>_lesion_mask.
-        out_base = (self.inputs.out_base or
-                    "slice_%d_lesion_mask" % self.inputs.slice_sequence_number)
+        if isdefined(self.inputs.out_base)
+            out_base = self.inputs.out_base
+        else
+            out_base = (
+                "slice_%d_lesion_mask" % self.inputs.slice_sequence_number
+            )
         # The output is compressed.
         out_file = out_base + '.nii.gz'
         # Expand the output path.
         outputs['out_file'] = os.path.abspath(out_file)
-        
+
         return outputs
