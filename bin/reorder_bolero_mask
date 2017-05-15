@@ -17,7 +17,7 @@ def main(argv=sys.argv):
     # The utility function option is out_file, not output.
     out_file = opts.get('output')
     func_opts = dict(out_file=out_file) if out_file else {}
-    mask.reorder_bolero_mask(in_file, func_opts)
+    roi.reorder_bolero_mask(in_file, func_opts)
 
     return 0
 
