@@ -168,7 +168,7 @@ class ROIWorkflow(WorkflowBase):
         self.logger.debug("Creating the ROI execution workflow...")
 
         # The execution workflow.
-        exec_wf = pe.Workflow(name='roi_exec', base_dir=self.base_dir)
+        exec_wf = pe.Workflow(name='roi', base_dir=self.base_dir)
 
         # The ROI workflow input.
         input_fields = ['subject', 'session', 'scan', 'time_series', 'resource']
