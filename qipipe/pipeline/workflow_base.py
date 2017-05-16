@@ -378,7 +378,7 @@ class WorkflowBase(object):
                     # in this workflow is included in a parent workflow.
                     def_plugin_args['overwrite'] = True
                     self.logger.debug("Workflow %s default node %s plug-in"
-                                      " parameters: %s."
+                                      " parameters: %s." %
                                       (workflow.name, self.plug_in,
                                        def_plugin_args))
                 else:
