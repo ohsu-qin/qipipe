@@ -119,20 +119,10 @@ def _run_with_dicom_input(actions, *inputs, **opts):
         wf_actions = _filter_actions(scan_input, actions)
         # Capture the subject.
         subjects.add(scan_input.subject)
-        # If only ROI is enabled, then check for an existing scan
-        # time series.
-        if set(wf_actions) == {'roi'}:
-            with qixnat.connect() as xnat:
-                wf_opts = opts.copy()
-                if _scan_resource_exists(xnat, project, scan_input.subject,
-                                         scan_input.session, scan_input.scan,
-                                         SCAN_TS_RSC):
-                    wf_opts['scan_time_series'] = SCAN_TS_RSC
-        else:
-            wf_opts = opts
         # Create a new workflow.
-        wf_gen = QIPipelineWorkflow(project, wf_actions, collection=collection,
-                                    **wf_opts)
+        wf_gen = QIPipelineWorkflow(
+            project, scan_input.subject, scan_input.session, scan_input.scan,
+            wf_actions, collection=collection, **opts)
         # Run the workflow on the scan.
         wf_gen.run_with_dicom_input(wf_actions, collection, scan_input)
 
@@ -213,16 +203,6 @@ def _run_with_xnat_input(actions, *inputs, **opts):
 
             # The workflow options are augmented from the base options.
             wf_opts = dict(opts)
-            # Check for an existing mask.
-            if _scan_resource_exists(xnat, prj, sbj, sess, scan, MASK_RSC):
-                wf_opts['mask'] = MASK_RSC
-
-            # Every post-stage action requires a 4D scan time series.
-            ts_actions = (action for action in actions if action != 'stage')
-            if any(ts_actions):
-                if _scan_resource_exists(xnat, prj, sbj, sess, scan,
-                                         SCAN_TS_RSC):
-                    wf_opts['scan_time_series'] = SCAN_TS_RSC
 
             # If modeling will be performed on a specified registration
             # resource, then check for an existing 4D registration time
@@ -237,7 +217,7 @@ def _run_with_xnat_input(actions, *inputs, **opts):
                     wf_opts['realigned_time_series'] = reg_ts_name
 
         # Make the workflow.
-        wf_gen = QIPipelineWorkflow(prj, actions, **wf_opts)
+        wf_gen = QIPipelineWorkflow(prj, sbj, sess, scan, actions, **wf_opts)
         # If a registration resource was specified, then set the flag
         # to check for registered scans.
         check_reg = opts.get('registration_resource') != None
@@ -332,9 +312,12 @@ class QIPipelineWorkflow(WorkflowBase):
     instance variable.
     """
 
-    def __init__(self, project, actions, **opts):
+    def __init__(self, project, subject, session, scan, actions, **opts):
         """
         :param project: the XNAT project name
+        :param subject: the subject name
+        :param session: the session name
+        :param scan: the scan number
         :param actions: the actions to perform
         :param opts: the :class:`qipipe.staging.WorkflowBase`
             initialization options as well as the following keyword arguments:
@@ -402,7 +385,8 @@ class QIPipelineWorkflow(WorkflowBase):
         self.modeling_resource = mdl_rsc
         """The modeling XNAT resource name."""
 
-        self.workflow = self._create_workflow(actions, **opts)
+        self.workflow = self._create_workflow(subject, session, scan,
+                                              actions, **opts)
         """
         The pipeline execution workflow. The execution workflow is executed
         by calling the :meth:`run_with_dicom_input` or
@@ -487,7 +471,7 @@ class QIPipelineWorkflow(WorkflowBase):
         :param actions: the workflow actions
         :param is_existing_registration_resource: flag indicating
             whether an existing registration resource name was
-            specfied
+            specified
         """
         self.logger.debug("Processing the %s %s %s scan %d volumes..." %
                            (project, subject, session, scan))
@@ -611,11 +595,14 @@ class QIPipelineWorkflow(WorkflowBase):
 
         return registered, unregistered
 
-    def _create_workflow(self, actions, **opts):
+    def _create_workflow(self, subject, session, scan, actions, **opts):
         """
         Builds the reusable pipeline workflow described in
         :class:`qipipe.pipeline.qipipeline.QIPipeline`.
 
+        :param subject: the subject name
+        :param session: the session name
+        :param scan: the scan number
         :param actions: the actions to perform
         :param opts: the constituent workflow initializer options
         :return: the Nipype workflow
@@ -645,7 +632,6 @@ class QIPipelineWorkflow(WorkflowBase):
         recursive_reg_opt = opts.get('recursive_registration')
         mdl_rsc_opt = opts.get('modeling_resource')
         mask_rsc_opt = opts.get('mask')
-        scan_ts_rsc_opt = opts.get('scan_time_series')
         reg_ts_name_opt = opts.get('realigned_time_series')
 
         # The technique options.
@@ -788,7 +774,6 @@ class QIPipelineWorkflow(WorkflowBase):
         # * the scan time series is not specified
         model_reg = reg_node or reg_ts_name_opt
         model_scan = not model_reg
-        model_vol = model_scan and not scan_ts_rsc_opt
 
         # Stitch together the workflows:
 
@@ -805,13 +790,18 @@ class QIPipelineWorkflow(WorkflowBase):
             mask_node or roi_node or (mdl_wf and not model_reg)
         )
         scan_ts = None
-        if need_scan_ts and scan_ts_rsc_opt:
+        if need_scan_ts and not stg_node:
+            has_scan_ts = False
+            with qixnat.connect() as xnat:
+                has_scan_ts = _scan_resource_exists(
+                    xnat, project, subject, session, scan, SCAN_TS_RSC
+                )
             # If there is a scan time series, then download it.
             # Otherwise, stack the staged 3D images into the
             # scan time series.
-            if scan_ts_rsc_opt:
+            if has_scan_ts:
                 scan_ts_xfc = XNATDownload(project=self.project,
-                                              resource=SCAN_TS_RSC)
+                                           resource=SCAN_TS_RSC)
                 scan_ts = pe.Node(scan_ts_xfc,
                                   name='download_scan_time_series')
                 exec_wf.connect(input_spec, 'subject', scan_ts, 'subject')
@@ -829,7 +819,7 @@ class QIPipelineWorkflow(WorkflowBase):
         if reg_node or (need_scan_ts and not scan_ts):
             if stg_node:
                 staged = stg_node
-            elif reg_node or not scan_ts_rsc_opt:
+            else:
                 dl_scan_xfc = XNATDownload(project=self.project,
                                            resource='NIFTI')
                 staged = pe.Node(dl_scan_xfc, name='staged')
@@ -869,9 +859,14 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # Registration and modeling require a mask and bolus arrival.
         if reg_node or mdl_wf:
+            has_mask = False
+            with qixnat.connect() as xnat:
+                has_mask = _scan_resource_exists(
+                    xnat, project, subject, session, scan, MASK_RSC
+                )
             # If a mask resource name was specified, then download the mask.
             # Otherwise, make the mask.
-            if mask_rsc_opt:
+            if has_mask:
                 dl_mask_xfc = XNATDownload(project=self.project,
                                            resource=mask_rsc_opt)
                 download_mask = pe.Node(dl_mask_xfc, name='download_mask')
