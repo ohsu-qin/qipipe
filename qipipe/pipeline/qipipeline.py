@@ -232,7 +232,7 @@ def _scan_resource_exists(xnat, project, subject, session, scan, resource):
     """
     rsc_obj = xnat.find_one(project, subject, session, scan=scan,
                             resource=resource)
-    exists = rsc_obj and rsc_obj.files().get()
+    exists = (rsc_obj and rsc_obj.files().get()) != None
     status = 'found' if exists else 'not found'
     logger(__name__).debug("The %s %s %s scan %d resource %s was %s." %
                            (project, subject, session, scan, resource,
@@ -796,10 +796,6 @@ class QIPipelineWorkflow(WorkflowBase):
                 has_scan_ts = _scan_resource_exists(
                     xnat, self.project, subject, session, scan, SCAN_TS_RSC
                 )
-            presence = 'was' if has_scan_ts else 'was not'
-            self.logger.debug("%s %s %d resource %s scan time series %s"
-                              " found." %
-                              (subject, session, scan, presence, SCAN_TS_RSC))
             # If there is a scan time series, then download it.
             # Otherwise, stack the staged 3D images into the
             # scan time series.
