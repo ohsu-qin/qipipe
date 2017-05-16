@@ -46,9 +46,9 @@ class ConvertBoleroMask(CommandLine):
         outputs = self._outputs().get()
 
         # The default output base name is slice_<slice>_lesion_mask.
-        if isdefined(self.inputs.out_base)
+        if isdefined(self.inputs.out_base):
             out_base = self.inputs.out_base
-        else
+        else:
             out_base = (
                 "slice_%d_lesion_mask" % self.inputs.slice_sequence_number
             )
