@@ -794,7 +794,7 @@ class QIPipelineWorkflow(WorkflowBase):
             has_scan_ts = False
             with qixnat.connect() as xnat:
                 has_scan_ts = _scan_resource_exists(
-                    xnat, project, subject, session, scan, SCAN_TS_RSC
+                    xnat, self.project, subject, session, scan, SCAN_TS_RSC
                 )
             # If there is a scan time series, then download it.
             # Otherwise, stack the staged 3D images into the
@@ -862,7 +862,7 @@ class QIPipelineWorkflow(WorkflowBase):
             has_mask = False
             with qixnat.connect() as xnat:
                 has_mask = _scan_resource_exists(
-                    xnat, project, subject, session, scan, MASK_RSC
+                    xnat, self.project, subject, session, scan, MASK_RSC
                 )
             # If a mask resource name was specified, then download the mask.
             # Otherwise, make the mask.
