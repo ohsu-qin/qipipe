@@ -369,15 +369,22 @@ class WorkflowBase(object):
         :param workflow: the workflow containing the nodes
         """
         # The default plug-in setting.
-        if self.is_distributable and self.plug_in and self.plug_in in self.configuration:
-            plugin_cfg = self.configuration[self.plug_in]
-            def_plugin_args = plugin_cfg.get('plugin_args')
-            if def_plugin_args and 'qsub_args' in def_plugin_args:
-                # Retain this workflow's default even if a node defined
-                # in this workflow is included in a parent workflow.
-                def_plugin_args['overwrite'] = True
-                self.logger.debug("Workflow %s default node plug-in parameters:"
-                                  " %s." % (workflow.name, def_plugin_args))
+        if self.is_distributable and self.plug_in:
+            if self.plug_in in self.configuration:
+                plugin_cfg = self.configuration[self.plug_in]
+                def_plugin_args = plugin_cfg.get('plugin_args')
+                if def_plugin_args and 'qsub_args' in def_plugin_args:
+                    # Retain this workflow's default even if a node defined
+                    # in this workflow is included in a parent workflow.
+                    def_plugin_args['overwrite'] = True
+                    self.logger.debug("Workflow %s default node %s plug-in"
+                                      " parameters: %s."
+                                      (workflow.name, self.plug_in,
+                                       def_plugin_args))
+                else:
+                    self.logger.debug("Workflow %s does not have a default"
+                                      " plug-in %s configuration entry."
+                                      (workflow.name, self.plug_in))
         else:
             def_plugin_args = None
 
@@ -499,8 +506,9 @@ class WorkflowBase(object):
         :param node: the interface class to check
         :return: the corresponding {field: value} dictionary
         """
-        return (self._interface_configuration(node.interface.__class__) or
-                self._node_name_configuration(workflow, node) or EMPTY_DICT)
+        return (self._node_name_configuration(workflow, node) or
+                self._interface_configuration(node.interface.__class__) or
+                EMPTY_DICT)
 
     def _node_name_configuration(self, workflow, node):
         """
