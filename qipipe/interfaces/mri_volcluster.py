@@ -1,7 +1,6 @@
 import os
 from os import path
-import traits.api as traits
-from nipype.interfaces.base import (TraitedSpec, CommandLine,
+from nipype.interfaces.base import (traits, TraitedSpec, CommandLine,
                                     CommandLineInputSpec)
 from nipype.interfaces.traits_extension import isdefined
 

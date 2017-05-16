@@ -20,9 +20,8 @@ import os
 from os import path
 from glob import glob
 from twisted.python.procutils import which
-import traits.api as traits
 from nipype.interfaces.base import (
-    DynamicTraitedSpec, MpiCommandLine, MpiCommandLineInputSpec,
+    traits, DynamicTraitedSpec, MpiCommandLine, MpiCommandLineInputSpec,
     isdefined
 )
 from nipype.interfaces.traits_extension import Undefined

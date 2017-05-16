@@ -3,9 +3,7 @@ This module reorders the OHSU AIRC ``bolero_mask_conv``
 result to conform with the time series x and y order.
 """
 import os
-import traits.api as traits
-from nipype.interfaces.base import (TraitedSpec, CommandLine,
-                                    CommandLineInputSpec)
+from nipype.interfaces.base import (traits, BaseInterface, TraitedSpec)
 from qiutil.file import splitexts
 
 
@@ -19,7 +17,7 @@ class ReorderBoleroMaskOutputSpec(TraitedSpec):
     out_file = traits.File(desc='Reordered mask file', exists=True)
 
 
-class ReorderBoleroMask(CommandLine):
+class ReorderBoleroMask(BaseInterface):
     """
     Interface to the mask reordering utility.
     """
@@ -31,7 +29,12 @@ class ReorderBoleroMask(CommandLine):
     def __init__(self, **inputs):
         super(ReorderBoleroMask, self).__init__(**inputs)
 
-    def run(self, **inputs):
+
+    def _run_interface(self, runtime):
+        self._out_file = self._copy(self.inputs.in_file, self.inputs.dest,
+                                    self.inputs.out_fname)
+
+    def _run_interface(self, **inputs):
         if not inputs.get('out_file'):
             in_file = inputs.get('in_file')
             # in_file is mandatory, but let the superclass run
@@ -39,6 +42,13 @@ class ReorderBoleroMask(CommandLine):
             if in_file:
                 def_out_file = self._default_output_file_name(in_file)
                 inputs['out_file'] = self.inputs.out_file = def_out_file
+
+
+        print (">>rbm inputs: %s" % inputs)
+        print (">>rbm self.inputs.out_file: %s" % self.inputs.out_file)
+
+        return runtime
+
 
         super(ReorderBoleroMask, self).run(**inputs)
 
