@@ -812,7 +812,7 @@ class QIPipelineWorkflow(WorkflowBase):
             if scan_ts_rsc_opt:
                 scan_ts_xfc = XNATDownload(project=self.project,
                                               resource=SCAN_TS_RSC)
-                scan_ts = pe.Node(dl_scan_ts_xfc,
+                scan_ts = pe.Node(scan_ts_xfc,
                                   name='download_scan_time_series')
                 exec_wf.connect(input_spec, 'subject', scan_ts, 'subject')
                 exec_wf.connect(input_spec, 'session', scan_ts, 'session')
