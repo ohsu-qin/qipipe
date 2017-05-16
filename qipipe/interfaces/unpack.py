@@ -1,4 +1,4 @@
-from nipype.interfaces.traits_extension import (DynamicTraitedSpec, isdefined)
+from nipype.interfaces.traits_extension import isdefined
 from nipype.interfaces.base import DynamicTraitedSpec
 from nipype.interfaces.io import (IOBase, add_traits)
 from .interface_error import InterfaceError
