@@ -1,14 +1,15 @@
 import os
 import logging
 # The ReadTheDocs build does not include nipype.
+# TODO - Reconfirm that RTD can't build with these.
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 if not on_rtd:
     from nipype.pipeline import engine as pe
     from nipype.interfaces import fsl
     from nipype.interfaces.dcmstack import CopyMeta
     from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
-    from ..helpers.bolus_arrival import bolus_arrival_index, BolusArrivalError
 import qiutil
+from ..helpers.bolus_arrival import (bolus_arrival_index, BolusArrivalError)
 from ..helpers.logging import logger
 from ..helpers.constants import CONF_DIR
 from ..interfaces import (Gate, XNATUpload, XNATFind)
