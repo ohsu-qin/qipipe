@@ -452,6 +452,8 @@ class QIPipelineWorkflow(WorkflowBase):
                 self.logger.info("ROI directory was not detected for"
                                   " %s %s scan %d" % (scan_input.subject,
                                   scan_input.session, scan_input.scan))
+                # Set the empty inputs for a no-op workflow.
+                self._set_roi_inputs()
 
         # Execute the workflow.
         self.logger.info("Running the pipeline on %s %s scan %d." %
