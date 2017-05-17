@@ -155,7 +155,7 @@ def _filter_actions(scan_input, actions):
             " single-volume scan and only the actions %s are"
             " supported for a single-volume scan." %
             (scan_input.subject, scan_input.session,
-             scan_input.scan, actions, SINGLE_VOLUME_ACTIONS)
+             scan_input.scan, SINGLE_VOLUME_ACTIONS)
         )
     elif disallowed:
         logger(__name__).debug(
