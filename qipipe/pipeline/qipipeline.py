@@ -450,8 +450,9 @@ class QIPipelineWorkflow(WorkflowBase):
                 self._set_roi_inputs(*roi_inputs)
             else:
                 self.logger.info("ROI directory was not detected for"
-                                  " %s %s scan %d" % (scan_input.subject,
-                                  scan_input.session, scan_input.scan))
+                                  " %s %s scan %d." %
+                                  (scan_input.subject, scan_input.session,
+                                   scan_input.scan))
                 # Set the empty inputs for a no-op workflow.
                 self._set_roi_inputs()
 
