@@ -117,6 +117,8 @@ def _run_with_dicom_input(actions, *inputs, **opts):
         iter_opts = opts
     for scan_input in iter_stage(project, collection, *inputs, **iter_opts):
         wf_actions = _filter_actions(scan_input, actions)
+        if not wf_actions:
+            continue
         # Capture the subject.
         subjects.add(scan_input.subject)
         # Create a new workflow.
