@@ -30,11 +30,11 @@ from .mask import MaskWorkflow
 from ..helpers.constants import (SCAN_TS_RSC, MASK_RSC)
 from ..interfaces import (XNATDownload, XNATUpload)
 
-SINGLE_VOLUME_ACTIONS = ['stage', 'roi']
+SINGLE_VOLUME_ACTIONS = ['stage']
 """The workflow actions which apply to a single-volume scan."""
 
 MULTI_VOLUME_ACTIONS = (SINGLE_VOLUME_ACTIONS +
-                        ['qiprofile', 'register', 'model'])
+                        ['roi', 'register', 'model'])
 """The workflow actions which apply to a multi-volume scan."""
 
 VOLUME_FILE_PAT = re.compile("volume(\d{3}).nii.gz$")
@@ -450,6 +450,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 self.logger.info("ROI directory was not detected for"
                                   " %s %s scan %d" % (scan_input.subject,
                                   scan_input.session, scan_input.scan))
+
         # Execute the workflow.
         self.logger.info("Running the pipeline on %s %s scan %d." %
                            (scan_input.subject, scan_input.session,
