@@ -151,18 +151,18 @@ def _filter_actions(scan_input, actions):
     disallowed = actions.difference(SINGLE_VOLUME_ACTIONS)
     if not allowed:
         logger(__name__).debug(
-            "Skipping the %s %s %s scan %d, since the scan is a single-volume"
-            " scan and only the actions %s are supported for a single-volume"
-            " scan." %
-            (scan_input.collection, scan_input.subject, scan_input.session,
+            "Skipping the %s %s scan %d, since the scan is a"
+            " single-volume scan and only the actions %s are"
+            " supported for a single-volume scan." %
+            (scan_input.subject, scan_input.session,
              scan_input.scan, actions, SINGLE_VOLUME_ACTIONS)
         )
     elif disallowed:
         logger(__name__).debug(
-            "Ignoring the %s %s %s scan %d actions %s, since the scan"
+            "Ignoring the %s %s scan %d actions %s, since the scan"
             " is a single-volume scan and only the actions %s are"
             " supported for a single-volume scan." %
-            (scan_input.collection, scan_input.subject, scan_input.session,
+            (scan_input.subject, scan_input.session,
              scan_input.scan, disallowed, SINGLE_VOLUME_ACTIONS)
         )
 
