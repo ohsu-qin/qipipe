@@ -168,7 +168,7 @@ class ROIWorkflow(WorkflowBase):
         self.logger.debug("Creating the ROI execution workflow...")
 
         # The execution workflow.
-        exec_wf = pe.Workflow(name='roi', base_dir=self.base_dir)
+        workflow = pe.Workflow(name='roi', base_dir=self.base_dir)
 
         # The ROI workflow input.
         input_fields = ['subject', 'session', 'scan', 'time_series', 'resource']
@@ -179,48 +179,50 @@ class ROIWorkflow(WorkflowBase):
         # The input ROI tuples are iterable.
         iter_slice_fields = ['lesion', 'slice_sequence_number', 'in_file']
         iter_slice = pe.Node(IdentityInterface(fields=iter_slice_fields),
-                           name='iter_slice')
+                             name='iter_slice')
 
         # The merged 3D output file base name.
         basename_xfc = Function(input_names=['lesion'],
                                 output_names=['basename'],
                                 function=base_name)
         basename = pe.Node(basename_xfc, name='basename')
-        exec_wf.connect(iter_slice, 'lesion', basename, 'lesion')
+        workflow.connect(iter_slice, 'lesion', basename, 'lesion')
 
         # Convert the input file.
         convert = pe.Node(ConvertBoleroMask(), name='convert')
-        exec_wf.connect(iter_slice, 'in_file', convert, 'in_file')
-        exec_wf.connect(iter_slice, 'slice_sequence_number',
-                        convert, 'slice_sequence_number')
-        exec_wf.connect(input_spec, 'time_series', convert, 'time_series')
-        exec_wf.connect(basename, 'basename', convert, 'out_base')
+        workflow.connect(iter_slice, 'in_file', convert, 'in_file')
+        workflow.connect(iter_slice, 'slice_sequence_number',
+                         convert, 'slice_sequence_number')
+        workflow.connect(input_spec, 'time_series', convert, 'time_series')
+        workflow.connect(basename, 'basename', convert, 'out_base')
 
         # Reorder the mask slice.
         reorder = pe.Node(ReorderBoleroMask(), name='reorder')
-        exec_wf.connect(convert, 'out_file', reorder, 'in_file')
+        workflow.connect(convert, 'out_file', reorder, 'in_file')
 
         # Merge the slices.
         merge = pe.JoinNode(MergeNifti(), joinsource='iter_slice',
                             joinfield='in_files', name='merge_slices')
-        exec_wf.connect(reorder, 'out_file', merge, 'in_files')
-        exec_wf.connect(basename, 'basename', merge, 'out_format')
+        workflow.connect(reorder, 'out_file', merge, 'in_files')
+        workflow.connect(basename, 'basename', merge, 'out_format')
 
         # Upload the ROI result into the XNAT ROI resource.
         upload_roi_xfc = XNATUpload(project=self.project,
                                     resource=ROI_RESOURCE, modality='MR')
         upload_roi = pe.Node(upload_roi_xfc, name='upload_roi')
-        exec_wf.connect(input_spec, 'subject', upload_roi, 'subject')
-        exec_wf.connect(input_spec, 'session', upload_roi, 'session')
-        exec_wf.connect(input_spec, 'scan', upload_roi, 'scan')
-        exec_wf.connect(merge, 'out_file', upload_roi, 'in_files')
+        workflow.connect(input_spec, 'subject', upload_roi, 'subject')
+        workflow.connect(input_spec, 'session', upload_roi, 'session')
+        workflow.connect(input_spec, 'scan', upload_roi, 'scan')
+        workflow.connect(merge, 'out_file', upload_roi, 'in_files')
 
-        self.logger.debug("Created the %s workflow." % exec_wf.name)
+        self._configure_nodes(workflow)
+
+        self.logger.debug("Created the %s workflow." % workflow.name)
         # If debug is set, then diagram the workflow graph.
         if self.logger.level <= logging.DEBUG:
-            self.depict_workflow(exec_wf)
+            self.depict_workflow(workflow)
 
-        return exec_wf
+        return workflow
 
 
 ### Utility functions called by the workflow nodes. ###
