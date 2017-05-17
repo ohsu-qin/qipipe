@@ -719,6 +719,7 @@ class QIPipelineWorkflow(WorkflowBase):
                                 output_names=['out_file'],
                                 function=mask)
             mask_node = pe.Node(mask_xfc, name='mask')
+            mask_node.inputs.opts = mask_opts
             self.logger.info("Enabled scan mask creation with options %s." %
                              mask_opts)
         else:
@@ -1342,6 +1343,7 @@ def roi(subject, session, scan, time_series, in_rois, opts):
     :return: the zero-based ROI volume index
     """
     from qipipe.pipeline import roi
+    from qipipe.helpers.logging import logger
 
     # If there are no ROI inputs, then call roi.run() anyway to
     # create the workflow and print appropriate log messages.
@@ -1349,9 +1351,10 @@ def roi(subject, session, scan, time_series, in_rois, opts):
     # we will bail out without determining the ROI volume
     # number.
     if not roi.run(subject, session, scan, time_series, *in_rois, **opts):
-        logger(__name__).debug("%s %s scan %d has ROI directories but no"
-                               "ROI input files; using the default volume"
-                               " index 0 to allow Nipype to continue." %
+        logger(__name__).debug("%s %s scan %d does not have ROI input files;"
+                               " using the default registration reference"
+                               " volume index 0 to allow Nipype to continue"
+                               " running any downstream actions." %
                                (subject, session, scan))
         return 0
 
