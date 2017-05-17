@@ -425,7 +425,7 @@ class ModelingWorkflow(WorkflowBase):
         # Import the proprietary OHSU FastFit interface.
         from ..interfaces import Fastfit
 
-        base_wf = pe.Workflow(name='bolero', base_dir=self.base_dir)
+        workflow = pe.Workflow(name='bolero', base_dir=self.base_dir)
 
         # The modeling profile configuration sections.
         self.profile_sections = BOLERO_CONF_SECTIONS
@@ -455,10 +455,10 @@ class ModelingWorkflow(WorkflowBase):
                 output_names=['baseline'],
                 function=make_baseline),
             make_base = pe.Node(make_base_func, name='make_base')
-            base_wf.connect(input_spec, 'time_series',
-                            make_base, 'time_series')
-            base_wf.connect(input_spec, 'baseline_end_idx',
-                            make_base, 'baseline_end_idx')
+            workflow.connect(input_spec, 'time_series',
+                             make_base, 'time_series')
+            workflow.connect(input_spec, 'baseline_end_idx',
+                             make_base, 'baseline_end_idx')
 
             # Create the R1_0 map.
             get_r1_0_func = Function(
@@ -466,10 +466,10 @@ class ModelingWorkflow(WorkflowBase):
                 output_names=['r1_0_map'], function=get_r1_0
             )
             get_r1_0 = pe.Node(get_r1_0_func, name='get_r1_0')
-            base_wf.connect(input_spec, 'pd_nii', get_r1_0, 'pdw_image')
-            base_wf.connect(make_base, 'baseline', get_r1_0, 't1w_image')
-            base_wf.connect(input_spec, 'max_r1_0', get_r1_0, 'max_r1_0')
-            base_wf.connect(input_spec, 'mask', get_r1_0, 'mask')
+            workflow.connect(input_spec, 'pd_nii', get_r1_0, 'pdw_image')
+            workflow.connect(make_base, 'baseline', get_r1_0, 't1w_image')
+            workflow.connect(input_spec, 'max_r1_0', get_r1_0, 'max_r1_0')
+            workflow.connect(input_spec, 'mask', get_r1_0, 'mask')
 
         # The R1 destination directory.
         # Convert the DCE time series to R1 maps.
@@ -479,21 +479,21 @@ class ModelingWorkflow(WorkflowBase):
         )
         r1_series = pe.Node(r1_series_func, dest=self.base_dir,
                             name='r1_series')
-        base_wf.connect(input_spec, 'time_series', r1_series, 'time_series')
-        base_wf.connect(input_spec, 'baseline_end_idx',
-                        r1_series, 'baseline_end')
-        base_wf.connect(input_spec, 'mask', r1_series, 'mask')
+        workflow.connect(input_spec, 'time_series', r1_series, 'time_series')
+        workflow.connect(input_spec, 'baseline_end_idx',
+                         r1_series, 'baseline_end')
+        workflow.connect(input_spec, 'mask', r1_series, 'mask')
         if use_fixed_r1_0:
-            base_wf.connect(input_spec, 'r1_0_val', r1_series, 'r1_0')
+            workflow.connect(input_spec, 'r1_0_val', r1_series, 'r1_0')
         else:
-            base_wf.connect(get_r1_0, 'r1_0_map', r1_series, 'r1_0')
+            workflow.connect(get_r1_0, 'r1_0_map', r1_series, 'r1_0')
 
         # Copy the time series meta-data to the R1 series.
         copy_meta = pe.Node(CopyMeta(), name='copy_meta')
         copy_meta.inputs.include_classes = [('global', 'const'),
                                             ('time', 'samples')]
-        base_wf.connect(input_spec, 'time_series', copy_meta, 'src_file')
-        base_wf.connect(r1_series, 'r1_series', copy_meta, 'dest_file')
+        workflow.connect(input_spec, 'time_series', copy_meta, 'src_file')
+        workflow.connect(r1_series, 'r1_series', copy_meta, 'dest_file')
 
         # Get the pharmacokinetic mapping parameters.
         aif_shift_flds = ['time_series', 'bolus_arrival_index']
@@ -501,16 +501,16 @@ class ModelingWorkflow(WorkflowBase):
                                    output_names=['aif_shift'],
                                    function=get_aif_shift)
         aif_shift = pe.Node(aif_shift_func, name='get_aif_shift')
-        base_wf.connect(input_spec, 'time_series', aif_shift, 'time_series')
-        base_wf.connect(input_spec, 'bolus_arrival_index',
-                        aif_shift, 'bolus_arrival_index')
+        workflow.connect(input_spec, 'time_series', aif_shift, 'time_series')
+        workflow.connect(input_spec, 'bolus_arrival_index',
+                         aif_shift, 'bolus_arrival_index')
         fit_params_flds = ['cfg_file', 'aif_shift']
         fit_params_func = Function(input_names=fit_params_flds,
                                    output_names=['params_csv'],
                                    function=get_fit_params)
         fit_params = pe.Node(fit_params_func, name='fit_params')
         fit_params.inputs.cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
-        base_wf.connect(aif_shift, 'aif_shift', fit_params, 'aif_shift')
+        workflow.connect(aif_shift, 'aif_shift', fit_params, 'aif_shift')
 
         # Work around the following Fastfit limitation:
         # * The Fastfit model_name and optional_outs inputs must be
@@ -528,45 +528,45 @@ class ModelingWorkflow(WorkflowBase):
                    if opt in pk_cfg}
         # The pharmacokinetic model optimizer.
         pk_map = pe.Node(Fastfit(**pk_opts), name='pk_map')
-        base_wf.connect(copy_meta, 'dest_file', pk_map, 'target_data')
-        base_wf.connect(input_spec, 'mask', pk_map, 'mask')
-        base_wf.connect(fit_params, 'params_csv', pk_map, 'params_csv')
+        workflow.connect(copy_meta, 'dest_file', pk_map, 'target_data')
+        workflow.connect(input_spec, 'mask', pk_map, 'mask')
+        workflow.connect(fit_params, 'params_csv', pk_map, 'params_csv')
         # Set the MPI flag.
         pk_map.inputs.use_mpi = self.is_distributable
 
         # Compute the Ktrans difference.
         delta_k_trans = pe.Node(fsl.ImageMaths(), name='delta_k_trans')
         delta_k_trans.inputs.op_string = '-sub'
-        base_wf.connect(pk_map, 'k_trans', delta_k_trans, 'in_file')
-        base_wf.connect(pk_map, 'guess_model.k_trans',
-                        delta_k_trans, 'in_file2')
+        workflow.connect(pk_map, 'k_trans', delta_k_trans, 'in_file')
+        workflow.connect(pk_map, 'guess_model.k_trans',
+                         delta_k_trans, 'in_file2')
 
         # The modeling outputs.
         outputs = FIXED_R1_0_OUTPUTS if use_fixed_r1_0 else INFERRED_R1_0_OUTPUTS
         output_spec = pe.Node(IdentityInterface(fields=outputs),
                               name='output_spec')
         # Collect the outputs.
-        base_wf.connect(copy_meta, 'dest_file', output_spec, 'r1_series')
-        base_wf.connect(fit_params, 'params_csv', output_spec, 'pk_params')
-        base_wf.connect(pk_map, 'k_trans', output_spec, 'fxr_k_trans')
-        base_wf.connect(pk_map, 'v_e', output_spec, 'fxr_v_e')
-        base_wf.connect(pk_map, 'tau_i', output_spec, 'fxr_tau_i')
-        base_wf.connect(pk_map, 'chisq', output_spec, 'fxr_chisq')
-        base_wf.connect(pk_map, 'guess_model.k_trans',
-                        output_spec, 'fxl_k_trans')
-        base_wf.connect(pk_map, 'guess_model.v_e', output_spec, 'fxl_v_e')
-        base_wf.connect(pk_map, 'guess_model.chisq', output_spec, 'fxl_chisq')
-        base_wf.connect(delta_k_trans, 'out_file',
-                        output_spec, 'delta_k_trans')
+        workflow.connect(copy_meta, 'dest_file', output_spec, 'r1_series')
+        workflow.connect(fit_params, 'params_csv', output_spec, 'pk_params')
+        workflow.connect(pk_map, 'k_trans', output_spec, 'fxr_k_trans')
+        workflow.connect(pk_map, 'v_e', output_spec, 'fxr_v_e')
+        workflow.connect(pk_map, 'tau_i', output_spec, 'fxr_tau_i')
+        workflow.connect(pk_map, 'chisq', output_spec, 'fxr_chisq')
+        workflow.connect(pk_map, 'guess_model.k_trans',
+                         output_spec, 'fxl_k_trans')
+        workflow.connect(pk_map, 'guess_model.v_e', output_spec, 'fxl_v_e')
+        workflow.connect(pk_map, 'guess_model.chisq', output_spec, 'fxl_chisq')
+        workflow.connect(delta_k_trans, 'out_file',
+                         output_spec, 'delta_k_trans')
         # If we are inferring R1_0, then make the DCE baseline.
         if not use_fixed_r1_0:
-            base_wf.connect(make_base, 'baseline',
-                            output_spec, 'dce_baseline')
-            base_wf.connect(get_r1_0, 'r1_0_map', output_spec, 'r1_0')
+            workflow.connect(make_base, 'baseline',
+                             output_spec, 'dce_baseline')
+            workflow.connect(get_r1_0, 'r1_0_map', output_spec, 'r1_0')
 
-        self._configure_nodes(base_wf)
+        self._configure_nodes(workflow)
 
-        return base_wf
+        return workflow
 
     def _create_mock_workflow(self, **opts):
         """
@@ -578,7 +578,7 @@ class ModelingWorkflow(WorkflowBase):
         :param opts: the PK modeling parameters
         :return: the pyxnat Workflow
         """
-        base_wf = pe.Workflow(name='mock', base_dir=self.base_dir)
+        workflow = pe.Workflow(name='mock', base_dir=self.base_dir)
 
         # The modeling profile configuration sections.
         self.profile_sections = []
@@ -608,19 +608,19 @@ class ModelingWorkflow(WorkflowBase):
         # The mock pharmacokinetic model optimizer copies the mask.
         pk_map_flds = ['params_csv', 'fxr_k_trans']
         pk_map = pe.Node(IdentityInterface(fields=pk_map_flds), name='pk_map')
-        base_wf.connect(input_spec, 'mask', pk_map, 'fxr_k_trans')
-        base_wf.connect(fit_params, 'params_csv', pk_map, 'params_csv')
+        workflow.connect(input_spec, 'mask', pk_map, 'fxr_k_trans')
+        workflow.connect(fit_params, 'params_csv', pk_map, 'params_csv')
 
         # Collect the mock outputs.
         output_flds = pk_map_flds + ['pk_params']
         output_spec = pe.Node(IdentityInterface(fields=output_flds),
                               name='output_spec')
-        base_wf.connect(pk_map, 'fxr_k_trans', output_spec, 'fxr_k_trans')
-        base_wf.connect(fit_params, 'params_csv', output_spec, 'pk_params')
+        workflow.connect(pk_map, 'fxr_k_trans', output_spec, 'fxr_k_trans')
+        workflow.connect(fit_params, 'params_csv', output_spec, 'pk_params')
 
-        self._configure_nodes(base_wf)
+        self._configure_nodes(workflow)
 
-        return base_wf
+        return workflow
 
     def _r1_parameters(self, **opts):
         """
