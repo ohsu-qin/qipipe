@@ -1,3 +1,4 @@
+import os
 import tempfile
 import logging
 from nipype.pipeline import engine as pe
