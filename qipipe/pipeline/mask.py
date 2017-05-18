@@ -9,20 +9,20 @@ from .workflow_base import WorkflowBase
 from ..helpers.logging import logger
 
 
-def run(project, subject, session, scan, time_series, **opts):
+def run(subject, session, scan, time_series, **opts):
     """
     Creates a :class:`qipipe.pipeline.mask.MaskWorkflow` and runs it
     on the given inputs.
 
-    :param project: the project name
     :param subject: the input subject
     :param session: the input session
     :param scan: the input scan number
     :param time_series: the input 4D NIfTI time series to mask
-    :param opts: additional :class:`MaskWorkflow` initialization parameters
+    :param opts: additional :class:`MaskWorkflow` initialization
+        parameters
     :return: the mask file location
     """
-    wf_gen = MaskWorkflow(project=project, **opts)
+    wf_gen = MaskWorkflow(**opts)
 
     # Run the workflow.
     return wf_gen.run(subject, session, scan, time_series)
@@ -77,7 +77,7 @@ class MaskWorkflow(WorkflowBase):
         self.workflow = self._create_workflow(**wf_opts)
         """The mask creation workflow."""
 
-    def run(self, subject, session, scan, time_series, **opts):
+    def run(self, subject, session, scan, time_series):
         """
         Runs the mask workflow on the scan NIfTI files for the given
         time series.
@@ -86,7 +86,6 @@ class MaskWorkflow(WorkflowBase):
         :param session: the input session
         :param scan: the input scan number
         :param time_series: the input 3D NIfTI time series to mask
-        :param opts: the following keyword arguments:
         :return: the mask file location
         """
         self.logger.debug("Creating the mask for the %s %s scan %d time series"
