@@ -130,7 +130,7 @@ class MaskWorkflow(WorkflowBase):
         workflow = pe.Workflow(name='mask', base_dir=self.base_dir)
 
         # The workflow input.
-        in_fields = ['subject', 'session', 'scan', 'time_series']
+        in_fields = ['subject', 'session', 'scan', 'time_series', 'out_file']
         input_spec = pe.Node(IdentityInterface(fields=in_fields),
                              name='input_spec')
 
