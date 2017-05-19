@@ -114,9 +114,6 @@ def _parse_arguments():
                         action='store_true')
 
     # The modeling options.
-    parser.add_argument('--modeling-resource',
-                        help='the XNAT modeling resource name',
-                        metavar='RESOURCE')
     parser.add_argument('--modeling-technique',
                         help='the XNAT modeling technique'
                              ' (required for modeling)',
