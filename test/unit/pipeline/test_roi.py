@@ -8,6 +8,7 @@ from qipipe.staging.iterator import iter_stage
 from qipipe.pipeline import (roi, qipipeline)
 from ... import (ROOT, PROJECT, CONF_DIR)
 from ...helpers.logging import logger
+from ...helpers.constants import SCAN_TS_BASE
 from .volume_test_base import VolumeTestBase
 
 STAGING_FIXTURES = os.path.join(ROOT, 'fixtures', 'staging')
@@ -20,14 +21,14 @@ RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'roi')
 class TestROIWorkflow(VolumeTestBase):
     """
     ROI workflow unit tests.
-    
+
     This test exercises the ROI workflow on the Breast and Sarcoma test
     fixture images.
     """
-    
+
     def __init__(self):
         super(TestROIWorkflow, self).__init__(logger(__name__), RESULTS)
-    
+
     def test_breast(self):
         if not which('bolero_mask_conv'):
             logger(__name__).debug('Skipping ROI test since bolero_mask_conv'
@@ -40,7 +41,7 @@ class TestROIWorkflow(VolumeTestBase):
         inputs = list(iter_stage(PROJECT, 'Breast', *sess_dirs))
         for args in self.stage('Breast'):
             self._test_workflow(inputs, *args)
-    
+
     def test_sarcoma(self):
         if not which('bolero_mask_conv'):
             return
@@ -51,12 +52,12 @@ class TestROIWorkflow(VolumeTestBase):
         # TODO - Get a combo of volumes and ROIs that work, if not too
         #   unwieldly, otherwise delete the Sarcoma fixture and this test
         #   method.
-    
+
     def _test_workflow(self, scan_inputs, project, subject, session, scan,
                        *images):
         """
         Executes :meth:`qipipe.pipeline.roi.run` on the input scans.
-        
+
         :param scan_inputs: the :meth:`qipipe.staging.iter_stage` iterator
         :param project: the input project name
         :param subject: the input subject name
@@ -82,8 +83,7 @@ class TestROIWorkflow(VolumeTestBase):
         # TODO - newer nipype has out_path MergeNifti input field. Set
         # that field to out_path=RESULTS below. Work-around is to move
         # the file to RESULTS below.
-        merge = MergeNifti(in_files=list(images),
-                           out_format=qipipeline.SCAN_TS_RSC)
+        merge = MergeNifti(in_files=list(images), out_format=SCAN_TS_BASE)
         time_series = merge.run().outputs.out_file
         # Work-around for nipype bug described above.
         _, ts_fname = os.path.split(time_series)
@@ -115,5 +115,5 @@ class TestROIWorkflow(VolumeTestBase):
 
 if __name__ == "__main__":
     import nose
-    
+
     nose.main(defaultTest=__name__)
