@@ -11,8 +11,14 @@ SESSION_FMT = 'Session%02d'
 CONF_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'conf'))
 """The common configuration directory."""
 
-SCAN_TS_RSC = 'scan_ts'
-"""The XNAT scan time series resource name."""
+SCAN_TS_BASE = 'scan_ts'
+"""The XNAT scan time series file base name without extension."""
 
-MASK_RSC = 'mask'
+SCAN_TS_FILE = "%s.nii.gz" % SCAN_TS_BASE
+"""The XNAT scan time series file name with extension."""
+
+MASK_RESOURCE = 'mask'
 """The XNAT mask resource name."""
+
+MASK_FILE = 'mask.nii.gz'
+"""The XNAT mask file name with extension."""
