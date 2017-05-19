@@ -41,14 +41,11 @@ class ModelingError(Exception):
     pass
 
 
-def run(technique, project, subject, session, scan, resource, time_series,
-        **opts):
+def run(subject, session, scan, time_series, **opts):
     """
     Creates a :class:`qipipe.pipeline.modeling.ModelingWorkflow` and
     runs it on the given inputs.
 
-    :param technique: the :attr:ModelingWorkflow.technique`
-    :param project: the project name
     :param subject: the input subject
     :param session: the input session
     :param scan: input scan
@@ -58,22 +55,12 @@ def run(technique, project, subject, session, scan, resource, time_series,
     :return: the :meth:`qipipe.pipeline.modeling.ModelingWorkflow.run`
         result
     """
-    run_opts = {key: opts.pop(key) for key in ['mask', 'registration']
+    run_opts = {key: opts.pop(key)
+                for key in ['bolus_arrival_index', 'mask', 'registration']
                 if key in opts}
-    mask = opts.pop('mask', None)
-    wf = ModelingWorkflow(project=project, technique=technique, **opts)
+    wf = ModelingWorkflow(**opts)
 
-    return wf.run(subject, session, scan, resource, time_series, **run_opts)
-
-
-def generate_resource_name():
-    """
-    Makes a unique modeling resource name. Uniqueness permits more than
-    one resource to be stored for a given session without a name conflict.
-
-    :return: a unique XNAT modeling resource name
-    """
-    return MODELING_PREFIX + qiutil.file.generate_file_name()
+    return wf.run(subject, session, scan, time_series, **run_opts)
 
 
 class ModelingWorkflow(WorkflowBase):
@@ -163,7 +150,7 @@ class ModelingWorkflow(WorkflowBase):
     .. _AIRC DCE: https://everett.ohsu.edu/hg/qin_dce
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **opts):
         """
         The modeling parameters can be defined in either the options or the
         configuration as follows:
@@ -186,9 +173,8 @@ class ModelingWorkflow(WorkflowBase):
         - The *baseline_end_idx* defaults to 1 if it is not set in
           either the input options or the configuration.
 
-        :param kwargs: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
+        :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
             initializer keyword arguments, as well as the following keyword arguments:
-        :keyword resource: the XNAT resource name
         :keyword r1_0_val: the optional fixed |R10| value
         :keyword max_r1_0: the maximum computed |R10| value, if the fixed
             |R10| option is not set
@@ -198,16 +184,15 @@ class ModelingWorkflow(WorkflowBase):
             series baseline image (default is 1)
         """
         super(ModelingWorkflow, self).__init__(logger=logger(__name__),
-                                               **kwargs)
+                                               **opts)
 
-        technique_opt = kwargs.pop('technique', None)
+        technique_opt = opts.pop('technique', None)
         if not technique_opt:
             raise PipelineError('The modeling technique was not specified.')
         self.technique = technique_opt.lower()
         """The modeling technique. Built-in techniques include ``mock``."""
 
-        rsc_opt = kwargs.pop('resource', None)
-        self.resource = rsc_opt or generate_resource_name()
+        self.resource = self._generate_resource_name()
         """
         The XNAT resource name for all executions of this
         :class:`qipipe.pipeline.modeling.ModelingWorkflow` instance.
@@ -215,13 +200,13 @@ class ModelingWorkflow(WorkflowBase):
         stored for each input volume without a name conflict.
         """
 
-        self.workflow = self._create_workflow(**kwargs)
+        self.workflow = self._create_workflow(**opts)
         """
         The modeling workflow described in
         :class:`qipipe.pipeline.modeling.ModelingWorkflow`.
         """
 
-    def run(self, subject, session, scan, resource, time_series, **opts):
+    def run(self, subject, session, scan, time_series, **opts):
         """
         Executes the modeling workflow described in
         :class:`qipipe.pipeline.modeling.ModelingWorkflow`
@@ -235,24 +220,23 @@ class ModelingWorkflow(WorkflowBase):
         :param subject: the subject name
         :param session: the session name
         :param scan: the scan number
-        :param resource: the XNAT resource containing the modeling input
-            time series
         :param time_series: the 4D modeling input time series file
             location
         :param opts: the following keyword parameters:
         :option mask: the XNAT mask resource name
-        :return: the modeling result XNAT resource name
+        :return: the modeling result dictionary
         """
-        resource = opts.get('resource', 'NIFTI')
         self.logger.debug("Modeling the %s %s scan %d time series %s..." %
             (subject, session, scan, time_series))
 
-        # Determine the bolus uptake. If it could not be determined,
-        # then take the first volume as the uptake.
-        try:
-            bolus_arv_ndx = bolus_arrival_index(time_series)
-        except BolusArrivalError:
-            bolus_arv_ndx = 0
+        # Get the default bolus uptake, if necessary. If it cannot
+        # be determined, then take the first volume as the uptake.
+        bolus_arv_ndx = opts.pop('bolus_arrival_index', None)
+        if bolus_arv_ndx == None:
+            try:
+                bolus_arv_ndx = bolus_arrival_index(time_series)
+            except BolusArrivalError:
+                bolus_arv_ndx = 0
 
         # The keyword parameters.
         mask = opts.get('mask')
@@ -262,25 +246,43 @@ class ModelingWorkflow(WorkflowBase):
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
         input_spec.inputs.scan = scan
-        input_spec.inputs.resource = resource
+        input_spec.inputs.resource = self.resource
         input_spec.inputs.time_series = time_series
         input_spec.inputs.bolus_arrival_index = bolus_arv_ndx
         if mask:
             input_spec.inputs.mask = mask
 
+        # Set the output collector.
+        results = {}
+        assoc_node = self.workflow.get_node('associate')
+        assoc_node.inputs.target = results
+
         # Execute the modeling workflow.
         self.logger.debug(
-            "Executing the %s workflow on the %s %s scan %d %s time series %s..." %
-            (self.workflow.name, subject, session, scan, resource, time_series)
+            "Executing the %s workflow on the %s %s scan %d"
+            " time series %s..." %
+            (self.workflow.name, subject, session, scan, time_series)
         )
         self._run_workflow(self.workflow)
         self.logger.debug(
-            "Executed the %s workflow on the %s %s scan %d %s time series %s." %
-            (self.workflow.name, subject, session, scan, resource, time_series)
+            "Executed the %s workflow on the %s %s scan %d"
+            " time series %s with resource %s results:\n%s" %
+            (self.workflow.name, subject, session, scan, time_series,
+             self.resource, results)
         )
 
-        # Return the resource name.
-        return self.resource
+        # Return the modeling results.
+        return results
+
+
+    def _generate_resource_name(self):
+        """
+        Makes a unique modeling resource name. Uniqueness permits more than
+        one resource to be stored for a given session without a name conflict.
+
+        :return: a unique XNAT modeling resource name
+        """
+        return MODELING_PREFIX + qiutil.file.generate_file_name()
 
     def _create_workflow(self, **opts):
         """
@@ -322,12 +324,12 @@ class ModelingWorkflow(WorkflowBase):
         #     wf_gen = __import__(parent_opt, globals(), locals(), [child_opt])
         # else:
         #     wf_gen = __import__(child_opt)
-        # base_wf = wf_gen.create_workflow(**opts)
+        # child_wf = wf_gen.create_workflow(**opts)
         #
         if self.technique == 'bolero':
-            base_wf = self._create_bolero_workflow(**opts)
+            child_wf = self._create_bolero_workflow(**opts)
         elif self.technique == 'mock':
-            base_wf = self._create_mock_workflow(**opts)
+            child_wf = self._create_mock_workflow(**opts)
         elif self.technique:
             raise ModelingError("The modeling technique is unsupported:"
                                 " %s" % self.technique)
@@ -335,18 +337,18 @@ class ModelingWorkflow(WorkflowBase):
             raise ModelingError('The modeling technique is missing')
 
         # The workflow input fields.
-        in_fields = ['subject', 'session', 'scan', 'resource', 'time_series',
-                     'mask', 'bolus_arrival_index']
+        in_fields = ['subject', 'session', 'scan', 'resource',
+                     'time_series', 'mask', 'bolus_arrival_index']
         input_xfc = IdentityInterface(fields=in_fields)
         # The profile location is a temp file.
         input_spec = pe.Node(input_xfc, name='input_spec')
         self.logger.debug("The modeling workflow input is %s with"
             " fields %s" % (input_spec.name, in_fields))
         mdl_wf.connect(input_spec, 'time_series',
-                       base_wf, 'input_spec.time_series')
-        mdl_wf.connect(input_spec, 'mask', base_wf, 'input_spec.mask')
+                       child_wf, 'input_spec.time_series')
+        mdl_wf.connect(input_spec, 'mask', child_wf, 'input_spec.mask')
         mdl_wf.connect(input_spec, 'bolus_arrival_index',
-                       base_wf, 'input_spec.bolus_arrival_index')
+                       child_wf, 'input_spec.bolus_arrival_index')
 
         # Make the profile.
         cr_prf_fields = ['technique', 'source', 'configuration', 'sections',
@@ -362,8 +364,8 @@ class ModelingWorkflow(WorkflowBase):
         mdl_wf.connect(input_spec, 'resource', cr_prf, 'source')
 
         # Each output field contains a modeling result file.
-        base_output = base_wf.get_node('output_spec')
-        out_fields = base_output.outputs.copyable_trait_names()
+        child_output = child_wf.get_node('output_spec')
+        out_fields = child_output.outputs.copyable_trait_names()
         # The files to upload include the profile and all
         # modeling result files.
         upload_file_cnt = len(out_fields) + 1
@@ -371,8 +373,8 @@ class ModelingWorkflow(WorkflowBase):
                                  name='concat_uploads')
         mdl_wf.connect(cr_prf, 'out_file', concat_uploads, 'in1')
         for i, field in enumerate(out_fields):
-            base_field = 'output_spec.' + field
-            mdl_wf.connect(base_wf, base_field,
+            child_field = 'output_spec.' + field
+            mdl_wf.connect(child_wf, child_field,
                            concat_uploads, "in%d" % (i + 2))
 
         # Upload the profile and modeling results into the XNAT
@@ -392,10 +394,24 @@ class ModelingWorkflow(WorkflowBase):
         output_xfc = IdentityInterface(fields=out_fields)
         output_spec = pe.Node(output_xfc, name='output_spec')
         for field in out_fields:
-            base_field = 'output_spec.' + field
-            mdl_wf.connect(base_wf, base_field, output_spec, field)
+            child_field = 'output_spec.' + field
+            mdl_wf.connect(child_wf, child_field, output_spec, field)
         self.logger.debug("The modeling workflow output is %s with"
                            " fields %s" % (output_spec.name, out_fields))
+
+        # Collect the outputs.
+        merge_output_xfc = Merge(len(out_fields))
+        merge_output = pe.Node(merge_output_xfc, name='merge_outputs')
+        for i, field in enumerate(out_fields):
+            child_field = 'output_spec.' + field
+            merge_field = "in%d" % (i + 1)
+            mdl_wf.connect(child_wf, child_field, merge_output, merge_field)
+        assoc_xfc = Function(input_names=['names', 'values', 'target'],
+                             output_names=['out_dict'],
+                             function=associate)
+        assoc_node = pe.Node(assoc_xfc, name='associate')
+        assoc_node.inputs.names = out_fields
+        mdl_wf.connect(merge_output, 'out', assoc_node, 'values')
 
         self._configure_nodes(mdl_wf)
 
@@ -436,7 +452,7 @@ class ModelingWorkflow(WorkflowBase):
         use_fixed_r1_0 = opts.get('r1_0_val') != None
 
         # Set up the input node.
-        non_pk_flds = ['time_series', 'mask', 'bolus_arrival_index']
+        non_pk_flds = ['time_series']
         in_fields = non_pk_flds + opts.keys()
         input_xfc = IdentityInterface(fields=in_fields, **opts)
         input_spec = pe.Node(input_xfc, name='input_spec')
@@ -542,7 +558,10 @@ class ModelingWorkflow(WorkflowBase):
                          delta_k_trans, 'in_file2')
 
         # The modeling outputs.
-        outputs = FIXED_R1_0_OUTPUTS if use_fixed_r1_0 else INFERRED_R1_0_OUTPUTS
+        if use_fixed_r1_0:
+            outputs = FIXED_R1_0_OUTPUTS
+        else:
+            outputs = INFERRED_R1_0_OUTPUTS
         output_spec = pe.Node(IdentityInterface(fields=outputs),
                               name='output_spec')
         # Collect the outputs.
@@ -753,7 +772,7 @@ def make_baseline(time_series, baseline_end_idx):
     return baseline_path
 
 
-def get_r1_0(pdw_image, t1w_image, max_r1_0, **kwargs):
+def get_r1_0(pdw_image, t1w_image, max_r1_0, **opts):
     """
     Returns the R1_0 map NIfTI file from the given proton density
     and T1-weighted images. The R1_0 map is computed using the
@@ -763,7 +782,7 @@ def get_r1_0(pdw_image, t1w_image, max_r1_0, **kwargs):
     :param pdw_image: the proton density NIfTI image file path
     :param t1w_image: the T1-weighted image file path
     :param max_r1_0: the R1_0 range maximum
-    :param kwargs: the ``pdw_t1w_to_r1`` function keyword arguments
+    :param opts: the ``pdw_t1w_to_r1`` function keyword arguments
     :return: the R1_0 map NIfTI image file name
     """
     import os
@@ -775,10 +794,10 @@ def get_r1_0(pdw_image, t1w_image, max_r1_0, **kwargs):
     pdw_nw = NiftiWrapper(nb.load(pdw_image), make_empty=True)
     t1w_nw = NiftiWrapper(nb.load(t1w_image), make_empty=True)
     r1_space = np.arange(0.01, max_r1_0, 0.01)
-    mask_opt = kwargs.pop('mask', None)
+    mask_opt = opts.pop('mask', None)
     if mask_opt:
-        kwargs['mask'] = nb.load(mask_opt).get_data()
-    r1_0 = pdw_t1w_to_r1(pdw_nw, t1w_nw, r1_space=r1_space, **kwargs)
+        opts['mask'] = nb.load(mask_opt).get_data()
+    r1_0 = pdw_t1w_to_r1(pdw_nw, t1w_nw, r1_space=r1_space, **opts)
 
     cwd = os.getcwd()
     out_nii = nb.Nifti1Image(r1_0, pdw_nw.nii_img.get_affine())
@@ -788,13 +807,13 @@ def get_r1_0(pdw_image, t1w_image, max_r1_0, **kwargs):
     return out_fn
 
 
-def get_r1_series(time_series, r1_0, **kwargs):
+def get_r1_series(time_series, r1_0, **opts):
     """
     Creates the R1_0 series NIfTI file.
 
     :param time_series: the modeling input 4D NIfTI image
     :param r1_0: the R1_0 image file path
-    :param kwargs: the ``dce_series_to_r1`` keyword options
+    :param opts: the ``dce_series_to_r1`` keyword options
     :return: the R1_0 series NIfTI image file name
     """
     import os
@@ -804,10 +823,10 @@ def get_r1_series(time_series, r1_0, **kwargs):
 
     dce_series = NiftiWrapper(nb.load(time_series), make_empty=True)
     r1_0_data = nb.load(r1_0).get_data()
-    mask_opt = kwargs.pop('mask', None)
+    mask_opt = opts.pop('mask', None)
     if mask_opt:
-        kwargs['mask'] = nb.load(mask_opt).get_data()
-    r1_series = dce_series_to_r1(dce_series, r1_0_data, **kwargs)
+        opts['mask'] = nb.load(mask_opt).get_data()
+    r1_series = dce_series_to_r1(dce_series, r1_0_data, **opts)
 
     cwd = os.getcwd()
     out_nii = nb.Nifti1Image(r1_series, dce_nw.nii_img.get_affine())
@@ -909,3 +928,19 @@ def get_fit_params(cfg_file, aif_shift):
         csv_writer.writerows(rows)
 
     return os.path.join(os.getcwd(), FASTFIT_PARAMS_FILE)
+
+
+def associate(names, values, target=None):
+    """
+
+    :param names: the field names
+    :param values: the field values
+    :param target: the target dictionary
+    :return: the target {name: value} dictionary
+    """
+    if not target:
+        target = {}
+    cardinality = min(len(names), len(values))
+    for i in range(cardinality):
+        target[names[i]] = values[i]
+    return target
