@@ -863,7 +863,7 @@ class QIPipelineWorkflow(WorkflowBase):
             else:
                 dl_scan_xfc = XNATDownload(project=self.project,
                                            resource='NIFTI',
-                                           file=VOLUME_FILE_PAT)
+                                           file='volume*.nii.gz')
                 staged = pe.Node(dl_scan_xfc, name='staged')
                 exec_wf.connect(input_spec, 'subject', staged, 'subject')
                 exec_wf.connect(input_spec, 'session', staged, 'session')
@@ -1019,7 +1019,7 @@ class QIPipelineWorkflow(WorkflowBase):
                     reg_dl_xfc = XNATDownload(
                         project=self.project,
                         resource=self.registration_resource,
-                        file=VOLUME_FILE_PAT
+                        file='volume*.nii.gz'
                     )
                     download_reg = pe.Node(reg_dl_xfc,
                                            name='download_realigned_images')
