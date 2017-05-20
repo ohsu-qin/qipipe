@@ -223,6 +223,7 @@ class ModelingWorkflow(WorkflowBase):
         :param time_series: the 4D modeling input time series file
             location
         :param opts: the following keyword parameters:
+        :option bolus_arrival_index: the bolus uptake volume index
         :option mask: the XNAT mask resource name
         :return: the modeling result dictionary
         """
@@ -321,10 +322,10 @@ class ModelingWorkflow(WorkflowBase):
         # parent_opt = '.'.join(modules[:-1])
         # child_opt = modules[-1]
         # if parent_opt:
-        #     wf_gen = __import__(parent_opt, globals(), locals(), [child_opt])
+        #     workflow = __import__(parent_opt, globals(), locals(), [child_opt])
         # else:
-        #     wf_gen = __import__(child_opt)
-        # child_wf = wf_gen.create_workflow(**opts)
+        #     workflow = __import__(child_opt)
+        # child_wf = workflow.create_workflow(**opts)
         #
         if self.technique == 'bolero':
             child_wf = self._create_bolero_workflow(**opts)

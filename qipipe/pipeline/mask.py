@@ -23,10 +23,10 @@ def run(subject, session, scan, time_series, **opts):
         parameters
     :return: the mask file location
     """
-    wf_gen = MaskWorkflow(**opts)
+    workflow = MaskWorkflow(**opts)
 
     # Run the workflow.
-    return wf_gen.run(subject, session, scan, time_series)
+    return workflow.run(subject, session, scan, time_series)
 
 
 class MaskWorkflow(WorkflowBase):

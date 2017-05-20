@@ -266,7 +266,7 @@ class RegistrationWorkflow(WorkflowBase):
 
         # The execution workflow.
         exec_wf = pe.Workflow(
-            name='reg_exec', base_dir=self.workflow.base_dir
+            name='registration', base_dir=self.workflow.base_dir
         )
 
         # The registration workflow input.
@@ -405,7 +405,7 @@ class RegistrationWorkflow(WorkflowBase):
 
         # The workflow.
         base_dir = opts.get('base_dir', tempfile.mkdtemp(prefix='qipipe_'))
-        realign_wf = pe.Workflow(name='registration', base_dir=self.base_dir)
+        realign_wf = pe.Workflow(name=self.technique, base_dir=self.base_dir)
 
         # The workflow input.
         in_fields = ['subject', 'session', 'scan', 'moving_image',

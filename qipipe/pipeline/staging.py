@@ -99,7 +99,7 @@ def run(subject, session, scan, *in_dirs, **opts):
         # Look for the 3D volume output in the workflow base directory
         # work area directly instead.
         vol_file = ("%s/staging/stack/volume%03d.nii.gz" %
-                    (base_dir, volume))
+                    (stg_wf.base_dir, volume))
         if os.path.exists(vol_file):
             vol_nii_files.append(vol_file)
         elif not stg_wf.dry_run:
