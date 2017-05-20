@@ -525,7 +525,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 )
             else:
                 registered = []
-                unregistered = files
+                unregistered = scan_volumes
 
         # Validate and log the partition.
         if 'register' in actions:
