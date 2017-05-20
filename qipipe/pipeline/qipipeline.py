@@ -486,24 +486,13 @@ class QIPipelineWorkflow(WorkflowBase):
         """
         self.logger.debug("Processing the %s %s %s scan %d volumes..." %
                            (project, subject, session, scan))
-        # Get the volume numbers.
         with qixnat.connect() as xnat:
-            scan_obj = xnat.find_one(project, subject, session, scan=scan)
-            if not scan_obj:
-                raise NotFoundError("The pipeline did not find a %s %s %s"
-                                    " scan %d." %
-                                    (project, subject, session, scan))
-            # The NIFTI resource contains the volume files.
-            rsc_obj = scan_obj.resource('NIFTI')
-            if not rsc_obj.exists():
-                raise NotFoundError("The pipeline did not find a %s %s %s"
-                                    " scan %d NIFTI resource." %
-                                    (project, subject, session, scan))
-            # The volume files.
-            files = rsc_obj.files().get()
-            if not files:
-                raise ArgumentError("There are no pipeline %s %s %s scan %d"
-                                    " NIFTI volumes" %
+            # The XNAT volume file names.
+            scan_volumes = _scan_files(xnat, project, subject, session,
+                                       scan, 'NIFTI', 'volume*.nii.gz')
+            if not scan_volumes:
+                raise ArgumentError("There are no pipeline %s %s %s"
+                                    " scan %d volumes" %
                                     (project, subject, session, scan))
 
             # If the registration resource already exists in XNAT, then
@@ -511,7 +500,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # already registered and those which need to be registered.
             if is_existing_registration_resource:
                 registered, unregistered = self._partition_registered(
-                    xnat, project, subject, session, scan, files
+                    xnat, project, subject, session, scan, scan_volumes
                 )
             else:
                 registered = []
