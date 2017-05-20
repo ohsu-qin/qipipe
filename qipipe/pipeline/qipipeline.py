@@ -3,6 +3,7 @@ import re
 import shutil
 import tempfile
 import logging
+import six
 # The ReadTheDocs build does not include nipype.
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 if not on_rtd:
@@ -240,27 +241,47 @@ def _run_with_xnat_input(actions, *inputs, **opts):
 
 
 def _scan_file_exists(xnat, project, subject, session, scan, resource,
-                      file_name=None):
+                      file_pat=None):
     """
-    :param file_name: the optional target file (default any file)
+    :param file_pat: the optional target XNAT label pattern to match
+        (default any file)
     :return: whether the given XNAT scan file exists
     """
-    rsc_files = _scan_files(xnat, project, subject, session, scan, resource)
-    exists = file_name in rsc_files if file_name else not not rsc_files
-    status = 'found' if exists else 'not found'
-    logger(__name__).debug("The %s %s %s scan %d resource %s was %s." %
-                           (project, subject, session, scan, resource,
-                            status))
+    matches = _scan_files(xnat, project, subject, session, scan,
+                          resource, file_pat)
 
-    return exists
+    return not not matches
 
-def _scan_files(xnat, project, subject, session, scan, resource):
+def _scan_files(xnat, project, subject, session, scan, resource,
+                file_pat=None):
     """
-    :return: the given XNAT scan resource file list
+    :param file_pat: the optional target XNAT file label pattern to match
+        (default any file)
+    :return: the XNAT scan file name list
     """
     rsc_obj = xnat.find_one(project, subject, session, scan=scan,
                             resource=resource)
-    return rsc_obj.files().get() if rsc_obj else []
+    if not rsc_obj:
+        return []
+    # The resource files labels.
+    files = rsc_obj.files().get()
+    # The match pattern.
+    if not file_pat:
+        logger(__name__).debug("The %s %s %s scan %d resource %s contains"
+                               " %d files." %
+                               (project, subject, session, scan, resource,
+                                len(files)))
+        return files
+    else:
+        if isinstance(file_pat, six.string_types):
+            file_pat = re.compile(file_pat)
+        matches = [f for f in files if file_pat.match(f)]
+        logger(__name__).debug("The %s %s %s scan %d resource %s contains"
+                               " %d files matching %s." %
+                               (project, subject, session, scan, resource,
+                                len(files), file_pat.pattern))
+
+        return matches
 
 
 class ArgumentError(Exception):
@@ -488,9 +509,9 @@ class QIPipelineWorkflow(WorkflowBase):
                            (project, subject, session, scan))
         with qixnat.connect() as xnat:
             # The XNAT volume file names.
-            scan_volumes = _scan_files(xnat, project, subject, session,
-                                       scan, 'NIFTI', 'volume*.nii.gz')
-            if not scan_volumes:
+            scan_volumes = _scan_files(xnat, project, subject, session, scan,
+                                       'NIFTI', VOLUME_FILE_PAT)
+            if not files:
                 raise ArgumentError("There are no pipeline %s %s %s"
                                     " scan %d volumes" %
                                     (project, subject, session, scan))
@@ -500,7 +521,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # already registered and those which need to be registered.
             if is_existing_registration_resource:
                 registered, unregistered = self._partition_registered(
-                    xnat, project, subject, session, scan, scan_volumes
+                    xnat, project, subject, session, scan, files
                 )
             else:
                 registered = []
@@ -842,7 +863,7 @@ class QIPipelineWorkflow(WorkflowBase):
             else:
                 dl_scan_xfc = XNATDownload(project=self.project,
                                            resource='NIFTI',
-                                           file='volume*.nii.gz')
+                                           file=VOLUME_FILE_PAT)
                 staged = pe.Node(dl_scan_xfc, name='staged')
                 exec_wf.connect(input_spec, 'subject', staged, 'subject')
                 exec_wf.connect(input_spec, 'session', staged, 'session')
@@ -998,7 +1019,7 @@ class QIPipelineWorkflow(WorkflowBase):
                     reg_dl_xfc = XNATDownload(
                         project=self.project,
                         resource=self.registration_resource,
-                        file='volume*.nii.gz'
+                        file=VOLUME_FILE_PAT
                     )
                     download_reg = pe.Node(reg_dl_xfc,
                                            name='download_realigned_images')
