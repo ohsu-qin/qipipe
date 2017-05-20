@@ -511,7 +511,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # The XNAT volume file names.
             scan_volumes = _scan_files(xnat, project, subject, session, scan,
                                        'NIFTI', VOLUME_FILE_PAT)
-            if not files:
+            if not scan_volumes:
                 raise ArgumentError("There are no pipeline %s %s %s"
                                     " scan %d volumes" %
                                     (project, subject, session, scan))
@@ -521,7 +521,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # already registered and those which need to be registered.
             if is_existing_registration_resource:
                 registered, unregistered = self._partition_registered(
-                    xnat, project, subject, session, scan, files
+                    xnat, project, subject, session, scan, scan_volumes
                 )
             else:
                 registered = []
