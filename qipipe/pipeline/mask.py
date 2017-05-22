@@ -155,7 +155,7 @@ class MaskWorkflow(WorkflowBase):
             # mean image.
             crop_back = pe.Node(fsl.ImageMaths(), name='crop_back')
             workflow.connect(mean, 'out_file', crop_back, 'in_file')
-            workflow.connect(cog, ('out_stat', _gen_crop_op_string),
+            workflow.connect(cog, ('out_stat', _gen_crop_option_string),
                              crop_back, 'op_string')
             workflow.connect(crop_back, 'out_file', cluster_mask, 'in_file')
         else:
@@ -197,7 +197,7 @@ class MaskWorkflow(WorkflowBase):
         return workflow
 
 
-def _gen_crop_op_string(cog):
+def _gen_crop_option_string(cog):
     """
     :param cog: the center of gravity
     :return: the crop -roi option
