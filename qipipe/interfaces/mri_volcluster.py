@@ -53,10 +53,12 @@ class MriVolCluster(CommandLine):
     def _list_outputs(self):
         cwd = os.getcwd()
         outputs = self.output_spec().get()
-        if not isdefined(self.inputs.out_clusters_name):
-            outputs['out_cluster_file'] = path.join(cwd,
-                                                    self.inputs.out_clusters_name)
-        if not isdefined(self.inputs.out_masked_name):
-            outputs['out_masked_file'] = path.join(cwd,
-                                                   self.inputs.out_masked_name)
+        if isdefined(self.inputs.out_clusters_name):
+            outputs['out_cluster_file'] = path.join(
+                cwd, self.inputs.out_clusters_name
+            )
+        if isdefined(self.inputs.out_masked_name):
+            outputs['out_masked_file'] = path.join(
+                cwd, self.inputs.out_masked_name
+            )
         return outputs
