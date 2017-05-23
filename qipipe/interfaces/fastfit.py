@@ -27,6 +27,9 @@ from nipype.interfaces.base import (
 from nipype.interfaces.traits_extension import Undefined
 from .interface_error import InterfaceError
 from ..helpers.logging import logger
+# fastfit.fastfit_cli is not available in the qipipe environment.
+# See
+#from fastfit.fastfit_cli import get_available_models
 
 class FastfitInputSpec(MpiCommandLineInputSpec):
     model_name = traits.String(desc='The name of the model to optimize',
@@ -60,13 +63,6 @@ class Fastfit(MpiCommandLine):
       input is set dynamically.
     """
 
-    # Note: a local fastfit build results in MPICOMM errors.
-    # The work-around is to specify the full path of the official
-    # build. In that case, a local fastfit build is sufficient to
-    # run this interface, but the local fastfit executable is
-    # ignored in preference to the official build.
-    # See also the cmdline note below.
-    #_cmd = 'global_fastfit'
     _cmd = 'fastfit'
 
     input_spec = FastfitInputSpec
@@ -106,7 +102,7 @@ class Fastfit(MpiCommandLine):
         if name == 'optional_outs':
             return ' '.join("-o '%s'" % opt_out for opt_out in value)
         elif name == 'params':
-            return ' '.join(["-s %s:%s" % item
+            return ' '.join(["--set-param %s:%s" % item
                              for item in value.iteritems()])
         elif name == 'fix_params':
             return ' '.join(["--fix-param %s:%s" % item
@@ -115,7 +111,7 @@ class Fastfit(MpiCommandLine):
             return spec.argstr % value
 
     def _outputs(self):
-        #Set up dynamic outputs for resulting parameter maps
+        # Set up dynamic outputs for resulting parameter maps.
         outputs = super(Fastfit, self)._outputs()
         undefined_traits = {}
 
@@ -125,17 +121,25 @@ class Fastfit(MpiCommandLine):
             for key in self.inputs.fix_params:
                 fixed_params.append(key)
 
-        #If the model name is static, we can find the outputs
+        # If the model name is static, we can find the outputs
         if isdefined(self.inputs.model_name):
-            # FIXME - The code commented out below no longer works.
-            # Hard-code the work-around below for the fxr.model
-            # only.
+            # FIXME - get_available_models cannot be imported in
+            # the line commented out below.
+            # The work-around hard-codes the model module names for
+            # the fxr.model only.
             #
-            # model_mods, _, _ = get_available_models()
+            #model_mods, _, _ = get_available_models()
+            #
+            # Start of work-around.
             from bunch import Bunch
             fxr = Bunch(optimization_params=('k_trans', 'v_e', 'tau_i'))
             model_mods = {'fxr.model': fxr}
-            model = model_mods[self.inputs.model_name]
+            model = model_mods.get(self.inputs.model_name)
+            if not model:
+                raise InterfaceError("The model is not supported: %s" %
+                                     model_name)
+            # End of work-around.
+
             self._opt_params = model.optimization_params
             if (not self._min_outs is None and
                 any(not out in self._opt_params
@@ -146,7 +150,7 @@ class Fastfit(MpiCommandLine):
                 if not param_name in fixed_params:
                     outputs.add_trait(param_name, traits.File(exists=True))
                     undefined_traits[param_name] = Undefined
-        #Otherwise we need min_outs
+        # Otherwise we need min_outs
         elif not self._min_outs is None:
             for param_name in self._min_outs:
                 outputs.add_trait(param_name, traits.File(exists=True))
