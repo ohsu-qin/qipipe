@@ -442,9 +442,6 @@ class QIPipelineWorkflow(WorkflowBase):
         if 'roi' in actions:
             roi_dirs = scan_input.roi
             if roi_dirs:
-                if not self.collection:
-                    raise PipelineError("ROI workflow requires the"
-                                        " collection option")
                 scan_pats = self.collection.patterns.scan[scan_input.scan]
                 if not scan_pats:
                     raise PipelineError("Scan patterns were not found"
@@ -784,13 +781,6 @@ class QIPipelineWorkflow(WorkflowBase):
                                     function=mask)
                 mask_node = pe.Node(mask_xfc, name='mask')
                 mask_node.inputs.opts = mask_opts
-                # Upload the mask.
-                ul_mask_xfc = XNATUpload(
-                    project=self.project, subject=subject, session=session,
-                    scan=scan, resource='NIFTI', modality='MR'
-                )
-                ul_mask = pe.Node(ul_mask_xfc, name='upload_mask')
-                exec_wf.connect(mask_node, 'out_file', ul_mask, 'in_files')
                 self.logger.info("Enabled scan mask creation with options"
                                  " %s." % mask_opts)
         else:
