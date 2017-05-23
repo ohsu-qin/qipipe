@@ -760,11 +760,11 @@ class QIPipelineWorkflow(WorkflowBase):
                 with qixnat.connect() as xnat:
                     has_mask = _scan_file_exists(
                         xnat, self.project, subject, session, scan,
-                        'NIFTI', MASK_FILE
+                        MASK_RESOURCE, MASK_FILE
                     )
             if has_mask:
                 dl_mask_xfc = XNATDownload(project=self.project,
-                                           resource='NIFTI',
+                                           resource=MASK_RESOURCE,
                                            file=MASK_FILE)
                 mask_node = pe.Node(dl_mask_xfc, name='download_mask')
             else:
