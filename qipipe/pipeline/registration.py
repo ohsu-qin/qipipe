@@ -348,8 +348,6 @@ class RegistrationWorkflow(WorkflowBase):
         exec_wf.connect(input_spec, 'resource', upload_reg, 'resource')
         exec_wf.connect(collect_realigned, 'images', upload_reg, 'in_files')
 
-        # Copy the realigned images to the destination directory.
-        #
         # FIXME: copying the realigned images individually with a Copy
         # submits a separate SGE job for each copy, contrary to the
         # defaults.cfg Copy setting. Although the defaults.cfg is
@@ -451,7 +449,6 @@ class RegistrationWorkflow(WorkflowBase):
                                register, 'fixed_image_mask')
             realign_wf.connect(input_spec, 'mask',
                                register, 'moving_image_mask')
-
             # If the initialize option is set, then make an initial
             # transform.
             initialize = opts.get('initialize')
@@ -471,10 +468,10 @@ class RegistrationWorkflow(WorkflowBase):
                 #   then the default invert_initial_moving_transform value
                 #   is not applied, resulting in the following error:
                 #
-                #   TraitError: Each element of the 'forward_invert_flags' trait
-                #   of a RegistrationOutputSpec instance must be a boolean, but a
-                #   value of <undefined> <class 'traits.trait_base._Undefined'>
-                #   was specified.
+                #     TraitError: Each element of the 'forward_invert_flags'
+                #     trait of a RegistrationOutputSpec instance must be a
+                #     boolean, but a value of <undefined>
+                #     <class 'traits.trait_base._Undefined'> was specified.
                 #
                 #   The forward_invert_flags output field is set from the
                 #   invert_initial_moving_transform input field. Even though
@@ -494,9 +491,12 @@ class RegistrationWorkflow(WorkflowBase):
                                apply_xfm, 'output_image')
             realign_wf.connect(register, 'forward_transforms',
                                apply_xfm, 'transforms')
+            # Downsize the data type to a signed short int.
+            downsize_xfc = fsl.fslmaths.ChangeDataType(output_datatype='short')
+            downsize = pe.Node(downsize, name='downsize')
+            realign_wf.connect(apply_xfm, 'output_image', downsize, 'in_file')
             # Copy the meta-data.
-            realign_wf.connect(apply_xfm, 'output_image',
-                               copy_meta, 'dest_file')
+            realign_wf.connect(downsize, 'out_file', copy_meta, 'dest_file')
         elif self.technique == 'fnirt':
             self.profile_sections = FNIRT_CONF_SECTIONS
             # Make the affine transformation.
