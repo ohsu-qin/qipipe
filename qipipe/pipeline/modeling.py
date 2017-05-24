@@ -462,21 +462,21 @@ class ModelingWorkflow(WorkflowBase):
             if field in opts:
                 setattr(input_spec.inputs, field, opts[field])
 
+        # Create the DCE baseline image.
+        make_base_func = Function(
+            input_names=['time_series', 'baseline_end_idx'],
+            output_names=['baseline'],
+            function=make_baseline),
+        make_base = pe.Node(make_base_func, name='make_base')
+        workflow.connect(input_spec, 'time_series',
+                         make_base, 'time_series')
+        workflow.connect(input_spec, 'baseline_end_idx',
+                         make_base, 'baseline_end_idx')
+
         # If we are not using a fixed r1_0 value, then compute a map
         # from a proton density weighted scan and the baseline of the
         # DCE series.
         if not use_fixed_r1_0:
-            # Create the DCE baseline image.
-            make_base_func = Function(
-                input_names=['time_series', 'baseline_end_idx'],
-                output_names=['baseline'],
-                function=make_baseline),
-            make_base = pe.Node(make_base_func, name='make_base')
-            workflow.connect(input_spec, 'time_series',
-                             make_base, 'time_series')
-            workflow.connect(input_spec, 'baseline_end_idx',
-                             make_base, 'baseline_end_idx')
-
             # Create the R1_0 map.
             get_r1_0_func = Function(
                 input_names=['pdw_image', 't1w_image', 'max_r1_0', 'mask'],
@@ -491,14 +491,12 @@ class ModelingWorkflow(WorkflowBase):
         # The R1 destination directory.
         # Convert the DCE time series to R1 maps.
         r1_series_func = Function(
-            input_names=['time_series', 'r1_0', 'base_end', 'mask', 'dest'],
+            input_names=['time_series', 'r1_0', 'baseline', 'mask'],
             output_names=['r1_series'], function=get_r1_series
         )
-        r1_series = pe.Node(r1_series_func, dest=self.base_dir,
-                            name='r1_series')
+        r1_series = pe.Node(r1_series_func, name='r1_series')
         workflow.connect(input_spec, 'time_series', r1_series, 'time_series')
-        workflow.connect(input_spec, 'baseline_end_idx',
-                         r1_series, 'baseline_end')
+        workflow.connect(make_base, 'baseline', r1_series, 'baseline')
         workflow.connect(input_spec, 'mask', r1_series, 'mask')
         if use_fixed_r1_0:
             workflow.connect(input_spec, 'r1_0_val', r1_series, 'r1_0')
@@ -767,13 +765,12 @@ def make_baseline(time_series, baseline_end_idx):
         return baselines[0]
     else:
         baseline = NiftiWrapper.from_sequence(baselines)
-    baseline_path = path.join(os.getcwd(), 'baseline.nii.gz')
-    nb.save(baseline, baseline_path)
+    baseline_img = path.join(os.getcwd(), 'baseline.nii.gz')
+    nb.save(baseline, baseline_img)
 
-    return baseline_path
+    return baseline_img
 
-
-def get_r1_0(pdw_image, t1w_image, max_r1_0, **opts):
+def get_r1_0(pdw_image, t1w_image, max_r1_0, mask=None):
     """
     Returns the R1_0 map NIfTI file from the given proton density
     and T1-weighted images. The R1_0 map is computed using the
@@ -783,7 +780,7 @@ def get_r1_0(pdw_image, t1w_image, max_r1_0, **opts):
     :param pdw_image: the proton density NIfTI image file path
     :param t1w_image: the T1-weighted image file path
     :param max_r1_0: the R1_0 range maximum
-    :param opts: the ``pdw_t1w_to_r1`` function keyword arguments
+    :param mask: the optional mask image file to use
     :return: the R1_0 map NIfTI image file name
     """
     import os
@@ -795,10 +792,10 @@ def get_r1_0(pdw_image, t1w_image, max_r1_0, **opts):
     pdw_nw = NiftiWrapper(nb.load(pdw_image), make_empty=True)
     t1w_nw = NiftiWrapper(nb.load(t1w_image), make_empty=True)
     r1_space = np.arange(0.01, max_r1_0, 0.01)
-    mask_opt = opts.pop('mask', None)
-    if mask_opt:
-        opts['mask'] = nb.load(mask_opt).get_data()
-    r1_0 = pdw_t1w_to_r1(pdw_nw, t1w_nw, r1_space=r1_space, **opts)
+    pdw_opts = {}
+    if mask:
+        pdw_opts['mask'] = nb.load(mask).get_data()
+    r1_0 = pdw_t1w_to_r1(pdw_nw, t1w_nw, r1_space=r1_space, **pdw_opts)
 
     cwd = os.getcwd()
     out_nii = nb.Nifti1Image(r1_0, pdw_nw.nii_img.get_affine())
@@ -807,14 +804,14 @@ def get_r1_0(pdw_image, t1w_image, max_r1_0, **opts):
 
     return out_fn
 
-
-def get_r1_series(time_series, r1_0, **opts):
+def get_r1_series(time_series, r1_0, baseline, mask=None):
     """
     Creates the R1_0 series NIfTI file.
 
     :param time_series: the modeling input 4D NIfTI image
     :param r1_0: the R1_0 image file path
-    :param opts: the ``dce_series_to_r1`` keyword options
+    :param baseline: the baseline file path
+    :param mask: the optional mask image file to use
     :return: the R1_0 series NIfTI image file name
     """
     import os
@@ -823,14 +820,16 @@ def get_r1_series(time_series, r1_0, **opts):
     from dcmstack.dcmmeta import NiftiWrapper
 
     dce_series = NiftiWrapper(nb.load(time_series), make_empty=True)
-    r1_0_data = nb.load(r1_0).get_data()
-    mask_opt = opts.pop('mask', None)
-    if mask_opt:
-        opts['mask'] = nb.load(mask_opt).get_data()
-    r1_series = dce_series_to_r1(dce_series, r1_0_data, **opts)
+    baseline_img = nb.load(baseline).get_data()
+    r1_0_img = nb.load(r1_0).get_data()
+    dce_opts = {}
+    if mask:
+        dce_opts['mask'] = nb.load(mask).get_data()
+    r1_series = dce_series_to_r1(dce_series, baseline_img, r1_0_img,
+                                 **dce_opts)
 
     cwd = os.getcwd()
-    out_nii = nb.Nifti1Image(r1_series, dce_nw.nii_img.get_affine())
+    out_nii = nb.Nifti1Image(r1_series, dce_series.nii_img.get_affine())
     out_file = os.path.join(cwd, 'r1_series.nii.gz')
     nb.save(out_nii, out_file)
 
