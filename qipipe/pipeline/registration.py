@@ -479,7 +479,8 @@ class RegistrationWorkflow(WorkflowBase):
                 #   default=False, the invert_initial_moving_transform value
                 #   is apparently undefined. Perhaps the input trait should
                 #   also set the usedefault option. The work-around is to
-                #   always set the the invert_initial_moving_transform field.
+                #   explicitly set the invert_initial_moving_transform field
+                #   to False.
                 register.inputs.invert_initial_moving_transform = False
             # Apply the transforms to the input image.
             apply_xfm = pe.Node(ApplyTransforms(), name='apply_xfm')
