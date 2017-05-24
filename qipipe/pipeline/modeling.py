@@ -463,11 +463,11 @@ class ModelingWorkflow(WorkflowBase):
                 setattr(input_spec.inputs, field, opts[field])
 
         # Create the DCE baseline image.
-        make_base_func = Function(
+        make_base_xfc = Function(
             input_names=['time_series', 'baseline_end_idx'],
-            output_names=['baseline'],
-            function=make_baseline),
-        make_base = pe.Node(make_base_func, name='make_base')
+            output_names=['baseline'], function=make_baseline
+        )
+        make_base = pe.Node(make_base_xfc, name='make_base')
         workflow.connect(input_spec, 'time_series',
                          make_base, 'time_series')
         workflow.connect(input_spec, 'baseline_end_idx',
@@ -478,11 +478,11 @@ class ModelingWorkflow(WorkflowBase):
         # DCE series.
         if not use_fixed_r1_0:
             # Create the R1_0 map.
-            get_r1_0_func = Function(
+            get_r1_0_xfc = Function(
                 input_names=['pdw_image', 't1w_image', 'max_r1_0', 'mask'],
                 output_names=['r1_0_map'], function=get_r1_0
             )
-            get_r1_0 = pe.Node(get_r1_0_func, name='get_r1_0')
+            get_r1_0 = pe.Node(get_r1_0_xfc, name='get_r1_0')
             workflow.connect(input_spec, 'pd_nii', get_r1_0, 'pdw_image')
             workflow.connect(make_base, 'baseline', get_r1_0, 't1w_image')
             workflow.connect(input_spec, 'max_r1_0', get_r1_0, 'max_r1_0')
@@ -490,11 +490,11 @@ class ModelingWorkflow(WorkflowBase):
 
         # The R1 destination directory.
         # Convert the DCE time series to R1 maps.
-        r1_series_func = Function(
+        r1_series_xfc = Function(
             input_names=['time_series', 'r1_0', 'baseline', 'mask'],
             output_names=['r1_series'], function=get_r1_series
         )
-        r1_series = pe.Node(r1_series_func, name='r1_series')
+        r1_series = pe.Node(r1_series_xfc, name='r1_series')
         workflow.connect(input_spec, 'time_series', r1_series, 'time_series')
         workflow.connect(make_base, 'baseline', r1_series, 'baseline')
         workflow.connect(input_spec, 'mask', r1_series, 'mask')
@@ -512,18 +512,18 @@ class ModelingWorkflow(WorkflowBase):
 
         # Get the pharmacokinetic mapping parameters.
         aif_shift_flds = ['time_series', 'bolus_arrival_index']
-        aif_shift_func = Function(input_names=aif_shift_flds,
-                                   output_names=['aif_shift'],
-                                   function=get_aif_shift)
-        aif_shift = pe.Node(aif_shift_func, name='get_aif_shift')
+        aif_shift_xfc = Function(input_names=aif_shift_flds,
+                                 output_names=['aif_shift'],
+                                 function=get_aif_shift)
+        aif_shift = pe.Node(aif_shift_xfc, name='get_aif_shift')
         workflow.connect(input_spec, 'time_series', aif_shift, 'time_series')
         workflow.connect(input_spec, 'bolus_arrival_index',
                          aif_shift, 'bolus_arrival_index')
         fit_params_flds = ['cfg_file', 'aif_shift']
-        fit_params_func = Function(input_names=fit_params_flds,
-                                   output_names=['params_csv'],
-                                   function=get_fit_params)
-        fit_params = pe.Node(fit_params_func, name='fit_params')
+        fit_params_xfc = Function(input_names=fit_params_flds,
+                                  output_names=['params_csv'],
+                                  function=get_fit_params)
+        fit_params = pe.Node(fit_params_xfc, name='fit_params')
         fit_params.inputs.cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
         workflow.connect(aif_shift, 'aif_shift', fit_params, 'aif_shift')
 
@@ -617,10 +617,10 @@ class ModelingWorkflow(WorkflowBase):
         # Get the pharmacokinetic mapping parameters with a mock
         # AIF shift.
         fit_params_flds = ['cfg_file', 'aif_shift']
-        fit_params_func = Function(input_names=fit_params_flds,
-                                   output_names=['params_csv'],
-                                   function=get_fit_params)
-        fit_params = pe.Node(fit_params_func, name='fit_params')
+        fit_params_xfc = Function(input_names=fit_params_flds,
+                                  output_names=['params_csv'],
+                                  function=get_fit_params)
+        fit_params = pe.Node(fit_params_xfc, name='fit_params')
         fit_params.inputs.cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
         fit_params.inputs.aif_shift = 40.0
         # The mock pharmacokinetic model optimizer copies the mask.
