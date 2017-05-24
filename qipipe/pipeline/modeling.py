@@ -448,14 +448,14 @@ class ModelingWorkflow(WorkflowBase):
         self.profile_sections = BOLERO_CONF_SECTIONS
 
         # The PK modeling parameters.
-        opts = self._r1_parameters(**opts)
+        pk_opts = self._r1_parameters(**opts)
         # Set the use_fixed_r1_0 flag.
-        use_fixed_r1_0 = opts.get('r1_0_val') != None
+        use_fixed_r1_0 = pk_opts.get('r1_0_val') != None
 
         # Set up the input node.
-        non_pk_flds = ['time_series']
-        in_fields = non_pk_flds + opts.keys()
-        input_xfc = IdentityInterface(fields=in_fields, **opts)
+        non_pk_flds = ['time_series', 'mask']
+        in_fields = non_pk_flds + pk_opts.keys()
+        input_xfc = IdentityInterface(fields=in_fields)
         input_spec = pe.Node(input_xfc, name='input_spec')
         # Set the config parameters.
         for field in in_fields:
@@ -539,10 +539,10 @@ class ModelingWorkflow(WorkflowBase):
         if not pk_cfg:
             raise ModelingError("The modeling configuration is missing the"
                                 " Fastfit topic")
-        pk_opts = {opt: pk_cfg[opt] for opt in ['model_name', 'optional_outs']
+        ff_opts = {opt: pk_cfg[opt] for opt in ['model_name', 'optional_outs']
                    if opt in pk_cfg}
         # The pharmacokinetic model optimizer.
-        pk_map = pe.Node(Fastfit(**pk_opts), name='pk_map')
+        pk_map = pe.Node(Fastfit(**ff_opts), name='pk_map')
         workflow.connect(copy_meta, 'dest_file', pk_map, 'target_data')
         workflow.connect(input_spec, 'mask', pk_map, 'mask')
         workflow.connect(fit_params, 'params_csv', pk_map, 'params_csv')
