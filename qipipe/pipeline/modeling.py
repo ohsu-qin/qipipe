@@ -465,15 +465,15 @@ class ModelingWorkflow(WorkflowBase):
             setattr(input_spec.inputs, field, value)
 
         # Create the DCE baseline image.
-        make_baseline_xfc = Function(
+        baseline_xfc = Function(
             input_names=['time_series', 'baseline_end_idx'],
             output_names=['baseline'], function=make_baseline
         )
-        make_baseline = pe.Node(make_baseline_xfc, name='make_baseline')
+        baseline = pe.Node(baseline_xfc, name='baseline')
         workflow.connect(input_spec, 'time_series',
-                         make_baseline, 'time_series')
+                         baseline, 'time_series')
         workflow.connect(input_spec, 'baseline_end_idx',
-                         make_baseline, 'baseline_end_idx')
+                         baseline, 'baseline_end_idx')
 
         # If we are not using a fixed r1_0 value, then compute a map
         # from a proton density weighted scan and the baseline of the
@@ -486,7 +486,7 @@ class ModelingWorkflow(WorkflowBase):
             )
             get_r1_0 = pe.Node(get_r1_0_xfc, name='get_r1_0')
             workflow.connect(input_spec, 'pd_nii', get_r1_0, 'pdw_image')
-            workflow.connect(make_baseline, 'baseline', get_r1_0, 't1w_image')
+            workflow.connect(baseline, 'baseline', get_r1_0, 't1w_image')
             workflow.connect(input_spec, 'max_r1_0', get_r1_0, 'max_r1_0')
             workflow.connect(input_spec, 'mask', get_r1_0, 'mask')
 
@@ -498,7 +498,7 @@ class ModelingWorkflow(WorkflowBase):
         )
         r1_series = pe.Node(r1_series_xfc, name='r1_series')
         workflow.connect(input_spec, 'time_series', r1_series, 'time_series')
-        workflow.connect(make_baseline, 'baseline', r1_series, 'baseline')
+        workflow.connect(baseline, 'baseline', r1_series, 'baseline')
         workflow.connect(input_spec, 'mask', r1_series, 'mask')
         if use_fixed_r1_0:
             workflow.connect(input_spec, 'r1_0_val', r1_series, 'r1_0')
@@ -580,7 +580,7 @@ class ModelingWorkflow(WorkflowBase):
                          output_spec, 'delta_k_trans')
         # If we are inferring R1_0, then make the DCE baseline.
         if not use_fixed_r1_0:
-            workflow.connect(make_baseline, 'baseline',
+            workflow.connect(baseline, 'baseline',
                              output_spec, 'dce_baseline')
             workflow.connect(get_r1_0, 'r1_0_map', output_spec, 'r1_0')
 
