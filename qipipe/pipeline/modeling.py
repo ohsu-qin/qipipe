@@ -453,7 +453,7 @@ class ModelingWorkflow(WorkflowBase):
         use_fixed_r1_0 = pk_opts.get('r1_0_val') != None
 
         # Set up the input node.
-        non_pk_flds = ['time_series', 'mask']
+        non_pk_flds = ['time_series', 'mask', 'bolus_arrival_index']
         in_fields = non_pk_flds + pk_opts.keys()
         input_xfc = IdentityInterface(fields=in_fields)
         input_spec = pe.Node(input_xfc, name='input_spec')
