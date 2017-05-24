@@ -458,9 +458,11 @@ class ModelingWorkflow(WorkflowBase):
         input_xfc = IdentityInterface(fields=in_fields)
         input_spec = pe.Node(input_xfc, name='input_spec')
         # Set the config parameters.
-        for field in in_fields:
+        for field in non_pk_flds:
             if field in opts:
                 setattr(input_spec.inputs, field, opts[field])
+        for field, value in pk_opts.iteritems():
+            setattr(input_spec.inputs, field, value)
 
         # Create the DCE baseline image.
         make_base_xfc = Function(
