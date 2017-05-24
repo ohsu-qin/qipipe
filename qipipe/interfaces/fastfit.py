@@ -27,9 +27,17 @@ from nipype.interfaces.base import (
 from nipype.interfaces.traits_extension import Undefined
 from .interface_error import InterfaceError
 from ..helpers.logging import logger
-# fastfit.fastfit_cli is not available in the qipipe environment.
-# See
+
+# FIXME - fastfit.fastfit_cli is no longer available in the OHSU
+# AIRC run-time environment at /usr/global/scripts. There is a file
+# /usr/global/scripts/fastfit_iface.py, but importing that results
+# in the following error:
+#   ImportError: No module named fastfit.fastfit_cli
+# The work-around is to hard-code the model parameters as
+# described in the Fastfits._outputs FIXME comment.
+#
 #from fastfit.fastfit_cli import get_available_models
+
 
 class FastfitInputSpec(MpiCommandLineInputSpec):
     model_name = traits.String(desc='The name of the model to optimize',
@@ -123,10 +131,10 @@ class Fastfit(MpiCommandLine):
 
         # If the model name is static, we can find the outputs
         if isdefined(self.inputs.model_name):
-            # FIXME - get_available_models cannot be imported in
-            # the line commented out below.
-            # The work-around hard-codes the model module names for
-            # the fxr.model only.
+            # FIXME - get_available_models cannot be imported, as
+            # described in the preceding import FIXME comment. The
+            # work-around is to hard-code the model module names
+            # for the fxr.model only.
             #
             #model_mods, _, _ = get_available_models()
             #
