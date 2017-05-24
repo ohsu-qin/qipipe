@@ -1,3 +1,16 @@
+# This workflow is adapted from OHSU AIRC /usr/global/scripts/qin_dce.py
+# with the following changes:
+# * Several bugs were fixed, e.g. missing node imports and a missing
+#   iteration enumerate call.
+# * As of 5/24/17 the dce_prep utility function signatures were changed
+#   and inconsistent with qin_dce.
+# * The MriVolCluster has been pulled out into its own upstream node,
+#   since the mask is also used for registration.
+# * Functional changes, e.g. the ReadTheDocs conditional import, fit
+#   the qipipe environment.
+# * Stylistic changes, e.g. variable names and spacing, are more
+#   consistent with qipipe.
+#
 import os
 import logging
 # The ReadTheDocs build does not include nipype.
@@ -494,7 +507,7 @@ class ModelingWorkflow(WorkflowBase):
         # Convert the DCE time series to R1 maps.
         r1_series_xfc = Function(
             input_names=['time_series', 'r1_0', 'baseline', 'mask'],
-            output_names=['r1_series'], function=get_r1_series
+            output_names=['r1_series'], function=make_r1_series
         )
         r1_series = pe.Node(r1_series_xfc, name='r1_series')
         workflow.connect(input_spec, 'time_series', r1_series, 'time_series')
@@ -759,7 +772,7 @@ def make_baseline(time_series, baseline_end_idx):
     nw = NiftiWrapper(nii)
 
     baselines = []
-    for idx, split_nii in nw.split():
+    for idx, split_nii in enumerate(nw.split()):
         if idx == baseline_end_idx:
             break
         baselines.append(split_nii)
@@ -807,7 +820,7 @@ def get_r1_0(pdw_image, t1w_image, max_r1_0, mask=None):
 
     return out_fn
 
-def get_r1_series(time_series, r1_0, baseline, mask=None):
+def make_r1_series(time_series, r1_0, baseline, mask=None):
     """
     Creates the R1_0 series NIfTI file.
 
@@ -822,17 +835,17 @@ def get_r1_series(time_series, r1_0, baseline, mask=None):
     from dce_prep.dce_to_r1 import dce_series_to_r1
     from dcmstack.dcmmeta import NiftiWrapper
 
-    dce_series = NiftiWrapper(nb.load(time_series), make_empty=True)
+    time_series_nw = NiftiWrapper(nb.load(time_series), make_empty=True)
     baseline_img = nb.load(baseline).get_data()
     r1_0_img = nb.load(r1_0).get_data()
     dce_opts = {}
     if mask:
         dce_opts['mask'] = nb.load(mask).get_data()
-    r1_series = dce_series_to_r1(dce_series, baseline_img, r1_0_img,
+    r1_series = dce_series_to_r1(time_series_nw, baseline_img, r1_0_img,
                                  **dce_opts)
 
     cwd = os.getcwd()
-    out_nii = nb.Nifti1Image(r1_series, dce_series.nii_img.get_affine())
+    out_nii = nb.Nifti1Image(r1_series, time_series_nw.nii_img.get_affine())
     out_file = os.path.join(cwd, 'r1_series.nii.gz')
     nb.save(out_nii, out_file)
 
