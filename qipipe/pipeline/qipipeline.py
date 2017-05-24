@@ -972,7 +972,7 @@ class QIPipelineWorkflow(WorkflowBase):
             reg_ts_name = self.registration_resource + '_ts'
             merge_reg_xfc = MergeNifti(out_format=reg_ts_name)
             merge_reg = pe.Node(merge_reg_xfc, name='merge_reg')
-                exec_wf.connect(reg_node, 'out_files', merge_reg, 'in_files')
+            exec_wf.connect(reg_node, 'out_files', merge_reg, 'in_files')
 
             # Upload the realigned time series to XNAT.
             upload_reg_ts_xfc = XNATUpload(
