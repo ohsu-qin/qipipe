@@ -778,7 +778,7 @@ def make_baseline(time_series, baseline_end_idx):
         baselines.append(split_nii)
 
     if len(baselines) == 1:
-        baseline_nw = NiftiWrapper(baselines[0])
+        baseline_nw = baselines[0]
     else:
         baseline_nw = NiftiWrapper.from_sequence(baselines)
 
