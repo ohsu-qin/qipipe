@@ -656,7 +656,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # parent, since Nipype Function arguments must be
             # primitive.
             reg_opts = self._child_options()
-            if self.registration_resource
+            if self.registration_resource:
                 reg_opts['resource'] = self.registration_resource
             reg_opts['technique'] = self.registration_technique
             if 'recursive_registration' in opts:
