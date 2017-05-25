@@ -778,9 +778,10 @@ def make_baseline(time_series, baseline_end_idx):
         baselines.append(split_nii)
 
     if len(baselines) == 1:
-        return baselines[0]
+        baseline_nw = NiftiWrapper(baselines[0])
+    else:
+        baseline_nw = NiftiWrapper.from_sequence(baselines)
 
-    baseline_nw = NiftiWrapper.from_sequence(baselines)
     baseline_path = path.join(os.getcwd(), 'baseline.nii.gz')
     nb.save(baseline_nw, baseline_path)
 
@@ -825,23 +826,25 @@ def make_r1_series(time_series, r1_0, baseline, mask=None):
     Creates the R1_0 series NIfTI file.
 
     :param time_series: the modeling input 4D NIfTI image
-    :param r1_0: the R1_0 image file path
+    :param r1_0: the R1_0 fixed value or image file path
     :param baseline: the baseline file path
     :param mask: the optional mask image file to use
     :return: the R1_0 series NIfTI image file name
     """
     import os
+    import six
     import nibabel as nb
     from dce_prep.dce_to_r1 import dce_series_to_r1
     from dcmstack.dcmmeta import NiftiWrapper
 
     time_series_nw = NiftiWrapper(nb.load(time_series), make_empty=True)
     baseline_img = nb.load(baseline).get_data()
-    r1_0_img = nb.load(r1_0).get_data()
+    if isinstance(r1_0, six.string_types):
+        r1_0 = nb.load(r1_0).get_data()
     dce_opts = {}
     if mask:
         dce_opts['mask'] = nb.load(mask).get_data()
-    r1_series = dce_series_to_r1(time_series_nw, baseline_img, r1_0_img,
+    r1_series = dce_series_to_r1(time_series_nw, baseline_img, r1_0,
                                  **dce_opts)
 
     cwd = os.getcwd()
