@@ -761,8 +761,9 @@ def make_baseline(time_series, baseline_end_idx):
     :return: the baseline NIfTI file name
     :raise ModelingError: if the end index is a negative number
     """
-    from dcmstack.dcmmeta import NiftiWrapper
+    import os
     import nibabel as nb
+    from dcmstack.dcmmeta import NiftiWrapper
 
     if baseline_end_idx <= 0:
         raise ModelingError("The R1_0 computation baseline end index"
@@ -782,7 +783,7 @@ def make_baseline(time_series, baseline_end_idx):
     else:
         baseline_nw = NiftiWrapper.from_sequence(baselines)
 
-    baseline_path = path.join(os.getcwd(), 'baseline.nii.gz')
+    baseline_path = os.path.join(os.getcwd(), 'baseline.nii.gz')
     nb.save(baseline_nw, baseline_path)
 
     return baseline_path
