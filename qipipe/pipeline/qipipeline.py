@@ -576,16 +576,18 @@ class QIPipelineWorkflow(WorkflowBase):
         reg_obj = xnat.find_one(project, subject, session, scan=scan,
                                 resource=self.registration_resource)
         if not reg_obj:
-            raise ArgumentError("The registration resource %s does not exist"
-                                " in XNAT: %s" % self.registration_resource)
+            raise ArgumentError("The %s %s scan %d registration resource"
+                                " %s does not exist in XNAT" %
+                                (subject, session, scan,
+                                 self.registration_resource)
 
         # The realigned files.
         registered = set(reg_obj.files().get())
         # The unregistered volume numbers.
         unregistered = set(files) - registered
-        self.logger.debug("The %s %s %s resource has %d registered volumes"
+        self.logger.debug("The %s %s scan %d resource has %d registered volumes"
                            " and %d unregistered volumes." %
-                           (project, subject, session, len(registered),
+                           (subject, session, scan, len(registered),
                             len(unregistered)))
 
         return registered, unregistered
@@ -671,7 +673,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # The registration function.
             reg_xfc = Function(input_names=reg_inputs,
                                output_names=['out_files'],
-                               function=register)
+                               function=_register)
             reg_node = pe.Node(reg_xfc, name='register')
             reg_node.inputs.opts = reg_opts
 
@@ -1160,42 +1162,44 @@ def stage(subject, session, scan, in_dirs, opts):
     return staging.run(subject, session, scan, *in_dirs, **opts)
 
 
-def register(subject, session, scan, in_files, opts, reference_index=0,
-             mask=None):
+def _register(subject, session, scan, in_files, opts,
+              reference_index=0, mask=None):
     """
-    A facade for the :meth:`qipipe.pipeline.registration.run` method.
+    A facade for the :meth:`qipipe.pipeline.registration.register
+    method.
 
     :Note: The *mask* and *reference_index* parameters are
-      registration options, but can'tbe included in the *opts*
-       parameter, since they are potential upstream workflow node
-       connection points. Since a mock registration technique
-       does not connect these inputs, they have default values
-       in the method signature as well.
+      registration options, but can't be included in the *opts*
+      parameter, since they are potential upstream workflow node
+      connection points. Since a mock registration technique
+      does not connect these inputs, they have default values
+      in the method signature as well.
 
-    :Note: contrary to Python convention, the *opts* method parameter
-      is a required dictionary rather than a keyword double-splat
-      argument (i.e., ``**opts``). The Nipype ``Function`` interface
-      does not support double-splat arguments. Similarly, the *in_files*
-      parameter is a list rather than a splat argument (i.e., *in_files).
+    :Note: contrary to Python convention, the *opts* method
+      parameter is a required dictionary rather than a keyword
+      double-splat argument (i.e., ``**opts``). The Nipype
+      ``Function`` interface does not support double-splat
+      arguments. Similarly, the *in_files* parameter is a list
+      rather than a splat argument (i.e., *in_files).
 
     :param subject: the subject name
     :param session: the session name
     :param scan: the scan number
     :param in_files: the input session scan 3D NIfTI images
-    :param opts: the :meth:`qipipe.pipeline.registration.run` keyword
-        options
+    :param opts: the :meth:`qipipe.pipeline.registration.run`
+        keyword options
     :param reference_index: the zero-based index of the file to
         register against (default first volume)
-    :param mask: the mask file, required unless the model technique
-        is ``Mock``
+    :param mask: the mask file, required unless the model
+        technique is ``Mock``
     """
     from qipipe.pipeline.qipipeline import register
 
-    return _register(subject, session, scan, reference_index, *in_files,
-                     mask=mask, **opts)
+    return register(subject, session, scan, reference_index,
+                    *in_files, mask=mask, **opts)
 
 
-def _register(subject, session, scan, reference_index, *in_files, **opts):
+def register(subject, session, scan, reference_index, *in_files, **opts):
     """
     Runs the registration workflow on the given session scan images.
 
