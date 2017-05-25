@@ -577,7 +577,7 @@ class QIPipelineWorkflow(WorkflowBase):
             raise ArgumentError("The %s %s scan %d registration resource"
                                 " %s does not exist in XNAT" %
                                 (subject, session, scan,
-                                 self.registration_resource)
+                                 self.registration_resource))
 
         # The realigned files.
         registered = set(reg_obj.files().get())
