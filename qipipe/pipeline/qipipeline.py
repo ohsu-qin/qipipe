@@ -372,16 +372,32 @@ class QIPipelineWorkflow(WorkflowBase):
         else:
             self.collection = None
 
-        self.registration_resource = opts.pop('registration_resource', None)
+        # Capture the registration resource name, or generate if
+        # necessary. The registration resource name is created
+        # here rather than by the registration workflow, since
+        # it the registration time series is built and uploaded
+        # in the supervisory workflow.
+        reg_rsc_opt = opts.pop('registration_resource', None)
+        if reg_rsc_opt:
+            reg_rsc = reg_rsc_opt
+        elif 'register' in actions:
+            reg_rsc = registration.generate_resource_name()
+            self.logger.debug(
+                "Generated %s %s scan %d registration resource name %s." %
+                (subject, session, scan, reg_rsc)
+            )
+        else:
+            reg_rsc = None
+        self.registration_resource = reg_rsc
         """The registration resource name."""
 
         reg_tech_opt = opts.pop('registration_technique', None)
         reg_tech = reg_tech_opt.lower() if reg_tech_opt else None
+        if 'register' in actions and not reg_tech:
+            raise PipelineError('The registration technique was not'
+                                ' specified.')
         self.registration_technique = reg_tech
         """The registration technique."""
-
-        if 'register' in actions and not self.registration_technique:
-            raise PipelineError('The registration technique was not specified.')
 
         self.modeling_resource = opts.pop('modeling_resource', None)
         """The modeling XNAT resource name."""
@@ -490,53 +506,43 @@ class QIPipelineWorkflow(WorkflowBase):
                                     " scan %d volumes" %
                                     (project, subject, session, scan))
 
-            # If the registration resource already exists in XNAT, then
-            # partition the scan image file names into those which are
-            # already registered and those which need to be registered.
-            if self.registration_resource:
-                registered, unregistered = self._partition_registered(
-                    xnat, project, subject, session, scan, scan_volumes
-                )
-            else:
-                registered = []
-                unregistered = scan_volumes
+            registered, unregistered = self._partition_registered(
+                xnat, project, subject, session, scan, scan_volumes
+            )
 
         # Validate and log the partition.
         if 'register' in actions:
             if registered:
                 if unregistered:
-                    self.logger.debug("Skipping registration of %d"
-                                      " previously registered %s %s %s"
-                                      " scan %d volumes:" %
-                                      (len(registered), project, subject,
-                                       session, scan))
+                    self.logger.debug(
+                        "Skipping registration of %d previously"
+                        " registered %s %s scan %d volumes:" %
+                        (len(registered), subject, session, scan)
+                    )
                     self.logger.debug("%s" % registered)
                 else:
-                    self.logger.debug("Skipping %s %s %s scan %d"
-                                      " registration, since all volumes"
-                                      " are already registered." %
-                                      (project, subject, session, scan))
+                    self.logger.debug(
+                        "Skipping %s %s scan %d registration, since"
+                        " all volumes are already registered." %
+                        (subject, session, scan)
+                    )
             if unregistered:
-                self.logger.debug("Registering %d %s %s %s scan %d"
-                                  " volumes:" %
-                                  (len(unregistered), project, subject,
-                                   session, scan))
+                self.logger.debug(
+                    "Registering the following %d %s %s scan %d volumes:" %
+                    (len(unregistered), subject, session, scan)
+                )
                 self.logger.debug("%s" % sorted(unregistered))
         elif unregistered and self.registration_resource:
-            self.logger.error("The pipeline %s %s %s scan %d register"
-                              " action is not specified but there are"
-                              "  %d unregistered volumes:" %
-                              (project, subject, session, scan,
-                               len(unregistered)))
-            self.logger.error(str(sorted(unregistered)))
-            raise ArgumentError("The pipeline %s %s %s scan %d register"
-                                " action is not specified but there are"
-                                " unregistered volumes" %
-                                (project, subject, session, scan))
+            raise ArgumentError(
+                "The pipeline %s %s scan %d register action is not"
+                " specified but there are %d unregistered scan volumes"
+                " not in the %s registration resource" %
+                (subject, session, scan, len(unregistered),
+                 self.registration_resource)
+            )
         else:
-            self.logger.debug("Processing %d %s %s %s scan %d volumes:" %
-                              (len(registered), project, subject, session,
-                               scan))
+            self.logger.debug("Processing %d %s %s scan %d volumes:" %
+                              (len(registered), subject, session, scan))
             self.logger.debug("%s" % sorted(registered))
 
         # Set the workflow input.
@@ -573,15 +579,10 @@ class QIPipelineWorkflow(WorkflowBase):
         # The XNAT registration object.
         reg_obj = xnat.find_one(project, subject, session, scan=scan,
                                 resource=self.registration_resource)
-        if not reg_obj:
-            raise ArgumentError("The %s %s scan %d registration resource"
-                                " %s does not exist in XNAT" %
-                                (subject, session, scan,
-                                 self.registration_resource))
 
         # The realigned files.
-        registered = set(reg_obj.files().get())
-        # The unregistered volume numbers.
+        registered = set(reg_obj.files().get()) if reg_obj else []
+        # The unregistered files.
         unregistered = set(files) - registered
         self.logger.debug("The %s %s scan %d resource has %d registered volumes"
                            " and %d unregistered volumes." %
@@ -656,8 +657,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # parent, since Nipype Function arguments must be
             # primitive.
             reg_opts = self._child_options()
-            if self.registration_resource:
-                reg_opts['resource'] = self.registration_resource
+            reg_opts['resource'] = self.registration_resource
             reg_opts['technique'] = self.registration_technique
             if 'recursive_registration' in opts:
                 reg_opts['recursive'] = opts['recursive_registration']
