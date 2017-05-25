@@ -651,19 +651,13 @@ class QIPipelineWorkflow(WorkflowBase):
             if not self.registration_technique:
                 raise ArgumentError('Missing the registration technique')
 
-            # The registration resource option is set if and
-            # only if we are resuming a previously interrupted
-            # registration process.
-            if not self.registration_resource:
-                reg_rsc = registration.generate_resource_name()
-                self.registration_resource = reg_rsc
-
             # Spell out the registration workflow options rather
             # than delegating to this qipipeline workflow as the
             # parent, since Nipype Function arguments must be
             # primitive.
             reg_opts = self._child_options()
-            reg_opts['resource'] = self.registration_resource
+            if self.registration_resource
+                reg_opts['resource'] = self.registration_resource
             reg_opts['technique'] = self.registration_technique
             if 'recursive_registration' in opts:
                 reg_opts['recursive'] = opts['recursive_registration']
