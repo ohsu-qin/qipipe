@@ -531,7 +531,7 @@ class QIPipelineWorkflow(WorkflowBase):
                     "Registering the following %d %s %s scan %d volumes:" %
                     (len(unregistered), subject, session, scan)
                 )
-                self.logger.debug("%s" % sorted(unregistered))
+                self.logger.debug("%s" % unregistered)
         elif unregistered and self.registration_resource:
             raise ArgumentError(
                 "The pipeline %s %s scan %d register action is not"
@@ -543,7 +543,7 @@ class QIPipelineWorkflow(WorkflowBase):
         else:
             self.logger.debug("Processing %d %s %s scan %d volumes:" %
                               (len(registered), subject, session, scan))
-            self.logger.debug("%s" % sorted(registered))
+            self.logger.debug("%s" % registered)
 
         # Set the workflow input.
         input_spec = self.workflow.get_node('input_spec')
@@ -581,9 +581,11 @@ class QIPipelineWorkflow(WorkflowBase):
                                 resource=self.registration_resource)
 
         # The realigned files.
-        registered = set(reg_obj.files().get()) if reg_obj else []
+        reg_set = set(reg_obj.files().get()) if reg_obj else set()
         # The unregistered files.
-        unregistered = set(files) - registered
+        unreg_set = set(files) - reg_set
+        registered = sorted(reg_set)
+        unregistered = sorted(unreg_set)
         self.logger.debug("The %s %s scan %d resource has %d registered volumes"
                            " and %d unregistered volumes." %
                            (subject, session, scan, len(registered),
