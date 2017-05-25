@@ -493,7 +493,7 @@ class RegistrationWorkflow(WorkflowBase):
             realign_wf.connect(register, 'forward_transforms',
                                apply_xfm, 'transforms')
             # Downsize the data type to a signed short int.
-            downsize_xfc = fsl.fslmaths.ChangeDataType(output_datatype='short')
+            downsize_xfc = fsl.maths.ChangeDataType(output_datatype='short')
             downsize = pe.Node(downsize, name='downsize')
             realign_wf.connect(apply_xfm, 'output_image', downsize, 'in_file')
             # Copy the meta-data.
