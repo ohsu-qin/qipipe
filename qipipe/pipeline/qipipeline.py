@@ -571,8 +571,6 @@ class QIPipelineWorkflow(WorkflowBase):
         :return: the (registered, unregistered) file names
         """
         # The XNAT registration object.
-        if not self.registration_resource:
-            raise ArgumentError("The registration resource is missing")
         reg_obj = xnat.find_one(project, subject, session, scan=scan,
                                 resource=self.registration_resource)
         if not reg_obj:
