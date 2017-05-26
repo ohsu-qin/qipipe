@@ -90,13 +90,13 @@ class PathologyWorksheet(Worksheet):
         # The special parsers.
         parsers = PARSERS.copy()
         # Add the subclass special parsers.
-        parsers_opt = opts.get('parsers', None)
+        parsers_opt = opts.get('parsers')
         if parsers_opt:
             parsers.update(parsers_opt)
         # The special column-attribute associations.
         col_attrs = COL_ATTRS.copy()
         # Add the subclass special associations.
-        col_attrs_opt = opts.get('column_attributes', None)
+        col_attrs_opt = opts.get('column_attributes')
         if col_attrs_opt:
             col_attrs.update(col_attrs_opt)
         # Initialize the worksheet.

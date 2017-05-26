@@ -5,7 +5,7 @@ import tempfile
 import logging
 import six
 # The ReadTheDocs build does not include nipype.
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if not on_rtd:
     # Disable nipype nipy import FutureWarnings.
     import warnings

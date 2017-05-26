@@ -53,7 +53,7 @@ class Worksheet(object):
         # Every worksheet has a subject number field.
         parsers.update(subject_number=int)
         # Add the special parsers.
-        parsers_opt = opts.get('parsers', None)
+        parsers_opt = opts.get('parsers')
         if parsers_opt:
             parsers.update(parsers_opt)
         self._parsers = parsers
