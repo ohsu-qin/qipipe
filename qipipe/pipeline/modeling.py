@@ -824,13 +824,13 @@ def get_r1_0(pdw_image, t1w_image, max_r1_0, mask=None):
 
 def make_r1_series(time_series, r1_0, baseline, mask=None):
     """
-    Creates the R1_0 series NIfTI file.
+    Creates the R1 series NIfTI file.
 
     :param time_series: the modeling input 4D NIfTI image
     :param r1_0: the R1_0 fixed value or image file path
     :param baseline: the baseline file path
     :param mask: the optional mask image file to use
-    :return: the R1_0 series NIfTI image file name
+    :return: the R1 series NIfTI image file name
     """
     import os
     import six
@@ -838,16 +838,35 @@ def make_r1_series(time_series, r1_0, baseline, mask=None):
     from dce_prep.dce_to_r1 import dce_series_to_r1
     from dcmstack.dcmmeta import NiftiWrapper
 
+    # Wrap the input time series.
     time_series_nw = NiftiWrapper(nb.load(time_series), make_empty=True)
+    # The baseline image data.
     baseline_img = nb.load(baseline).get_data()
+    # If r1_0 is a file path rather than a fixed value,
+    # then load the file.
     if isinstance(r1_0, six.string_types):
         r1_0 = nb.load(r1_0).get_data()
+    # The mask is optional.
     dce_opts = {}
     if mask:
         dce_opts['mask'] = nb.load(mask).get_data()
+
+    # The NIfTI header.
+    hdr = time_series.header
+    # The DICOM extension has code 0.
+    dcm_exts = (ext for ext in hdr.extensions() if ext.get_code() == 0)
+    dcm_ext = next(dcm_exts, None)
+    if not dcm_ext:
+        raise ValueError('The modeling input time series header does not'
+                         'have a DICOM meta-data extension')
+    # The flip angle is a global constant for all slices.
+    flip_angle = dcm_ext.get_content()['global']['const']['FlipAngle']
+
+    # Convert the input image to a R1 series.
     r1_series = dce_series_to_r1(time_series_nw, baseline_img, r1_0,
                                  **dce_opts)
 
+    # Save the result to a file.
     cwd = os.getcwd()
     out_nii = nb.Nifti1Image(r1_series, time_series_nw.nii_img.get_affine())
     out_file = os.path.join(cwd, 'r1_series.nii.gz')
