@@ -15,7 +15,7 @@ import os
 import logging
 # The ReadTheDocs build does not include nipype.
 # TODO - Reconfirm that RTD can't build with these.
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if not on_rtd:
     from nipype.pipeline import engine as pe
     from nipype.interfaces import fsl
@@ -138,7 +138,7 @@ class ModelingWorkflow(WorkflowBase):
     In addition, if |R10| is computed, then the output includes the
     following fields:
 
-    - `pdw_image`: the proton density weighted image
+    - `pdw_file`: the proton density weighted image
 
     - `dce_baseline`: the DCE series baseline image
 
@@ -494,12 +494,12 @@ class ModelingWorkflow(WorkflowBase):
         if not use_fixed_r1_0:
             # Create the R1_0 map.
             get_r1_0_xfc = Function(
-                input_names=['pdw_image', 't1w_image', 'max_r1_0', 'mask'],
+                input_names=['pdw_file', 't1w_file', 'max_r1_0', 'mask'],
                 output_names=['r1_0_map'], function=get_r1_0
             )
             get_r1_0 = pe.Node(get_r1_0_xfc, name='get_r1_0')
-            workflow.connect(input_spec, 'pd_nii', get_r1_0, 'pdw_image')
-            workflow.connect(baseline, 'baseline', get_r1_0, 't1w_image')
+            workflow.connect(input_spec, 'pdw_file', get_r1_0, 'pdw_file')
+            workflow.connect(baseline, 'baseline', get_r1_0, 't1w_file')
             workflow.connect(input_spec, 'max_r1_0', get_r1_0, 'max_r1_0')
             workflow.connect(input_spec, 'mask', get_r1_0, 'mask')
 
@@ -755,7 +755,7 @@ def make_baseline(time_series, baseline_end_idx):
     """
     Makes the R1_0 computation baseline NIfTI file.
 
-    :param time_series: the modeling input 4D NIfTI image
+    :param time_series: the modeling input 4D NIfTI image file path
     :param baseline_end_idx: the exclusive limit of the baseline
         computation input series
     :return: the baseline NIfTI file name
@@ -769,11 +769,11 @@ def make_baseline(time_series, baseline_end_idx):
         raise ModelingError("The R1_0 computation baseline end index"
                             " input value is not a positive number:"
                             " %s" % baseline_end_idx)
-    nii = nb.load(time_series)
-    nw = NiftiWrapper(nii)
+    ts_nii = nb.load(time_series)
+    ts_nw = NiftiWrapper(ts_nii)
 
     baselines = []
-    for idx, split_nii in enumerate(nw.split()):
+    for idx, split_nii in enumerate(ts_nw.split()):
         if idx == baseline_end_idx:
             break
         baselines.append(split_nii)
@@ -783,23 +783,23 @@ def make_baseline(time_series, baseline_end_idx):
     else:
         baseline_nw = NiftiWrapper.from_sequence(baselines)
 
-    baseline_path = os.path.join(os.getcwd(), 'baseline.nii.gz')
-    nb.save(baseline_nw, baseline_path)
+    out_file = os.path.join(os.getcwd(), 'baseline.nii.gz')
+    nb.save(baseline_nw, out_file)
 
-    return baseline_path
+    return out_file
 
-def get_r1_0(pdw_image, t1w_image, max_r1_0, mask=None):
+def get_r1_0(pdw_file, t1w_file, max_r1_0, mask=None):
     """
     Returns the R1_0 map NIfTI file from the given proton density
     and T1-weighted images. The R1_0 map is computed using the
     ``pdw_t1w_to_r1`` function. The ``pdw_t1w_to_r1`` module
     must be in the Python path.
 
-    :param pdw_image: the proton density NIfTI image file path
-    :param t1w_image: the T1-weighted image file path
+    :param pdw_file: the proton density NIfTI image file path
+    :param t1w_file: the T1-weighted image file path
     :param max_r1_0: the R1_0 range maximum
-    :param mask: the optional mask image file to use
-    :return: the R1_0 map NIfTI image file name
+    :param mask: the optional mask image file path to use
+    :return: the R1_0 map NIfTI image file path
     """
     import os
     import nibabel as nb
@@ -807,26 +807,27 @@ def get_r1_0(pdw_image, t1w_image, max_r1_0, mask=None):
     from pdw_t1w_to_r1 import pdw_t1w_to_r1
     from dcmstack.dcmmeta import NiftiWrapper
 
-    pdw_nw = NiftiWrapper(nb.load(pdw_image), make_empty=True)
-    t1w_nw = NiftiWrapper(nb.load(t1w_image), make_empty=True)
+    pdw_nii = nb.load(pdw_file)
+    pdw_nw = NiftiWrapper(pdw_nii, make_empty=True)
+    t1w_nw = NiftiWrapper(nb.load(t1w_file), make_empty=True)
     r1_space = np.arange(0.01, max_r1_0, 0.01)
     pdw_opts = {}
     if mask:
         pdw_opts['mask'] = nb.load(mask).get_data()
-    r1_0 = pdw_t1w_to_r1(pdw_nw, t1w_nw, r1_space=r1_space, **pdw_opts)
+    r1_0_arr = pdw_t1w_to_r1(pdw_nw, t1w_nw, r1_space=r1_space, **pdw_opts)
 
     cwd = os.getcwd()
-    out_nii = nb.Nifti1Image(r1_0, pdw_nw.nii_img.get_affine())
-    out_fn = os.path.join(cwd, 'r1_0_map.nii.gz')
-    nb.save(out_nii, out_fn)
+    r1_0_nii = nb.Nifti1Image(r1_0_arr, pdw_nii.affine)
+    out_file = os.path.join(cwd, 'r1_0_map.nii.gz')
+    nb.save(r1_0_nii, out_file)
 
-    return out_fn
+    return out_file
 
 def make_r1_series(time_series, r1_0, baseline, mask=None):
     """
     Creates the R1 series NIfTI file.
 
-    :param time_series: the modeling input 4D NIfTI image
+    :param time_series: the modeling input 4D NIfTI image file path
     :param r1_0: the R1_0 fixed value or image file path
     :param baseline: the baseline file path
     :param mask: the optional mask image file to use
@@ -838,37 +839,34 @@ def make_r1_series(time_series, r1_0, baseline, mask=None):
     from dce_prep.dce_to_r1 import dce_series_to_r1
     from dcmstack.dcmmeta import NiftiWrapper
 
-    # Wrap the input time series.
-    time_series_nw = NiftiWrapper(nb.load(time_series), make_empty=True)
+    # Load the time series file.
+    ts_nii = nb.load(time_series)
+    # The time series data.
+    ts_arr = ts_nii.get_data()
+    # Wrap the image.
+    ts_nw = NiftiWrapper(ts_nii, make_empty=True)
     # The baseline image data.
-    baseline_img = nb.load(baseline).get_data()
+    baseline_arr = nb.load(baseline).get_data()
     # If r1_0 is a file path rather than a fixed value,
     # then load the file.
     if isinstance(r1_0, six.string_types):
         r1_0 = nb.load(r1_0).get_data()
+    # The DICOM flip angle tag value common to all slices.
+    flip_angle = ts_nw.get_meta('FlipAngle')
     # The mask is optional.
     dce_opts = {}
     if mask:
         dce_opts['mask'] = nb.load(mask).get_data()
 
-    # The NIfTI header.
-    hdr = time_series.header
-    # The DICOM extension has code 0.
-    dcm_exts = (ext for ext in hdr.extensions() if ext.get_code() == 0)
-    dcm_ext = next(dcm_exts, None)
-    if not dcm_ext:
-        raise ValueError('The modeling input time series header does not'
-                         'have a DICOM meta-data extension')
-    # The flip angle is a global constant for all slices.
-    flip_angle = dcm_ext.get_content()['global']['const']['FlipAngle']
-
-    # Convert the input image to a R1 series.
-    r1_series = dce_series_to_r1(time_series_nw, baseline_img, r1_0,
-                                 **dce_opts)
+    # Convert the input image to a R1 series. The dce_series_to_r1
+    # return value is a tuple of ndarrays (r1_series, mask),
+    # where *mask* is the modified mask, which is ignored for our
+    # purposes.
+    r1_series_arr, _ = dce_series_to_r1(ts_arr, baseline_arr, r1_0, **dce_opts)
 
     # Save the result to a file.
     cwd = os.getcwd()
-    out_nii = nb.Nifti1Image(r1_series, time_series_nw.nii_img.get_affine())
+    out_nii = nb.Nifti1Image(r1_series_arr, ts_nii.affine)
     out_file = os.path.join(cwd, 'r1_series.nii.gz')
     nb.save(out_nii, out_file)
 
@@ -885,7 +883,7 @@ def get_aif_shift(time_series, bolus_arrival_index):
     and *t*\ :sub:`arrival` averages the acquisition times at
     and immediately following bolus arrival.
 
-    :param time_series: the modeling input 4D NIfTI image
+    :param time_series: the modeling input 4D NIfTI image file path
     :param bolus_arrival_index: the bolus uptake series index
     :return: the parameter CSV file path
     """
@@ -897,18 +895,18 @@ def get_aif_shift(time_series, bolus_arrival_index):
     from dcmstack import dcm_time_to_sec
 
     # Load the time series into a NIfTI wrapper.
-    nii = nb.load(time_series)
-    nw = NiftiWrapper(nii)
+    ts_nii = nb.load(time_series)
+    ts_nw = NiftiWrapper(ts_nii)
 
     # The AIF shift parameter is the offset of the bolus arrival
     # series mid-point acquisition time from the MR session start
     # time.
-    acq_time0 = dcm_time_to_sec(nw.get_meta('AcquisitionTime', (0, 0, 0, 0)))
+    acq_time0 = dcm_time_to_sec(ts_nw.get_meta('AcquisitionTime', (0, 0, 0, 0)))
     acq_time1 = dcm_time_to_sec(
-        nw.get_meta('AcquisitionTime', (0, 0, 0, bolus_arrival_index))
+        ts_nw.get_meta('AcquisitionTime', (0, 0, 0, bolus_arrival_index))
     )
     acq_time2 = dcm_time_to_sec(
-        nw.get_meta('AcquisitionTime', (0, 0, 0, bolus_arrival_index + 1))
+        ts_nw.get_meta('AcquisitionTime', (0, 0, 0, bolus_arrival_index + 1))
     )
     return ((acq_time1 + acq_time2) / 2.0) - acq_time0
 
