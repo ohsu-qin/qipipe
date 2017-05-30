@@ -58,8 +58,8 @@ def run(subject, session, scan, *in_dirs, **opts):
         if parent_wf:
             collection = parent_wf.collection
         else:
-            raise PipelineError("The staging collection could not be"
-                                " determined from the options")
+            raise PipelineError('The staging collection could not be'
+                                ' determined from the options')
     # Sort the volumes.
     vol_dcm_dict = sort(collection, scan, *in_dirs)
     # Stage the volumes.
@@ -103,7 +103,10 @@ def run(subject, session, scan, *in_dirs, **opts):
         if os.path.exists(vol_file):
             vol_nii_files.append(vol_file)
         elif not stg_wf.dry_run:
-            raise PipelineError("Volume file not found: %s" % vol_file)
+            raise PipelineError(
+                "The %s %s scan %d volume file was not found: %s"
+                % (subject, session, scan, vol_file)
+            )
     _logger.debug("Staged %d volumes in %s." % (len(vol_dcm_dict), dest))
     # The compressed DICOM files. The scan_files must be collected into
     # an array rather than iterated from a generator to work around the
@@ -322,7 +325,7 @@ class StagingWorkflow(WorkflowBase):
         vol_fmt = pe.Node(vol_fmt_xfc, name='volume_format')
         workflow.connect(input_spec, 'collection', vol_fmt, 'collection')
 
-        # Stack the scan volume into a 3D NIfTI file.
+        # Stack the scan slices into a 3D volume NIfTI file.
         stack_xfc = DcmStack(embed_meta=True)
         stack = pe.JoinNode(stack_xfc, joinsource='iter_dicom',
                             joinfield='dicom_files', name='stack')
