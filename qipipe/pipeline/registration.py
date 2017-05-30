@@ -19,9 +19,6 @@ from .pipeline_error import PipelineError
 REG_PREFIX = 'reg_'
 """The XNAT registration resource name prefix."""
 
-REG_CONF_FILE = 'registration.cfg'
-"""The registration workflow configuration."""
-
 ANTS_CONF_SECTIONS = ['ants.Registration']
 """The common ANTs registration configuration sections."""
 
@@ -330,11 +327,11 @@ class RegistrationWorkflow(WorkflowBase):
         cr_prf.inputs.technique = self.technique
         cr_prf.inputs.configuration = self.configuration
         cr_prf.inputs.sections = self.profile_sections
-        cr_prf.inputs.dest = REG_CONF_FILE
+        cr_prf.inputs.dest = "%s.cfg" % self.resource
 
         # Merge the profile and registration result into one list.
         concat_output = pe.Node(Merge(2), name='concat_output')
-        exec_wf.connect(cr_prf, 'out_file', concat_output, 'in1')
+        exec_wf.connect(cr_prf, 'out_file', concat_output, 'in1's)
         exec_wf.connect(collect_realigned, 'images', concat_output, 'in2')
 
         # Upload the registration result into the XNAT registration
