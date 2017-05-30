@@ -331,7 +331,7 @@ class RegistrationWorkflow(WorkflowBase):
 
         # Merge the profile and registration result into one list.
         concat_output = pe.Node(Merge(2), name='concat_output')
-        exec_wf.connect(cr_prf, 'out_file', concat_output, 'in1's)
+        exec_wf.connect(cr_prf, 'out_file', concat_output, 'in1')
         exec_wf.connect(collect_realigned, 'images', concat_output, 'in2')
 
         # Upload the registration result into the XNAT registration
