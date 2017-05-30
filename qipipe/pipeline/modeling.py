@@ -854,7 +854,7 @@ def make_r1_series(time_series, r1_0, baseline, mask=None):
     # The DICOM flip angle tag value common to all slices.
     flip_angle = ts_nw.get_meta('FlipAngle')
     # The mask is optional.
-    dce_opts = {}
+    dce_opts = dict(flip_angle=flip_angle)
     if mask:
         dce_opts['mask'] = nb.load(mask).get_data()
 
