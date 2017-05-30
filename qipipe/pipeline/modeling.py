@@ -851,10 +851,12 @@ def make_r1_series(time_series, r1_0, baseline, mask=None):
     # then load the file.
     if isinstance(r1_0, six.string_types):
         r1_0 = nb.load(r1_0).get_data()
+    # The DICOM repetition time tag value common to all slices.
+    repetition_time = ts_nw.get_meta('RepetitionTime')
     # The DICOM flip angle tag value common to all slices.
     flip_angle = ts_nw.get_meta('FlipAngle')
     # The mask is optional.
-    dce_opts = dict(flip_angle=flip_angle)
+    dce_opts = dict(repetition_time=repetition_time, flip_angle=flip_angle)
     if mask:
         dce_opts['mask'] = nb.load(mask).get_data()
 
