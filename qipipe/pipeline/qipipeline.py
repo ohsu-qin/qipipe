@@ -1,5 +1,6 @@
 import os
 import re
+import glob
 import shutil
 import tempfile
 import logging
@@ -1230,14 +1231,14 @@ def register(subject, session, scan, reference_index, *in_files, **opts):
     if after:
         logger(__name__).debug(
             "Registering the %d volumes after the fixed reference"
-            "volume %s..." % (len(after), reference)
+            " volume %s..." % (len(after), reference)
         )
     post = registration.run(subject, session, scan, reference,
                             *after, **opts)
     if after:
         logger(__name__).debug(
             "Registered the %d volumes after the fixed reference"
-            "volume %s." % (len(after), reference)
+            " volume %s." % (len(after), reference)
         )
     # Register the files before the reference point in
     # reverse order in case the recursive flag is set.
@@ -1246,14 +1247,14 @@ def register(subject, session, scan, reference_index, *in_files, **opts):
     if before:
         logger(__name__).debug(
             "Registering the %d volumes before the fixed reference"
-            "volume %s..." % (len(before), reference)
+            " volume %s..." % (len(before), reference)
         )
     pre = registration.run(subject, session, scan, reference,
                            *before, **opts)
     if before:
         logger(__name__).debug(
             "Registered the %d volumes before the fixed reference"
-            "volume %s." % (len(before), reference)
+            " volume %s." % (len(before), reference)
         )
     # Restore the original sort order.
     pre.reverse()
@@ -1307,7 +1308,7 @@ def register(subject, session, scan, reference_index, *in_files, **opts):
         " %s." % (subject, session, scan, resource)
     )
 
-    # Return the registeration result.
+    # Return the registration result.
     return output
 
 
