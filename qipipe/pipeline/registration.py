@@ -206,8 +206,8 @@ class RegistrationWorkflow(WorkflowBase):
             input_spec.inputs.mask = mask
 
         # Iterate over the registration inputs.
-        iter_reg_input = exec_wf.get_node('iter_reg_input')
-        iter_reg_input.iterables = ('image', images)
+        iter_input = exec_wf.get_node('iter_input')
+        iter_input.iterables = ('image', images)
 
         # Execute the workflow.
         self.logger.debug("Executing the %s workflow on %s %s..." %
@@ -221,11 +221,9 @@ class RegistrationWorkflow(WorkflowBase):
 
     def _create_execution_workflow(self, reference, dest, recursive=False):
         """
-        Makes the registration execution workflow on the given session
-        scan images.
-
-        The execution workflow input is the *input_spec* node consisting
-        of the following input fields:
+        Makes the registration execution workflow. The execution
+        workflow input is the *input_spec* node consisting of the
+        following input fields:
 
         - *subject*: the subject name
 
@@ -239,7 +237,7 @@ class RegistrationWorkflow(WorkflowBase):
           registration
 
         In addition, the caller has the responsibility of setting the
-        ``iter_reg_input`` iterables to the 3D image files to realign.
+        ``iter_input`` iterables to the 3D image files to realign.
 
         If the *recurse* option is set, then the *reference* input is
         set by :meth:`recurse`. Otherwise, *reference* is
@@ -288,11 +286,11 @@ class RegistrationWorkflow(WorkflowBase):
 
         # The realignment child workflow iterator.
         iter_reg_fields = ['image', 'reference']
-        iter_reg_input = pe.Node(IdentityInterface(fields=iter_reg_fields),
-                                 name='iter_reg_input')
-        exec_wf.connect(iter_reg_input, 'image',
+        iter_input = pe.Node(IdentityInterface(fields=iter_reg_fields),
+                                 name='iter_input')
+        exec_wf.connect(iter_input, 'image',
                         self.workflow, 'input_spec.moving_image')
-        exec_wf.connect(iter_reg_input, 'reference',
+        exec_wf.connect(iter_input, 'reference',
                         self.workflow, 'input_spec.reference')
 
         # If the recursive flag is set, then set the recursive
@@ -300,11 +298,11 @@ class RegistrationWorkflow(WorkflowBase):
         # reference is always the initial reference image.
         if recursive:
             exec_wf.connect_iterables(
-                iter_reg_input, copy_output, recurse,
+                iter_input, copy_output, recurse,
                 reference=reference
             )
         else:
-            iter_reg_input.inputs.reference = reference
+            iter_input.inputs.reference = reference
 
         # The output destination directory.
         if not os.path.exists(dest):
@@ -312,7 +310,7 @@ class RegistrationWorkflow(WorkflowBase):
 
         # Collect the realigned images.
         collect_realigned = pe.JoinNode(IdentityInterface(fields=['images']),
-                                        joinsource='iter_reg_input',
+                                        joinsource='iter_input',
                                         joinfield='images',
                                         name='collect_realigned')
         exec_wf.connect(self.workflow, 'output_spec.out_file',
