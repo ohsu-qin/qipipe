@@ -84,6 +84,8 @@ def run(subject, session, scan, *in_dirs, **opts):
         vol_base_dir = '/'.join([base_dir, 'volume', str(volume)])
         os.makedirs(vol_base_dir)
         # Make the workflow.
+        _logger.debug("Staging %s %s scan %d volume %d in %s..." %
+                      (subject, session, scan, volume, vol_dest))
         stg_wf = StagingWorkflow(base_dir=vol_base_dir, **opts)
         # Capture the project for later.
         if not project:
@@ -107,6 +109,32 @@ def run(subject, session, scan, *in_dirs, **opts):
                 "The %s %s scan %d volume file was not found: %s"
                 % (subject, session, scan, vol_file)
             )
+
+        # Bug - staging in SGE cluster environment dies after 3-5
+        # volumes of 120 DICOM file each without a clue as as to
+        # why--no error, no time-out, no suspicious log message.
+        #
+        # This defies explanation. The only clue is that increasing
+        # the job submission memory lengthens the execution time.
+        # Is Nipype hanging onto the workflow in some global
+        # variable? Is vol_dcm_files too big? Is this an OHSU AIRC
+        # cluster scheduling problem?
+        #
+        # At any rate, the lame work-around is to throw more memory
+        # at the qipipe job (4G instead of standard 1G) for now.
+        #
+        # In addition, work around a possible memory leak by killing
+        # the workflow and vol_dcm_files entry after we finish
+        # processing. This fumbling gesture should be completely
+        # irrelevant, but who knows?
+        #
+        # TODO - revisit in late 2017.
+        vol_dcm_dict[volume] = None
+        del stg_wf
+        # End of work-around.
+
+        _logger.debug("Staged %s %s scan %d volume %d." %
+                      (subject, session, scan, volume))
     _logger.debug("Staged %d volumes in %s." % (len(vol_dcm_dict), dest))
     # The compressed DICOM files. The scan_files must be collected into
     # an array rather than iterated from a generator to work around the
