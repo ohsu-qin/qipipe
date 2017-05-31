@@ -56,7 +56,10 @@ def fix_dicom_headers(collection, subject, *in_files, **opts):
     :return: the files which were created
     :raise StagingError: if the collection is not supported
     """
-    # Make the tag name => value dictionary.
+    # The sarcoma tumor location is set by the qipipe administrator
+    # in conf/sarcoma.cfg. The image collection name identifies
+    # tumor location for non-sarcoma collections.
+    # TODO - is this collection naming convention scalable?
     if collection == 'Sarcoma':
         site = sarcoma_location(subject)
     else:
