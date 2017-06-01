@@ -273,6 +273,7 @@ class WorkflowBase(object):
         Executes the given workflow.
 
         :param workflow: the workflow to run
+        :return: the workflow execution result graph
         """
         # If the workflow can be distributed, then get the plugin
         # arguments.
@@ -300,7 +301,7 @@ class WorkflowBase(object):
             self.logger.debug("Executing the %s workflow in %s..." %
                               (workflow.name, workflow.base_dir))
             with qixnat.connect(cachedir=workflow.base_dir):
-                workflow.run(**opts)
+                return workflow.run(**opts)
 
     def _inspect_workflow_inputs(self, workflow):
         """

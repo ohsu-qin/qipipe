@@ -266,18 +266,17 @@ class ModelingWorkflow(WorkflowBase):
         if mask:
             input_spec.inputs.mask = mask
 
-        # Set the output collector.
-        results = {}
-        assoc_node = self.workflow.get_node('associate')
-        assoc_node.inputs.target = results
-
         # Execute the modeling workflow.
         self.logger.debug(
             "Executing the %s workflow on the %s %s scan %d"
             " time series %s..." %
             (self.workflow.name, subject, session, scan, time_series)
         )
-        self._run_workflow(self.workflow)
+        wf_res = self._run_workflow(self.workflow)
+        # The magic incantation to get the Nipype workflow result.
+        output_res = next(n for n in wf_res.nodes() if n.name == 'output_spec')
+        results = output_res.inputs.get()['out_dict']
+
         self.logger.debug(
             "Executed the %s workflow on the %s %s scan %d"
             " time series %s with resource %s results:\n%s" %
@@ -404,15 +403,6 @@ class ModelingWorkflow(WorkflowBase):
 
         # TODO - Get the overall and ROI FSL mean intensity values.
 
-        # The modeling workflow output node.
-        output_xfc = IdentityInterface(fields=out_fields)
-        output_spec = pe.Node(output_xfc, name='output_spec')
-        for field in out_fields:
-            child_field = 'output_spec.' + field
-            mdl_wf.connect(child_wf, child_field, output_spec, field)
-        self.logger.debug("The modeling workflow output is %s with"
-                           " fields %s" % (output_spec.name, out_fields))
-
         # Collect the outputs.
         merge_output_xfc = Merge(len(out_fields))
         merge_output = pe.Node(merge_output_xfc, name='merge_outputs')
@@ -426,6 +416,15 @@ class ModelingWorkflow(WorkflowBase):
         assoc_node = pe.Node(assoc_xfc, name='associate')
         assoc_node.inputs.names = out_fields
         mdl_wf.connect(merge_output, 'out', assoc_node, 'values')
+
+        # The modeling workflow output node is a Gate rather than an
+        # IdentityInterface because Nipype cavalierly disappears
+        # IdentityInterface output nodes.
+        output_xfc = Gate(fields=['out_dict'])
+        output_spec = pe.Node(output_xfc, name='output_spec')
+        mdl_wf.connect(assoc_node, 'out_dict', output_spec, 'out_dict')
+        self.logger.debug("The modeling workflow output is %s with"
+                           " fields %s" % (output_spec.name, out_fields))
 
         self._configure_nodes(mdl_wf)
 
@@ -969,17 +968,16 @@ def get_fit_params(cfg_file, aif_shift):
     return os.path.join(os.getcwd(), FASTFIT_PARAMS_FILE)
 
 
-def associate(names, values, target=None):
+def associate(names, values):
     """
+    Captures the synchronized *names* and *values* in a
+    dictionary.
 
     :param names: the field names
     :param values: the field values
-    :param target: the target dictionary
     :return: the target {name: value} dictionary
     """
-    if not target:
-        target = {}
-    cardinality = min(len(names), len(values))
-    for i in range(cardinality):
-        target[names[i]] = values[i]
-    return target
+    # The {name: value} dictionary cardinality.
+    n = min(len(names), len(values))
+
+    return {names[i]: values[i] for i in range(n)}
