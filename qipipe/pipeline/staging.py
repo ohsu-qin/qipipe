@@ -7,7 +7,7 @@ from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Function)
 from nipype.interfaces.dcmstack import DcmStack
 import qixnat
-from ..interfaces import (Gate, FixDicom, Compress, XNATFind, XNATUpload)
+from ..interfaces import (StickyIdentityInterface, FixDicom, Compress, XNATFind, XNATUpload)
 from .workflow_base import WorkflowBase
 from ..helpers.logging import logger
 from ..staging import iterator
@@ -36,7 +36,7 @@ def run(subject, session, scan, *in_dirs, **opts):
     """
     # The target directory for the fixed, compressed DICOM files.
     _logger = logger(__name__)
-    dest_opt = opts.get('dest')
+    dest_opt = opts.pop('dest', None)
     if dest_opt:
         dest = os.path.abspath(dest_opt)
         if not os.path.exists(dest):
@@ -44,13 +44,15 @@ def run(subject, session, scan, *in_dirs, **opts):
     else:
         dest = os.getcwd()
 
+    # Print a debug log message.
     in_dirs_s = in_dirs[0] if len(in_dirs) == 1 else [d for d in in_dirs]
     _logger.debug("Staging the %s %s scan %d files in %s..." %
                   (subject, session, scan, in_dirs_s))
+
     # We need the collection up front before creating the workflow, so
     # we can't follow the roi or registration idiom of delegating to the
     # workflow constructor to determine the collection.
-    coll_opt = opts.get('collection')
+    coll_opt = opts.pop('collection', None)
     if coll_opt:
         collection = coll_opt
     else:
@@ -60,105 +62,159 @@ def run(subject, session, scan, *in_dirs, **opts):
         else:
             raise PipelineError('The staging collection could not be'
                                 ' determined from the options')
+
+    # Make the scan workflow.
+    scan_wf = ScanStagingWorkflow(**opts)
+
     # Sort the volumes.
     vol_dcm_dict = sort(collection, scan, *in_dirs)
-    # Stage the volumes.
-    vol_dirs = []
-    vol_nii_files = []
-    project = None
-    # The volume workflows run in a subdirectory.
-    base_dir_opt = opts.pop('base_dir', None)
-    if base_dir_opt:
-        base_dir = os.path.abspath(base_dir_opt)
-    else:
-        base_dir = os.getcwd()
-    for volume, in_files in vol_dcm_dict.iteritems():
-        # Put the compressed DICOM files in an empty volume
-        # subdirectory.
-        vol_dest = "%s/%d" % (dest, volume)
-        if os.path.exists(vol_dest):
-            shutil.rmtree(vol_dest)
-        os.mkdir(vol_dest)
-        vol_dirs.append(vol_dest)
-        # The workflow runs in a subdirectory.
-        vol_base_dir = '/'.join([base_dir, 'volume', str(volume)])
-        os.makedirs(vol_base_dir)
+    # Set the inputs.
+    scan_wf.set_inputs(subject, session, scan, vol_dcm_dict)
+
+    # Execute the workflow.
+    return scan_wf.run()
+
+
+class ScanStagingWorkflow(WorkflowBase):
+    """
+    The ScanStagingWorkflow class builds and executes the scan
+    staging supervisory Nipype workflow. This workflow delegates
+    to :meth:`qipipe.pipeline.staging.stage_volume` for each
+    iterated scan volume.
+
+    The scan staging workflow input is the *input_spec* node
+    consisting of the following input fields:
+
+    - *collection*: the collection name
+
+    - *subject*: the subject name
+
+    - *session*: the session name
+
+    - *scan*: the scan number
+
+    The scan staging workflow has one iterable:
+
+    - the *iter_volume* node with input fields *volume* and *in_files*
+
+    This iterable must be set prior to workflow execution.
+
+    The staging workflow output is the *output_spec* node consisting
+    of the following output field:
+
+    - *out_file*: the 3D volume stack NIfTI image file
+    """
+
+    def __init__(self, **opts):
+        """
+        :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
+            initializer keyword arguments
+        """
+        super(ScanStagingWorkflow, self).__init__(logger=logger(__name__), **opts)
+
         # Make the workflow.
-        _logger.debug("Staging %s %s scan %d volume %d in %s..." %
-                      (subject, session, scan, volume, vol_dest))
-        stg_wf = StagingWorkflow(base_dir=vol_base_dir, **opts)
-        # Capture the project for later.
-        if not project:
-            project = stg_wf.project
-        # Set the iterables.
-        stg_wf.set_inputs(collection, subject, session, scan, volume,
-                          vol_dest, *in_files)
-        # Run the workflow.
-        stg_wf.run()
-        # Work around the following Nipype defect:
-        # * Nipype does not have a mechanism for collecting workflow
-        #   outputs.
-        # Look for the 3D volume output in the workflow base directory
-        # work area directly instead.
-        vol_file = ("%s/staging/stack/volume%03d.nii.gz" %
-                    (stg_wf.base_dir, volume))
-        if os.path.exists(vol_file):
-            vol_nii_files.append(vol_file)
-        elif not stg_wf.dry_run:
-            raise PipelineError(
-                "The %s %s scan %d volume file was not found: %s"
-                % (subject, session, scan, vol_file)
-            )
+        self.workflow = self._create_workflow()
+        """
+        The scan staging workflow sequence described in
+        :class:`qipipe.pipeline.staging.StagingWorkflow`.
+        """
 
-        # Bug - staging in SGE cluster environment dies after 3-5
-        # volumes of 120 DICOM file each without a clue as as to
-        # why--no error, no time-out, no suspicious log message.
-        #
-        # This defies explanation. The only clue is that increasing
-        # the job submission memory lengthens the execution time.
-        # Is Nipype hanging onto the workflow in some global
-        # variable? Is vol_dcm_files too big? Is this an OHSU AIRC
-        # cluster scheduling problem?
-        #
-        # At any rate, the lame work-around is to throw more memory
-        # at the qipipe job (4G instead of standard 1G) for now.
-        #
-        # In addition, work around a possible memory leak by killing
-        # the workflow and vol_dcm_files entry after we finish
-        # processing. This fumbling gesture should be completely
-        # irrelevant, but who knows?
-        #
-        # TODO - revisit in late 2017.
-        vol_dcm_dict[volume] = None
-        del stg_wf
-        # End of work-around.
+    def set_inputs(self, collection, subject, session, scan, dest,
+                   vol_dcm_dict):
+        """
+        Sets the scan staging workflow inputs for the *input_spec* node
+        and the iterables.
 
-        _logger.debug("Staged %s %s scan %d volume %d." %
-                      (subject, session, scan, volume))
-    _logger.debug("Staged %d volumes in %s." % (len(vol_dcm_dict), dest))
-    # The compressed DICOM files. The scan_files must be collected into
-    # an array rather than iterated from a generator to work around the
-    # following Nipype bug:
-    # * Nipype does not support an InputMultiPath generator argument.
-    sess_dcm_files = []
-    for vol_dir in vol_dirs:
-        vol_dcm_files = glob.glob("%s/*" % vol_dir)
-        sess_dcm_files.extend(vol_dcm_files)
-    if sess_dcm_files:
-        # Upload the compressed DICOM files in one action.
-        upload = XNATUpload(project=project, subject=subject,
-                            session=session, scan=scan, resource='DICOM',
-                            modality='MR', in_files=sess_dcm_files)
-        _logger.debug("Uploading the %s %s scan %d staged DICOM files to XNAT..." %
-                      (subject, session, scan))
-        upload.run()
-        _logger.debug("Uploaded the %s %s scan %d staged DICOM files to XNAT." %
-                      (subject, session, scan))
+        :param collection: the collection name
+        :param subject: the subject name
+        :param session: the session name
+        :param scan: the scan number
+        :param dest: the destination directory
+        :param vol_dcm_dict: the input {volume: DICOM files} dictionary
+        """
+        # Set the top-level inputs.
+        input_spec = self.workflow.get_node('input_spec')
+        input_spec.inputs.collection = collection
+        input_spec.inputs.subject = subject
+        input_spec.inputs.session = session
+        input_spec.inputs.scan = scan
+        input_spec.inputs.dest = dest
 
-    return vol_nii_files
+        # Prime the volume iterator.
+        in_volumes = sorted(vol_dcm_dict.iterkeys())
+        dcm_files = [vol_dcm_dict[v] for v in in_volumes]
+        iter_dict = dict(volume=in_volumes, in_files=dcm_files)
+        iterables = iter_dict.items()
+        iter_volume = self.workflow.get_node('iter_volume')
+        iter_volume.iterables = iterables
+        # Iterate over the volumes and corresponding DICOM files
+        # in lock-step.
+        iter_volume.synchronize = True
+
+    def run(self):
+        """Executes this scan staging workflow."""
+        self._run_workflow(self.workflow)
+
+    def _create_workflow(self):
+        """
+        Makes the staging workflow described in
+        :class:`qipipe.pipeline.staging.StagingWorkflow`.
+        :return: the new workflow
+        """
+        self.logger.debug('Creating the scan staging workflow...')
+
+        # The Nipype workflow object.
+        workflow = pe.Workflow(name='stage_scan')
+
+        # The workflow input.
+        in_fields = ['collection', 'subject', 'session', 'scan', 'dest']
+        input_spec = pe.Node(IdentityInterface(fields=in_fields),
+                             name='input_spec')
+        self.logger.debug("The %s workflow input node is %s with fields %s" %
+                         (workflow.name, input_spec.name, in_fields))
+
+        # The volume iterator.
+        iter_fields = ['volume', 'in_files']
+        iter_volume = pe.Node(IdentityInterface(fields=iter_fields),
+                              name='iter_volume')
+        self.logger.debug("The %s workflow volume iterator node is %s"
+                          " with fields %s" %
+                         (workflow.name, iter_volume.name, iter_fields))
+
+        # The volume staging node wraps the stage_volume function.
+        stg_inputs = in_fields + iter_fields + ['base_dir', 'opts']
+        stg_xfc = Function(input_names=stg_inputs, output_names=['out_dir'],
+                           function=stage_volume)
+        stg_node = pe.Node(stg_xfc, name='stage')
+        child_opts = self._child_options()
+        base_dir = child_opts.pop('base_dir')
+        stg_node.inputs.base_dir = base_dir
+        stg_node.inputs.opts = child_opts
+        for fld in in_fields:
+            workflow.connect(input_spec, fld, stg_node, fld)
+        for fld in iter_fields:
+            workflow.connect(iter_volume, fld, stg_node, fld)
+
+        # Upload the processed DICOM and merged 3D NIfTI files.
+        upload_xfc = Function(input_names=['in_dir'],
+                              output_names=['out_files'],
+                              function=upload)
+        upload_node = pe.Node(upload_xfc, name='upload')
+        upload_node.inputs.project = self.project
+        workflow.connect(input_spec, 'subject', upload_node, 'subject')
+        workflow.connect(input_spec, 'session', upload_node, 'session')
+        workflow.connect(input_spec, 'scan', upload_node, 'scan')
+        workflow.connect(input_spec, 'dest', upload_node, 'in_dir')
+
+        # The output is the 3D NIfTI volume image files.
+        output_spec = pe.Node(IdentityInterface(fields=['out_files']),
+                             name='output_spec')
+        workflow.connect(upload_node, 'out_files', output_spec, 'out_files')
+
+        return workflow
 
 
-class StagingWorkflow(WorkflowBase):
+class VolumeStagingWorkflow(WorkflowBase):
     """
     The StagingWorkflow class builds and executes the staging Nipype workflow.
     The staging workflow includes the following steps:
@@ -258,7 +314,7 @@ class StagingWorkflow(WorkflowBase):
         :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
             initializer keyword arguments
         """
-        super(StagingWorkflow, self).__init__(logger=logger(__name__), **opts)
+        super(VolumeStagingWorkflow, self).__init__(logger=logger(__name__), **opts)
 
         # Make the workflow.
         self.workflow = self._create_workflow()
@@ -307,7 +363,7 @@ class StagingWorkflow(WorkflowBase):
         self.logger.debug('Creating the DICOM processing workflow...')
 
         # The Nipype workflow object.
-        workflow = pe.Workflow(name='staging')
+        workflow = pe.Workflow(name='staging', base_dir=self.base_dir)
 
         # The workflow input.
         in_fields = ['collection', 'subject', 'session', 'scan', 'volume', 'dest']
@@ -315,19 +371,6 @@ class StagingWorkflow(WorkflowBase):
                              name='input_spec')
         self.logger.debug("The %s workflow input node is %s with fields %s" %
                          (workflow.name, input_spec.name, in_fields))
-
-        # Create the scan, if necessary. The gate blocks upload until the
-        # scan is created.
-        find_scan_xfc = XNATFind(project=self.project, modality='MR',
-                                 create=True)
-        find_scan = pe.Node(find_scan_xfc, name='find_scan')
-        workflow.connect(input_spec, 'subject', find_scan, 'subject')
-        workflow.connect(input_spec, 'session', find_scan, 'session')
-        workflow.connect(input_spec, 'scan', find_scan, 'scan')
-        scan_gate_xfc = Gate(fields=['scan', 'xnat_id'])
-        scan_gate = pe.Node(scan_gate_xfc, name='scan_gate')
-        workflow.connect(input_spec, 'scan', scan_gate, 'scan')
-        workflow.connect(find_scan, 'xnat_id', scan_gate, 'xnat_id')
 
         # The DICOM file iterator.
         iter_dicom = pe.Node(IdentityInterface(fields=['dicom_file']),
@@ -369,22 +412,13 @@ class StagingWorkflow(WorkflowBase):
         workflow.connect(input_spec, 'scan', upload_3d, 'scan')
         workflow.connect(stack, 'out_file', upload_3d, 'in_files')
 
-        # The output is the 3D NIfTI stack file. Make an intermediate Gate
+        # The output is the 3D NIfTI stack file. Make an intermediate StickyIdentityInterface
         # node to ensure that upload is completed before setting the output
         # field.
-        output_gate_xfc = Gate(fields=['image', 'xnat_files'])
+        output_gate_xfc = StickyIdentityInterface(fields=['image', 'xnat_files'])
         output_gate = pe.Node(output_gate_xfc, name='output_gate')
         workflow.connect(stack, 'out_file', output_gate, 'image')
         workflow.connect(upload_3d, 'xnat_files', output_gate, 'xnat_files')
-
-        # Make the output a Gate node to work around the following Nipype
-        # bug:
-        # * Nipype overzealously prunes an IdentityInterface node as
-        #   extraneous, even if it is connected in a parent workflow.
-        # TODO - verify that this is still the case
-        output_spec_xfc = Gate(fields=['image'])
-        output_spec = pe.Node(output_spec_xfc, name='output_spec')
-        workflow.connect(output_gate, 'image', output_spec, 'image')
 
         # Instrument the nodes for cluster submission, if necessary.
         self._configure_nodes(workflow)
@@ -395,6 +429,102 @@ class StagingWorkflow(WorkflowBase):
             self.depict_workflow(workflow)
 
         return workflow
+
+
+def stage_volume(subject, session, scan, volume, in_files, dest,
+                 base_dir, opts):
+    """
+    Stages the given volume. The processed DICOM ``.dcm.gz`` files
+    and merged 3D NIfTI volume ``.nii.gz`` file are placed in the
+    *dest*/*volume* subdirectory.
+
+    :param subject: the subject name
+    :param session: the session name
+    :param scan: the scan number
+    :param volume: the volume number
+    :param in_files: the input DICOM files
+    :param dest: the parent destination directory
+    :param base_dir: the parent base directory
+    :param opts: the non-base_dir :class:`VolumeStagingWorkflow`
+        initializer options
+    :return: the volume target directory
+    """
+    import os
+    import shutil
+
+    # The destination is a subdirectory.
+    out_dir = "%s/volume%03d" % (dest, volume)
+    os.mkdir(out_dir)
+
+    # The workflow runs in a subdirectory.
+    vol_base_dir = "%s/volume%03d" % (base_dir, volume)
+    os.mkdir(vol_base_dir)
+
+    # Make the workflow.
+    stg_wf = VolumeStagingWorkflow(base_dir=base_dir, **opts)
+    # Set the inputs.
+    stg_wf.set_inputs(collection, subject, session, scan, volume,
+                      out_dir, *in_files)
+    # Execute the workflow.
+    logger(__name__).debug("Staging %s %s scan %d volume %d in %s..." %
+                           (subject, session, scan, volume, out_dir))
+    stg_wf.run()
+    logger(__name__).debug("Staged %s %s scan %d volume %d in %s." %
+                           (subject, session, scan, volume, out_dir))
+
+    return out_dir
+
+
+def upload(project, subject, session, scan, in_dir):
+    """
+    Uploads the staged files in *in_dir* as follows:
+    * the processed DICOM ``.dcm.gz`` files are uploaded to the
+      XNAT scan ``DICOM`` resource
+    * the merged NIfTI ``.nii.gz`` files are uploaded to the
+      XNAT scan ``NIFTI`` resource
+
+    :param project: the project name
+    :param subject: the subject name
+    :param session: the session name
+    :param scan: the scan number
+    :param in_dir: the input staged directory
+    :return: the 3D volume image NIfTI files
+    """
+    import glob
+    import qixnat
+
+    # The DICOM files to upload.
+    dcm_files = glob.iglob("%s/volume*/*.dcm.gz" % in_dir)
+    # Upload the compressed DICOM files in one action.
+    _logger.debug("Uploading the %s %s scan %d staged DICOM files to XNAT..." %
+                  (subject, session, scan))
+    with qixnat.connect() as xnat:
+        # The target XNAT scan DICOM resource object.
+        # The modality option is required if it is necessary to
+        # create the XNAT scan object.
+        rsc = xnat.find_or_create(
+            project, subject, session, scan=scan, resource='DICOM',
+            modality='MR'
+        )
+        xnat.upload(rsc, *dcm_files)
+    _logger.debug("Uploaded the %s %s scan %d staged DICOM files to XNAT." %
+                  (subject, session, scan))
+
+    # The NIfTI files to upload.
+    nii_files = glob.glob("%s/volume*/*.nii.gz" % in_dir)
+    # Upload the NIfTI files in one action.
+    _logger.debug("Uploading the %s %s scan %d staged NIfTI files to XNAT..." %
+                  (subject, session, scan))
+    with qixnat.connect() as xnat:
+        # The target XNAT scan NIFTI resource object.
+        rsc = xnat.find_or_create(
+            project, subject, session, scan=scan, resource='NIFTI'
+        )
+        xnat.upload(rsc, *nii_files)
+    _logger.debug("Uploaded the %s %s scan %d staged NIfTI files to XNAT." %
+                  (subject, session, scan))
+
+    return nii_files
 
 
 def volume_format(collection):

@@ -4,42 +4,61 @@ from nipype.interfaces.utility import IdentityInterface
 from .interface_error import InterfaceError
 
 
-class Gate(IOBase):
+class StickyIdentityInterface(IOBase):
     """
-    The Gate interface class is a copy of the Nipype IdentityInterface.
-    Since Nipype elides IdentityInterface nodes from the execution graph,
-    IdentityInterface cannot be used to constrain execution order, as in
-    the example below. Gate is an IdentityInterface look-alike that
+    The StickyIdentityInterface interface class is a copy of the
+    Nipype IdentityInterface. Since Nipype over-zealously elides
+    IdentityInterface nodes from the execution graph,
+    IdentityInterface cannot be used to capture workflow output
+    nor to constrain execution order, as in the examples below.
+    StickyIdentityInterface is an IdentityInterface look-alike that
     preserves the node connection in the execution graph.
-    
+
     Example::
-        
-        from qipipe.interfaces import Gate
-        gate = Node(Gate(fields'['a', 'b']))
-        workflow.connect(upstream1, 'a', gate, 'a')
-        workflow.connect(upstream2, 'b', gate, 'b')
-        workflow.connect(gate, 'a', downstream, 'a')
-    
+
+        >> from qipipe.interfaces import StickyIdentityInterface
+        >> gate = Node(StickyIdentityInterface(fields=['a', 'b']))
+        >> workflow.connect(upstream1, 'a', gate, 'a')
+        >> workflow.connect(upstream2, 'b', gate, 'b')
+        >> workflow.connect(gate, 'a', downstream, 'a')
+
     In this example, the ``gate`` node starts after both ``upstream1`` and
     ``upstream2`` finish. Consequently, the ``downstream`` node starts only
-    after ``upstream2`` finishes. This execution precedence constraint does
-    not hold if gate were an IdentityInterface.
+    after both ``upstream1`` and ``upstream2`` finish. This execution
+    precedence constraint does not hold if gate were an IdentityInterface.
+
+    Example::
+
+        >> from qipipe.interfaces import StickyIdentityInterface
+        >> output_spec = Node(StickyIdentityInterface(fields=['a']))
+        >> workflow.connect(upstream, 'a', output_spec, 'a')
+        >> upstream.inputs.a = 1
+        >> # The magic incantation to get a Nipype workflow output.
+        >> wf_res = workflow.run()
+        >> output_res = next(n for n in wf_res.nodes()
+        ...                  if n.name == 'output_spec')
+        >> output_res.inputs.get()['a']
+        1
+        >> # But, oddly:
+        >> output_res.outputs.get()['a']  # bad!
+        <undefined>
     
     :Note: a better solution is to set a *preserve* flag on
         IdentityInterface. If this solution is implemented by Nipype,
-        then this :class:`Gate` class will be deprecated.
+        then this :class:`StickyIdentityInterface` class will be
+        deprecated.
     """
     input_spec = IdentityInterface.input_spec
     output_spec = IdentityInterface.output_spec
-    
+
     def __init__(self, fields=None, mandatory_inputs=True, **inputs):
-        super(Gate, self).__init__(**inputs)
+        super(StickyIdentityInterface, self).__init__(**inputs)
         if fields is None or not fields:
-            raise InterfaceError('Gate fields must be a non-empty list')
+            raise InterfaceError('StickyIdentityInterface fields must be a non-empty list')
         # Each input must be in the fields.
         for in_field in inputs:
             if in_field not in fields:
-                raise InterfaceError('Gate input is not in the fields: %s' % in_field)
+                raise InterfaceError('StickyIdentityInterface input is not in the fields: %s' % in_field)
         self._fields = fields
         self._mandatory_inputs = mandatory_inputs
         add_traits(self.inputs, fields)
@@ -47,7 +66,7 @@ class Gate(IOBase):
         # even it the trait is not in the add_traits argument. The work-around is to reset
         # the values after adding the traits.
         self.inputs.set(**inputs)
-    
+
     def _add_output_traits(self, base):
         undefined_traits = {}
         for key in self._fields:
@@ -55,7 +74,7 @@ class Gate(IOBase):
             undefined_traits[key] = Undefined
         base.trait_set(trait_change_notify=False, **undefined_traits)
         return base
-    
+
     def _list_outputs(self):
         #manual mandatory inputs check
         if self._fields and self._mandatory_inputs:
@@ -66,7 +85,7 @@ class Gate(IOBase):
                     You can turn off mandatory inputs checking by passing mandatory_inputs = False to the constructor." % \
                     (self.__class__.__name__, key)
                     raise InterfaceError(msg)
-        
+
         outputs = self._outputs().get()
         for key in self._fields:
             val = getattr(self.inputs, key)
