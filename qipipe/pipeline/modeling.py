@@ -424,8 +424,8 @@ class ModelingWorkflow(WorkflowBase):
         self.logger.debug("The modeling workflow output is %s with"
                            " fields %s" % (output_spec.name, out_fields))
 
-    # Instrument the nodes for cluster submission, if necessary.
-    self._configure_nodes(mdl_wf)
+        # Instrument the nodes for cluster submission, if necessary.
+        self._configure_nodes(mdl_wf)
 
         self.logger.debug("Created the %s workflow." % mdl_wf.name)
         # If debug is set, then diagram the workflow graph.
