@@ -4,8 +4,6 @@ utility. ``bolero_mask_conv`` converts a proprietary OHSU format
 mask file into a NIfTI mask file.
 """
 import os
-from os import path
-from glob import glob
 from nipype.interfaces.base import (traits, TraitedSpec, CommandLine,
                                     CommandLineInputSpec)
 from nipype.interfaces.traits_extension import isdefined
