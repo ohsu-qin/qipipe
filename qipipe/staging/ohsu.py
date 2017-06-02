@@ -104,7 +104,7 @@ BREAST_ROI_REGEX = re.compile("""
     slice                       # The slice subdirectory
      (?P<slice_sequence_number>\d+)       # The slice index
      /                          # End of the slice subdirectory
-    (?P<fname>                  # The ROI file base name
+    (?P<base_name>                  # The ROI file base name
      .*\.bqf                    # The ROI file extension
     )$                          # End of the ROI file name
 """, re.VERBOSE)
@@ -126,7 +126,7 @@ results" subdirectory)!
 SARCOMA_ROI_REGEX = re.compile("""
     ^.*                         # The slice parent directory
     slice(?P<slice_sequence_number>\d+)/  # The slice subdirectory
-    (?P<fname>                  # The ROI file base name
+    (?P<base_name>                  # The ROI file base name
      .*\.bqf                    # The ROI file extension
     )$                          # End of the ROI file name
 """, re.VERBOSE)

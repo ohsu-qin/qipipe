@@ -8,11 +8,11 @@ from nipype.interfaces.base import (traits, BaseInterfaceInputSpec,
 class CopyInputSpec(BaseInterfaceInputSpec):
     in_file = traits.Either(File, Directory, exists=True, mandatory=True,
                             desc='The file or directory to copy')
-    
+
     dest = Directory(desc='The destination directory path'
                           ' (default current directory)')
-    
-    out_fname = traits.Either(File, Directory,
+
+    out_base_name = traits.Either(File, Directory,
                               desc='The destination file name'
                                    ' (default is the input file name)')
 
@@ -25,28 +25,28 @@ class CopyOutputSpec(TraitedSpec):
 class Copy(BaseInterface):
     """The Copy interface copies a file to a destination directory."""
     input_spec = CopyInputSpec
-    
+
     output_spec = CopyOutputSpec
-    
+
     def _run_interface(self, runtime):
         self._out_file = self._copy(self.inputs.in_file, self.inputs.dest,
-                                    self.inputs.out_fname)
+                                    self.inputs.out_base_name)
         return runtime
-    
+
     def _list_outputs(self):
         outputs = self._outputs().get()
         outputs['out_file'] = self._out_file
-        
+
         return outputs
-    
-    def _copy(self, in_file, dest=None, out_fname=None):
+
+    def _copy(self, in_file, dest=None, out_base_name=None):
         """
         Copies the given file.
-        
+
         :param in_file: the path of the file or directory to copy
         :param dest: the destination directory path
             (default is the current directory)
-        :param out_fname: the destination file name
+        :param out_base_name: the destination file name
             (default is the input file name)
         :return: the copied file path
         """
@@ -56,16 +56,16 @@ class Copy(BaseInterface):
                 os.makedirs(dest)
         else:
             dest = os.getcwd()
-        if out_fname:
+        if out_base_name:
             # Remove the out file name directory.
-            _, out_fname = os.path.split(out_fname)
+            _, out_base_name = os.path.split(out_base_name)
         else:
             # The default out file name is the input file name.
-            _, out_fname = os.path.split(in_file)
-        out_file = os.path.join(dest, out_fname)
+            _, out_base_name = os.path.split(in_file)
+        out_file = os.path.join(dest, out_base_name)
         if os.path.isdir(in_file):
             shutil.copytree(in_file, out_file)
         else:
             shutil.copy(in_file, out_file)
-        
+
         return out_file

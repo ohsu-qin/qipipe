@@ -95,12 +95,12 @@ class TestStagingWorkflow(object):
                             (scan_input.subject, scan_input.session,
                              scan_input.scan, 'NIFTI'))
                 for volume in scan_input.iterators.dicom.iterkeys():
-                    fname = "volume%03d.nii.gz" % volume
-                    file_obj = rsc_obj.file(fname)
+                    base_name = "volume%03d.nii.gz" % volume
+                    file_obj = rsc_obj.file(base_name)
                     assert_true(file_obj.exists(),
                                 "The %s %s scan %s file %s was not created in XNAT" %
                                 (scan_input.subject, scan_input.session,
-                                 scan_input.scan, fname))
+                                 scan_input.scan, base_name))
             
             # Delete the test subjects.
             for sbj in subjects:

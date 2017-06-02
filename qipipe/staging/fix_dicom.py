@@ -122,12 +122,12 @@ def _dest_file_name(in_file, dest):
     :param dest: the destination directory
     :return: the target output file name
     """
-    _, fname = os.path.split(in_file)
+    _, base_name = os.path.split(in_file)
     # Replace non-word characters.
-    fname = re.sub('\W', '_', fname.lower())
+    base_name = re.sub('\W', '_', base_name.lower())
     # Add a .dcm extension, if necessary.
-    _, ext = os.path.splitext(fname)
+    _, ext = os.path.splitext(base_name)
     if not ext:
-        fname = fname + '.dcm'
+        base_name = base_name + '.dcm'
 
-    return os.path.join(dest, fname)
+    return os.path.join(dest, base_name)

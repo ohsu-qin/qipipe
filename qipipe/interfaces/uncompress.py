@@ -43,8 +43,8 @@ class Uncompress(BaseInterface):
             dest = os.getcwd()
         if not os.path.exists(dest):
             os.makedirs(dest)
-        _, fname = os.path.split(in_file)
-        out_file = os.path.join(dest, fname[:-3])
+        _, base_name = os.path.split(in_file)
+        out_file = os.path.join(dest, base_name[:-3])
         cf = gzip.open(in_file, 'rb')
         f = open(out_file, 'wb')
         f.writelines(cf)

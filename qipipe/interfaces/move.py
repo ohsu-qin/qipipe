@@ -45,6 +45,6 @@ class Move(BaseInterface):
         if not os.path.exists(dest):
             os.makedirs(dest)
         shutil.move(in_file, dest)
-        _, fname = os.path.split(in_file)
-        out_file = os.path.join(dest, fname)
+        _, base_name = os.path.split(in_file)
+        out_file = os.path.join(dest, base_name)
         return out_file

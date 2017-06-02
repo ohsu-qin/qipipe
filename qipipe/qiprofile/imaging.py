@@ -201,10 +201,10 @@ class Updater(object):
         if not rsc.exists():
             return rois
         # The file object label is the file base name.
-        fnames = set(rsc.files().get())
+        base_names = set(rsc.files().get())
         # The mask files do not have _color in the base name.
         # Sort the mask files by the lesion prefix.
-        masks = sorted(f for f in fnames if not '_color' in f)
+        masks = sorted(f for f in base_names if not '_color' in f)
         centroids = opts.get('centroids')
         avg_intensities = opts.get('average_intensities')
         # The color look-up table.
@@ -214,7 +214,7 @@ class Updater(object):
         for i, mask in enumerate(masks):
             roi_opts = lobel_map_opts.clone()
             label_map_name = label_map_basename(mask)
-            if label_map_name in fnames:
+            if label_map_name in base_names:
                 # A label map must have a color table.
                 if not color_table:
                     raise ImagingUpdateError(
@@ -316,11 +316,11 @@ class Updater(object):
         xnat_file_labels = {xnat_name(xnat_file) for xnat_file in xnat_files}
         result = {}
         for output in OUTPUTS:
-            fname = output + '.nii.gz'
-            if fname in xnat_file_labels:
+            base_name = output + '.nii.gz'
+            if base_name in xnat_file_labels:
                 # TODO - add the param result average and label map to the
                 # pipeline and here.
-                param_result = Modeling.ParameterResult(filename=fname)
+                param_result = Modeling.ParameterResult(filename=base_name)
                 result[output] = param_result
 
         # Return the new qiprofile Modeling object.

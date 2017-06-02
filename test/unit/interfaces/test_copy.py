@@ -43,7 +43,7 @@ class TestCopy(object):
     
     def test_copy_file_with_output_filename(self):
         # Copy the file.
-        copy = Copy(in_file=SOURCE, dest=TARGET, out_fname='target.txt')
+        copy = Copy(in_file=SOURCE, dest=TARGET, out_base_name='target.txt')
         result = copy.run()
         
         # Verify the result.

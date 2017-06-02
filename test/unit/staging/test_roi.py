@@ -43,9 +43,9 @@ class TestROI(object):
             assert_equal(set(slice_dict.iterkeys()), expected_slice_seq_nbrs,
                          "The multi-lesion ROI slice indexes are incorrect")
             for path in slice_dict.itervalues():
-                _, fname = os.path.split(path)
-                assert_equal(fname, 'roi.bqf', "The multi-lesion ROI file name"
-                                               " is incorrect: %s" % fname)
+                _, base_name = os.path.split(path)
+                assert_equal(base_name, 'roi.bqf', "The multi-lesion ROI file name"
+                                               " is incorrect: %s" % base_name)
     
     def test_single_lesion(self):
         single_lesion_visit = os.path.join(FIXTURES, 'Visit2')
@@ -69,9 +69,9 @@ class TestROI(object):
                          "The single lesion ROI slice indexes are incorrect: %s" %
                          slice_seq_nbrs)
             for path in slice_dict.itervalues():
-                _, fname = os.path.split(path)
-                assert_equal(fname, 'roi.bqf', "The single lesion ROI file name"
-                                               " is incorrect: %s" % fname)
+                _, base_name = os.path.split(path)
+                assert_equal(base_name, 'roi.bqf', "The single lesion ROI file name"
+                                               " is incorrect: %s" % base_name)
 
 
 if __name__ == "__main__":

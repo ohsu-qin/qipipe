@@ -86,8 +86,8 @@ class TestROIWorkflow(VolumeTestBase):
         merge = MergeNifti(in_files=list(images), out_format=SCAN_TS_BASE)
         time_series = merge.run().outputs.out_file
         # Work-around for nipype bug described above.
-        _, ts_fname = os.path.split(time_series)
-        ts_dest = os.path.join(RESULTS, ts_fname)
+        _, ts_base_name = os.path.split(time_series)
+        ts_dest = os.path.join(RESULTS, ts_base_name)
         import shutil
         shutil.move(time_series, ts_dest)
         time_series = ts_dest

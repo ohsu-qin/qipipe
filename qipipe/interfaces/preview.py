@@ -8,14 +8,14 @@ from nipype.interfaces.base import (traits, BaseInterfaceInputSpec,
 class PreviewInputSpec(BaseInterfaceInputSpec):
     in_file = traits.File(exists=True, mandatory=True,
                           desc='The input 3D NIfTI file')
-    
+
     dest = traits.Directory(desc='The destination directory path'
                                  ' (default current directory)')
-    
+
     crop = traits.List(traits.List(traits.Int),
                        desc='The x and y [min, max] bounds')
-    
-    out_fname = traits.File(desc='The destination file name'
+
+    out_base_name = traits.File(desc='The destination file name'
                                  ' (default is the input file name)')
 
 
@@ -25,32 +25,32 @@ class PreviewOutputSpec(TraitedSpec):
 
 class Preview(BaseInterface):
     """Preview creates a JPEG image from an input DICOM image."""
-    
+
     input_spec = PreviewInputSpec
-    
+
     output_spec = PreviewOutputSpec
-    
+
     def _run_interface(self, runtime):
         self._out_file = self._convert(
             self.inputs.in_file, dest=self.inputs.dest,
-            out_fname=self.inputs.out_fname, crop=self.inputs.crop
+            out_base_name=self.inputs.out_base_name, crop=self.inputs.crop
         )
         return runtime
-    
+
     def _list_outputs(self):
         outputs = self._outputs().get()
         outputs['out_file'] = self._out_file
-        
+
         return outputs
-    
-    def _convert(self, in_file, dest=None, out_fname=None, crop=None):
+
+    def _convert(self, in_file, dest=None, out_base_name=None, crop=None):
         """
         Copies the given file.
-        
+
         :param in_file: the path of the file or directory to copy
         :param dest: the destination directory path
             (default is the current directory)
-        :param out_fname: the destination file name
+        :param out_base_name: the destination file name
             (default is the input file name)
         :param crop: the x and y [min, max] bounds
         :return: the preview JPEG file path
@@ -61,15 +61,15 @@ class Preview(BaseInterface):
                 os.makedirs(dest)
         else:
             dest = os.getcwd()
-        
+
         # The default output file name is the input file name
         # with a .jpg extension.
-        if not out_fname:
-            _, in_fname = os.path.split(in_file)
-            base, _ = os.path.splitext(in_fname)
-            out_fname = base + '.jpg'
-        out_file = os.path.join(dest, out_fname)
-        
+        if not out_base_name:
+            _, in_base_name = os.path.split(in_file)
+            base, _ = os.path.splitext(in_base_name)
+            out_base_name = base + '.jpg'
+        out_file = os.path.join(dest, out_base_name)
+
         dcm = dicom.read_file(in_file)
         data = dcm.pixel_array
         # Crop the data, if necessary.
@@ -79,5 +79,5 @@ class Preview(BaseInterface):
             crop_ymin, crop_ymax = crop_y
             data = data[crop_xmin:crop_xmax, crop_ymin:crop_ymax]
         image.imsave(out_file, data, cmap=cm.jet)
-        
+
         return out_file

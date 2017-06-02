@@ -66,7 +66,7 @@ class TestXNATDownload(object):
                                     " property is not set" % (SUBJECT, SESSION, SCAN))
         assert_true(os.path.exists(dl_file), "The %s %s scan %s file was not"
                                              " downloaded" % (SUBJECT, SESSION, SCAN))
-        fdir, fname = os.path.split(dl_file)
+        fdir, base_name = os.path.split(dl_file)
         assert_true(os.path.samefile(RESULTS, fdir),
                     "The download location is incorrect: %s" % fdir)
         _, srcname = os.path.split(FIXTURE)
