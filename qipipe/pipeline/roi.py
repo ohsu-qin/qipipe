@@ -76,7 +76,7 @@ class ROIWorkflow(WorkflowBase):
         :param kwargs: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
             initializer keyword arguments
         """
-        super(ROIWorkflow, self).__init__(logger=logger(__name__), **kwargs)
+        super(ROIWorkflow, self).__init__(__name__, **kwargs)
         # The child workflow.
         self.workflow = self._create_workflow(**kwargs)
         """The ROI workflow."""

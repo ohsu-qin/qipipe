@@ -364,7 +364,7 @@ class QIPipelineWorkflow(WorkflowBase):
             name
         """
         super(QIPipelineWorkflow, self).__init__(
-            project=project, name=__name__, **opts
+            __name__, project=project, **opts
         )
 
         collOpt = opts.pop('collection', None)
@@ -1313,12 +1313,12 @@ def register(subject, session, scan, reference_index, *in_files, **opts):
 
 
 def _extract_volume_number(location):
-    _, fname = os.path.split(location)
-    match = VOLUME_FILE_PAT.match(fname)
+    _, base_name = os.path.split(location)
+    match = VOLUME_FILE_PAT.match(base_name)
     if not match:
         raise ArgumentError("The volume file base name does not match"
                             " pattern %s: %s" %
-                            (VOLUME_FILE_PAT.pattern, fname))
+                            (VOLUME_FILE_PAT.pattern, base_name))
     return int(match.group(1))
 
 

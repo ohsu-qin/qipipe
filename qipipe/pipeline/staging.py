@@ -110,7 +110,7 @@ class ScanStagingWorkflow(WorkflowBase):
         :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
             initializer keyword arguments
         """
-        super(ScanStagingWorkflow, self).__init__(logger=logger(__name__), **opts)
+        super(ScanStagingWorkflow, self).__init__(__name__, **opts)
 
         # Make the workflow.
         self.workflow = self._create_workflow()
@@ -195,7 +195,7 @@ class ScanStagingWorkflow(WorkflowBase):
         for fld in iter_fields:
             workflow.connect(iter_volume, fld, stg_node, fld)
 
-        # Upload the processed DICOM and merged 3D NIfTI files.
+        # Upload the processed DICOM and 3D volume NIfTI files.
         upload_xfc = Function(input_names=['in_dir'],
                               output_names=['out_files'],
                               function=upload)
@@ -210,6 +210,9 @@ class ScanStagingWorkflow(WorkflowBase):
         output_spec = pe.Node(IdentityInterface(fields=['out_files']),
                              name='output_spec')
         workflow.connect(upload_node, 'out_files', output_spec, 'out_files')
+
+        # Instrument the nodes for cluster submission, if necessary.
+        self._configure_nodes(workflow)
 
         return workflow
 
@@ -314,7 +317,7 @@ class VolumeStagingWorkflow(WorkflowBase):
         :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
             initializer keyword arguments
         """
-        super(VolumeStagingWorkflow, self).__init__(logger=logger(__name__), **opts)
+        super(VolumeStagingWorkflow, self).__init__(__name__, **opts)
 
         # Make the workflow.
         self.workflow = self._create_workflow()
@@ -366,7 +369,8 @@ class VolumeStagingWorkflow(WorkflowBase):
         workflow = pe.Workflow(name='staging', base_dir=self.base_dir)
 
         # The workflow input.
-        in_fields = ['collection', 'subject', 'session', 'scan', 'volume', 'dest']
+        in_fields = ['collection', 'subject', 'session', 'scan',
+                     'volume', 'dest']
         input_spec = pe.Node(IdentityInterface(fields=in_fields),
                              name='input_spec')
         self.logger.debug("The %s workflow input node is %s with fields %s" %
@@ -412,10 +416,11 @@ class VolumeStagingWorkflow(WorkflowBase):
         workflow.connect(input_spec, 'scan', upload_3d, 'scan')
         workflow.connect(stack, 'out_file', upload_3d, 'in_files')
 
-        # The output is the 3D NIfTI stack file. Make an intermediate StickyIdentityInterface
-        # node to ensure that upload is completed before setting the output
-        # field.
-        output_gate_xfc = StickyIdentityInterface(fields=['image', 'xnat_files'])
+        # The output is the 3D NIfTI stack file. Make an intermediate
+        # gate node to ensure that upload is completed before setting
+        # the output field.
+        output_gate_flds = ['image', 'xnat_files']
+        output_gate_xfc = StickyIdentityInterface(fields=output_gate_flds)
         output_gate = pe.Node(output_gate_xfc, name='output_gate')
         workflow.connect(stack, 'out_file', output_gate, 'image')
         workflow.connect(upload_3d, 'xnat_files', output_gate, 'xnat_files')

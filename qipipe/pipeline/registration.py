@@ -142,8 +142,7 @@ class RegistrationWorkflow(WorkflowBase):
         :keyword recursive: flag indicating whether to perform step-wise
             iterative recursive registration
         """
-        super(RegistrationWorkflow, self).__init__(logger=logger(__name__),
-                                                   **opts)
+        super(RegistrationWorkflow, self).__init__(__name__, **opts)
 
         technique_opt = opts.pop('technique', None)
         if not technique_opt:

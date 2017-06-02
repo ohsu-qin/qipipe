@@ -71,7 +71,7 @@ class MaskWorkflow(WorkflowBase):
         :option crop_posterior: crop posterior to the center of gravity,
             e.g. for a breast tumor
         """
-        super(MaskWorkflow, self).__init__(logger=logger(__name__), **opts)
+        super(MaskWorkflow, self).__init__(__name__, **opts)
 
         wf_kws = ['crop_posterior']
         wf_opts = {k: opts.pop(k) for k in wf_kws if k in wf_kws}

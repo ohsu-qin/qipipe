@@ -39,9 +39,6 @@ class WorkflowBase(object):
     files followed by the workflow-specific configuration files.
     """
 
-    CLASS_NAME_PAT = re.compile("^(?P<name>\w+)Workflow$")
-    """The workflow wrapper class name matcher."""
-
     INTERFACE_PREFIX_PAT = re.compile('(\w+\.)+interfaces?\.?')
     """
     Regexp matcher for an interface module.
@@ -66,16 +63,15 @@ class WorkflowBase(object):
     None
     """
 
-    def __init__(self, **opts):
+    def __init__(self, name, **opts):
         """
         Initializes this workflow wrapper object.
         The *parent* option obviates the other options.
 
+        :param name: the module name
         :param opts: the following keyword arguments:
         :keyword project: the :attr:`project`
-        :keyword logger: the :attr:`logger` to use
         :keyword parent: the parent workflow for a child workflow
-        :keyword name: the workflow name, used for logging
         :keyword base_dir: the :attr:`base_dir`
         :keyword config_dir: the optional workflow node :attr:`configuration`
             file location or dictionary
@@ -96,16 +92,8 @@ class WorkflowBase(object):
         self.project = project
         """The XNAT project name."""
 
-        name = opts.get('name', 'qiprofile')
-        logger_opt = opts.get('logger')
-        if logger_opt:
-            _logger = logger_opt
-        elif parent:
-            _logger = parent.logger
-            _logger.debug("%s is using the parent workflow logger." % name)
-        else:
-            _logger = logger(name)
-            _logger.debug("Created %s logger." % name)
+        _logger = logger(name)
+        _logger.debug("Created the %s workflow logger." % name)
         self.logger = _logger
         """This workflow's logger."""
 
@@ -129,7 +117,10 @@ class WorkflowBase(object):
         self.config_dir = cfg_dir
         """The workflow node inputs configuration directory."""
 
-        self.configuration = self._load_configuration()
+        # The configuration is identified by the last item
+        # in the module path, e.g. 'stage' for 'qipipe.pipeline.stage'.
+        cfg_name = name.split('.')[-1]
+        self.configuration = self._load_configuration(cfg_name)
         """The workflow node inputs configuration."""
 
         config_s = pprint.pformat(self.configuration)
@@ -178,10 +169,10 @@ class WorkflowBase(object):
         :param workflow the workflow to diagram
         """
         base = workflow.name + '.dot'
-        fname = os.path.join(self.base_dir, base)
-        workflow.write_graph(dotfilename=fname)
+        base_name = os.path.join(self.base_dir, base)
+        workflow.write_graph(dotfilename=base_name)
         self.logger.debug("The %s workflow graph is depicted at %s.png." %
-                         (workflow.name, fname))
+                         (workflow.name, base_name))
 
     def _child_options(self):
         """
@@ -202,22 +193,16 @@ class WorkflowBase(object):
             distributable=self.is_distributable
         )
 
-    def _load_configuration(self):
+    def _load_configuration(self, name):
         """
         Loads the workflow configuration, as described in
         :class:`WorkflowBase`.
 
+        :param name: the configuration file base name without extension
         :return: the configuration dictionary
         """
         # The configuration files to load.
         cfg_files = []
-        # Validate that the workflow name ends in Workflow.
-        match = WorkflowBase.CLASS_NAME_PAT.match(self.__class__.__name__)
-        if not match:
-            raise NameError("The workflow wrapper class does not match the"
-                            " standard workflow class name pattern: %s" %
-                            self.__class__.__name__)
-        name = match.group('name')
 
         # The default configuration files.
         def_cfg_files = self._configuration_files('default')
@@ -235,14 +220,14 @@ class WorkflowBase(object):
 
     def _configuration_files(self, name):
         """
-        :param name: the case-insensitive configuration file name
-            without path or extension
-        :return: the list of matching configuration files in the configuration
-            path, in low-to-high precedence order
+        :param name: the configuration file base name without
+            extension
+        :return: the list of matching configuration files in the
+            configuration path, in low-to-high precedence order
         """
 
-        # The file name is lower-case with .cfg extension.
-        fname = name.lower() + '.cfg'
+        # The file base name with extension.
+        base_name = "%.cfg" % name
         # The configuration directories.
         cfg_dirs = [CONF_DIR]
         if self.config_dir:
@@ -250,7 +235,7 @@ class WorkflowBase(object):
         # The configuration file locations.
         cfg_files = []
         for cfg_dir in cfg_dirs:
-            cfg_file = os.path.join(cfg_dir, fname)
+            cfg_file = os.path.join(cfg_dir, base_name)
             if os.path.exists(cfg_file):
                 cfg_files.append(os.path.abspath(cfg_file))
 
