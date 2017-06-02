@@ -18,6 +18,10 @@ interfaces
 -----------
 .. automodule:: qipipe.interfaces.copy
 
+:mod:`dce_to_r1`
+-----------
+.. automodule:: qipipe.interfaces.dce_to_r1
+
 :mod:`fastfit`
 --------------
 .. automodule:: qipipe.interfaces.fastfit
@@ -25,10 +29,6 @@ interfaces
 :mod:`fix_dicom`
 ----------------
 .. automodule:: qipipe.interfaces.fix_dicom
-
-:mod:`gate`
------------
-.. automodule:: qipipe.interfaces.gate
 
 :mod:`group_dicom`
 ------------------
@@ -57,6 +57,10 @@ interfaces
 :mod:`preview`
 --------------
 .. automodule:: qipipe.interfaces.preview
+
+:mod:`sticky_identity_interface`
+-----------
+.. automodule:: qipipe.interfaces.StickyIdentityInterface
 
 :mod:`touch`
 ------------
@@ -90,4 +94,3 @@ interfaces
 :mod:`xnat_upload`
 ------------------
 .. automodule:: qipipe.interfaces.xnat_upload
-

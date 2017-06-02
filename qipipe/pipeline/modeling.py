@@ -25,7 +25,9 @@ import qiutil
 from ..helpers.bolus_arrival import (bolus_arrival_index, BolusArrivalError)
 from ..helpers.logging import logger
 from ..helpers.constants import CONF_DIR
-from ..interfaces import (Gate, XNATUpload, XNATFind)
+from ..interfaces import (
+    DceToR1, StickyIdentityInterface, XNATUpload, XNATFind
+)
 from .workflow_base import WorkflowBase
 from .pipeline_error import PipelineError
 
@@ -417,10 +419,10 @@ class ModelingWorkflow(WorkflowBase):
         assoc_node.inputs.names = out_fields
         mdl_wf.connect(merge_output, 'out', assoc_node, 'values')
 
-        # The modeling workflow output node is a Gate rather than an
+        # The modeling workflow output node is a StickyIdentityInterface rather than an
         # IdentityInterface because Nipype cavalierly disappears
         # IdentityInterface output nodes.
-        output_xfc = Gate(fields=['out_dict'])
+        output_xfc = StickyIdentityInterface(fields=['out_dict'])
         output_spec = pe.Node(output_xfc, name='output_spec')
         mdl_wf.connect(assoc_node, 'out_dict', output_spec, 'out_dict')
         self.logger.debug("The modeling workflow output is %s with"
@@ -502,27 +504,24 @@ class ModelingWorkflow(WorkflowBase):
             workflow.connect(input_spec, 'max_r1_0', get_r1_0, 'max_r1_0')
             workflow.connect(input_spec, 'mask', get_r1_0, 'mask')
 
-        # The R1 destination directory.
         # Convert the DCE time series to R1 maps.
-        r1_series_xfc = Function(
-            input_names=['time_series', 'r1_0', 'baseline', 'mask'],
-            output_names=['r1_series'], function=make_r1_series
-        )
-        r1_series = pe.Node(r1_series_xfc, name='r1_series')
-        workflow.connect(input_spec, 'time_series', r1_series, 'time_series')
+        r1_series = pe.Node(DceToR1(), name='r1_series')
+        workflow.connect(input_spec, 'time_series', r1_series, 'in_file')
         workflow.connect(baseline, 'baseline', r1_series, 'baseline')
         workflow.connect(input_spec, 'mask', r1_series, 'mask')
         if use_fixed_r1_0:
-            workflow.connect(input_spec, 'r1_0_val', r1_series, 'r1_0')
+            workflow.connect(input_spec, 'r1_0_val', r1_series, 'r1_0_val')
         else:
-            workflow.connect(get_r1_0, 'r1_0_map', r1_series, 'r1_0')
+            raise ModelingError('The DceToR1 r1_0_map attribute is not'
+                                ' yet supported')
+            #workflow.connect(get_r1_0, 'r1_0_map', r1_series, 'r1_0')
 
         # Copy the time series meta-data to the R1 series.
         copy_meta = pe.Node(CopyMeta(), name='copy_meta')
         copy_meta.inputs.include_classes = [('global', 'const'),
                                             ('time', 'samples')]
         workflow.connect(input_spec, 'time_series', copy_meta, 'src_file')
-        workflow.connect(r1_series, 'r1_series', copy_meta, 'dest_file')
+        workflow.connect(r1_series, 'out_file', copy_meta, 'dest_file')
 
         # Get the pharmacokinetic mapping parameters.
         aif_shift_flds = ['time_series', 'bolus_arrival_index']
@@ -819,57 +818,6 @@ def get_r1_0(pdw_file, t1w_file, max_r1_0, mask=None):
     r1_0_nii = nb.Nifti1Image(r1_0_arr, pdw_nii.affine)
     out_file = os.path.join(cwd, 'r1_0_map.nii.gz')
     nb.save(r1_0_nii, out_file)
-
-    return out_file
-
-def make_r1_series(time_series, r1_0, baseline, mask=None):
-    """
-    Creates the R1 series NIfTI file.
-
-    :param time_series: the modeling input 4D NIfTI image file path
-    :param r1_0: the R1_0 fixed value or image file path
-    :param baseline: the baseline file path
-    :param mask: the optional mask image file to use
-    :return: the R1 series NIfTI image file name
-    """
-    import os
-    import six
-    import nibabel as nb
-    from dce_prep.dce_to_r1 import dce_series_to_r1
-    from dcmstack.dcmmeta import NiftiWrapper
-
-    # Load the time series file.
-    ts_nii = nb.load(time_series)
-    # The time series data.
-    ts_arr = ts_nii.get_data()
-    # Wrap the image.
-    ts_nw = NiftiWrapper(ts_nii, make_empty=True)
-    # The baseline image data.
-    baseline_arr = nb.load(baseline).get_data()
-    # If r1_0 is a file path rather than a fixed value,
-    # then load the file.
-    if isinstance(r1_0, six.string_types):
-        r1_0 = nb.load(r1_0).get_data()
-    # The DICOM repetition time tag value common to all slices.
-    rep_time = ts_nw.get_meta('RepetitionTime')
-    # The DICOM flip angle tag value common to all slices.
-    flip_angle = ts_nw.get_meta('FlipAngle')
-    # The mask is optional.
-    dce_opts = dict(rep_time=rep_time, flip_angle=flip_angle)
-    if mask:
-        dce_opts['mask'] = nb.load(mask).get_data()
-
-    # Convert the input image to a R1 series. The dce_series_to_r1
-    # return value is a tuple of ndarrays (r1_series, mask),
-    # where *mask* is the modified mask, which is ignored for our
-    # purposes.
-    r1_series_arr, _ = dce_series_to_r1(ts_arr, baseline_arr, r1_0, **dce_opts)
-
-    # Save the result to a file.
-    cwd = os.getcwd()
-    out_nii = nb.Nifti1Image(r1_series_arr, ts_nii.affine)
-    out_file = os.path.join(cwd, 'r1_series.nii.gz')
-    nb.save(out_nii, out_file)
 
     return out_file
 
