@@ -37,13 +37,10 @@ MODELING_PREFIX = 'pk_'
 MODELING_CONF_FILE = 'modeling.cfg'
 """The modeling workflow configuration."""
 
-FIXED_R1_0_OUTPUTS = ['r1_series', 'pk_params', 'fxr_k_trans', 'fxr_v_e',
-           'fxr_tau_i', 'fxr_chisq', 'fxl_k_trans', 'fxl_v_e',
-           'fxl_chisq', 'delta_k_trans']
-"""The modeling outputs for all runs."""
-
-INFERRED_R1_0_OUTPUTS = FIXED_R1_0_OUTPUTS + ['dce_baseline', 'r1_0']
-"""The inferred R1_0 modeling outputs."""
+OUTPUT_FIELDS = ['r1_series', 'pk_params', 'fxr_k_trans', 'fxr_v_e',
+                 'fxr_tau_i', 'fxr_chisq', 'fxl_k_trans', 'fxl_v_e',
+                 'fxl_chisq', 'delta_k_trans']
+"""The modeling workflow output fields."""
 
 FASTFIT_PARAMS_FILE = 'params.csv'
 """The fastfit parameters CSV file name."""
@@ -185,7 +182,7 @@ class ModelingWorkflow(WorkflowBase):
           and *r1_0_val* is not set in the input options, then
           a *r1_0_val* configuration setting is ignored.
 
-        - The *baseline_end_idx* defaults to 1 if it is not set in
+        - The *base_end* defaults to 1 if it is not set in
           either the input options or the configuration.
 
         :param opts: the :class:`qipipe.pipeline.workflow_base.WorkflowBase`
@@ -195,11 +192,10 @@ class ModelingWorkflow(WorkflowBase):
             |R10| option is not set
         :keyword pd_dir: the proton density files parent directory, if the
             fixed |R10| option is not set
-        :keyword baseline_end_idx: the number of volumes to merge into a R1
+        :keyword base_end: the number of volumes to merge into a R1
             series baseline image (default is 1)
         """
-        super(ModelingWorkflow, self).__init__(logger=logger(__name__),
-                                               **opts)
+        super(ModelingWorkflow, self).__init__(__name__, **opts)
 
         technique_opt = opts.pop('technique', None)
         if not technique_opt:
@@ -419,16 +415,17 @@ class ModelingWorkflow(WorkflowBase):
         assoc_node.inputs.names = out_fields
         mdl_wf.connect(merge_output, 'out', assoc_node, 'values')
 
-        # The modeling workflow output node is a StickyIdentityInterface rather than an
-        # IdentityInterface because Nipype cavalierly disappears
-        # IdentityInterface output nodes.
+        # The modeling workflow output node is a StickyIdentityInterface
+        # rather than an IdentityInterface because Nipype cavalierly
+        # disappears IdentityInterface output nodes.
         output_xfc = StickyIdentityInterface(fields=['out_dict'])
         output_spec = pe.Node(output_xfc, name='output_spec')
         mdl_wf.connect(assoc_node, 'out_dict', output_spec, 'out_dict')
         self.logger.debug("The modeling workflow output is %s with"
                            " fields %s" % (output_spec.name, out_fields))
 
-        self._configure_nodes(mdl_wf)
+    # Instrument the nodes for cluster submission, if necessary.
+    self._configure_nodes(mdl_wf)
 
         self.logger.debug("Created the %s workflow." % mdl_wf.name)
         # If debug is set, then diagram the workflow graph.
@@ -478,21 +475,18 @@ class ModelingWorkflow(WorkflowBase):
         for field, value in pk_opts.iteritems():
             setattr(input_spec.inputs, field, value)
 
-        # Create the DCE baseline image.
-        baseline_xfc = Function(
-            input_names=['time_series', 'baseline_end_idx'],
-            output_names=['baseline'], function=make_baseline
-        )
-        baseline = pe.Node(baseline_xfc, name='baseline')
-        workflow.connect(input_spec, 'time_series',
-                         baseline, 'time_series')
-        workflow.connect(input_spec, 'baseline_end_idx',
-                         baseline, 'baseline_end_idx')
-
         # If we are not using a fixed r1_0 value, then compute a map
         # from a proton density weighted scan and the baseline of the
         # DCE series.
         if not use_fixed_r1_0:
+            # Create the DCE baseline image.
+            baseline_xfc = Function(
+                input_names=['time_series', 'base_end'],
+                output_names=['out_file'], function=make_baseline
+            )
+            baseline = pe.Node(baseline_xfc, name='baseline')
+            workflow.connect(input_spec, 'time_series', baseline, 'time_series')
+            workflow.connect(input_spec, 'base_end', baseline, 'base_end')
             # Create the R1_0 map.
             get_r1_0_xfc = Function(
                 input_names=['pdw_file', 't1w_file', 'max_r1_0', 'mask'],
@@ -500,14 +494,14 @@ class ModelingWorkflow(WorkflowBase):
             )
             get_r1_0 = pe.Node(get_r1_0_xfc, name='get_r1_0')
             workflow.connect(input_spec, 'pdw_file', get_r1_0, 'pdw_file')
-            workflow.connect(baseline, 'baseline', get_r1_0, 't1w_file')
+            workflow.connect(baseline, 'out_file', get_r1_0, 't1w_file')
             workflow.connect(input_spec, 'max_r1_0', get_r1_0, 'max_r1_0')
             workflow.connect(input_spec, 'mask', get_r1_0, 'mask')
 
         # Convert the DCE time series to R1 maps.
         r1_series = pe.Node(DceToR1(), name='r1_series')
         workflow.connect(input_spec, 'time_series', r1_series, 'in_file')
-        workflow.connect(baseline, 'baseline', r1_series, 'baseline')
+        workflow.connect(input_spec, 'base_end', r1_series, 'base_end')
         workflow.connect(input_spec, 'mask', r1_series, 'mask')
         if use_fixed_r1_0:
             workflow.connect(input_spec, 'r1_0_val', r1_series, 'r1_0_val')
@@ -570,11 +564,7 @@ class ModelingWorkflow(WorkflowBase):
                          delta_k_trans, 'in_file2')
 
         # The modeling outputs.
-        if use_fixed_r1_0:
-            outputs = FIXED_R1_0_OUTPUTS
-        else:
-            outputs = INFERRED_R1_0_OUTPUTS
-        output_spec = pe.Node(IdentityInterface(fields=outputs),
+        output_spec = pe.Node(IdentityInterface(fields=OUTPUT_FIELDS),
                               name='output_spec')
         # Collect the outputs.
         workflow.connect(copy_meta, 'dest_file', output_spec, 'r1_series')
@@ -589,11 +579,6 @@ class ModelingWorkflow(WorkflowBase):
         workflow.connect(pk_map, 'guess_model.chisq', output_spec, 'fxl_chisq')
         workflow.connect(delta_k_trans, 'out_file',
                          output_spec, 'delta_k_trans')
-        # If we are inferring R1_0, then make the DCE baseline.
-        if not use_fixed_r1_0:
-            workflow.connect(baseline, 'baseline',
-                             output_spec, 'dce_baseline')
-            workflow.connect(get_r1_0, 'r1_0_map', output_spec, 'r1_0')
 
         self._configure_nodes(workflow)
 
@@ -666,16 +651,16 @@ class ModelingWorkflow(WorkflowBase):
         r1_fields = ['pd_dir', 'max_r1_0']
         # All of the possible fields.
         fields = set(r1_fields)
-        fields.update(['baseline_end_idx', 'r1_0_val'])
+        fields.update(['base_end', 'r1_0_val'])
         # The PK options.
         pk_opts = {k: opts[k] for k in fields if k in opts}
-        if 'baseline_end_idx' not in pk_opts:
+        if 'base_end' not in pk_opts:
             # Look for the the baseline parameter in the configuration.
-            if 'baseline_end_idx' in config:
-                pk_opts['baseline_end_idx'] = config['baseline_end_idx']
+            if 'base_end' in config:
+                pk_opts['base_end'] = config['base_end']
             else:
-                # The default baseline image count.
-                pk_opts['baseline_end_idx'] = 1
+                # The default baseline image count is 1.
+                pk_opts['base_end'] = 1
 
         # Set the use_fixed_r1_0 variable to None, signifying unknown.
         use_fixed_r1_0 = None
@@ -749,12 +734,12 @@ def create_profile(technique, source, configuration, sections, dest):
                                    source=dict(resource=source))
 
 
-def make_baseline(time_series, baseline_end_idx):
+def make_baseline(time_series, base_end):
     """
     Makes the R1_0 computation baseline NIfTI file.
 
     :param time_series: the modeling input 4D NIfTI image file path
-    :param baseline_end_idx: the exclusive limit of the baseline
+    :param base_end: the exclusive limit of the baseline
         computation input series
     :return: the baseline NIfTI file name
     :raise ModelingError: if the end index is a negative number
@@ -763,16 +748,16 @@ def make_baseline(time_series, baseline_end_idx):
     import nibabel as nb
     from dcmstack.dcmmeta import NiftiWrapper
 
-    if baseline_end_idx <= 0:
+    if base_end <= 0:
         raise ModelingError("The R1_0 computation baseline end index"
                             " input value is not a positive number:"
-                            " %s" % baseline_end_idx)
+                            " %s" % base_end)
     ts_nii = nb.load(time_series)
     ts_nw = NiftiWrapper(ts_nii)
 
     baselines = []
     for idx, split_nii in enumerate(ts_nw.split()):
-        if idx == baseline_end_idx:
+        if idx == base_end:
             break
         baselines.append(split_nii)
 
