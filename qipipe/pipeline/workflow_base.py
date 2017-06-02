@@ -227,7 +227,7 @@ class WorkflowBase(object):
         """
 
         # The file base name with extension.
-        base_name = "%.cfg" % name
+        base_name = "%s.cfg" % name
         # The configuration directories.
         cfg_dirs = [CONF_DIR]
         if self.config_dir:
