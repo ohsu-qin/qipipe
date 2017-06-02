@@ -11,7 +11,7 @@ utility.
 from __future__ import absolute_import
 import os
 from nipype.interfaces.base import (
-    TraitedSpec, CommandLine, CommandLineInputSpec, isdefined
+    traits, TraitedSpec, CommandLine, CommandLineInputSpec
 )
 
 OUTPUT_FILE_NAME = 'r1_series.nii.gz'
@@ -21,11 +21,15 @@ MASK_FILE_NAME = 'valid_mask.nii.gz'
 """The dce_to_r1 output mask file base name."""
 
 class DceToR1InputSpec(CommandLineInputSpec):
-    in_file = traits.String(desc='The 4D time series image file path',
-                            mandatory=True, position=1, argstr='%s')
+    in_file = traits.File(desc='The 4D time series image file path',
+                          mandatory=True, position=1, argstr='%s')
 
-    r1_0_val = traits.Integer(desc='Constant R1 value',
-                             mandatory=True, position=2, argstr='%d')
+    r1_0_val = traits.Float(desc='Constant R1 value', mandatory=True,
+                            position=2, argstr='%d')
+
+    # TODO - add r1_0_file as an alternative input.
+    #r1_0_file = traits.File(desc='R1 2D or 3D image file path',
+    #                        mandatory=???, position=???, argstr='%s')
 
     base_end = traits.String(desc='End index for baseline signal',
                              argstr='--base-end %s')
