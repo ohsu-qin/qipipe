@@ -98,8 +98,13 @@ class WorkflowBase(object):
         """This workflow's logger."""
 
         base_dir_opt = opts.get('base_dir')
+        # The base directory must be an absolute path to allow
+        # workflows to make node output attributes based on the
+        # base directory. If the outputs were relative, then
+        # they would be inaccurate in any context other than
+        # this workflow execution.
         if base_dir_opt:
-            base_dir = base_dir_opt
+            base_dir = os.path.abspath(base_dir_opt)
         elif parent:
             base_dir = parent.base_dir
         else:
