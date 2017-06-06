@@ -155,9 +155,9 @@ class ScanStagingWorkflow(WorkflowBase):
         results = output_res.inputs.get()['out_files']
 
         self.logger.debug(
-            "Executed the %s workflow on the %s %s scan %d"
-            " with 3D volume results:\n%s" %
-            (self.workflow.name, subject, session, scan results)
+            "Executed the %s workflow on the %s %s scan %d with 3D volume"
+            " results:\n%s" %
+            (self.workflow.name, subject, session, scan, results)
         )
 
         # Return the staged 3D volume files.
@@ -372,9 +372,8 @@ class VolumeStagingWorkflow(WorkflowBase):
         result = output_res.inputs.get()['out_file']
 
         self.logger.debug(
-            "Executed the %s workflow on the %s %s scan %d"
-            " with 3D volume result %s" %
-            (self.workflow.name, subject, session, scan results)
+            "Executed the %s workflow on the %s %s scan %d with 3D volume"
+            " result %s" % (self.workflow.name, subject, session, scan, result)
         )
 
         # Return the staged 3D volume files.
