@@ -247,23 +247,23 @@ def _scan_files(xnat, project, subject, session, scan, resource,
         return []
     # The resource files labels.
     files = rsc_obj.files().get()
-    # The match pattern.
-    if not file_pat:
-        logger(__name__).debug("The %s %s %s scan %d resource %s contains"
-                               " %d files." %
-                               (project, subject, session, scan, resource,
-                                len(files)))
-        return files
-    else:
+    # Filter the files for the match pattern, if necessary.
+    if file_pat:
         if isinstance(file_pat, six.string_types):
             file_pat = re.compile(file_pat)
         matches = [f for f in files if file_pat.match(f)]
-        logger(__name__).debug("The %s %s %s scan %d resource %s contains"
-                               " %d files matching %s." %
-                               (project, subject, session, scan, resource,
-                                len(files), file_pat.pattern))
-
+        logger(__name__).debug(
+            "The %s %s %s scan %d resource %s contains %d files matching %s." %
+            (project, subject, session, scan, resource, len(matches),
+             file_pat.pattern)
+        )
         return matches
+    else:
+        logger(__name__).debug(
+            "The %s %s %s scan %d resource %s contains %d files." %
+            (project, subject, session, scan, resource, len(files))
+        )
+        return files
 
 
 class ArgumentError(Exception):
