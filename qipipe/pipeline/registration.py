@@ -169,17 +169,17 @@ class RegistrationWorkflow(WorkflowBase):
         :param session: the session name
         :param scan: the scan number
         :param reference: the volume to register against
-        :param images: the input session scan images
+        :param in_files: the input session scan volume image files
         :param opts: the following keyword arguments:
         :option mask: the image mask file path
         :option dest: the realigned image target directory (default is the
             current directory)
         :return: the realigned output file paths
         """
-        if not images:
+        if not in_files:
             return []
         # Sort the images by volume number.
-        sorted_scans = sorted(images)
+        sorted_scans = sorted(in_files)
 
         # The target location.
         dest = opts.get('dest')
@@ -206,7 +206,7 @@ class RegistrationWorkflow(WorkflowBase):
 
         # Iterate over the registration inputs.
         iter_input = exec_wf.get_node('iter_input')
-        iter_input.iterables = ('image', images)
+        iter_input.iterables = ('in_file', in_files)
 
         # Execute the workflow.
         self.logger.debug("Executing the %s workflow on %s %s..." %
@@ -216,7 +216,7 @@ class RegistrationWorkflow(WorkflowBase):
                          (self.workflow.name, subject, session))
 
         # Return the output files.
-        return [os.path.join(dest, filename(image)) for image in images]
+        return [os.path.join(dest, base_name(f)) for f in in_files]
 
     def _create_execution_workflow(self, reference, dest, recursive=False):
         """
@@ -253,10 +253,9 @@ class RegistrationWorkflow(WorkflowBase):
                                 ' initial fixed reference image')
         if not dest:
             raise PipelineError('Registration workflow is missing the' +
-                             ' destination directory')
+                                ' destination directory')
         self.logger.debug("Creating the registration execution workflow"
-                           " with initial reference %s..." %
-                           reference)
+                          " with fixed reference image %s..." % reference)
 
         # The execution workflow.
         exec_wf = pe.Workflow(
@@ -284,11 +283,11 @@ class RegistrationWorkflow(WorkflowBase):
         input_spec.inputs.resource = self.resource
 
         # The realignment child workflow iterator.
-        iter_reg_fields = ['image', 'reference']
+        iter_reg_fields = ['in_file', 'reference']
         iter_input = pe.Node(IdentityInterface(fields=iter_reg_fields),
                                  name='iter_input')
-        exec_wf.connect(iter_input, 'image',
-                        self.workflow, 'input_spec.moving_image')
+        exec_wf.connect(iter_input, 'in_file',
+                        self.workflow, 'input_spec.in_file')
         exec_wf.connect(iter_input, 'reference',
                         self.workflow, 'input_spec.reference')
 
@@ -308,12 +307,12 @@ class RegistrationWorkflow(WorkflowBase):
             os.makedirs(dest)
 
         # Collect the realigned images.
-        collect_realigned = pe.JoinNode(IdentityInterface(fields=['images']),
+        collect_realigned = pe.JoinNode(IdentityInterface(fields=['in_files']),
                                         joinsource='iter_input',
-                                        joinfield='images',
+                                        joinfield='in_files',
                                         name='collect_realigned')
         exec_wf.connect(self.workflow, 'output_spec.out_file',
-                        collect_realigned, 'images')
+                        collect_realigned, 'in_files')
 
         # Make the profile.
         cr_prf_fields = ['technique', 'configuration', 'sections', 'dest']
@@ -329,7 +328,7 @@ class RegistrationWorkflow(WorkflowBase):
         # Merge the profile and registration result into one list.
         concat_output = pe.Node(Merge(2), name='concat_output')
         exec_wf.connect(cr_prf, 'out_file', concat_output, 'in1')
-        exec_wf.connect(collect_realigned, 'images', concat_output, 'in2')
+        exec_wf.connect(collect_realigned, 'in_files', concat_output, 'in2')
 
         # Upload the registration result into the XNAT registration
         # resource.
@@ -340,7 +339,7 @@ class RegistrationWorkflow(WorkflowBase):
         exec_wf.connect(input_spec, 'session', upload_reg, 'session')
         exec_wf.connect(input_spec, 'scan', upload_reg, 'scan')
         exec_wf.connect(input_spec, 'resource', upload_reg, 'resource')
-        exec_wf.connect(collect_realigned, 'images', upload_reg, 'in_files')
+        exec_wf.connect(collect_realigned, 'in_files', upload_reg, 'in_files')
 
         # FIXME: copying the realigned images individually with a Copy
         # submits a separate SGE job for each copy, contrary to the
@@ -362,9 +361,9 @@ class RegistrationWorkflow(WorkflowBase):
         exec_wf.connect(concat_output, 'out', copy_output, 'in_files')
 
         # The execution output.
-        output_spec = pe.Node(IdentityInterface(fields=['images']),
+        output_spec = pe.Node(IdentityInterface(fields=['out_files']),
                               name='output_spec')
-        exec_wf.connect(collect_realigned, 'images', output_spec, 'images')
+        exec_wf.connect(collect_realigned, 'out_files', output_spec, 'out_files')
 
         self.logger.debug("Created the %s workflow." % exec_wf.name)
         # If debug is set, then diagram the workflow graph.
@@ -400,7 +399,7 @@ class RegistrationWorkflow(WorkflowBase):
         realign_wf = pe.Workflow(name=self.technique, base_dir=self.base_dir)
 
         # The workflow input.
-        in_fields = ['subject', 'session', 'scan', 'moving_image',
+        in_fields = ['subject', 'session', 'scan', 'in_file',
                      'reference', 'mask', 'resource']
         input_spec = pe.Node(IdentityInterface(fields=in_fields),
                              name='input_spec')
@@ -409,15 +408,14 @@ class RegistrationWorkflow(WorkflowBase):
         # Copy the DICOM meta-data. The copy target is set by the technique
         # node defined below.
         copy_meta = pe.Node(CopyMeta(), name='copy_meta')
-        realign_wf.connect(input_spec, 'moving_image', copy_meta, 'src_file')
+        realign_wf.connect(input_spec, 'in_file', copy_meta, 'src_file')
 
         # The input file name without directory.
-        input_filename_xfc = Function(input_names=['in_file'],
-                                      output_names=['out_file'],
-                                      function=filename)
-        input_filename = pe.Node(input_filename_xfc, name='input_filename')
-        realign_wf.connect(input_spec, 'moving_image',
-                           input_filename, 'in_file')
+        in_base_xfc = Function(input_names=['in_file'],
+                               output_names=['out_file'],
+                               function=base_name)
+        in_base = pe.Node(in_base_xfc, name='in_base')
+        realign_wf.connect(input_spec, 'in_file', in_base, 'in_file')
 
         if self.technique == 'ants':
             self.profile_sections = ANTS_CONF_SECTIONS
@@ -430,35 +428,42 @@ class RegistrationWorkflow(WorkflowBase):
             metric_inputs = {field: reg_cfg[field]
                              for field in ['metric', 'metric_weight']
                              if field in reg_cfg}
+
             # Register the images to create the rigid, affine and SyN
             # ANTS transformations. The float option is set to reduce
             # the output image size by app. 4x.
+            #
+            # Note: The float option has no effect. The work-around
+            # is to change the data type from float to short in the
+            # downsize node defined below.
+            # TODO - isolate and fix this Nipype defect.
             reg_xfc = Registration(float=True, **metric_inputs)
             register = pe.Node(reg_xfc, name='register')
+            realign_wf.connect(input_spec, 'in_file', register, 'moving_image')
             realign_wf.connect(input_spec, 'reference',
-                               register, 'fixed_image')
-            realign_wf.connect(input_spec, 'moving_image',
                                register, 'moving_image')
             realign_wf.connect(input_spec, 'mask',
-                               register, 'fixed_image_mask')
-            realign_wf.connect(input_spec, 'mask',
                                register, 'moving_image_mask')
+            realign_wf.connect(input_spec, 'mask',
+                               register, 'fixed_image_mask')
+
             # If the initialize option is set, then make an initial
             # transform.
             initialize = opts.get('initialize')
             if initialize:
                 self.profile_sections.append(ANTS_INITIALIZER_CONF_SECTION)
-                init_xfm = pe.Node(AffineInitializer(), name='initialize_affine')
+                aff_xfc = AffineInitializer()
+                init_xfm = pe.Node(aff_xfc, name='initialize_affine')
                 realign_wf.connect(input_spec, 'reference',
                                    init_xfm, 'fixed_image')
-                realign_wf.connect(input_spec, 'moving_image',
+                realign_wf.connect(input_spec, 'in_file',
                                    init_xfm, 'moving_image')
                 realign_wf.connect(input_spec, 'mask',
                                    init_xfm, 'image_mask')
                 realign_wf.connect(init_xfm, 'affine_transform',
                                    register, 'initial_moving_transform')
                 # Work around the following Nipype bug:
-                # * If the Registration has an initial_moving_transform,
+                # * If the registration has an initial_moving_transform,
                 #   then the default invert_initial_moving_transform value
                 #   is not applied, resulting in the following error:
                 #
@@ -476,33 +481,41 @@ class RegistrationWorkflow(WorkflowBase):
                 #   explicitly set the invert_initial_moving_transform field
                 #   to False.
                 register.inputs.invert_initial_moving_transform = False
+
             # Apply the transforms to the input image.
             apply_xfm = pe.Node(ApplyTransforms(), name='apply_xfm')
             realign_wf.connect(input_spec, 'reference',
                                apply_xfm, 'reference_image')
-            realign_wf.connect(input_spec, 'moving_image',
-                               apply_xfm, 'input_image')
-            realign_wf.connect(input_filename, 'out_file',
-                               apply_xfm, 'output_image')
+            realign_wf.connect(input_spec, 'in_file', apply_xfm, 'input_image')
+            realign_wf.connect(in_base, 'out_file', apply_xfm, 'output_image')
             realign_wf.connect(register, 'forward_transforms',
                                apply_xfm, 'transforms')
+
+            # Work-around for Nipype bug described in the TODO comment
+            # above.
             # Downsize the data type to a signed short int.
             downsize_xfc = fsl.maths.ChangeDataType(output_datatype='short')
             downsize = pe.Node(downsize_xfc, name='downsize')
             realign_wf.connect(apply_xfm, 'output_image', downsize, 'in_file')
+            # End of work-around.
+
             # Copy the meta-data.
             realign_wf.connect(downsize, 'out_file', copy_meta, 'dest_file')
+
         elif self.technique == 'fnirt':
             self.profile_sections = FNIRT_CONF_SECTIONS
+
             # Make the affine transformation.
             flirt = pe.Node(fsl.FLIRT(), name='flirt')
             realign_wf.connect(input_spec, 'reference', flirt, 'reference')
-            realign_wf.connect(input_spec, 'moving_image', flirt, 'in_file')
+            realign_wf.connect(input_spec, 'in_file', flirt, 'in_file')
+
             # Copy the input to a work directory, since FNIRT adds
             # temporary files to the input image location.
             fnirt_copy_moving = pe.Node(Copy(), name='fnirt_copy_moving')
-            realign_wf.connect(input_spec, 'moving_image',
+            realign_wf.connect(input_spec, 'in_file',
                                fnirt_copy_moving, 'in_file')
+
             # Register the image.
             fnirt = pe.Node(fsl.FNIRT(), name='fnirt')
             realign_wf.connect(input_spec, 'reference', fnirt, 'ref_file')
@@ -510,14 +523,16 @@ class RegistrationWorkflow(WorkflowBase):
             realign_wf.connect(fnirt_copy_moving, 'out_file', fnirt, 'in_file')
             realign_wf.connect(input_spec, 'mask', fnirt, 'inmask_file')
             realign_wf.connect(input_spec, 'mask', fnirt, 'refmask_file')
-            realign_wf.connect(input_filename, 'out_file', fnirt, 'warped_file')
+            realign_wf.connect(in_base, 'out_file', fnirt, 'warped_file')
+
             # Copy the meta-data.
             realign_wf.connect(fnirt, 'warped_file', copy_meta, 'dest_file')
+
         elif self.technique == 'mock':
             self.profile_sections = []
             # Copy the input scan file to an output file.
             mock_copy = pe.Node(Copy(), name='mock_copy')
-            realign_wf.connect(input_spec, 'moving_image',
+            realign_wf.connect(input_spec, 'in_file',
                                mock_copy, 'in_file')
             realign_wf.connect(mock_copy, 'out_file', copy_meta, 'dest_file')
         else:
@@ -563,7 +578,7 @@ def create_profile(technique, configuration, sections, dest):
                                    general=dict(technique=technique))
 
 
-def filename(in_file):
+def base_name(in_file):
     """
     :param in_file: the input file path
     :return: the file name without a directory
