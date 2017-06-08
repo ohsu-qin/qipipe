@@ -852,11 +852,11 @@ class QIPipelineWorkflow(WorkflowBase):
             # The volume grouping tag.
             vol_tag = self.collection.patterns.volume
             if not vol_tag:
-                raise ArgumentError('The scan time series pipeline'
-                                    ' collection volume tag is missing.')
+                raise PipelineError('The collection configuration DICOM'
+                                    ' volume tag is missing.')
             scan_ts_xfc = MergeNifti(sort_order=[vol_tag],
                                      out_format=SCAN_TS_BASE)
-            scan_ts = pe.Node(scan_ts_xfc, name='merge_volumes')
+            scan_ts = pe.Node(scan_ts_xfc, name='merge_scan_volumes')
             exec_wf.connect(staged, 'out_files', scan_ts, 'in_files')
             self.logger.debug('Connected staging to scan time series merge.')
             # Upload the time series.
@@ -968,7 +968,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # Stack the registered images into a 4D time series.
             reg_ts_name = self.registration_resource + '_ts'
             merge_reg_xfc = MergeNifti(out_format=reg_ts_name)
-            merge_reg = pe.Node(merge_reg_xfc, name='merge_reg')
+            merge_reg = pe.Node(merge_reg_xfc, name='merge_reg_volumes')
             exec_wf.connect(reg_node, 'out_files', merge_reg, 'in_files')
 
             # Upload the realigned time series to XNAT.
