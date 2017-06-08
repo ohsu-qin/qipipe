@@ -866,7 +866,7 @@ def get_fit_params(cfg_file, aif_shift):
     import csv
     from qiutil.collections import is_nonstring_iterable
     from qiutil.ast_config import read_config
-    from qipipe.pipeline.modeling import (FASTFIT_PARAMS_FILE)
+    from qipipe.pipeline.modeling import FASTFIT_PARAMS_FILE
 
     # The R1 parameters used by Fastfit.
     FASTFIT_R1_PARAMS = ['r1_cr', 'r1_b_pre']
@@ -875,7 +875,7 @@ def get_fit_params(cfg_file, aif_shift):
     cfg = read_config(cfg_file)
     cfg_dict = dict(cfg)
     # Start with the AIF parameters.
-    fastfit_opts = cfg_dict.get('AIF')
+    fastfit_opts = cfg_dict.get('AIF').copy()
     # Add the R1 Fastfit parameters.
     r1_opts = cfg_dict.get('R1')
     for param in FASTFIT_R1_PARAMS:
