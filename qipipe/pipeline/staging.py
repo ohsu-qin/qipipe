@@ -7,9 +7,7 @@ from nipype.pipeline import engine as pe
 from nipype.interfaces.utility import (IdentityInterface, Function)
 from nipype.interfaces.dcmstack import DcmStack
 import qixnat
-from ..interfaces import (
-    StickyIdentityInterface, FixDicom, Compress, XNATFind, XNATUpload
-)
+from ..interfaces import (StickyIdentityInterface, FixDicom, Compress)
 from .workflow_base import WorkflowBase
 from ..helpers.logging import logger
 from ..staging import iterator
