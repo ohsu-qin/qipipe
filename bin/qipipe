@@ -72,8 +72,8 @@ def _parse_arguments():
     # TODO -
     # * Move the staging, registration and modeling options to
     #   a config file with sections [Staging], etc.
-    # * Add a -c/--config option, with default ./qipipe.cfg.
-    # * Rename staging/ohsu.py to staging/patterns and read the
+    # * Add a --config option, with default ./qipipe.cfg.
+    # * Rename staging/ohsu.py to staging/patterns.py and read the
     #   constants from the config property file.
     ##
     # The staging options.
