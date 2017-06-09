@@ -560,7 +560,7 @@ class ModelingWorkflow(WorkflowBase):
         delta_k_trans = pe.Node(fsl.ImageMaths(), name='delta_k_trans')
         delta_k_trans.inputs.op_string = '-sub'
         workflow.connect(pk_map, 'k_trans', delta_k_trans, 'in_file')
-        workflow.connect(pk_map, 'guess_model.k_trans',
+        workflow.connect(pk_map, 'ext_tofts.k_trans',
                          delta_k_trans, 'in_file2')
 
         # The modeling outputs.
@@ -573,10 +573,10 @@ class ModelingWorkflow(WorkflowBase):
         workflow.connect(pk_map, 'v_e', output_spec, 'fxr_v_e')
         workflow.connect(pk_map, 'tau_i', output_spec, 'fxr_tau_i')
         workflow.connect(pk_map, 'chisq', output_spec, 'fxr_chisq')
-        workflow.connect(pk_map, 'guess_model.k_trans',
+        workflow.connect(pk_map, 'ext_tofts.k_trans',
                          output_spec, 'fxl_k_trans')
-        workflow.connect(pk_map, 'guess_model.v_e', output_spec, 'fxl_v_e')
-        workflow.connect(pk_map, 'guess_model.chisq', output_spec, 'fxl_chisq')
+        workflow.connect(pk_map, 'ext_tofts.v_e', output_spec, 'fxl_v_e')
+        workflow.connect(pk_map, 'ext_tofts.chisq', output_spec, 'fxl_chisq')
         workflow.connect(delta_k_trans, 'out_file',
                          output_spec, 'delta_k_trans')
 
