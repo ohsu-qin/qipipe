@@ -760,7 +760,7 @@ def create_profile(technique, time_series, configuration, sections, dest):
     :param sections: the profile sections
     :param dest: the output profile file path
     """
-
+    import os
     from qipipe.helpers import metadata
 
     _, base_name = os.path.split(time_series)
