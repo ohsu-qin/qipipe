@@ -4,7 +4,6 @@ from a XNAT scan.
 """
 import csv
 import tempfile
-from qiutil.file import splitexts
 from qiutil.collections import concat
 from qiutil.ast_config import read_config
 from qixnat.helpers import (xnat_path, xnat_name, parse_xnat_date)

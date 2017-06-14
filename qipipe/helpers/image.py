@@ -1,5 +1,4 @@
 import os
-from matplotlib import (pyplot, colors, cm)
 import numpy as np
 import nibabel as nib
 from .logging import logger
