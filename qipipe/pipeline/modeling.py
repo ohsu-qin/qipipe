@@ -366,8 +366,8 @@ class ModelingWorkflow(WorkflowBase):
                        child_wf, 'input_spec.bolus_arrival_index')
 
         # Make the profile.
-        cr_prf_fields = ['technique', 'source', 'configuration', 'sections',
-                         'dest']
+        cr_prf_fields = ['technique', 'time_series', 'configuration',
+                         'sections', 'dest']
         cr_prf_xfc = Function(input_names=cr_prf_fields,
                               output_names=['out_file'],
                               function=create_profile)
