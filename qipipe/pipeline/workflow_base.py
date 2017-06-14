@@ -183,27 +183,14 @@ class WorkflowBase(object):
         """
         Collects the following options for creating a child workflow:
         * project
-        * base_dir
         * config_dir
         * dry_run
         * distributable
 
-        If the *name* option is set, then the child *base_dir* is
-        the subdirectory *base_dir*\ /\ *name*, where *base_dir*
-        is this parent workflow's *base_dir*. Otherwise the child
-        *base_dir* is this parent workflow's *base_dir*.
-
-        :param name: the optional child workflow name
         :return: the options sufficient to create a child workflow
         """
-        if name:
-            base_dir = "%s/%s" % (self.base_dir, name)
-        else:
-            base_dir = self.base_dir
-
         return dict(
             project=self.project,
-            base_dir=base_dir,
             config_dir=self.config_dir,
             dry_run=self.dry_run,
             distributable=self.is_distributable

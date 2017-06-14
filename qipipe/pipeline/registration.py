@@ -259,7 +259,7 @@ class RegistrationWorkflow(WorkflowBase):
 
         # The execution workflow.
         exec_wf = pe.Workflow(
-            name='registration', base_dir=self.workflow.base_dir
+            name='registration', base_dir=self.base_dir
         )
 
         # The registration workflow input.
@@ -386,8 +386,6 @@ class RegistrationWorkflow(WorkflowBase):
         - Upload the realign outputs to XNAT
 
         :param opts: the following workflow options:
-        :keyword base_dir: the workflow directory
-            (default a new temp directory)
         :keyword initialize: flag indicating whether to create an
             initial affine transform (ANTs only, default false)
         :return: the Workflow object
@@ -395,8 +393,8 @@ class RegistrationWorkflow(WorkflowBase):
         self.logger.debug('Creating the registration realignment workflow...')
 
         # The workflow.
-        base_dir = opts.get('base_dir', tempfile.mkdtemp(prefix='qipipe_'))
-        realign_wf = pe.Workflow(name=self.technique, base_dir=self.base_dir)
+        base_dir = "%s/%s" % (self.base_dir, self.technique)
+        realign_wf = pe.Workflow(name=self.technique, base_dir=base_dir)
 
         # The workflow input.
         in_fields = ['subject', 'session', 'scan', 'in_file',

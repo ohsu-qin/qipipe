@@ -170,7 +170,7 @@ class ScanStagingWorkflow(WorkflowBase):
         self.logger.debug('Creating the scan staging workflow...')
 
         # The Nipype workflow object.
-        workflow = pe.Workflow(name='stage_scan')
+        workflow = pe.Workflow(name='stage_scan', base_dir=self.base_dir)
 
         # The workflow input.
         hierarchy_fields = ['subject', 'session', 'scan']
@@ -190,14 +190,12 @@ class ScanStagingWorkflow(WorkflowBase):
 
         # The volume staging node wraps the stage_volume function.
         stg_inputs = (
-            in_fields + iter_fields + ['collection', 'base_dir', 'opts']
+            in_fields + iter_fields + ['collection', 'opts']
         )
         stg_xfc = Function(input_names=stg_inputs, output_names=['out_dir'],
                            function=stage_volume)
         stg_node = pe.Node(stg_xfc, name='stage')
         child_opts = self._child_options()
-        base_dir = child_opts.pop('base_dir')
-        stg_node.inputs.base_dir = base_dir
         stg_node.inputs.opts = child_opts
         for fld in in_fields:
             workflow.connect(input_spec, fld, stg_node, fld)
@@ -386,7 +384,8 @@ class VolumeStagingWorkflow(WorkflowBase):
         self.logger.debug('Creating the DICOM processing workflow...')
 
         # The Nipype workflow object.
-        workflow = pe.Workflow(name='staging', base_dir=self.base_dir)
+        base_dir = "%s/%s" % (self.base_dir, 'stage_volume')
+        workflow = pe.Workflow(name='stage_volume', base_dir=base_dir)
 
         # The workflow input.
         in_fields = ['collection', 'subject', 'session', 'scan',
