@@ -591,7 +591,6 @@ class ModelingWorkflow(WorkflowBase):
         # The non-FXL/FXR outputs.
         other_fastfit_outs = [fld for fld in fastfit_outs
                               if not fld in complementary_outs_dict]
-        print (">>mdl couts: %s oouts: %s" % (complementary_outs_dict, other_fastfit_outs))
         other_outs = non_fastfit_outs + other_fastfit_outs
         # The output fields.
         output_fields = (
