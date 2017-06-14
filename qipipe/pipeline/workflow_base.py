@@ -1,6 +1,5 @@
 import os
 import re
-import tempfile
 import pprint
 import networkx as nx
 import qixnat
@@ -108,7 +107,7 @@ class WorkflowBase(object):
         elif parent:
             base_dir = parent.base_dir
         else:
-            base_dir = tempfile.mkdtemp(prefix='qipipe_')
+            base_dir = os.getcwd()
         self.base_dir = base_dir
         "The workflow execution directory (default a new temp directory)."
 
