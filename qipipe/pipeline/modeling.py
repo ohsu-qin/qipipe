@@ -26,7 +26,7 @@ from ..helpers.bolus_arrival import (bolus_arrival_index, BolusArrivalError)
 from ..helpers.logging import logger
 from ..helpers.constants import CONF_DIR
 from ..interfaces import (
-    DceToR1, Fastfit, StickyIdentityInterface, XNATUpload, XNATFind
+    DceToR1, Fastfit, StickyIdentityInterface, Copy, XNATUpload, XNATFind
 )
 from .workflow_base import WorkflowBase
 from .pipeline_error import PipelineError
@@ -376,7 +376,7 @@ class ModelingWorkflow(WorkflowBase):
         cr_prf.inputs.configuration = self.configuration
         cr_prf.inputs.sections = self.profile_sections
         cr_prf.inputs.dest = MODELING_CONF_FILE
-        mdl_wf.connect(input_spec, 'resource', cr_prf, 'source')
+        mdl_wf.connect(input_spec, 'time_series', cr_prf, 'time_series')
 
         # Each output field contains a modeling result file.
         child_output = child_wf.get_node('output_spec')
@@ -592,6 +592,7 @@ class ModelingWorkflow(WorkflowBase):
         other_fastfit_outs = [fld for fld in fastfit_outs
                               if not fld in complementary_outs_dict]
         other_outs = non_fastfit_outs + other_fastfit_outs
+
         # The output fields.
         output_fields = (
             complementary_outs_dict.values() + other_outs
@@ -607,9 +608,14 @@ class ModelingWorkflow(WorkflowBase):
         workflow.connect(fit_params, 'params_csv', output_spec, 'params_csv')
         workflow.connect(delta_k_trans, 'out_file',
                          output_spec, 'delta_k_trans')
-        # Collect the complementary fastfit outputs.
+        # Rename the FXL/FXR files.
         for fastfit_fld, out_fld in complementary_outs_dict.iteritems():
-            workflow.connect(fastfit, fastfit_fld, output_spec, out_fld)
+            node_name = "copy_%s" % out_fld
+            out_base_name = "%s.nii.gz" % out_fld
+            copy_xfc = Copy(out_base_name=out_base_name)
+            copy = pe.node(copy_xfc, name=node_name)
+            workflow.connect(fastfit, fastfit_fld, copy, 'in_file')
+            workflow.connect(copy, 'out_file', output_spec, out_fld)
         # Collect the other fastfit outputs.
         for fld in other_fastfit_outs:
             workflow.connect(fastfit, fld, output_spec, fld)
@@ -744,12 +750,12 @@ class ModelingWorkflow(WorkflowBase):
 
 ### Utility functions called by workflow nodes. ###
 
-def create_profile(technique, source, configuration, sections, dest):
+def create_profile(technique, time_series, configuration, sections, dest):
     """
     :meth:`qipipe.helpers.metadata.create_profile` wrapper.
 
     :param technique: the modeling technique
-    :param source: the modeling input XNAT resource name
+    :param time_series: the modeling input time series file path
     :param configuration: the modeling workflow interface settings
     :param sections: the profile sections
     :param dest: the output profile file path
@@ -757,15 +763,19 @@ def create_profile(technique, source, configuration, sections, dest):
 
     from qipipe.helpers import metadata
 
-    # The correct technique names.
-    TECHNIQUE_NAMES = dict(ohsu='OHSU', mock='Mock')
+    _, base_name = os.path.split(time_series)
+    match = re.match('(.*)_ts', base_name)
+    if not match:
+        raise ModelingError("The input time series file base name does not"
+                            " include the _ts qualifier: %s" % base_name)
+    resource = match.group(1)
+    source = dict(resource=resource, file=base_name)
+    optimization=dict(technique=technique)
 
-    technique = TECHNIQUE_NAMES.get(technique, technique)
-
-    return metadata.create_profile(configuration, sections,
-                                   dest=dest,
-                                   general=dict(technique=technique),
-                                   source=dict(resource=source))
+    return metadata.create_profile(
+        configuration, sections, dest,
+        source=source, optimization=optimization
+    )
 
 
 def make_baseline(time_series, base_end):
