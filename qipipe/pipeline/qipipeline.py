@@ -621,6 +621,11 @@ class QIPipelineWorkflow(WorkflowBase):
         #
         # By contrast, the workflows are tied together in front-to-back
         # order.
+        #
+        # TODO - Make a qiprofile update stage. Each other stage
+        # flows into the update. E.g. take the overall and ROI FSL mean
+        # intensity values for the modeling output files.
+        #
         self.logger.debug("Building the pipeline execution workflow"
                             " for the actions %s..." % actions)
         # The execution workflow.
