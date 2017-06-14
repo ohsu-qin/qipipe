@@ -541,7 +541,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 (subject, session, scan, len(unregistered),
                  self.registration_resource)
             )
-        else:
+        elif registered:
             self.logger.debug("Processing %d %s %s scan %d volumes:" %
                               (len(registered), subject, session, scan))
             self.logger.debug("%s" % registered)
@@ -555,11 +555,6 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # Execute the workflow.
         self._run_workflow(self.workflow)
-        if unregistered:
-            self.logger.debug("Registered %d %s %s %s scan %d volumes:" %
-                              (len(unregistered), project, subject,
-                               session, scan))
-            self.logger.debug("%s" % unregistered)
 
     def _set_roi_inputs(self, *inputs):
         """
@@ -1230,42 +1225,53 @@ def register(subject, session, scan, reference_index, *in_files, **opts):
     # The initial fixed image.
     reference = volumes[reference_index]
 
+    _logger = logger(__name__)
+    _logger.debug(
+        "Registering %d volumes against the reference volume %s..." %
+         (len(in_files), reference)
+    )
+
     # Register the files after the reference point.
     ref_successor = reference_index + 1
     after = volumes[ref_successor:]
     if after:
-        logger(__name__).debug(
+        _logger.debug(
             "Registering the %d volumes after the fixed reference"
             " volume %s..." % (len(after), reference)
         )
-    post = registration.run(subject, session, scan, reference,
-                            *after, **opts)
-    if after:
-        logger(__name__).debug(
+        post = registration.run(subject, session, scan, reference,
+                                *after, **opts)
+        _logger.debug(
             "Registered the %d volumes after the fixed reference"
             " volume %s." % (len(after), reference)
         )
+    else:
+        post = []
+
     # Register the files before the reference point in
     # reverse order in case the recursive flag is set.
     before = volumes[:reference_index]
     before.reverse()
     if before:
-        logger(__name__).debug(
+        _logger.debug(
             "Registering the %d volumes before the fixed reference"
             " volume %s..." % (len(before), reference)
         )
-    pre = registration.run(subject, session, scan, reference,
-                           *before, **opts)
-    if before:
-        logger(__name__).debug(
+        pre = registration.run(subject, session, scan, reference,
+                               *before, **opts)
+        _logger.debug(
             "Registered the %d volumes before the fixed reference"
             " volume %s." % (len(before), reference)
         )
-    # Restore the original sort order.
-    pre.reverse()
+        # Restore the original sort order.
+        pre.reverse()
+    else:
+        pre = []
+
+    _logger.debug("Registered %d volumes." % len(in_files))
+
     # The registration result in sort order.
     output = pre + [reference] + post
-
     # Infer the project from the options.
     prj_opt = opts.get('project')
     if prj_opt:
@@ -1275,12 +1281,12 @@ def register(subject, session, scan, reference_index, *in_files, **opts):
         if parent_wf:
             project = parent_wf.project
         else:
-            raise PipelineError("The registration project could not"
-                                " be determined from the options")
+            raise PipelineError('The registration project could not be'
+                                ' determined from the options')
     # Get the resource from the options.
     resource = opts.get('resource')
     if not resource:
-        raise PipelineError("The registration resource option was not found")
+        raise PipelineError('The registration resource option was not found')
 
     # Upload the registration profile and the unrealigned image into the
     # XNAT registration resource. The profile is in the same directory as
@@ -1299,7 +1305,7 @@ def register(subject, session, scan, reference_index, *in_files, **opts):
     _, prf_base = os.path.split(profile)
     _, ref_base = os.path.split(reference)
     in_files = [profile, reference]
-    logger(__name__).debug(
+    _logger.debug(
         "Uploading the registration profile %s and fixed reference image"
         " %s to %s %s scan %d resource %s from %s..." %
         (prf_base, ref_base, subject, session, scan, resource, reg_dir)
@@ -1308,7 +1314,7 @@ def register(subject, session, scan, reference_index, *in_files, **opts):
                         scan=scan, resource=resource, in_files=in_files,
                         modality='MR')
     upload.run()
-    logger(__name__).info(
+    _logger.info(
         "Uploaded the %s %s scan %d registration result to resource"
         " %s." % (subject, session, scan, resource)
     )
