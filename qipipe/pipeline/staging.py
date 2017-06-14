@@ -210,17 +210,17 @@ class ScanStagingWorkflow(WorkflowBase):
         upload_xfc = Function(input_names=upload_fields,
                               output_names=['out_files'],
                               function=upload)
-        upload = pe.Node(upload_xfc, name='upload')
-        upload.inputs.project = self.project
-        workflow.connect(input_spec, 'subject', upload, 'subject')
-        workflow.connect(input_spec, 'session', upload, 'session')
-        workflow.connect(input_spec, 'scan', upload, 'scan')
-        workflow.connect(input_spec, 'dest', upload, 'in_dir')
+        upload_node = pe.Node(upload_xfc, name='upload')
+        upload_node.inputs.project = self.project
+        workflow.connect(input_spec, 'subject', upload_node, 'subject')
+        workflow.connect(input_spec, 'session', upload_node, 'session')
+        workflow.connect(input_spec, 'scan', upload_node, 'scan')
+        workflow.connect(input_spec, 'dest', upload_node, 'in_dir')
 
         # The output is the 3D NIfTI volume image files.
         output_spec = pe.Node(StickyIdentityInterface(fields=['out_files']),
                               name='output_spec')
-        workflow.connect(upload, 'out_files', output_spec, 'out_files')
+        workflow.connect(upload_node, 'out_files', output_spec, 'out_files')
 
         # Instrument the nodes for cluster submission, if necessary.
         self._configure_nodes(workflow)
