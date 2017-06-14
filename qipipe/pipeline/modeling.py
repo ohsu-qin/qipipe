@@ -26,7 +26,7 @@ from ..helpers.bolus_arrival import (bolus_arrival_index, BolusArrivalError)
 from ..helpers.logging import logger
 from ..helpers.constants import CONF_DIR
 from ..interfaces import (
-    DceToR1, StickyIdentityInterface, XNATUpload, XNATFind
+    DceToR1, Fastfit, StickyIdentityInterface, XNATUpload, XNATFind
 )
 from .workflow_base import WorkflowBase
 from .pipeline_error import PipelineError
@@ -37,17 +37,17 @@ MODELING_PREFIX = 'pk_'
 MODELING_CONF_FILE = 'modeling.cfg'
 """The modeling workflow configuration."""
 
-OUTPUT_FIELDS = ['r1_series', 'pk_params', 'fxr_k_trans', 'fxr_v_e',
-                 'fxr_tau_i', 'fxr_chisq', 'fxl_k_trans', 'fxl_v_e',
-                 'fxl_chisq', 'delta_k_trans']
-"""The modeling workflow output fields."""
+OHSU_CONF_SECTIONS = ['Fastfit', 'R1', 'AIF']
+"""The OHSU AIRC modeling configuration sections."""
 
 FASTFIT_PARAMS_FILE = 'params.csv'
-"""The fastfit parameters CSV file name."""
+"""The Fastfit parameters CSV file name."""
 
-BOLERO_CONF_SECTIONS = ['Fastfit', 'R1', 'AIF']
-"""The OHSU bolero modeling configuration sections."""
+FASTFIT_CONF_PROPS = ['model_name', 'optimization_params', 'optional_outs']
+"""The Fastfit configuration property names."""
 
+FXL_MODEL_PREFIX = 'ext_tofts.'
+"""The Fastfit Standard TOFTS model prefix."""
 
 class ModelingError(Exception):
     pass
@@ -89,7 +89,7 @@ class ModelingWorkflow(WorkflowBase):
 
     - Determine the AIF and R1 fit parameters from the time series
 
-    - Optimize the BOLERO pharmacokinetic model
+    - Optimize the OHSU pharmacokinetic model
 
     - Upload the modeling result to XNAT
 
@@ -146,7 +146,7 @@ class ModelingWorkflow(WorkflowBase):
     This workflow is adapted from the `AIRC DCE`_ implementation.
 
     :Note: This workflow uses proprietary OHSU AIRC software, notably the
-        BOLERO implementation of the shutter speed model.
+        OHSU implementation of the shutter speed model.
 
     .. reST substitutions:
     .. include:: <isogrk3.txt>
@@ -271,6 +271,9 @@ class ModelingWorkflow(WorkflowBase):
             (self.workflow.name, subject, session, scan, time_series)
         )
         wf_res = self._run_workflow(self.workflow)
+        # If dry-run is set, then there is no result.
+        if not wf_res:
+            return {}
         # The magic incantation to get the Nipype workflow result.
         output_res = next(n for n in wf_res.nodes() if n.name == 'output_spec')
         results = output_res.inputs.get()['out_dict']
@@ -307,20 +310,21 @@ class ModelingWorkflow(WorkflowBase):
         # The supervisory workflow.
         mdl_wf = pe.Workflow(name='modeling', base_dir=self.base_dir)
 
-        # The default modeling technique is the OHSU proprietary bolero.
+        # The default modeling technique is the OHSU proprietary modeling
+        # workflow.
         #
         # TODO - generalize workflow techniques here and in registration
         # to a module reference, e.g.:
         #
         # qipipe.cfg:
         # [Modeling]
-        # technique = ohsu.modeling.bolero
+        # technique = ohsu
         #
         # New git project with:
         # qipipe-ohsu/
         #   requirements.txt:
         #     qipipe==x.x.x
-        #   modeling/bolero.py:
+        #   modeling/ohsu.py:
         #     def create_workflow(**opts):
         #         ...
         #
@@ -337,8 +341,8 @@ class ModelingWorkflow(WorkflowBase):
         #     workflow = __import__(child_opt)
         # child_wf = workflow.create_workflow(**opts)
         #
-        if self.technique == 'bolero':
-            child_wf = self._create_bolero_workflow(**opts)
+        if self.technique == 'ohsu':
+            child_wf = self._create_ohsu_workflow(**opts)
         elif self.technique == 'mock':
             child_wf = self._create_mock_workflow(**opts)
         elif self.technique:
@@ -399,8 +403,6 @@ class ModelingWorkflow(WorkflowBase):
         mdl_wf.connect(input_spec, 'scan', upload_mdl, 'scan')
         mdl_wf.connect(concat_uploads, 'out', upload_mdl, 'in_files')
 
-        # TODO - Get the overall and ROI FSL mean intensity values.
-
         # Collect the outputs.
         merge_output_xfc = Merge(len(out_fields))
         merge_output = pe.Node(merge_output_xfc, name='merge_outputs')
@@ -434,7 +436,7 @@ class ModelingWorkflow(WorkflowBase):
 
         return mdl_wf
 
-    def _create_bolero_workflow(self, **opts):
+    def _create_ohsu_workflow(self, **opts):
         """
         Creates the modeling base workflow. This workflow performs the
         steps described in
@@ -444,35 +446,35 @@ class ModelingWorkflow(WorkflowBase):
         :Note: This workflow is adapted from the AIRC workflow at
         https://everett.ohsu.edu/hg/qin_dce. The AIRC workflow time
         series merge is removed and added as input to the workflow
-        created by this method. Any change to the ``qin_dce`` workflow
-        should be reflected in this method.
+        created by this method. The modeling optimization parameters
+        are specified in the configuration rather than inferred
+        from fastfit_cli.get_available_model to allow import of
+        this Fastfit module in an environment which does not have
+        the proprietary OHSU fastfit library.
 
         :param opts: the PK modeling parameters
-        :return: the pyxnat Workflow
+        :return: the Nipype Workflow
         """
-        # Import the proprietary OHSU FastFit interface.
-        from ..interfaces import Fastfit
-
-        workflow = pe.Workflow(name='bolero', base_dir=self.base_dir)
+        workflow = pe.Workflow(name='ohsu', base_dir=self.base_dir)
 
         # The modeling profile configuration sections.
-        self.profile_sections = BOLERO_CONF_SECTIONS
+        self.profile_sections = OHSU_CONF_SECTIONS
 
         # The PK modeling parameters.
-        pk_opts = self._r1_parameters(**opts)
+        r1_opts = self._r1_parameters(**opts)
         # Set the use_fixed_r1_0 flag.
-        use_fixed_r1_0 = pk_opts.get('r1_0_val') != None
+        use_fixed_r1_0 = r1_opts.get('r1_0_val') != None
 
         # Set up the input node.
-        non_pk_flds = ['time_series', 'mask', 'bolus_arrival_index']
-        in_fields = non_pk_flds + pk_opts.keys()
+        non_r1_flds = ['time_series', 'mask', 'bolus_arrival_index']
+        in_fields = non_r1_flds + r1_opts.keys()
         input_xfc = IdentityInterface(fields=in_fields)
         input_spec = pe.Node(input_xfc, name='input_spec')
         # Set the config parameters.
-        for field in non_pk_flds:
+        for field in non_r1_flds:
             if field in opts:
                 setattr(input_spec.inputs, field, opts[field])
-        for field, value in pk_opts.iteritems():
+        for field, value in r1_opts.iteritems():
             setattr(input_spec.inputs, field, value)
 
         # If we are not using a fixed r1_0 value, then compute a map
@@ -508,6 +510,8 @@ class ModelingWorkflow(WorkflowBase):
         else:
             raise ModelingError('The DceToR1 r1_0_map attribute is not'
                                 ' yet supported')
+            # TODO - remove error and enable below when r1_0_map is
+            # supported.
             #workflow.connect(get_r1_0, 'r1_0_map', r1_series, 'r1_0')
 
         # Copy the time series meta-data to the R1 series.
@@ -535,50 +539,81 @@ class ModelingWorkflow(WorkflowBase):
         workflow.connect(aif_shift, 'aif_shift', fit_params, 'aif_shift')
 
         # Work around the following Fastfit limitation:
-        # * The Fastfit model_name and optional_outs inputs must be
-        #   set before the Fastfit output is connected in the workflow.
+        # * The Fastfit model_name, optimization_params and optional_outs
+        #   inputs must be set before the Fastfit output is connected in
+        #   the workflow.
         # These inputs are specified in the ModelingWorkflow configuration
         # named modeling.cfg. However, the configuration inputs are assigned
         # only in the WorkflowBase._run_workflow wrapper directly before
         # the workflow is run. The work-around is to get the configuration
         # settings and set the inputs here.
-        pk_cfg = self.configuration['Fastfit']
-        if not pk_cfg:
-            raise ModelingError("The modeling configuration is missing the"
-                                " Fastfit topic")
-        ff_opts = {opt: pk_cfg[opt] for opt in ['model_name', 'optional_outs']
-                   if opt in pk_cfg}
+        fastfit_cfg = self.configuration['Fastfit']
+        if not fastfit_cfg:
+            raise ModelingError('The modeling configuration is missing the'
+                                ' Fastfit topic')
+        fastfit_opts = {opt: fastfit_cfg[opt] for opt in FASTFIT_CONF_PROPS
+                        if opt in fastfit_cfg}
         # The pharmacokinetic model optimizer.
-        pk_map = pe.Node(Fastfit(**ff_opts), name='pk_map')
-        workflow.connect(copy_meta, 'dest_file', pk_map, 'target_data')
-        workflow.connect(input_spec, 'mask', pk_map, 'mask')
-        workflow.connect(fit_params, 'params_csv', pk_map, 'params_csv')
-        # Set the MPI flag.
-        pk_map.inputs.use_mpi = self.is_distributable
+        fastfit = pe.Node(Fastfit(**fastfit_opts), name='fastfit')
+        workflow.connect(copy_meta, 'dest_file', fastfit, 'in_file')
+        workflow.connect(input_spec, 'mask', fastfit, 'mask')
+        workflow.connect(fit_params, 'params_csv', fastfit, 'other_params_csv')
 
         # Compute the Ktrans difference.
         delta_k_trans = pe.Node(fsl.ImageMaths(), name='delta_k_trans')
         delta_k_trans.inputs.op_string = '-sub'
-        workflow.connect(pk_map, 'k_trans', delta_k_trans, 'in_file')
-        workflow.connect(pk_map, 'ext_tofts.k_trans',
+        workflow.connect(fastfit, 'k_trans', delta_k_trans, 'in_file')
+        workflow.connect(fastfit, 'ext_tofts.k_trans',
                          delta_k_trans, 'in_file2')
 
-        # The modeling outputs.
-        output_spec = pe.Node(IdentityInterface(fields=OUTPUT_FIELDS),
+        # The non-fastfit output fields.
+        non_fastfit_outs = ['r1_series', 'params_csv', 'delta_k_trans']
+        # The mandatory fastfit output fields.
+        mandatory_outs = fastfit_opts.get('optimization_params', [])
+        # The optional fastfit output fields.
+        optional_outs = fastfit_opts.get('optional_outs', [])
+        # All fastfit output fields.
+        fastfit_outs = mandatory_outs + optional_outs
+        # All upstream output fields.
+        upsteam_outs = non_fastfit_outs + fastfit_outs
+
+        # The FXL (Standard TOFTS) {upstream: output} dictionary.
+        fxl_outs_dict = {fld: fld.replace(FXL_MODEL_PREFIX, 'fxl_')
+                    for fld in optional_outs
+                    if fld.startswith(FXL_MODEL_PREFIX)}
+        # The corresponding FXR (Shutter Speed) {upstream: output}
+        # dictionary.
+        fxr_outs_dict = {fld.replace('fxl_', ''): fld.replace('fxl_', 'fxr_')
+                         for fld in fxl_outs_dict.itervalues()}
+        # The FXL/FXR {upstream: output} dictionary.
+        complementary_outs_dict = fxl_outs_dict.copy()
+        complementary_outs_dict.update(fxr_outs_dict)
+        # The non-FXL/FXR outputs.
+        other_fastfit_outs = [fld for fld in fastfit_outs
+                              if not fld in complementary_outs_dict]
+        print (">>mdl couts: %s oouts: %s" % (complementary_outs_dict, other_fastfit_outs))
+        other_outs = non_fastfit_outs + other_fastfit_outs
+        # The output fields.
+        output_fields = (
+            complementary_outs_dict.values() + other_outs
+        )
+        # The output node.
+        output_spec = pe.Node(IdentityInterface(fields=output_fields),
                               name='output_spec')
-        # Collect the outputs.
+        self.logger.debug("Created the %s workflow output node %s with output"
+                          " fields:\n%s" %
+                          (workflow.name, output_spec.name, output_fields))
+        # Collect the non-fastfit outputs.
         workflow.connect(copy_meta, 'dest_file', output_spec, 'r1_series')
-        workflow.connect(fit_params, 'params_csv', output_spec, 'pk_params')
-        workflow.connect(pk_map, 'k_trans', output_spec, 'fxr_k_trans')
-        workflow.connect(pk_map, 'v_e', output_spec, 'fxr_v_e')
-        workflow.connect(pk_map, 'tau_i', output_spec, 'fxr_tau_i')
-        workflow.connect(pk_map, 'chisq', output_spec, 'fxr_chisq')
-        workflow.connect(pk_map, 'ext_tofts.k_trans',
-                         output_spec, 'fxl_k_trans')
-        workflow.connect(pk_map, 'ext_tofts.v_e', output_spec, 'fxl_v_e')
-        workflow.connect(pk_map, 'ext_tofts.chisq', output_spec, 'fxl_chisq')
+        workflow.connect(fit_params, 'params_csv', output_spec, 'params_csv')
         workflow.connect(delta_k_trans, 'out_file',
                          output_spec, 'delta_k_trans')
+        # Collect the complementary fastfit outputs.
+        for fastfit_fld, out_fld in complementary_outs_dict.iteritems():
+            workflow.connect(fastfit, fastfit_fld, output_spec, out_fld)
+        # Collect the other fastfit outputs.
+        for fld in other_fastfit_outs:
+            workflow.connect(fastfit, fld, output_spec, fld)
 
         self._configure_nodes(workflow)
 
@@ -592,7 +627,7 @@ class ModelingWorkflow(WorkflowBase):
         exception of XNAT upload.
 
         :param opts: the PK modeling parameters
-        :return: the pyxnat Workflow
+        :return: the Nipype Workflow
         """
         workflow = pe.Workflow(name='mock', base_dir=self.base_dir)
 
@@ -616,22 +651,22 @@ class ModelingWorkflow(WorkflowBase):
         # AIF shift.
         fit_params_flds = ['cfg_file', 'aif_shift']
         fit_params_xfc = Function(input_names=fit_params_flds,
-                                  output_names=['params_csv'],
+                                  output_names=['out_dict'],
                                   function=get_fit_params)
         fit_params = pe.Node(fit_params_xfc, name='fit_params')
         fit_params.inputs.cfg_file = os.path.join(CONF_DIR, MODELING_CONF_FILE)
         fit_params.inputs.aif_shift = 40.0
         # The mock pharmacokinetic model optimizer copies the mask.
-        pk_map_flds = ['params_csv', 'fxr_k_trans']
-        pk_map = pe.Node(IdentityInterface(fields=pk_map_flds), name='pk_map')
-        workflow.connect(input_spec, 'mask', pk_map, 'fxr_k_trans')
-        workflow.connect(fit_params, 'params_csv', pk_map, 'params_csv')
+        fastfit_flds = ['out_dict', 'fxr_k_trans']
+        fastfit = pe.Node(IdentityInterface(fields=fastfit_flds), name='fastfit')
+        workflow.connect(input_spec, 'mask', fastfit, 'fxr_k_trans')
+        workflow.connect(fit_params, 'out_dict', fastfit, 'params_csv')
 
         # Collect the mock outputs.
-        output_flds = pk_map_flds + ['pk_params']
+        output_flds = fastfit_flds + ['pk_params']
         output_spec = pe.Node(IdentityInterface(fields=output_flds),
                               name='output_spec')
-        workflow.connect(pk_map, 'fxr_k_trans', output_spec, 'fxr_k_trans')
+        workflow.connect(fastfit, 'fxr_k_trans', output_spec, 'fxr_k_trans')
         workflow.connect(fit_params, 'params_csv', output_spec, 'pk_params')
 
         self._configure_nodes(workflow)
@@ -653,27 +688,27 @@ class ModelingWorkflow(WorkflowBase):
         fields = set(r1_fields)
         fields.update(['base_end', 'r1_0_val'])
         # The PK options.
-        pk_opts = {k: opts[k] for k in fields if k in opts}
-        if 'base_end' not in pk_opts:
+        r1_opts = {k: opts[k] for k in fields if k in opts}
+        if 'base_end' not in r1_opts:
             # Look for the the baseline parameter in the configuration.
             if 'base_end' in config:
-                pk_opts['base_end'] = config['base_end']
+                r1_opts['base_end'] = config['base_end']
             else:
                 # The default baseline image count is 1.
-                pk_opts['base_end'] = 1
+                r1_opts['base_end'] = 1
 
         # Set the use_fixed_r1_0 variable to None, signifying unknown.
         use_fixed_r1_0 = None
         # Get the R1_0 parameter values.
-        if 'r1_0_val' in pk_opts:
-            r1_0_val = pk_opts.get('r1_0_val')
+        if 'r1_0_val' in r1_opts:
+            r1_0_val = r1_opts.get('r1_0_val')
             if r1_0_val:
                 use_fixed_r1_0 = True
             else:
                 use_fixed_r1_0 = False
         else:
             for field in r1_fields:
-                value = pk_opts.get(field)
+                value = r1_opts.get(field)
                 if value:
                     use_fixed_r1_0 = False
 
@@ -682,18 +717,18 @@ class ModelingWorkflow(WorkflowBase):
         if use_fixed_r1_0 == None:
             r1_0_val = config.get('r1_0_val')
             if r1_0_val:
-                pk_opts['r1_0_val'] = r1_0_val
+                r1_opts['r1_0_val'] = r1_0_val
                 use_fixed_r1_0 = True
 
         # If R1_0 is not fixed, then augment the R1_0 options
         # from the configuration, if necessary.
         if not use_fixed_r1_0:
             for field in r1_fields:
-                if field not in pk_opts and field in config:
+                if field not in r1_opts and field in config:
                     use_fixed_r1_0 = False
-                    pk_opts[field] = config[field]
+                    r1_opts[field] = config[field]
                 # Validate the R1 parameter.
-                if not pk_opts.get(field):
+                if not r1_opts.get(field):
                     raise ModelingError("Missing both the r1_0_val and the"
                                         " %s parameter." % field)
 
@@ -701,11 +736,11 @@ class ModelingWorkflow(WorkflowBase):
         # extraneous R1 computation fields.
         if use_fixed_r1_0:
             for field in r1_fields:
-                pk_opts.pop(field, None)
+                r1_opts.pop(field, None)
 
-        self.logger.debug("The PK modeling parameters: %s" % pk_opts)
+        self.logger.debug("The PK modeling parameters: %s" % r1_opts)
 
-        return pk_opts
+        return r1_opts
 
 
 ### Utility functions called by workflow nodes. ###
@@ -724,7 +759,7 @@ def create_profile(technique, source, configuration, sections, dest):
     from qipipe.helpers import metadata
 
     # The correct technique names.
-    TECHNIQUE_NAMES = dict(bolero='BOLERO', mock='Mock')
+    TECHNIQUE_NAMES = dict(ohsu='OHSU', mock='Mock')
 
     technique = TECHNIQUE_NAMES.get(technique, technique)
 
