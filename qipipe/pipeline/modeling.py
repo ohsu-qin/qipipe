@@ -768,7 +768,8 @@ def create_profile(technique, time_series, configuration, sections, dest):
     if not match:
         raise ModelingError("The input time series file base name does not"
                             " include the _ts qualifier: %s" % base_name)
-    resource = match.group(1)
+    base_prefix = match.group(1)
+    resource = 'NIFTI' if base_prefix == 'scan' else base_prefix
     source = dict(resource=resource, file=base_name)
     optimization=dict(technique=technique)
 
