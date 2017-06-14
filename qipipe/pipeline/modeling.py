@@ -341,8 +341,8 @@ class ModelingWorkflow(WorkflowBase):
         #     workflow = __import__(child_opt)
         # child_wf = workflow.create_workflow(**opts)
         #
-        if self.technique == 'ohsu':
-            child_wf = self._create_ohsu_workflow(**opts)
+        if self.technique == 'airc':
+            child_wf = self._create_airc_workflow(**opts)
         elif self.technique == 'mock':
             child_wf = self._create_mock_workflow(**opts)
         elif self.technique:
@@ -436,7 +436,7 @@ class ModelingWorkflow(WorkflowBase):
 
         return mdl_wf
 
-    def _create_ohsu_workflow(self, **opts):
+    def _create_airc_workflow(self, **opts):
         """
         Creates the modeling base workflow. This workflow performs the
         steps described in
@@ -455,7 +455,7 @@ class ModelingWorkflow(WorkflowBase):
         :param opts: the PK modeling parameters
         :return: the Nipype Workflow
         """
-        workflow = pe.Workflow(name='ohsu', base_dir=self.base_dir)
+        workflow = pe.Workflow(name='airc', base_dir=self.base_dir)
 
         # The modeling profile configuration sections.
         self.profile_sections = OHSU_CONF_SECTIONS
