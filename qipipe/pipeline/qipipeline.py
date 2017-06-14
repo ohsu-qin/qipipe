@@ -638,7 +638,7 @@ class QIPipelineWorkflow(WorkflowBase):
                                output_names=['results'],
                                function=model)
             mdl_node = pe.Node(mdl_xfc, name='model')
-            mdl_opts = self._child_options()
+            mdl_opts = self._child_options(name='model')
             mdl_opts['technique'] = self.modeling_technique
             mdl_node.inputs.opts = mdl_opts
             self.logger.info("Enabled modeling with options %s." % mdl_opts)
@@ -659,7 +659,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # than delegating to this qipipeline workflow as the
             # parent, since Nipype Function arguments must be
             # primitive.
-            reg_opts = self._child_options()
+            reg_opts = self._child_options(name='registration')
             reg_opts['resource'] = self.registration_resource
             reg_opts['technique'] = self.registration_technique
             if 'recursive_registration' in opts:
@@ -693,7 +693,7 @@ class QIPipelineWorkflow(WorkflowBase):
                                output_names=['volume'],
                                function=roi)
             roi_node = pe.Node(roi_xfc, name='roi')
-            roi_opts = self._child_options()
+            roi_opts = self._child_options(name='roi')
             roi_node.inputs.opts = roi_opts
             self.logger.info("Enabled ROI conversion with options %s." %
                              roi_opts)
@@ -716,7 +716,7 @@ class QIPipelineWorkflow(WorkflowBase):
             #     TypeError: cannot deepcopy this pattern object
             # The work-around is to break out the separate simple options
             # that the WorkflowBase constructor extracts from the parent.
-            stg_opts = self._child_options()
+            stg_opts = self._child_options(name='stage')
             if 'dest' in opts:
                 stg_opts['dest'] = opts['dest']
             if not self.collection:
@@ -757,7 +757,7 @@ class QIPipelineWorkflow(WorkflowBase):
                     raise PipelineError("The mask workflow requires the"
                                         " collection option")
                 crop_posterior = self.collection.crop_posterior
-                mask_opts = self._child_options()
+                mask_opts = self._child_options(name='mask')
                 mask_opts['crop_posterior'] = crop_posterior
                 mask_inputs = ['subject', 'session', 'scan', 'time_series',
                                'opts']
