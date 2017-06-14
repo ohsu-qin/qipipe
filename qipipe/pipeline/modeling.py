@@ -613,7 +613,7 @@ class ModelingWorkflow(WorkflowBase):
             node_name = "copy_%s" % out_fld
             out_base_name = "%s.nii.gz" % out_fld
             copy_xfc = Copy(out_base_name=out_base_name)
-            copy = pe.node(copy_xfc, name=node_name)
+            copy = pe.Node(copy_xfc, name=node_name)
             workflow.connect(fastfit, fastfit_fld, copy, 'in_file')
             workflow.connect(copy, 'out_file', output_spec, out_fld)
         # Collect the other fastfit outputs.
