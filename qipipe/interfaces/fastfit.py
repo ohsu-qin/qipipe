@@ -104,10 +104,11 @@ class Fastfit(CommandLine):
     # The cmdline override below is commented out, since it only
     # applies to the broken old fastfit. However, it may apply to
     # the new fastfit when it replaces the global fastfit.
-    # # Note: nipype MpiCommandLine calls mpiexec, which resolves to the
-    # # local build mpiexec. This results in MPICOMM errors. The
-    # # work-around is to replace mpiexec with the absolute path of
-    # # the official mpiexec.
+    #
+    # # Note: nipype MpiCommandLine calls mpiexec, which resolves
+    # # to the Anaconda virtual environment mpiexec. This results
+    # # in MPICOMM errors. The work-around is to replace mpiexec
+    # # in the command with the absolute path of the global mpiexec.
     # @property
     # def cmdline(self):
     #     result = super(Fastfit, self).cmdline
