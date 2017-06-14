@@ -308,7 +308,7 @@ class ModelingWorkflow(WorkflowBase):
         self.logger.debug("Building the modeling workflow...")
 
         # The supervisory workflow.
-        workflow = pe.Workflow(name='modeling', base_dir=self.base_dir)
+        exec_wf = pe.Workflow(name='modeling', base_dir=self.base_dir)
 
         # The default modeling technique is the OHSU proprietary modeling
         # workflow.
@@ -358,12 +358,12 @@ class ModelingWorkflow(WorkflowBase):
         # The profile location is a temp file.
         input_spec = pe.Node(input_xfc, name='input_spec')
         self.logger.debug("The modeling workflow input is %s with"
-            " fields %s" % (input_spec.name, in_fields))
-        mdl_wf.connect(input_spec, 'time_series',
-                       child_wf, 'input_spec.time_series')
-        mdl_wf.connect(input_spec, 'mask', child_wf, 'input_spec.mask')
-        mdl_wf.connect(input_spec, 'bolus_arrival_index',
-                       child_wf, 'input_spec.bolus_arrival_index')
+                          " fields %s" % (input_spec.name, in_fields))
+        exec_wf.connect(input_spec, 'time_series',
+                        child_wf, 'input_spec.time_series')
+        exec_wf.connect(input_spec, 'mask', child_wf, 'input_spec.mask')
+        exec_wf.connect(input_spec, 'bolus_arrival_index',
+                        child_wf, 'input_spec.bolus_arrival_index')
 
         # Make the profile.
         cr_prf_fields = ['technique', 'time_series', 'configuration',
@@ -376,7 +376,7 @@ class ModelingWorkflow(WorkflowBase):
         cr_prf.inputs.configuration = self.configuration
         cr_prf.inputs.sections = self.profile_sections
         cr_prf.inputs.dest = MODELING_CONF_FILE
-        mdl_wf.connect(input_spec, 'time_series', cr_prf, 'time_series')
+        exec_wf.connect(input_spec, 'time_series', cr_prf, 'time_series')
 
         # Each output field contains a modeling result file.
         child_output = child_wf.get_node('output_spec')
@@ -386,22 +386,22 @@ class ModelingWorkflow(WorkflowBase):
         upload_file_cnt = len(out_fields) + 1
         concat_uploads = pe.Node(Merge(upload_file_cnt),
                                  name='concat_uploads')
-        mdl_wf.connect(cr_prf, 'out_file', concat_uploads, 'in1')
+        exec_wf.connect(cr_prf, 'out_file', concat_uploads, 'in1')
         for i, field in enumerate(out_fields):
             child_field = 'output_spec.' + field
-            mdl_wf.connect(child_wf, child_field,
-                           concat_uploads, "in%d" % (i + 2))
+            exec_wf.connect(child_wf, child_field,
+                            concat_uploads, "in%d" % (i + 2))
 
         # Upload the profile and modeling results into the XNAT
         # modeling resource.
-        upload_mdl_xfc = XNATUpload(project=self.project,
-                                    resource=self.resource,
-                                    modality='MR')
+        upload_mdl_xfc = XNATUpload(
+            project=self.project, resource=self.resource, modality='MR'
+        )
         upload_mdl = pe.Node(upload_mdl_xfc, name='upload_modeling')
-        mdl_wf.connect(input_spec, 'subject', upload_mdl, 'subject')
-        mdl_wf.connect(input_spec, 'session', upload_mdl, 'session')
-        mdl_wf.connect(input_spec, 'scan', upload_mdl, 'scan')
-        mdl_wf.connect(concat_uploads, 'out', upload_mdl, 'in_files')
+        exec_wf.connect(input_spec, 'subject', upload_mdl, 'subject')
+        exec_wf.connect(input_spec, 'session', upload_mdl, 'session')
+        exec_wf.connect(input_spec, 'scan', upload_mdl, 'scan')
+        exec_wf.connect(concat_uploads, 'out', upload_mdl, 'in_files')
 
         # Collect the outputs.
         merge_output_xfc = Merge(len(out_fields))
@@ -409,32 +409,32 @@ class ModelingWorkflow(WorkflowBase):
         for i, field in enumerate(out_fields):
             child_field = 'output_spec.' + field
             merge_field = "in%d" % (i + 1)
-            mdl_wf.connect(child_wf, child_field, merge_output, merge_field)
+            exec_wf.connect(child_wf, child_field, merge_output, merge_field)
         assoc_xfc = Function(input_names=['names', 'values', 'target'],
                              output_names=['out_dict'],
                              function=associate)
         assoc_node = pe.Node(assoc_xfc, name='associate')
         assoc_node.inputs.names = out_fields
-        mdl_wf.connect(merge_output, 'out', assoc_node, 'values')
+        exec_wf.connect(merge_output, 'out', assoc_node, 'values')
 
         # The modeling workflow output node is a StickyIdentityInterface
         # rather than an IdentityInterface because Nipype cavalierly
         # disappears IdentityInterface output nodes.
         output_xfc = StickyIdentityInterface(fields=['out_dict'])
         output_spec = pe.Node(output_xfc, name='output_spec')
-        mdl_wf.connect(assoc_node, 'out_dict', output_spec, 'out_dict')
+        exec_wf.connect(assoc_node, 'out_dict', output_spec, 'out_dict')
         self.logger.debug("The modeling workflow output is %s with"
                            " fields %s" % (output_spec.name, out_fields))
 
         # Instrument the nodes for cluster submission, if necessary.
-        self._configure_nodes(mdl_wf)
+        self._configure_nodes(exec_wf)
 
-        self.logger.debug("Created the %s workflow." % mdl_wf.name)
+        self.logger.debug("Created the %s workflow." % exec_wf.name)
         # If debug is set, then diagram the workflow graph.
         if self.logger.level <= logging.DEBUG:
-            self.depict_workflow(mdl_wf)
+            self.depict_workflow(exec_wf)
 
-        return mdl_wf
+        return exec_wf
 
     def _create_airc_workflow(self, **opts):
         """
