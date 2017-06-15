@@ -503,8 +503,9 @@ def upload(project, subject, session, scan, in_dir):
 
     # The DICOM files to upload.
     dcm_files = glob.iglob("%s/volume*/*.dcm.gz" % in_dir)
+    _logger = logger(__name__)
     # Upload the compressed DICOM files in one action.
-    logger(__name__).debug(
+    _logger.debug(
         "Uploading the %s %s scan %d staged DICOM files to XNAT..." %
         (subject, session, scan)
     )
