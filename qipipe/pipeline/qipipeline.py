@@ -27,8 +27,9 @@ from ..staging.iterator import iter_stage
 from ..staging.map_ctp import map_ctp
 from ..staging.ohsu import MULTI_VOLUME_SCAN_NUMBERS
 from ..staging.roi import (iter_roi, LesionROI)
-from ..helpers.constants import (SCAN_TS_BASE, SCAN_TS_FILE,
-                                 MASK_RESOURCE, MASK_FILE)
+from ..helpers.constants import (
+    SCAN_TS_BASE, SCAN_TS_FILE, VOLUME_FILE_PAT, MASK_RESOURCE, MASK_FILE
+)
 from ..interfaces import (XNATDownload, XNATUpload)
 
 SINGLE_VOLUME_ACTIONS = ['stage']
@@ -37,14 +38,6 @@ SINGLE_VOLUME_ACTIONS = ['stage']
 MULTI_VOLUME_ACTIONS = (SINGLE_VOLUME_ACTIONS +
                         ['roi', 'register', 'model'])
 """The workflow actions which apply to a multi-volume scan."""
-
-VOLUME_FILE_PAT = re.compile("volume(\d{3}).nii.gz$")
-"""
-The volume file name pattern. The image file name is
-volume<number>.nii.gz, where <number> is the zero-padded volume
-number, as determined by the
-:meth:`qipipe.pipeline.staging.volume_format` function.
-"""
 
 
 def run(*inputs, **opts):
@@ -112,7 +105,17 @@ def _run_with_dicom_input(actions, *inputs, **opts):
         dest = os.path.abspath(dest_opt)
     else:
         dest = os.getcwd()
-    opts['dest'] = dest
+
+    # The parent base directory. Each scan workflow runs in
+    # its own subdirectory. If that were not the case, then
+    # a succeeding scan workflow would overwrite its
+    # preceding scan workflow's base directory and garble
+    # the results.
+    base_dir_opt = opts.pop('base_dir', None)
+    if base_dir:
+        base_dir = os.path.abspath(base_dir_opt)
+    else:
+        base_dir = os.getcwd()
 
     # The set of input subjects is used to build the CTP mapping file
     # after the workflow is completed, if staging is enabled.
@@ -121,21 +124,22 @@ def _run_with_dicom_input(actions, *inputs, **opts):
     # If the only action is ROI, then the input session directories
     # have already been staged. Therefore, set the skip_existing
     # flag to False.
+    iter_opts = dict(scan=opts['scan']) if 'scan' in opts else {}
     if actions == ['roi']:
-        iter_opts = opts.copy()
         iter_opts['skip_existing'] = False
-    else:
-        iter_opts = opts
     for scan_input in iter_stage(project, collection, *inputs, **iter_opts):
         wf_actions = _filter_actions(scan_input, actions)
         if not wf_actions:
             continue
         # Capture the subject.
         subjects.add(scan_input.subject)
+        # The scan workflow base directory.
+        scan_base_dir = "%s/scan/%d" % (base_dir, scan_input.scan)
         # Create a new workflow.
         workflow = QIPipelineWorkflow(
             project, scan_input.subject, scan_input.session, scan_input.scan,
-            wf_actions, collection=collection, **opts)
+            wf_actions, collection=collection, dest=dest,
+            base_dir=scan_base_dir, **opts)
         # Run the workflow on the scan.
         workflow.run_with_dicom_input(wf_actions, scan_input)
 
@@ -804,25 +808,15 @@ class QIPipelineWorkflow(WorkflowBase):
             mdl_node and not reg_node and not self.registration_resource
         )
         need_scan_ts = mask_node or roi_node or is_scan_modeling
-        scan_ts = None
         if need_scan_ts and not stg_node:
-            with qixnat.connect() as xnat:
-                has_scan_ts = _scan_file_exists(
-                    xnat, self.project, subject, session, scan, 'NIFTI',
-                    SCAN_TS_FILE
-                )
-            # If there is a scan time series, then download it.
-            # Otherwise, stack the staged 3D images into the
-            # scan time series.
-            if has_scan_ts:
-                scan_ts_xfc = XNATDownload(project=self.project,
-                                           resource='NIFTI',
-                                           file=SCAN_TS_FILE)
-                scan_ts = pe.Node(scan_ts_xfc,
-                                  name='download_scan_time_series')
-                exec_wf.connect(input_spec, 'subject', scan_ts, 'subject')
-                exec_wf.connect(input_spec, 'session', scan_ts, 'session')
-                exec_wf.connect(input_spec, 'scan', scan_ts, 'scan')
+            scan_ts_xfc = XNATDownload(project=self.project,
+                                       resource='NIFTI',
+                                       file=SCAN_TS_FILE)
+            scan_ts = pe.Node(scan_ts_xfc,
+                              name='download_scan_time_series')
+            exec_wf.connect(input_spec, 'subject', scan_ts, 'subject')
+            exec_wf.connect(input_spec, 'session', scan_ts, 'session')
+            exec_wf.connect(input_spec, 'scan', scan_ts, 'scan')
 
         # Registration and the scan time series require a staged
         # node scan with output 'images'. If staging is enabled,
@@ -832,7 +826,7 @@ class QIPipelineWorkflow(WorkflowBase):
         # The scan time series is required by mask and scan
         # registration.
         staged = None
-        if reg_node or (need_scan_ts and not scan_ts):
+        if reg_node:
             if stg_node:
                 staged = stg_node
             else:
@@ -843,31 +837,6 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(input_spec, 'subject', staged, 'subject')
                 exec_wf.connect(input_spec, 'session', staged, 'session')
                 exec_wf.connect(input_spec, 'scan', staged, 'scan')
-
-        # If we need a scan time series, then merge the staged files.
-        if need_scan_ts and not scan_ts:
-            if not self.collection:
-                raise ArgumentError('The scan time series pipeline'
-                                    ' collection option is missing.')
-            # The volume grouping tag.
-            vol_tag = self.collection.patterns.volume
-            if not vol_tag:
-                raise PipelineError('The collection configuration DICOM'
-                                    ' volume tag is missing.')
-            scan_ts_xfc = MergeNifti(sort_order=[vol_tag],
-                                     out_format=SCAN_TS_BASE)
-            scan_ts = pe.Node(scan_ts_xfc, name='merge_scan_volumes')
-            exec_wf.connect(staged, 'out_files', scan_ts, 'in_files')
-            self.logger.debug('Connected staging to scan time series merge.')
-            # Upload the time series.
-            ul_scan_ts_xfc = XNATUpload(project=self.project,
-                                        resource='NIFTI', modality='MR')
-            ul_scan_ts = pe.Node(ul_scan_ts_xfc,
-                                 name='upload_scan_time_series')
-            exec_wf.connect(input_spec, 'subject', ul_scan_ts, 'subject')
-            exec_wf.connect(input_spec, 'session', ul_scan_ts, 'session')
-            exec_wf.connect(input_spec, 'scan', ul_scan_ts, 'scan')
-            exec_wf.connect(scan_ts, 'out_file', ul_scan_ts, 'in_files')
 
         # Registration and modeling require a mask and bolus arrival.
         if mask_node:

@@ -3,12 +3,21 @@ import glob
 import shutil
 import itertools
 import logging
-from nipype.pipeline import engine as pe
-from nipype.interfaces.utility import (IdentityInterface, Function)
-from nipype.interfaces.dcmstack import DcmStack
+# The ReadTheDocs build does not include nipype.
+on_rtd = os.environ.get('READTHEDOCS') == 'True'
+if not on_rtd:
+    # Disable nipype nipy import FutureWarnings.
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter(action='ignore', category=FutureWarning)
+        from nipype.pipeline import engine as pe
+        from nipype.interfaces.utility import (IdentityInterface, Function)
+        from nipype.interfaces.dcmstack import DcmStack
+        from nipype.interfaces.dcmstack import MergeNifti
 import qixnat
 from ..interfaces import (StickyIdentityInterface, FixDicom, Compress)
 from .workflow_base import WorkflowBase
+from ..helpers.constants import (SCAN_TS_BASE, SCAN_TS_FILE, VOLUME_FILE_PAT)
 from ..helpers.logging import logger
 from ..staging import iterator
 from ..staging.sort import sort
@@ -134,6 +143,14 @@ class ScanStagingWorkflow(WorkflowBase):
         input_spec.inputs.scan = scan
         input_spec.inputs.dest = dest
 
+        # The volume grouping tag.
+        coll = image_collection.with_name(collection)
+        volume_tag = self.collection.patterns.volume
+        if not volume_tag:
+            raise PipelineError('The collection configuration DICOM'
+                                ' volume tag is missing.')
+        input_spec.inputs.volume_tag = volume_tag
+
         # Prime the volume iterator.
         in_volumes = sorted(vol_dcm_dict.iterkeys())
         dcm_files = [vol_dcm_dict[v] for v in in_volumes]
@@ -150,16 +167,19 @@ class ScanStagingWorkflow(WorkflowBase):
 
         # The magic incantation to get the Nipype workflow result.
         output_res = next(n for n in wf_res.nodes() if n.name == 'output_spec')
-        results = output_res.inputs.get()['out_files']
+        time_series = output_res.inputs.get()['time_series'],
+        volume_files = output_res.inputs.get()['volume_files'],
+        result = (time_series, volume_files)
 
         self.logger.debug(
-            "Executed the %s workflow on the %s %s scan %d with 3D volume"
-            " results:\n%s" %
-            (self.workflow.name, subject, session, scan, results)
+            "Executed the %s workflow on the %s %s scan %d to create"
+            " %d volume files and the 4D time series %s." %
+            (self.workflow.name, subject, session, scan,
+             len(volume_files), time_series)
         )
 
-        # Return the staged 3D volume files.
-        return results
+        # Return the (time series, volume files) result.
+        return result
 
     def _create_workflow(self):
         """
@@ -174,11 +194,12 @@ class ScanStagingWorkflow(WorkflowBase):
 
         # The workflow input.
         hierarchy_fields = ['subject', 'session', 'scan']
-        in_fields = hierarchy_fields + ['collection', 'dest']
+        stg_fields = hierarchy_fields + ['collection', 'dest']
+        in_fields = stg_fields + ['volume_tag']
         input_spec = pe.Node(IdentityInterface(fields=in_fields),
                              name='input_spec')
         self.logger.debug("The %s workflow input node is %s with fields %s" %
-                         (workflow.name, input_spec.name, in_fields))
+                          (workflow.name, input_spec.name, in_fields))
 
         # The volume iterator.
         iter_fields = ['volume', 'in_files']
@@ -189,22 +210,39 @@ class ScanStagingWorkflow(WorkflowBase):
                          (workflow.name, iter_volume.name, iter_fields))
 
         # The volume staging node wraps the stage_volume function.
-        stg_inputs = (
-            in_fields + iter_fields + ['collection', 'opts']
-        )
+        stg_inputs = stg_fields + iter_fields + ['opts']
         stg_xfc = Function(input_names=stg_inputs, output_names=['out_dir'],
                            function=stage_volume)
         stg_node = pe.Node(stg_xfc, name='stage')
-        child_opts = self._child_options()
-        stg_node.inputs.opts = child_opts
-        for fld in in_fields:
+        stg_node.inputs.opts = self._child_options()
+        for fld in stg_fields:
             workflow.connect(input_spec, fld, stg_node, fld)
         for fld in iter_fields:
             workflow.connect(iter_volume, fld, stg_node, fld)
 
-        # Upload the processed DICOM and 3D volume NIfTI files.
+        # Collect the output directories.
+        collect_fields = ['dcm_dirs', 'volume_files']
+        collect_xfc = IdentityInterface(fields=collect_fields)
+        collect_node = pe.JoinNode(
+            merge_volumes_xfc, joinsource='iter_volume',
+            joinfield='volume_files', name='collect_volumes'
+        )
+        exec_wf.connect(stg_node, 'out_dir', collect_node, 'dcm_dirs')
+        exec_wf.connect(vol_file_node, 'out_file', collect_node, 'volume_files')
+
+        # Merge the volumes.
+        scan_ts_xfc = MergeNifti(out_format=SCAN_TS_BASE)
+        scan_ts_node = pe.Node(scan_ts_xfc, name='merge_volumes')
+        exec_wf.connect(input_spec, 'volume_tag', scan_ts_node, 'sort_order')
+        exec_wf.connect(input_spec, 'dest', scan_ts_node, 'out_path')
+        exec_wf.connect(collect_node, 'volume_files', scan_ts_node, 'in_files')
+        self.logger.debug('Connected staging to scan time series merge.')
+
+        # Upload the processed DICOM and NIfTI files.
         # The upload out_files output is the volume files.
-        upload_fields = hierarchy_fields + ['project', 'in_dir']
+        upload_fields = (
+            hierarchy_fields + ['project', 'in_dir', 'time_series']
+        )
         upload_xfc = Function(input_names=upload_fields,
                               output_names=['out_files'],
                               function=upload)
@@ -214,11 +252,15 @@ class ScanStagingWorkflow(WorkflowBase):
         workflow.connect(input_spec, 'session', upload_node, 'session')
         workflow.connect(input_spec, 'scan', upload_node, 'scan')
         workflow.connect(input_spec, 'dest', upload_node, 'in_dir')
+        workflow.connect(scan_ts_node, 'out_file' upload_node, 'time_series')
+        self.logger.debug('Connected scan time series merge to upload.')
 
-        # The output is the 3D NIfTI volume image files.
-        output_spec = pe.Node(StickyIdentityInterface(fields=['out_files']),
+        # The output is the 4D time series and 3D NIfTI volume image files.
+        output_fields = ['time_series', 'volume_files']
+        output_spec = pe.Node(StickyIdentityInterface(fields=output_fields),
                               name='output_spec')
-        workflow.connect(upload_node, 'out_files', output_spec, 'out_files')
+        workflow.connect(upload_node, 'out_files', output_spec, 'volume_files')
+        workflow.connect(scan_ts_node, 'out_file', output_spec, 'time_series')
 
         # Instrument the nodes for cluster submission, if necessary.
         self._configure_nodes(workflow)
@@ -424,6 +466,7 @@ class VolumeStagingWorkflow(WorkflowBase):
                             joinfield='dicom_files', name='stack')
         workflow.connect(fix_dicom, 'out_file', stack, 'dicom_files')
         workflow.connect(vol_fmt, 'format', stack, 'out_format')
+        workflow.connect(input_spec, 'dest', stack, 'out_path')
 
         # The output is the 3D NIfTI stack file.
         output_flds = ['out_file']
@@ -481,60 +524,98 @@ def stage_volume(collection, subject, session, scan, volume, in_files,
     return out_dir
 
 
-def upload(project, subject, session, scan, in_dir):
+def upload(project, subject, session, scan, in_dir, time_series):
     """
     Uploads the staged files in *in_dir* as follows:
     * the processed DICOM ``.dcm.gz`` files are uploaded to the
       XNAT scan ``DICOM`` resource
-    * the merged NIfTI ``.nii.gz`` files are uploaded to the
-      XNAT scan ``NIFTI`` resource
+    * the time series and the 3D volume NIfTI ``.nii.gz`` files
+      are uploaded to the XNAT scan ``NIFTI`` resource
 
     :param project: the project name
     :param subject: the subject name
     :param session: the session name
     :param scan: the scan number
     :param in_dir: the input staged directory
+    :param time_series: the 4D scan time series file
     :return: the 3D volume image NIfTI files
     """
+    import os
     import glob
     import qixnat
     from qipipe.helpers.logging import logger
 
-    # The DICOM files to upload.
-    dcm_files = glob.iglob("%s/volume*/*.dcm.gz" % in_dir)
     _logger = logger(__name__)
-    # Upload the compressed DICOM files in one action.
-    _logger.debug(
-        "Uploading the %s %s scan %d staged DICOM files to XNAT..." %
-        (subject, session, scan)
-    )
-    with qixnat.connect() as xnat:
-        # The target XNAT scan DICOM resource object.
-        # The modality option is required if it is necessary to
-        # create the XNAT scan object.
-        rsc = xnat.find_or_create(
-            project, subject, session, scan=scan, resource='DICOM',
-            modality='MR'
-        )
-        xnat.upload(rsc, *dcm_files)
-    _logger.debug("Uploaded the %s %s scan %d staged DICOM files to XNAT." %
-                  (subject, session, scan))
+    # The volume directories.
+    vol_dir_pat = "%s/volume*" % in_dir
+    vol_dirs = glob.glob(vol_dir_pat)
+    if not vol_dirs:
+        raise ArgumentError("The input directory does not contain any"
+                            " directories matching %s" % vol_dir_pat)
+    _logger.debug("Uploading %d %s %s scan %d volumes to XNAT..." %
+                  (len(vol_dirs), subject, session, scan))
+    # Upload one volume directory at a time, since the DICOM
+    # file paths will take up a big chunk of memory.
+    dcm_file_cnt = 0
+    for vol_dir in vol_dirs:
+        # The DICOM files to upload.
+        dcm_file_pat = "%s/*.dcm.gz" % in_dir
+        dcm_files = glob.glob(dcm_file_pat)
+        if not dcm_files:
+            raise ArgumentError("The input directory does not contain scan"
+                                " DICOM files matching %s" % dcm_file_pat)
+        # Upload the compressed DICOM files.
+        with qixnat.connect() as xnat:
+            # The target XNAT scan DICOM resource object.
+            # The modality option is required if it is necessary to
+            # create the XNAT scan object.
+            rsc = xnat.find_or_create(
+                project, subject, session, scan=scan, resource='DICOM',
+                modality='MR'
+            )
+            xnat.upload(rsc, *dcm_files)
+        dcm_file_cnt += len(dcm_files)
+    _logger.debug("Uploaded %d %s %s scan %d staged DICOM files to"
+                  " XNAT." % (dcm_file_cnt, subject, session, scan))
 
-    # The NIfTI files to upload.
-    nii_files = glob.glob("%s/volume*/*.nii.gz" % in_dir)
+    # The scan volume files.
+    vol_file_pat = "%s/volume*/*.nii.gz" % in_dir
+    vol_files = glob.glob(vol_file_pat)
+    if not vol_files:
+        raise ArgumentError("The input directory does not contain scan"
+                            " volume files matching %s" % vol_file_pat)
     # Upload the NIfTI files in one action.
-    _logger.debug("Uploading the %s %s scan %d staged NIfTI files to XNAT..." %
-                  (subject, session, scan))
+    nii_file_cnt = len(vol_files) + 1
+    _logger.debug("Uploading %d %s %s scan %d staged NIfTI files to"
+                  " XNAT..." % (nii_file_cnt, subject, session, scan))
     with qixnat.connect() as xnat:
         # The target XNAT scan NIFTI resource object.
         rsc = xnat.find_or_create(
             project, subject, session, scan=scan, resource='NIFTI'
         )
-        xnat.upload(rsc, *nii_files)
-    _logger.debug("Uploaded the %s %s scan %d staged NIfTI files to XNAT." %
-                  (subject, session, scan))
+        xnat.upload(rsc, time_series, *vol_files)
+    _logger.debug("Uploaded %d %s %s scan %d staged NIfTI files to"
+                  " XNAT." % (nii_file_cnt, subject, session, scan))
 
-    return nii_files
+    return vol_files
+
+
+def find_volume_file(in_dir, pattern):
+    """
+    :param in_dir: the directory to search
+    :param pattern: the file match pattern
+    :return: the matching file path, or None if no match
+    :raise ArgumentError: if there is more than one match
+    """
+    import glob
+
+    glob_pat = "%s/%s" % (in_dir, pattern)
+    matches = glob.glob(glob_pat)
+    if matches:
+        if len(matches) > 1:
+            raise ArgumentError("The file pattern %s ambiguously matches"
+                                " %d files." % (glob_pat, len(matches)))
+        return matches[0]
 
 
 def volume_format(collection):
