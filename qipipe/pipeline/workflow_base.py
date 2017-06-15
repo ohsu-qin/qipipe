@@ -178,11 +178,12 @@ class WorkflowBase(object):
         self.logger.debug("The %s workflow graph is depicted at %s.png." %
                          (workflow.name, base_name))
 
-    def _child_options(self, name=None):
+    def _child_options(self):
         """
         Collects the following options for creating a child workflow:
         * project
         * config_dir
+        * base_dir
         * dry_run
         * distributable
 
@@ -190,6 +191,7 @@ class WorkflowBase(object):
         """
         return dict(
             project=self.project,
+            base_dir=self.base_dir,
             config_dir=self.config_dir,
             dry_run=self.dry_run,
             distributable=self.is_distributable

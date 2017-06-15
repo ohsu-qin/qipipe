@@ -455,8 +455,7 @@ class ModelingWorkflow(WorkflowBase):
         :param opts: the PK modeling parameters
         :return: the Nipype Workflow
         """
-        base_dir = "%s/%s" % (self.base_dir, 'airc')
-        workflow = pe.Workflow(name='airc', base_dir=base_dir)
+        workflow = pe.Workflow(name='airc', base_dir=self.base_dir)
 
         # The modeling profile configuration sections.
         self.profile_sections = OHSU_CONF_SECTIONS
@@ -635,8 +634,7 @@ class ModelingWorkflow(WorkflowBase):
         :param opts: the PK modeling parameters
         :return: the Nipype Workflow
         """
-        base_dir = "%s/%s" % (self.base_dir, 'mock')
-        workflow = pe.Workflow(name='mock', base_dir=base_dir)
+        workflow = pe.Workflow(name='mock', base_dir=self.base_dir)
 
         # The modeling profile configuration sections.
         self.profile_sections = []

@@ -393,8 +393,7 @@ class RegistrationWorkflow(WorkflowBase):
         self.logger.debug('Creating the registration realignment workflow...')
 
         # The workflow.
-        base_dir = "%s/%s" % (self.base_dir, self.technique)
-        realign_wf = pe.Workflow(name=self.technique, base_dir=base_dir)
+        realign_wf = pe.Workflow(name=self.technique, base_dir=self.base_dir)
 
         # The workflow input.
         in_fields = ['subject', 'session', 'scan', 'in_file',

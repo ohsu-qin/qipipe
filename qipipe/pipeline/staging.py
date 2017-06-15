@@ -384,8 +384,7 @@ class VolumeStagingWorkflow(WorkflowBase):
         self.logger.debug('Creating the DICOM processing workflow...')
 
         # The Nipype workflow object.
-        base_dir = "%s/%s" % (self.base_dir, 'stage_volume')
-        workflow = pe.Workflow(name='stage_volume', base_dir=base_dir)
+        workflow = pe.Workflow(name='stage_volume', base_dir=self.base_dir)
 
         # The workflow input.
         in_fields = ['collection', 'subject', 'session', 'scan',
