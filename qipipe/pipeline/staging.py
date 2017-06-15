@@ -444,7 +444,7 @@ class VolumeStagingWorkflow(WorkflowBase):
 
 
 def stage_volume(collection, subject, session, scan, volume, in_files,
-                 dest, base_dir, opts):
+                 dest, opts):
     """
     Stages the given volume. The processed DICOM ``.dcm.gz`` files
     and merged 3D NIfTI volume ``.nii.gz`` file are placed in the
@@ -457,7 +457,6 @@ def stage_volume(collection, subject, session, scan, volume, in_files,
     :param volume: the volume number
     :param in_files: the input DICOM files
     :param dest: the parent destination directory
-    :param base_dir: the parent base directory
     :param opts: the non-base_dir :class:`VolumeStagingWorkflow`
         initializer options
     :return: the volume target directory
@@ -471,12 +470,8 @@ def stage_volume(collection, subject, session, scan, volume, in_files,
     out_dir = "%s/volume%03d" % (dest, volume)
     os.mkdir(out_dir)
 
-    # The workflow runs in a subdirectory.
-    vol_base_dir = "%s/volume%03d" % (base_dir, volume)
-    os.mkdir(vol_base_dir)
-
     # Make the workflow.
-    stg_wf = VolumeStagingWorkflow(base_dir=base_dir, **opts)
+    stg_wf = VolumeStagingWorkflow(**opts)
     # Execute the workflow.
     logger(__name__).debug("Staging %s %s scan %d volume %d in %s..." %
                            (subject, session, scan, volume, out_dir))
