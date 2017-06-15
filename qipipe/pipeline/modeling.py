@@ -774,11 +774,10 @@ def create_profile(technique, time_series, configuration, sections, dest):
     base_prefix = match.group(1)
     resource = 'NIFTI' if base_prefix == 'scan' else base_prefix
     source = dict(resource=resource, file=base_name)
-    optimization=dict(technique=technique)
+    modeling = dict(technique=technique)
 
     return metadata.create_profile(
-        configuration, sections, dest,
-        source=source, optimization=optimization
+        configuration, sections, dest, source=source, modeling=modeling
     )
 
 
