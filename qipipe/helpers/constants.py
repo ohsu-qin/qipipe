@@ -11,6 +11,14 @@ SESSION_FMT = 'Session%02d'
 CONF_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'conf'))
 """The common configuration directory."""
 
+VOLUME_FILE_PAT = re.compile("volume(\d{3}).nii.gz$")
+"""
+The volume file name pattern. The image file name is
+volume<number>.nii.gz, where <number> is the zero-padded volume
+number, as determined by the
+:meth:`qipipe.pipeline.staging.volume_format` function.
+"""
+
 SCAN_TS_BASE = 'scan_ts'
 """The XNAT scan time series file base name without extension."""
 
