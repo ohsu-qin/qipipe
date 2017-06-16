@@ -12,15 +12,15 @@ def subject_sources(collection, source):
     directories. The directories are matched against
     the :attr:`qipipe.staging.image_collection.Collection.patterns`
     ``subject`` regular expression for the given collection.
-    
+
     :param collection: the image collection name
     :param source: the input parent directory
     :return: the subject {*name*: *directory*} dictionary
     """
-    logger(__name__).debug("Detecting %s subjects from %s..." %
-          (collection, source))
-    coll = staging.image_collection.with_name(collection)
-    pat = coll.patterns.subject
+    _logger = logger(__name__)
+    _logger.debug("Detecting %s subjects from %s..." % (collection, source))
+    img_coll = staging.image_collection.with_name(collection)
+    pat = img_coll.patterns.subject
     sbj_dir_dict = {}
     for d in os.listdir(source):
         match = re.match(pat, d)
@@ -29,8 +29,7 @@ def subject_sources(collection, source):
             subject = SUBJECT_FMT % (collection, int(match.group(1)))
             # The subject source directory.
             sbj_dir_dict[subject] = os.path.join(source, d)
-            logger(__name__).debug(
-                "Discovered XNAT test subject %s subdirectory: %s" %
-                (subject, d))
+            _logger.debug("Discovered XNAT test subject %s"
+                          " subdirectory: %s" % (subject, d))
 
     return sbj_dir_dict
