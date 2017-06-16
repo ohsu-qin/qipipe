@@ -30,6 +30,10 @@ helpers
 ------------
 .. automodule:: qipipe.helpers.image
 
+:mod:`logging`
+---------------
+.. automodule:: qipipe.helpers.logging
+
 :mod:`metadata`
 ---------------
 .. automodule:: qipipe.helpers.metadata

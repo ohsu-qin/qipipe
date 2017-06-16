@@ -6,10 +6,6 @@ staging
 ----------------------
 .. automodule:: qipipe.staging
 
-:mod:`collection`
------------------
-.. automodule:: qipipe.staging.image_collection
-
 :mod:`ctp_config`
 -----------------
 .. automodule:: qipipe.staging.ctp_config
@@ -17,6 +13,10 @@ staging
 :mod:`fix_dicom`
 ----------------
 .. automodule:: qipipe.staging.fix_dicom
+
+:mod:`image_collection`
+-----------------
+.. automodule:: qipipe.staging.image_collection
 
 :mod:`iterator`
 ---------------
@@ -33,6 +33,10 @@ staging
 :mod:`roi`
 ----------
 .. automodule:: qipipe.staging.roi
+
+:mod:`sort`
+---------------------
+.. automodule:: qipipe.staging.sort
 
 :mod:`sarcoma_config`
 ---------------------

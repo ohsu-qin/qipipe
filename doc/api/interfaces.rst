@@ -58,9 +58,13 @@ interfaces
 --------------
 .. automodule:: qipipe.interfaces.preview
 
-:mod:`sticky_identity_interface`
+:mod:`reorder_bolero_mask`
 -----------
-.. automodule:: qipipe.interfaces.StickyIdentityInterface
+.. automodule:: qipipe.interfaces.reorder_bolero_mask
+
+:mod:`sticky_identity`
+-----------
+.. automodule:: qipipe.interfaces.sticky_identity
 
 :mod:`touch`
 ------------
