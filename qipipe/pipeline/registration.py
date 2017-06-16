@@ -29,7 +29,7 @@ FNIRT_CONF_SECTIONS = ['fsl.FLIRT', 'fsl.FNIRT']
 """The FNIRT registration configuration sections."""
 
 
-def run(subject, session, scan, reference, *images, **opts):
+def run(subject, session, scan, reference, *in_files, **opts):
     """
     Runs the registration workflow on the given session scan images.
 
@@ -37,7 +37,7 @@ def run(subject, session, scan, reference, *images, **opts):
     :param session: the session name
     :param scan: the scan number
     :param reference: the initial fixed reference image
-    :param images: the image files to register
+    :param in_files: the image files to register
     :param opts: the :class:`RegistrationWorkflow` initializer
         and :meth:`RegistrationWorkflow.run` options
     :return: the realigned image file path array
@@ -48,7 +48,7 @@ def run(subject, session, scan, reference, *images, **opts):
     # Make the workflow.
     reg_wf = RegistrationWorkflow(**opts)
     # Run the workflow.
-    return reg_wf.run(subject, session, scan, reference, *images,
+    return reg_wf.run(subject, session, scan, reference, *in_files,
                       **run_opts)
 
 
@@ -161,7 +161,7 @@ class RegistrationWorkflow(WorkflowBase):
         self.workflow = self._create_realignment_workflow(**opts)
         """The registration realignment workflow."""
 
-    def run(self, subject, session, scan, reference, *images, **opts):
+    def run(self, subject, session, scan, reference, *in_files, **opts):
         """
         Runs the registration workflow on the given session scan images.
 
@@ -307,12 +307,13 @@ class RegistrationWorkflow(WorkflowBase):
             os.makedirs(dest)
 
         # Collect the realigned images.
-        collect_realigned = pe.JoinNode(IdentityInterface(fields=['in_files']),
-                                        joinsource='iter_input',
-                                        joinfield='in_files',
-                                        name='collect_realigned')
+        collect_realigned_xfc = IdentityInterface(fields=['realigned_files'])
+        collect_realigned = pe.JoinNode(
+            collect_realigned_xfc, joinsource='iter_input',
+            joinfield='realigned_files', name='collect_realigned'
+        )
         exec_wf.connect(self.workflow, 'output_spec.out_file',
-                        collect_realigned, 'in_files')
+                        collect_realigned, 'realigned_files')
 
         # Make the profile.
         cr_prf_fields = ['technique', 'configuration', 'sections', 'dest']
@@ -328,7 +329,8 @@ class RegistrationWorkflow(WorkflowBase):
         # Merge the profile and registration result into one list.
         concat_output = pe.Node(Merge(2), name='concat_output')
         exec_wf.connect(cr_prf, 'out_file', concat_output, 'in1')
-        exec_wf.connect(collect_realigned, 'in_files', concat_output, 'in2')
+        exec_wf.connect(collect_realigned, 'realigned_files',
+                        concat_output, 'in2')
 
         # Upload the registration result into the XNAT registration
         # resource.
@@ -339,7 +341,8 @@ class RegistrationWorkflow(WorkflowBase):
         exec_wf.connect(input_spec, 'session', upload_reg, 'session')
         exec_wf.connect(input_spec, 'scan', upload_reg, 'scan')
         exec_wf.connect(input_spec, 'resource', upload_reg, 'resource')
-        exec_wf.connect(collect_realigned, 'in_files', upload_reg, 'in_files')
+        exec_wf.connect(collect_realigned, 'realigned_files',
+                        upload_reg, 'in_files')
 
         # FIXME: copying the realigned images individually with a Copy
         # submits a separate SGE job for each copy, contrary to the
@@ -363,7 +366,8 @@ class RegistrationWorkflow(WorkflowBase):
         # The execution output.
         output_spec = pe.Node(IdentityInterface(fields=['out_files']),
                               name='output_spec')
-        exec_wf.connect(collect_realigned, 'out_files', output_spec, 'out_files')
+        exec_wf.connect(collect_realigned, 'realigned_files',
+                        output_spec, 'out_files')
 
         self.logger.debug("Created the %s workflow." % exec_wf.name)
         # If debug is set, then diagram the workflow graph.
@@ -436,9 +440,8 @@ class RegistrationWorkflow(WorkflowBase):
             # TODO - isolate and fix this Nipype defect.
             reg_xfc = Registration(float=True, **metric_inputs)
             register = pe.Node(reg_xfc, name='register')
+            realign_wf.connect(input_spec, 'reference', register, 'fixed_image')
             realign_wf.connect(input_spec, 'in_file', register, 'moving_image')
-            realign_wf.connect(input_spec, 'reference',
-                               register, 'moving_image')
             realign_wf.connect(input_spec, 'mask',
                                register, 'moving_image_mask')
             realign_wf.connect(input_spec, 'mask',

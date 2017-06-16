@@ -19,7 +19,7 @@ from ..interfaces import (StickyIdentityInterface, FixDicom, Compress)
 from .workflow_base import WorkflowBase
 from ..helpers.constants import (SCAN_TS_BASE, SCAN_TS_FILE, VOLUME_FILE_PAT)
 from ..helpers.logging import logger
-from ..staging import iterator
+from ..staging import (iterator, image_collection)
 from ..staging.sort import sort
 from .pipeline_error import PipelineError
 
@@ -40,8 +40,8 @@ def run(subject, session, scan, *in_dirs, **opts):
     :param session: the session name
     :param scan: the scan number
     :param in_dirs: the input DICOM file directories
-    :param opts: the :class:`StagingWorkflow` initializer options
-    :return: the compressed 3D volume NIfTI files
+    :param opts: the :class:`ScanStagingWorkflow` initializer options
+    :return: the :meth:`ScanStagingWorkflow.run` result
     """
     # The target directory for the fixed, compressed DICOM files.
     _logger = logger(__name__)
@@ -134,6 +134,7 @@ class ScanStagingWorkflow(WorkflowBase):
         :param scan: the scan number
         :param vol_dcm_dict: the input {volume: DICOM files} dictionary
         :param dest: the destination directory
+        :return: the (time series, volume files) tuple
         """
         # Set the top-level inputs.
         input_spec = self.workflow.get_node('input_spec')
@@ -144,8 +145,8 @@ class ScanStagingWorkflow(WorkflowBase):
         input_spec.inputs.dest = dest
 
         # The volume grouping tag.
-        coll = image_collection.with_name(collection)
-        volume_tag = self.collection.patterns.volume
+        img_coll = image_collection.with_name(collection)
+        volume_tag = img_coll.patterns.volume
         if not volume_tag:
             raise PipelineError('The collection configuration DICOM'
                                 ' volume tag is missing.')
@@ -164,12 +165,14 @@ class ScanStagingWorkflow(WorkflowBase):
 
         # Execute the workflow.
         wf_res = self._run_workflow(self.workflow)
+        # If dry-run, then _run_workflow is a no-op.
+        if not wf_res:
+            return
 
         # The magic incantation to get the Nipype workflow result.
         output_res = next(n for n in wf_res.nodes() if n.name == 'output_spec')
         time_series = output_res.inputs.get()['time_series'],
         volume_files = output_res.inputs.get()['volume_files'],
-        result = (time_series, volume_files)
 
         self.logger.debug(
             "Executed the %s workflow on the %s %s scan %d to create"
@@ -179,7 +182,7 @@ class ScanStagingWorkflow(WorkflowBase):
         )
 
         # Return the (time series, volume files) result.
-        return result
+        return time_series, volume_files
 
     def _create_workflow(self):
         """
@@ -211,7 +214,7 @@ class ScanStagingWorkflow(WorkflowBase):
 
         # The volume staging node wraps the stage_volume function.
         stg_inputs = stg_fields + iter_fields + ['opts']
-        stg_xfc = Function(input_names=stg_inputs, output_names=['out_dir'],
+        stg_xfc = Function(input_names=stg_inputs, output_names=['out_file'],
                            function=stage_volume)
         stg_node = pe.Node(stg_xfc, name='stage')
         stg_node.inputs.opts = self._child_options()
@@ -220,22 +223,19 @@ class ScanStagingWorkflow(WorkflowBase):
         for fld in iter_fields:
             workflow.connect(iter_volume, fld, stg_node, fld)
 
-        # Collect the output directories.
-        collect_fields = ['dcm_dirs', 'volume_files']
-        collect_xfc = IdentityInterface(fields=collect_fields)
-        collect_node = pe.JoinNode(
-            merge_volumes_xfc, joinsource='iter_volume',
+        # Collect the 3D volume files.
+        collect_xfc = IdentityInterface(fields=['volume_files'])
+        collect_vols = pe.JoinNode(
+            collect_xfc, joinsource='iter_volume',
             joinfield='volume_files', name='collect_volumes'
         )
-        exec_wf.connect(stg_node, 'out_dir', collect_node, 'dcm_dirs')
-        exec_wf.connect(vol_file_node, 'out_file', collect_node, 'volume_files')
+        workflow.connect(stg_node, 'out_file', collect_vols, 'volume_files')
 
         # Merge the volumes.
-        scan_ts_xfc = MergeNifti(out_format=SCAN_TS_BASE)
-        scan_ts_node = pe.Node(scan_ts_xfc, name='merge_volumes')
-        exec_wf.connect(input_spec, 'volume_tag', scan_ts_node, 'sort_order')
-        exec_wf.connect(input_spec, 'dest', scan_ts_node, 'out_path')
-        exec_wf.connect(collect_node, 'volume_files', scan_ts_node, 'in_files')
+        merge_vols_xfc = MergeNifti(out_format=SCAN_TS_BASE)
+        merge_vols = pe.Node(merge_vols_xfc, name='merge_volumes')
+        workflow.connect(input_spec, 'volume_tag', merge_vols, 'sort_order')
+        workflow.connect(collect_vols, 'volume_files', merge_vols, 'in_files')
         self.logger.debug('Connected staging to scan time series merge.')
 
         # Upload the processed DICOM and NIfTI files.
@@ -252,15 +252,16 @@ class ScanStagingWorkflow(WorkflowBase):
         workflow.connect(input_spec, 'session', upload_node, 'session')
         workflow.connect(input_spec, 'scan', upload_node, 'scan')
         workflow.connect(input_spec, 'dest', upload_node, 'in_dir')
-        workflow.connect(scan_ts_node, 'out_file' upload_node, 'time_series')
+        workflow.connect(merge_vols, 'out_file', upload_node, 'time_series')
         self.logger.debug('Connected scan time series merge to upload.')
 
         # The output is the 4D time series and 3D NIfTI volume image files.
         output_fields = ['time_series', 'volume_files']
         output_spec = pe.Node(StickyIdentityInterface(fields=output_fields),
                               name='output_spec')
-        workflow.connect(upload_node, 'out_files', output_spec, 'volume_files')
-        workflow.connect(scan_ts_node, 'out_file', output_spec, 'time_series')
+        workflow.connect(collect_vols, 'volume_files',
+                         output_spec, 'volume_files')
+        workflow.connect(merge_vols, 'out_file', output_spec, 'time_series')
 
         # Instrument the nodes for cluster submission, if necessary.
         self._configure_nodes(workflow)
@@ -407,15 +408,16 @@ class VolumeStagingWorkflow(WorkflowBase):
 
         # The magic incantation to get the Nipype workflow result.
         output_res = next(n for n in wf_res.nodes() if n.name == 'output_spec')
-        result = output_res.inputs.get()['out_file']
+        out_file = output_res.inputs.get()['out_file']
 
         self.logger.debug(
             "Executed the %s workflow on the %s %s scan %d with 3D volume"
-            " result %s" % (self.workflow.name, subject, session, scan, result)
+            " result %s." %
+            (self.workflow.name, subject, session, scan, out_file)
         )
 
         # Return the staged 3D volume files.
-        return result
+        return out_file
 
     def _create_workflow(self):
         """
@@ -501,7 +503,7 @@ def stage_volume(collection, subject, session, scan, volume, in_files,
     :param dest: the parent destination directory
     :param opts: the non-base_dir :class:`VolumeStagingWorkflow`
         initializer options
-    :return: the volume target directory
+    :return: the 3D NIfTI volume file
     """
     import os
     import shutil
@@ -517,11 +519,12 @@ def stage_volume(collection, subject, session, scan, volume, in_files,
     # Execute the workflow.
     logger(__name__).debug("Staging %s %s scan %d volume %d in %s..." %
                            (subject, session, scan, volume, out_dir))
-    stg_wf.run(collection, subject, session, scan, volume, out_dir, *in_files)
+    out_file = stg_wf.run(collection, subject, session, scan, volume,
+                          out_dir, *in_files)
     logger(__name__).debug("Staged %s %s scan %d volume %d in %s." %
                            (subject, session, scan, volume, out_dir))
 
-    return out_dir
+    return out_file
 
 
 def upload(project, subject, session, scan, in_dir, time_series):
@@ -625,9 +628,8 @@ def volume_format(collection):
 
     Example::
 
-        coll = Collection(volume='AcquisitionNumber', ...)
-        volume_format(coll)
-        >> "volume%(AcquisitionNumber)03d"
+        >> volume_format('Sarcoma')
+        "volume%(AcquisitionNumber)03d"
 
 
     :param collection: the collection name
@@ -635,7 +637,7 @@ def volume_format(collection):
     """
     from qipipe.staging import image_collection
 
-    coll = image_collection.with_name(collection)
+    img_coll = image_collection.with_name(collection)
 
     # Escape the leading % and inject the DICOM tag.
-    return "volume%%(%s)03d" % coll.patterns.volume
+    return "volume%%(%s)03d" % img_coll.patterns.volume

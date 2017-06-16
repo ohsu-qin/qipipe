@@ -112,7 +112,7 @@ def _run_with_dicom_input(actions, *inputs, **opts):
     # preceding scan workflow's base directory and garble
     # the results.
     base_dir_opt = opts.pop('base_dir', None)
-    if base_dir:
+    if base_dir_opt:
         base_dir = os.path.abspath(base_dir_opt)
     else:
         base_dir = os.getcwd()
@@ -709,7 +709,7 @@ class QIPipelineWorkflow(WorkflowBase):
         if 'stage' in actions:
             stg_inputs = ['subject', 'session', 'scan', 'in_dirs', 'opts']
             stg_xfc = Function(input_names=stg_inputs,
-                               output_names=['out_files'],
+                               output_names=['time_series', 'volume_files'],
                                function=stage)
             stg_node = pe.Node(stg_xfc, name='stage')
             # It would be preferable to pass this QIPipelineWorkflow
@@ -808,15 +808,23 @@ class QIPipelineWorkflow(WorkflowBase):
             mdl_node and not reg_node and not self.registration_resource
         )
         need_scan_ts = mask_node or roi_node or is_scan_modeling
-        if need_scan_ts and not stg_node:
-            scan_ts_xfc = XNATDownload(project=self.project,
-                                       resource='NIFTI',
-                                       file=SCAN_TS_FILE)
-            scan_ts = pe.Node(scan_ts_xfc,
-                              name='download_scan_time_series')
-            exec_wf.connect(input_spec, 'subject', scan_ts, 'subject')
-            exec_wf.connect(input_spec, 'session', scan_ts, 'session')
-            exec_wf.connect(input_spec, 'scan', scan_ts, 'scan')
+        if need_scan_ts:
+            if stg_node:
+                scan_ts = stg_node
+            else:
+                dl_scan_ts_xfc = XNATDownload(project=self.project,
+                                              resource='NIFTI',
+                                              file=SCAN_TS_FILE)
+                dl_scan_ts = pe.Node(dl_scan_ts_xfc,
+                                  name='download_scan_time_series')
+                exec_wf.connect(input_spec, 'subject', dl_scan_ts, 'subject')
+                exec_wf.connect(input_spec, 'session', dl_scan_ts, 'session')
+                exec_wf.connect(input_spec, 'scan', dl_scan_ts, 'scan')
+                # Rename the download out_file to volume_files.
+                scan_ts_xfc = IdentityInterface(fields=['time_series'])
+                scan_ts_xfc = pe.Node(scan_ts_xfc)
+                exec_wf.connect(dl_scan_ts, 'out_file',
+                                scan_ts_xfc, 'time_series')
 
         # Registration and the scan time series require a staged
         # node scan with output 'images'. If staging is enabled,
@@ -825,18 +833,23 @@ class QIPipelineWorkflow(WorkflowBase):
         #
         # The scan time series is required by mask and scan
         # registration.
-        staged = None
+        scan_volumes = None
         if reg_node:
             if stg_node:
-                staged = stg_node
+                scan_volumes = stg_node
             else:
-                dl_scan_xfc = XNATDownload(project=self.project,
+                dl_vols_xfc = XNATDownload(project=self.project,
                                            resource='NIFTI',
                                            file='volume*.nii.gz')
-                staged = pe.Node(dl_scan_xfc, name='staged')
-                exec_wf.connect(input_spec, 'subject', staged, 'subject')
-                exec_wf.connect(input_spec, 'session', staged, 'session')
-                exec_wf.connect(input_spec, 'scan', staged, 'scan')
+                dl_vols_node = pe.Node(dl_vols_xfc, name='scan_volumes')
+                exec_wf.connect(input_spec, 'subject', dl_vols_node, 'subject')
+                exec_wf.connect(input_spec, 'session', dl_vols_node, 'session')
+                exec_wf.connect(input_spec, 'scan', dl_vols_node, 'scan')
+                # Rename the download out_file to volume_files.
+                scan_volumes_xfc = IdentityInterface(fields=['volume_files'])
+                scan_volumes = pe.Node(scan_volumes_xfc)
+                exec_wf.connect(dl_vols_node, 'out_files',
+                                dl_vols_node, 'volume_files')
 
         # Registration and modeling require a mask and bolus arrival.
         if mask_node:
@@ -844,7 +857,7 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(input_spec, 'session', mask_node, 'session')
             exec_wf.connect(input_spec, 'scan', mask_node, 'scan')
             if hasattr(mask_node.inputs, 'time_series'):
-                exec_wf.connect(scan_ts, 'out_file',
+                exec_wf.connect(scan_ts, 'time_series',
                                 mask_node, 'time_series')
                 self.logger.debug('Connected the scan time series to mask.')
 
@@ -873,7 +886,7 @@ class QIPipelineWorkflow(WorkflowBase):
                                          function=bolus_arrival_index_or_zero)
                 bolus_arv_node = pe.Node(bolus_arv_xfc,
                                          name='bolus_arrival_index')
-                exec_wf.connect(scan_ts, 'out_file',
+                exec_wf.connect(scan_ts, 'time_series',
                                 bolus_arv_node, 'time_series')
                 self.logger.debug('Connected the scan time series to the bolus'
                                   ' arrival calculation.')
@@ -884,14 +897,14 @@ class QIPipelineWorkflow(WorkflowBase):
             exec_wf.connect(input_spec, 'subject', roi_node, 'subject')
             exec_wf.connect(input_spec, 'session', roi_node, 'session')
             exec_wf.connect(input_spec, 'scan', roi_node, 'scan')
-            exec_wf.connect(scan_ts, 'out_file', roi_node, 'time_series')
+            exec_wf.connect(scan_ts, 'time_series', roi_node, 'time_series')
             self.logger.debug('Connected the scan time series to ROI.')
 
         # If registration is enabled, then register the unregistered
         # staged images.
         if reg_node:
             # There must be staged files.
-            if not staged:
+            if not scan_volumes:
                 raise NotFoundError('Registration requires a scan input')
             exec_wf.connect(input_spec, 'subject', reg_node, 'subject')
             exec_wf.connect(input_spec, 'session', reg_node, 'session')
@@ -900,14 +913,15 @@ class QIPipelineWorkflow(WorkflowBase):
             # If the registration input files were downloaded from
             # XNAT, then select only the unregistered files.
             if stg_node:
-                exec_wf.connect(staged, 'out_files', reg_node, 'in_files')
+                exec_wf.connect(scan_volumes, 'volume_files',
+                                reg_node, 'in_files')
             else:
                 exc_regd_xfc = Function(input_names=['in_files', 'exclusions'],
                                         output_names=['out_files'],
                                         function=exclude_files)
                 exclude_registered = pe.Node(exc_regd_xfc,
                                              name='exclude_registered')
-                exec_wf.connect(staged, 'out_files',
+                exec_wf.connect(scan_volumes, 'volume_files',
                                 exclude_registered, 'in_files')
                 exec_wf.connect(input_spec, 'registered',
                                 exclude_registered, 'exclusions')
@@ -978,7 +992,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 # resource option. In that case, model the scan
                 # input. scan_ts is always created previously if
                 # is_scan_modeling is true.
-                exec_wf.connect(scan_ts, 'out_file', mdl_node, 'time_series')
+                exec_wf.connect(scan_ts, 'time_series', mdl_node, 'time_series')
             elif reg_node:
                 # merge_reg is created in the registration processing.
                 exec_wf.connect(merge_reg, 'out_file', mdl_node, 'time_series')
@@ -1119,7 +1133,7 @@ def stage(subject, session, scan, in_dirs, opts):
     :param scan: the scan number
     :param in_dirs: the input DICOM directories
     :param opts: the :meth:`qipipe.pipeline.staging.run` keyword options
-    :return: the 3D volume files
+    :return: the :meth:`qipipe.staging.run` result
     """
     from qipipe.pipeline import staging
 

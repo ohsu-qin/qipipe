@@ -1,4 +1,5 @@
 import os
+import re
 
 SUBJECT_FMT = '%s%03d'
 """

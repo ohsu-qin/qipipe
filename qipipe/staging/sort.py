@@ -16,12 +16,12 @@ def sort(collection, scan, *in_dirs):
     :return: the {volume: files} dictionary
     """
     # Get the collection pattern.
-    coll = image_collection.with_name(collection)
-    scan_patterns = coll.patterns.scan.get(scan)
+    img_coll = image_collection.with_name(collection)
+    scan_patterns = img_coll.patterns.scan.get(scan)
     if not scan_patterns:
         raise StagingError("There is no pattern for collection %s"
                            " scan %d" %(collection, scan))
-    tag = coll.patterns.volume
+    tag = img_coll.patterns.volume
 
     return _sort(tag, *in_dirs)
 
