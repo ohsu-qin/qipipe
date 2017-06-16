@@ -135,10 +135,12 @@ def _run_with_dicom_input(actions, *inputs, **opts):
         subjects.add(scan_input.subject)
         # The scan workflow base directory.
         scan_base_dir = "%s/scan/%d" % (base_dir, scan_input.scan)
+        # The scan workflow base directory.
+        scan_dest = "%s/scan/%d" % (dest, scan_input.scan)
         # Create a new workflow.
         workflow = QIPipelineWorkflow(
             project, scan_input.subject, scan_input.session, scan_input.scan,
-            wf_actions, collection=collection, dest=dest,
+            wf_actions, collection=collection, dest=scan_dest,
             base_dir=scan_base_dir, **opts)
         # Run the workflow on the scan.
         workflow.run_with_dicom_input(wf_actions, scan_input)
