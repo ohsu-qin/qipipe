@@ -6,6 +6,7 @@ import csv
 import tempfile
 from qiutil.collections import concat
 from qiutil.ast_config import read_config
+from qiutil.file import splitexts
 from qixnat.helpers import (xnat_path, xnat_name, parse_xnat_date)
 from qirest_client.helpers import database
 from qirest_client.model.imaging import (
@@ -15,15 +16,13 @@ from ..staging import image_collection
 from ..helpers.constants import (SUBJECT_FMT, SESSION_FMT)
 from ..helpers.colors import label_map_basename
 from ..pipeline.staging import (SCAN_METADATA_RESOURCE, SCAN_CONF_FILE)
-from ..pipeline.registration import (REG_PREFIX, REG_CONF_FILE)
+from ..pipeline.registration import REG_PREFIX
 from ..pipeline.modeling import (MODELING_PREFIX, MODELING_CONF_FILE)
-from ..pipeline.modeling import INFERRED_R1_0_OUTPUTS as OUTPUTS
 from ..pipeline.roi import ROI_RESOURCE
 from . import modeling
 
 
-class ImagingUpdateError(Exception):
-    """``qiprofile`` imaging update error."""
+class ImagingError(Exception):
     pass
 
 
@@ -70,9 +69,9 @@ class Updater(object):
         from the XNAT experiment.
 
         :param experiment: the XNAT experiment object
-        :raise ImagingUpdateError: if the XNAT experiment does not have
+        :raise ImagingError: if the XNAT experiment does not have
             a visit date
-        :raise ImagingUpdateError: if the ``qiprofile`` REST database session
+        :raise ImagingError: if the ``qiprofile`` REST database session
             with the same visit date already exists
         """
         # The XNAT experiment must have a date. The XNAT date is
@@ -80,13 +79,13 @@ class Updater(object):
         # datetime.
         date_s = experiment.attrs.get('date')
         if not date_s:
-            raise ImagingUpdateError( "The XNAT experiment %s is missing the"
+            raise ImagingError( "The XNAT experiment %s is missing the"
                                 " visit date" % xnat_path(experiment))
         date = parse_xnat_date(date_s)
         # If there is a qiprofile session with the same date,
         # then complain.
         if any( sess.date == date for sess in self.subject.sessions):
-            raise ImagingUpdateError(
+            raise ImagingError(
                 "a qiprofile %s %s Subject %d session with visit date %s"
                 " already exists" % (self.subject.project,
                                      self.subject.collection,
@@ -115,7 +114,9 @@ class Updater(object):
         # The modeling resources begin with 'pk_'.
         xnat_mdl_rscs = (rsc for rsc in xnat_scan.resources()
                          if xnat_name(rsc).startswith(MODELING_PREFIX))
-        modelings = [self._create_modeling(rsc, scans) for rsc in xnat_mdl_rscs]
+        modelings = [
+            self._create_modeling(rsc, scans) for rsc in xnat_mdl_rscs
+        ]
 
         # The session detail database object to hold the scans.
         detail = SessionDetail(scans=scans)
@@ -146,7 +147,7 @@ class Updater(object):
         # Determine the scan type from the collection and scan number.
         scan_type = collection.scan_types.get(number)
         if not scan_type:
-            raise ImagingUpdateError(
+            raise ImagingError(
                 "The %s XNAT scan number %s is not recognized" %
                 (self.subject.collection, number)
             )
@@ -158,7 +159,7 @@ class Updater(object):
         # There must be a time series.
         rsc = xnat_scan.resource('scan_ts')
         if not rsc.exists():
-            raise ImagingUpdateError("The XNAT scan %s does not have a time series"
+            raise ImagingError("The XNAT scan %s does not have a time series"
                                      " resource" % xnat_path(xnat_scan))
         time_series_file = next(f for f in rsc.files())
         name = xnat_name(time_series_file)
@@ -166,7 +167,7 @@ class Updater(object):
 
         # There must be a bolus arrival.
         if self.bolus_arrival_index == None:
-            raise ImagingUpdateError("The XNAT scan %s qiprofile update is"
+            raise ImagingError("The XNAT scan %s qiprofile update is"
                                     " missing the bolus arrival" %
                                     xnat_path(xnat_scan))
 
@@ -216,7 +217,7 @@ class Updater(object):
             if label_map_name in base_names:
                 # A label map must have a color table.
                 if not color_table:
-                    raise ImagingUpdateError(
+                    raise ImagingError(
                         "The %s label map %s is missing a color table" %
                         (xnat_path(xnat_scan), label_map_name)
                     )
@@ -244,22 +245,25 @@ class Updater(object):
         :return: the qiprofile Registration object
         """
         # Find or create the registration protocol.
-        cfg = self._read_configuration(resource, REG_CONF_FILE)
-        technique_section = cfg.get('General')
+        profile_file = "%s.cfg" % resource
+        profile = self._read_configuration(resource, profile_file)
+        technique_section = profile.get('General')
         if not technique_section:
-            raise ImagingUpdateError("The XNAT resource %s protocol is"
+            raise ImagingError("The XNAT resource %s protocol is"
                                      " missing the General section" %
                                      xnat_path(resource))
         technique = technique_section.get('technique')
         if not technique:
-            raise ImagingUpdateError("The XNAT resource %s protocol is"
+            raise ImagingError("The XNAT resource %s protocol is"
                                      " missing the technique option" %
                                      xnat_path(resource))
-        key = dict(technique=technique, configuration=cfg)
+        key = dict(technique=technique, configuration=profile)
         protocol = database.get_or_create(RegistrationProtocol, key)
 
         # There must be a time series.
-        time_series_file = next(f for f in resource.files() if f.label().ends_with('_ts.nii.gz'))
+        time_series_file = next(
+            f for f in resource.files() if f.label().ends_with('_ts.nii.gz')
+        )
         time_series = TimeSeries(name=xnat_name(time_series_file))
 
         # Return the new qiprofile Registration object.
@@ -271,56 +275,63 @@ class Updater(object):
         Creates the qiprofile Modeling object from the given XNAT
         resource object.
 
-        :param resource: the modeling source XNAT resource object
-        :param scans: the REST Scan list for the current session
+        :param resource: the modeling XNAT resource object
+        :param scans: the list of REST Scan objects for the current session
         :return: the qiprofile Modeling object
         """
         # The XNAT modeling files.
         xnat_files = resource.files()
 
-        # The modeling configuration.
-        cfg = self._read_configuration(resource, MODELING_CONF_FILE)
-
         # Tease out the modeling source.
-        source_topic = cfg.pop('Source', None)
+        source_topic = profile.pop('Source', None)
         if not source_topic:
-            raise ImagingUpdateError("The XNAT modeling configuration %s is"
-                               " missing the Source topic" % xnat_path(cfg_file))
+            raise ImagingError(
+                "The XNAT modeling configuration %s is missing the Source"
+                " topic" % xnat_path(profile_file)
+            )
         source_rsc = source_topic.get('resource')
         if not source_rsc:
-            raise ImagingUpdateError("The XNAT modeling configuration %s Source"
-                               " topic is missing the resource option" %
-                               xnat_path(cfg_file))
+            raise ImagingError(
+                "The XNAT modeling configuration %s Source topic is missing"
+                " the resource option" % xnat_path(profile_file)
+            )
         xnat_scan = resource.parent()
         if source_rsc.startswith('reg_'):
             reg_lists = (s.registrations for s in scans)
             regs = concat(*reg_lists)
             reg = next((r for r in regs if r.resource == source_rsc), None)
             if not reg:
-                raise ImagingUpdateError("The XNAT modeling resource %s source"
-                                         " registration resource %s was not"
-                                         " found in the session scans" %
-                                         (xnat_path(resource), source_rsc))
+                raise ImagingError(
+                    "The XNAT modeling resource %s source registration"
+                    " resource %s was not found in the session scans" %
+                    (xnat_path(resource), source_rsc)
+                )
             source = Modeling.Source(registration=reg.protocol)
         else:
             scan_nbr = xnat_name(xnat_scan)
             scan = next(s for s in scans if s.number == scan_nbr)
             source = Modeling.Source(scan=scan.protocol)
 
+        # The modeling configuration.
+        profile_file = "%s.cfg" % resource
+        profile = self._read_configuration(resource, profile_file)
+        optimization = profile.pop('Optimization', None)
+        if not optimization:
+            raise ImagingError("")
         # The qiprofile ModelingProtocol.
-        key = dict(technique='Mock', configuration=cfg)
+        key = dict(technique='Mock', configuration=profile)
         protocol = database.get_or_create(ModelingProtocol, key)
 
         # The modeling result files.
-        xnat_file_labels = {xnat_name(xnat_file) for xnat_file in xnat_files}
+        xnat_file_labels = (xnat_name(xnat_file) for xnat_file in xnat_files)
         result = {}
-        for output in OUTPUTS:
-            base_name = output + '.nii.gz'
-            if base_name in xnat_file_labels:
-                # TODO - add the param result average and label map to the
-                # pipeline and here.
-                param_result = Modeling.ParameterResult(filename=base_name)
-                result[output] = param_result
+        for xnat_file in xnat_files:
+            name = xnat_name(xnat_file)
+            key, _ = splitexts(name)
+            # TODO - add the param result average and label map to the
+            # pipeline and here.
+            param_result = Modeling.ParameterResult(filename=name)
+            result[key] = param_result
 
         # Return the new qiprofile Modeling object.
         return Modeling(protocol=protocol, source=source,
@@ -331,7 +342,7 @@ class Updater(object):
         :param resource: the XNAT resource configuration file parent
         :param name: the configuration XNAT file name
         :return: the configuration dictionary
-        :raise ImagingUpdateError: if the configuration XNAT file was
+        :raise ImagingError: if the configuration XNAT file was
             not found in the resource
         """
         # The registration configuration.
@@ -339,9 +350,10 @@ class Updater(object):
                            if xnat_name(xnat_file) == name)
         xnat_cfg_file = next(cfg_file_finder, None)
         if not xnat_cfg_file:
-            raise ImagingUpdateError("The XNAT resource %s does not contain"
-                               " the configuration file %s" %
-                               (xnat_path(resource), name))
+            raise ImagingError(
+                "The XNAT resource %s does not contain the configuration"
+                " file %s" % (xnat_path(resource), name)
+            )
         if xnat_cfg_file:
             cfg_file = xnat_cfg_file.get()
             cfg_dict = dict(read_config(cfg_file))

@@ -4,24 +4,24 @@ from nose.tools import (assert_true, assert_equal, assert_not_equal, assert_is_n
 from qiutil.ast_config import read_config
 from qipipe.helpers import metadata
 from qipipe.helpers.constants import CONF_DIR
-from qipipe.pipeline.registration import (REG_CONF_FILE, FNIRT_CONF_SECTIONS)
+from qipipe.pipeline.registration import FNIRT_CONF_SECTIONS
 from ... import ROOT
 
 RESULTS = os.path.join(ROOT, 'results', 'helpers')
 
 
 class TestMetadata(object):
-    
+
     def setup(self):
         shutil.rmtree(RESULTS, True)
-    
+
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
-    
+
     def test_create_profile(self):
-        in_file = os.path.join(CONF_DIR, REG_CONF_FILE)
+        in_file = os.path.join(CONF_DIR, 'reg_test.cfg')
         in_cfg = dict(read_config(in_file))
-        dest = os.path.join(RESULTS, REG_CONF_FILE)
+        dest = os.path.join(RESULTS, 'reg_test.cfg')
         self.profile = metadata.create_profile(in_cfg, FNIRT_CONF_SECTIONS,
                                                dest=dest)
         assert_true(os.path.exists(dest),
@@ -43,5 +43,5 @@ class TestMetadata(object):
 
 if __name__ == "__main__":
     import nose
-    
+
     nose.main(defaultTest=__name__)

@@ -15,7 +15,7 @@ staging
 .. automodule:: qipipe.staging.fix_dicom
 
 :mod:`image_collection`
------------------
+-----------------------
 .. automodule:: qipipe.staging.image_collection
 
 :mod:`iterator`
@@ -35,7 +35,7 @@ staging
 .. automodule:: qipipe.staging.roi
 
 :mod:`sort`
----------------------
+-----------
 .. automodule:: qipipe.staging.sort
 
 :mod:`sarcoma_config`

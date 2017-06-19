@@ -11,7 +11,6 @@ import qixnat
 from qirest_client.helpers import database
 from qirest_client.model.subject import Subject
 from qipipe.helpers import metadata
-from qipipe.pipeline.registration import REG_CONF_FILE
 from qipipe.pipeline.modeling import (MODELING_CONF_FILE, BOLERO_CONF_SECTIONS)
 from qipipe.qiprofile import imaging
 from qipipe.helpers.constants import (CONF_DIR, SUBJECT_FMT, SESSION_FMT)
@@ -62,7 +61,7 @@ class TestImaging(object):
     """
     Imaging update tests.
     """
-    
+
     def setup(self):
         self._connection = connect(db=DATABASE)
         self._connection.drop_database(DATABASE)
@@ -70,12 +69,12 @@ class TestImaging(object):
         self._subject_name = SUBJECT_FMT % (COLLECTION, SUBJECT)
         self._session_name = SESSION_FMT % SESSION
         self._seed()
-    
+
     def tearDown(self):
 #        self._connection.drop_database(DATABASE)
         with qixnat.connect() as xnat:
             xnat.delete(PROJECT, self._subject_name, self._session_name)
-    
+
     def test_update(self):
         # The test qiprofile subject.
         subject = Subject(project=PROJECT, collection=COLLECTION,
@@ -85,10 +84,10 @@ class TestImaging(object):
             exp = xnat.find_one(PROJECT, self._subject_name,
                                 self._session_name)
             imaging.update(subject, exp, bolus_arrival_index=1)
-        
+
         # Perform a REST database validation.
         subject.validate()
-        
+
         # Verify the REST session object.
         sessions = list(subject.sessions)
         assert_equal(len(sessions), 1,
@@ -104,7 +103,7 @@ class TestImaging(object):
         assert_is_not_none(session.detail,
                            "The %s Subject %s Session %d detail is missing" %
                            (COLLECTION, SUBJECT, SESSION))
-        
+
         # Verify the REST scan object.
         scans = list(session.detail.scans)
         assert_equal(len(scans), 1,
@@ -125,7 +124,7 @@ class TestImaging(object):
                      "The %s Subject %s Session %d Scan %d protocol technique is"
                      " incorrect: %s" % (COLLECTION, SUBJECT, SESSION, SCAN,
                                          scan.protocol.technique))
-        
+
         # Verify the REST registration object.
         regs = list(scan.registrations)
         assert_equal(len(regs), 1, "The %s Subject %s Session %d Scan %d"
@@ -149,7 +148,7 @@ class TestImaging(object):
                      " protocol technique is incorrect: %s" %
                      (COLLECTION, SUBJECT, SESSION, SCAN, REG_RESOURCE,
                       reg.protocol.technique))
-        
+
         # Verify the REST modeling object.
         mdls = list(session.modelings)
         assert_equal(len(mdls), 1, "The %s Subject %s Session %d modelings"
@@ -176,7 +175,7 @@ class TestImaging(object):
                      " modeling %s protocol technique is incorrect: %s" %
                      (COLLECTION, SUBJECT, SESSION, SCAN, REG_RESOURCE,
                       MODELING_RESOURCE, mdl.protocol.technique))
-    
+
     def _seed(self):
         """
         Seeds the XNAT database with the test fixture scan :const:`VOLUMES`,
@@ -189,13 +188,13 @@ class TestImaging(object):
             scan = xnat.find_or_create(PROJECT, self._subject_name,
                                        experiment=exp_opt, scan=SCAN,
                                        modality='MR')
-            
+
             # Upload the 3D scan volumes.
             nifti = scan.resource('NIFTI')
             nifti.create()
             files = glob.glob(VOLUMES + '/*.nii.gz')
             xnat.upload(nifti, *files)
-            
+
             # The registration resource.
             reg = scan.resource(REG_RESOURCE)
             reg.create()
@@ -204,14 +203,14 @@ class TestImaging(object):
             # realigned files.
             xnat.upload(reg, *files)
             # Make the registration profile.
+            cfg_file = "%s.cfg" % REG_RESOURCE
             with tempfile.NamedTemporaryFile() as profile:
-                self._create_profile(REG_CONF_FILE,
-                                     dest=profile.name,
+                self._create_profile(cfg_file, dest=profile.name,
                                      general=dict(technique='Mock'))
                 profile.flush()
                 # Upload the registration profile.
                 xnat.upload(reg, profile.name, name='registration.cfg')
-            
+
             # The modeling resource.
             mdl = scan.resource(MODELING_RESOURCE)
             mdl.create()
@@ -229,11 +228,10 @@ class TestImaging(object):
                 profile.flush()
                 # Upload the modeling profile.
                 xnat.upload(mdl, profile.name, name='modeling.cfg')
-    
+
     def _create_profile(self, name, dest, **opts):
         cfg_file = os.path.join(CONF_DIR, name)
         cfg = read_config(cfg_file)
         cfg_dict = dict(cfg)
-        
+
         return metadata.create_profile(cfg_dict, [], dest, **opts)
-    

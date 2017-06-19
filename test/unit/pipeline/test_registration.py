@@ -22,30 +22,30 @@ RESOURCE = generate_unique_name(__name__)
 class TestRegistrationWorkflow(VolumeTestBase):
     """
     Registration workflow unit tests.
-    
+
     This test exercises the registration workflow on three volumes of one visit
     in each of the Breast and Sarcoma studies.
     """
-    
+
     def __init__(self):
         super(TestRegistrationWorkflow, self).__init__(
             logger(__name__), RESULTS, use_mask=True
         )
-    
+
     def test_breast(self):
         for args in self.stage('Breast'):
             self._test_workflow('mock', *args)
-    
+
     def test_sarcoma(self):
         for args in self.stage('Sarcoma'):
             self._test_workflow('mock', *args)
-    
+
     def _test_workflow(self, technique, project, subject, session, scan,
                        *images):
         """
         Executes :meth:`qipipe.pipeline.registration.run` on the given
         input.
-        
+
         :param technique: the built-in registration technique
         :param project: the input project name
         :param subject: the input subject name
@@ -74,7 +74,7 @@ class TestRegistrationWorkflow(VolumeTestBase):
                 self._verify_result(xnat, subject, session, scan, result)
             finally:
                 xnat.delete(project, subject)
-    
+
     def _verify_result(self, xnat, subject, session, scan, result):
         """
         :param xnat: the XNAT connection
@@ -90,26 +90,26 @@ class TestRegistrationWorkflow(VolumeTestBase):
         assert_is_not_none(rsc,  "The %s %s scan %d %s XNAT registration"
                                  " resource object was not created" %
                                  (subject, session, scan, RESOURCE))
-        
+
         # Verify that the registration result is accurate.
         split = (os.path.split(location) for location in result)
         out_dirs, out_files = (set(files) for files in zip(*split))
         rsc_files = set(rsc.files().get())
-        assert_true(registration.REG_CONF_FILE in rsc_files,
+        cfg_file = "%s.cfg" % RESOURCE
+        assert_true(cfg_file in rsc_files,
                      "The XNAT registration resource %s does not contain"
                       " the profile %s" %
-                      (xnat_path(rsc), registration.REG_CONF_FILE))
+                      (xnat_path(rsc), cfg_file)
         assert_equal(out_dirs, set([self.dest]),
                      "The %s %s scan %d %s registration result directory"
                       " is incorrect - expected: %s, found: %s" %
                       (subject, session, scan, RESOURCE, self.dest, out_dirs))
-        rsc_img_files = {f for f in rsc_files
-                         if f != registration.REG_CONF_FILE}
+        rsc_img_files = {f for f in rsc_files if f != cfg_file}
         assert_equal(out_files, rsc_img_files,
                      "The %s %s scan %d %s XNAT registration image file"
                      " names are incorrect - expected: %s, found: %s" %
                      (subject, session, scan, RESOURCE, rsc_img_files, out_files))
-        
+
         # Verify that the output files were created.
         dest_files = (os.path.join(self.dest, location)
                       for location in os.listdir(self.dest))
@@ -121,5 +121,5 @@ class TestRegistrationWorkflow(VolumeTestBase):
 
 if __name__ == "__main__":
     import nose
-    
+
     nose.main(defaultTest=__name__)
