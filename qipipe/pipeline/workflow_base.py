@@ -16,7 +16,7 @@ class WorkflowBase(object):
     The WorkflowBase class is the base class for the qipipe workflow
     wrapper classes.
 
-    If the :attr:`distributable' flag is set, then the execution is
+    If the *distributable* flag is set, then the execution is
     distributed using the Nipype plug-in specified in the configuration
     *plug_in* parameter.
 
