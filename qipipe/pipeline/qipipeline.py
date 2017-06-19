@@ -124,7 +124,10 @@ def _run_with_dicom_input(actions, *inputs, **opts):
     # If the only action is ROI, then the input session directories
     # have already been staged. Therefore, set the skip_existing
     # flag to False.
-    iter_opts = dict(scan=opts['scan']) if 'scan' in opts else {}
+    iter_opts = {}
+    scan_opt = opts.pop('scan', None)
+    if scan_opt:
+        iter_opts['scan'] = scan_opt
     if actions == ['roi']:
         iter_opts['skip_existing'] = False
     for scan_input in iter_stage(project, collection, *inputs, **iter_opts):
