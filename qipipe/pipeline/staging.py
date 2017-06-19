@@ -348,20 +348,20 @@ class VolumeStagingWorkflow(WorkflowBase):
 
     where:
 
-    * *subject* is the subject name, e.g. ``Breast011``
+    * _subject_ is the subject name, e.g. ``Breast011``
 
-    * *session* is the session name, e.g. ``Session03``
+    * _session_ is the session name, e.g. ``Session03``
 
-    * *volume number* is determined by the
+    * _volume number_ is determined by the
       :attr:`qipipe.staging.image_collection.Collection.patterns`
       ``volume`` DICOM tag
 
-    * *file* is the DICOM file name
+    * _file_ is the DICOM file name
 
     The staging workflow output is the *output_spec* node consisting
     of the following output field:
 
-    - *image*: the 3D volume stack NIfTI image file
+    * _image_: the 3D volume stack NIfTI image file
 
     Note: Concurrent XNAT upload fails unpredictably due to one of
         the causes described in the ``qixnat.facade.XNAT.find`` method
@@ -370,9 +370,8 @@ class VolumeStagingWorkflow(WorkflowBase):
         The errors are addressed by the following measures:
         * setting an isolated pyxnat cache_dir for each execution node
         * serializing the XNAT find-or-create access points with JoinNodes
-        * increasing the SGE submission resource parameters. The following
-          setting is adequate:
-             h_rt=02:00:00,mf=32M
+        * increasing the SGE submission resource parameters as shown in
+          the ``conf/staging.cfg [upload]`` section
 
     .. _CTP: https://wiki.cancerimagingarchive.net/display/Public/Image+Submitter+Site+User%27s+Guide
     .. _DcmStack: http://nipy.sourceforge.net/nipype/interfaces/generated/nipype.interfaces.dcmstack.html
@@ -395,7 +394,8 @@ class VolumeStagingWorkflow(WorkflowBase):
         :class:`qipipe.pipeline.staging.StagingWorkflow`.
         """
 
-    def run(self, collection, subject, session, scan, volume, dest, *in_files):
+    def run(self, collection, subject, session, scan, volume, dest,
+            *in_files):
         """
         Executes this volume staging workflow.
 
@@ -416,21 +416,21 @@ class VolumeStagingWorkflow(WorkflowBase):
         input_spec.inputs.scan = scan
         input_spec.inputs.volume = volume
         input_spec.inputs.dest = dest
-
         # Set the DICOM file iterator inputs.
         iter_dicom = self.workflow.get_node('iter_dicom')
         iter_dicom.iterables = ('dicom_file', in_files)
-
         # Execute the workflow.
         wf_res = self._run_workflow(self.workflow)
 
         # The magic incantation to get the Nipype workflow result.
-        output_res = next(n for n in wf_res.nodes() if n.name == 'output_spec')
+        output_res = next(
+            n for n in wf_res.nodes() if n.name == 'output_spec'
+        )
         out_file = output_res.inputs.get()['out_file']
 
         self.logger.debug(
-            "Executed the %s workflow on the %s %s scan %d with 3D volume"
-            " result %s." %
+            "Executed the %s workflow on the %s %s scan %d with 3D"
+            " volume result %s." %
             (self.workflow.name, subject, session, scan, out_file)
         )
 
@@ -531,7 +531,9 @@ def stage_volume(collection, subject, session, scan, volume, in_files,
     from qipipe.helpers.logging import logger
     from qipipe.pipeline.staging import VolumeStagingWorkflow
 
-    # The destination is a subdirectory.
+    _logger = logger(__name__)
+    # The volume destination is a dest subdirectory.
+    dest = os.path.abspath(dest)
     out_dir = "%s/volume%03d" % (dest, volume)
     os.mkdir(out_dir)
 
@@ -591,7 +593,7 @@ def upload(project, subject, session, scan, dcm_dir, volume_files,
     dcm_file_cnt = 0
     for vol_dir in vol_dirs:
         # The DICOM files to upload.
-        dcm_file_pat = "%s/*.dcm.gz" % dcm_dir
+        dcm_file_pat = "%s/volume*/*.dcm.gz" % dcm_dir
         dcm_files = glob.glob(dcm_file_pat)
         if not dcm_files:
             raise PipelineError("The input directory does not contain scan"
