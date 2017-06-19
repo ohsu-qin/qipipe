@@ -9,3 +9,4 @@ networkx
 openpyxl
 pyasn1
 six
+twisted
