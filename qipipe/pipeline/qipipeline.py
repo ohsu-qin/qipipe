@@ -90,13 +90,13 @@ def _run_with_dicom_input(actions, *inputs, **opts):
     # The required XNAT project name.
     project = opts.pop('project', None)
     if not project:
-        raise ArgumentError('The staging pipeline project option'
+        raise PipelineError('The staging pipeline project option'
                             ' is missing.')
 
     # The required image collection name.
     collection = opts.pop('collection', None)
     if not collection:
-        raise ArgumentError('The staging pipeline collection option'
+        raise PipelineError('The staging pipeline collection option'
                             ' is missing.')
 
     # The absolute destination path.
@@ -201,23 +201,23 @@ def _run_with_xnat_input(actions, *inputs, **opts):
         hierarchy = dict(path_hierarchy(path))
         prj = hierarchy.pop('project', None)
         if not prj:
-            raise ArgumentError("The XNAT path is missing a project: %s" % path)
+            raise PipelineError("The XNAT path is missing a project: %s" % path)
         sbj = hierarchy.pop('subject', None)
         if not sbj:
-            raise ArgumentError("The XNAT path is missing a subject: %s" % path)
+            raise PipelineError("The XNAT path is missing a subject: %s" % path)
         sess = hierarchy.pop('experiment', None)
         if not sess:
-            raise ArgumentError("The XNAT path is missing a session: %s" % path)
+            raise PipelineError("The XNAT path is missing a session: %s" % path)
         scan_s = hierarchy.pop('scan', None)
         if not scan_s:
-            raise ArgumentError("The XNAT path is missing a scan: %s" % path)
+            raise PipelineError("The XNAT path is missing a scan: %s" % path)
         scan = int(scan_s)
         # The XNAT connection is open while the input scan is processed.
         with qixnat.connect() as xnat:
             # The XNAT scan object must exist.
             scan_obj = xnat.find_one(prj, sbj, sess, scan=scan)
             if not scan_obj:
-                raise ArgumentError("The XNAT scan object does not exist: %s" %
+                raise PipelineError("The XNAT scan object does not exist: %s" %
                                     path)
 
         # Make the workflow.
@@ -272,7 +272,7 @@ def _scan_files(xnat, project, subject, session, scan, resource,
         return files
 
 
-class ArgumentError(Exception):
+class PipelineError(Exception):
     pass
 
 
@@ -509,7 +509,7 @@ class QIPipelineWorkflow(WorkflowBase):
             scan_volumes = _scan_files(xnat, project, subject, session, scan,
                                        'NIFTI', VOLUME_FILE_PAT)
             if not scan_volumes:
-                raise ArgumentError("There are no pipeline %s %s %s"
+                raise PipelineError("There are no pipeline %s %s %s"
                                     " scan %d volumes" %
                                     (project, subject, session, scan))
 
@@ -540,7 +540,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 )
                 self.logger.debug("%s" % unregistered)
         elif unregistered and self.registration_resource:
-            raise ArgumentError(
+            raise PipelineError(
                 "The pipeline %s %s scan %d register action is not"
                 " specified but there are %d unregistered scan volumes"
                 " not in the %s registration resource" %
@@ -659,7 +659,7 @@ class QIPipelineWorkflow(WorkflowBase):
             # The registration technique option is required
             # for the registration action.
             if not self.registration_technique:
-                raise ArgumentError('Missing the registration technique')
+                raise PipelineError('Missing the registration technique')
 
             # Spell out the registration workflow options rather
             # than delegating to this qipipeline workflow as the
@@ -736,7 +736,7 @@ class QIPipelineWorkflow(WorkflowBase):
 
         # Validate that there is at least one constituent workflow.
         if not any([stg_node, roi_node, reg_node, mdl_node]):
-            raise ArgumentError("No workflow was enabled.")
+            raise PipelineError("No workflow was enabled.")
 
         # Registration and modeling require a mask.
         is_mask_required = (
@@ -1312,7 +1312,7 @@ def _extract_volume_number(location):
     _, base_name = os.path.split(location)
     match = VOLUME_FILE_PAT.match(base_name)
     if not match:
-        raise ArgumentError("The volume file base name does not match"
+        raise PipelineError("The volume file base name does not match"
                             " pattern %s: %s" %
                             (VOLUME_FILE_PAT.pattern, base_name))
     return int(match.group(1))

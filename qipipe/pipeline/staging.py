@@ -12,8 +12,7 @@ if not on_rtd:
         warnings.simplefilter(action='ignore', category=FutureWarning)
         from nipype.pipeline import engine as pe
         from nipype.interfaces.utility import (IdentityInterface, Function)
-        from nipype.interfaces.dcmstack import DcmStack
-        from nipype.interfaces.dcmstack import MergeNifti
+        from nipype.interfaces.dcmstack import (DcmStack, MergeNifti)
 import qixnat
 from ..interfaces import (StickyIdentityInterface, FixDicom, Compress)
 from .workflow_base import WorkflowBase
@@ -576,13 +575,14 @@ def upload(project, subject, session, scan, dcm_dir, volume_files,
     import glob
     import qixnat
     from qipipe.helpers.logging import logger
+    from qipipe.pipeline.pipeline_error import PipelineError
 
     _logger = logger(__name__)
     # The volume directories.
     vol_dir_pat = "%s/volume*" % dcm_dir
     vol_dirs = glob.glob(vol_dir_pat)
     if not vol_dirs:
-        raise ArgumentError("The input directory does not contain any"
+        raise PipelineError("The input directory does not contain any"
                             " directories matching %s" % vol_dir_pat)
     _logger.debug("Uploading %d %s %s scan %d volumes to XNAT..." %
                   (len(vol_dirs), subject, session, scan))
@@ -594,7 +594,7 @@ def upload(project, subject, session, scan, dcm_dir, volume_files,
         dcm_file_pat = "%s/*.dcm.gz" % dcm_dir
         dcm_files = glob.glob(dcm_file_pat)
         if not dcm_files:
-            raise ArgumentError("The input directory does not contain scan"
+            raise PipelineError("The input directory does not contain scan"
                                 " DICOM files matching %s" % dcm_file_pat)
         # Upload the compressed DICOM files.
         with qixnat.connect() as xnat:
