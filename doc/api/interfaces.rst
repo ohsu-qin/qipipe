@@ -19,7 +19,7 @@ interfaces
 .. automodule:: qipipe.interfaces.copy
 
 :mod:`dce_to_r1`
------------
+----------------
 .. automodule:: qipipe.interfaces.dce_to_r1
 
 :mod:`fastfit`
@@ -59,11 +59,11 @@ interfaces
 .. automodule:: qipipe.interfaces.preview
 
 :mod:`reorder_bolero_mask`
------------
+--------------------------
 .. automodule:: qipipe.interfaces.reorder_bolero_mask
 
 :mod:`sticky_identity`
------------
+----------------------
 .. automodule:: qipipe.interfaces.sticky_identity
 
 :mod:`touch`
@@ -72,7 +72,6 @@ interfaces
 
 :mod:`uncompress`
 -----------------
-
 .. automodule:: qipipe.interfaces.uncompress
 
 :mod:`unpack`
