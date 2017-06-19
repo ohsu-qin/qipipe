@@ -509,8 +509,12 @@ def stage_volume(collection, subject, session, scan, volume, in_files,
                  dest, opts):
     """
     Stages the given volume. The processed DICOM ``.dcm.gz`` files
-    and merged 3D NIfTI volume ``.nii.gz`` file are placed in the
-    *dest*/*volume* subdirectory.
+    are placed in the *dest*/*volume* subdirectory. The child
+    :class:`VolumeStagingWorkflow` runs in the
+    _parent_/volume\ _volume_ directory, where:
+    * _parent_ is the parent base directory specified in the
+      options (default current directory)
+    * _volume_ is the volume argument
 
     :param collection: the collection name
     :param subject: the subject name
@@ -519,8 +523,8 @@ def stage_volume(collection, subject, session, scan, volume, in_files,
     :param volume: the volume number
     :param in_files: the input DICOM files
     :param dest: the parent destination directory
-    :param opts: the non-base_dir :class:`VolumeStagingWorkflow`
-        initializer options
+    :param opts: the :class:`VolumeStagingWorkflow` initializer
+         options
     :return: the 3D NIfTI volume file
     """
     import os
@@ -533,7 +537,8 @@ def stage_volume(collection, subject, session, scan, volume, in_files,
     os.mkdir(out_dir)
 
     # The volume workflow runs in a subdirectory.
-    base_dir = "volume%03d" % volume
+    parent_dir = opts.pop('base_dir', os.getcwd())
+    base_dir = "%s/volume%03d" % (parent_dir, volume)
 
     # Make the workflow.
     stg_wf = VolumeStagingWorkflow(base_dir=base_dir, **opts)
