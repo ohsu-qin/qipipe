@@ -24,6 +24,7 @@ traits
 networkx
 openpyxl
 six
+twisted
 qiutil
 qidicom
 qixnat
