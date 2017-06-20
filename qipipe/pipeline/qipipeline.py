@@ -825,9 +825,9 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(input_spec, 'subject', dl_scan_ts, 'subject')
                 exec_wf.connect(input_spec, 'session', dl_scan_ts, 'session')
                 exec_wf.connect(input_spec, 'scan', dl_scan_ts, 'scan')
-                # Rename the download out_file to volume_files.
+                # Rename the download out_file to time_series.
                 scan_ts_xfc = IdentityInterface(fields=['time_series'])
-                scan_ts_xfc = pe.Node(scan_ts_xfc)
+                scan_ts_xfc = pe.Node(scan_ts_xfc, name='scan_time_series')
                 exec_wf.connect(dl_scan_ts, 'out_file',
                                 scan_ts_xfc, 'time_series')
 
