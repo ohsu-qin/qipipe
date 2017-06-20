@@ -363,7 +363,7 @@ class VolumeStagingWorkflow(WorkflowBase):
 
     - *image*: the 3D volume stack NIfTI image file
 
-    Note: Concurrent XNAT upload fails unpredictably due to one of
+    :Note: Concurrent XNAT upload fails unpredictably due to one of
         the causes described in the ``qixnat.facade.XNAT.find`` method
         documentation.
 
