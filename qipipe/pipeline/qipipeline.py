@@ -846,16 +846,15 @@ class QIPipelineWorkflow(WorkflowBase):
                 dl_vols_xfc = XNATDownload(project=self.project,
                                            resource='NIFTI',
                                            file='volume*.nii.gz')
-                dl_vols_node = pe.Node(dl_vols_xfc,
-                                       name='download_scan_volumes')
-                exec_wf.connect(input_spec, 'subject', dl_vols_node, 'subject')
-                exec_wf.connect(input_spec, 'session', dl_vols_node, 'session')
-                exec_wf.connect(input_spec, 'scan', dl_vols_node, 'scan')
+                dl_vols = pe.Node(dl_vols_xfc, name='download_scan_volumes')
+                exec_wf.connect(input_spec, 'subject', dl_vols, 'subject')
+                exec_wf.connect(input_spec, 'session', dl_vols, 'session')
+                exec_wf.connect(input_spec, 'scan', dl_vols, 'scan')
                 # Rename the download out_file to volume_files.
                 scan_volumes_xfc = IdentityInterface(fields=['volume_files'])
                 scan_volumes = pe.Node(scan_volumes_xfc, name='scan_volumes')
-                exec_wf.connect(dl_vols_node, 'out_files',
-                                dl_vols_node, 'volume_files')
+                exec_wf.connect(dl_vols, 'out_files',
+                                scan_volumes, 'volume_files')
 
         # Registration and modeling require a mask and bolus arrival.
         if mask_node:
