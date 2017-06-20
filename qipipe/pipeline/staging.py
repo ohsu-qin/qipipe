@@ -33,7 +33,7 @@ SCAN_CONF_FILE = 'scan.cfg'
 def run(subject, session, scan, *in_dirs, **opts):
     """
     Runs the staging workflow on the given DICOM input directory.
-    The return value is a {volume: file} dictionary, where *volume*
+    The return value is a {*volume*: *file*} dictionary, where *volume*
     is the volume number and *file* is the 3D NIfTI volume file.
 
     :param subject: the subject name
@@ -352,7 +352,7 @@ class VolumeStagingWorkflow(WorkflowBase):
 
     - *session* is the session name, e.g. ``Session03``
 
-    * *volume number* is determined by the
+    - *volume number* is determined by the
       :attr:`qipipe.staging.image_collection.Collection.patterns`
       ``volume`` DICOM tag
 
@@ -361,15 +361,18 @@ class VolumeStagingWorkflow(WorkflowBase):
     The staging workflow output is the *output_spec* node consisting
     of the following output field:
 
-    * _image_: the 3D volume stack NIfTI image file
+    - *image*: the 3D volume stack NIfTI image file
 
     Note: Concurrent XNAT upload fails unpredictably due to one of
         the causes described in the ``qixnat.facade.XNAT.find`` method
         documentation.
 
         The errors are addressed by the following measures:
+
         * setting an isolated pyxnat cache_dir for each execution node
+
         * serializing the XNAT find-or-create access points with JoinNodes
+
         * increasing the SGE submission resource parameters as shown in
           the ``conf/staging.cfg [upload]`` section
 
@@ -511,8 +514,10 @@ def stage_volume(collection, subject, session, scan, volume, in_files,
     are placed in the *dest*/*volume* subdirectory. The child
     :class:`VolumeStagingWorkflow` runs in the
     _parent_/volume\ _volume_ directory, where:
+
     * _parent_ is the parent base directory specified in the
       options (default current directory)
+
     * _volume_ is the volume argument
 
     :param collection: the collection name

@@ -483,7 +483,9 @@ class ExtentSegmentFactory(object):
     def _distances(self, points):
         """
         Returns a N x N matrix of the (i,j) point distances, where:
+
         * N = the number of points
+
         * i, j = 0, ..., N
 
         :param points: the subject points
