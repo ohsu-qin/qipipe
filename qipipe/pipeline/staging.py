@@ -222,7 +222,7 @@ class ScanStagingWorkflow(WorkflowBase):
         stg_inputs = stg_fields + iter_fields + ['opts']
         stg_xfc = Function(input_names=stg_inputs, output_names=['out_file'],
                            function=stage_volume)
-        stg_node = pe.Node(stg_xfc, name='stage')
+        stg_node = pe.Node(stg_xfc, name='stage_volume')
         stg_node.inputs.opts = self._child_options()
         for fld in stg_fields:
             workflow.connect(input_spec, fld, stg_node, fld)
