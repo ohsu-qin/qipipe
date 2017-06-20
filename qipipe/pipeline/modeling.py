@@ -894,11 +894,11 @@ def get_fit_params(cfg_file, aif_shift):
     """
     Obtains the following modeling fit parameters:
 
-    * *aif_shift*: arterial input function parameter array
-    * *aif_delta_t*: acquisition time deltas
-    * *aif_shift*: acquisition time shift
-    * *r1_cr*: contrast R1
-    * *r1_b_pre*: pre-contrast R1
+    - *aif_shift*: arterial input function parameter array
+    - *aif_delta_t*: acquisition time deltas
+    - *aif_shift*: acquisition time shift
+    - *r1_cr*: contrast R1
+    - *r1_b_pre*: pre-contrast R1
 
     The *aif_shift* is calculated by :func:`get_aif_shift` and passed
     to this function. The remaining parameters are read from the

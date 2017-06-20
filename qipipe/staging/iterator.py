@@ -133,9 +133,9 @@ class VisitIterator(object):
         """
         Returns the next (subject, session, scan_dict) tuple for the
         scans in the session directories, where:
-        * *subject* is the subject name
-        * *session* is the session name
-        * *scan_dict* is the scan {number: {dicom, roi}}
+        - *subject* is the subject name
+        - *session* is the session name
+        - *scan_dict* is the scan {number: {dicom, roi}}
             dictionary
 
         :return: the next (subject, session, scan_dict) tuple

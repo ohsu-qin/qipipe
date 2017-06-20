@@ -348,15 +348,15 @@ class VolumeStagingWorkflow(WorkflowBase):
 
     where:
 
-    * _subject_ is the subject name, e.g. ``Breast011``
+    - *subject* is the subject name, e.g. ``Breast011``
 
-    * _session_ is the session name, e.g. ``Session03``
+    - *session* is the session name, e.g. ``Session03``
 
-    * _volume number_ is determined by the
+    * *volume number* is determined by the
       :attr:`qipipe.staging.image_collection.Collection.patterns`
       ``volume`` DICOM tag
 
-    * _file_ is the DICOM file name
+    - *file* is the DICOM file name
 
     The staging workflow output is the *output_spec* node consisting
     of the following output field:
