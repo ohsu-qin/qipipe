@@ -827,9 +827,8 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(input_spec, 'scan', dl_scan_ts, 'scan')
                 # Rename the download out_file to time_series.
                 scan_ts_xfc = IdentityInterface(fields=['time_series'])
-                scan_ts_xfc = pe.Node(scan_ts_xfc, name='scan_time_series')
-                exec_wf.connect(dl_scan_ts, 'out_file',
-                                scan_ts_xfc, 'time_series')
+                scan_ts = pe.Node(scan_ts_xfc, name='scan_time_series')
+                exec_wf.connect(dl_scan_ts, 'out_file', scan_ts, 'time_series')
 
         # Registration and the scan time series require a staged
         # node scan with output 'images'. If staging is enabled,
