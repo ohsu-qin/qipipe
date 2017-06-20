@@ -1151,14 +1151,14 @@ def _register(subject, session, scan, in_files, opts,
     A facade for the :meth:`qipipe.pipeline.registration.register
     method.
 
-    :Note: The *mask* and *reference_index* parameters are
+    .. Note:: The *mask* and *reference_index* parameters are
       registration options, but can't be included in the *opts*
       parameter, since they are potential upstream workflow node
       connection points. Since a mock registration technique
       does not connect these inputs, they have default values
       in the method signature as well.
 
-    :Note: contrary to Python convention, the *opts* method
+    .. Note:: contrary to Python convention, the *opts* method
       parameter is a required dictionary rather than a keyword
       double-splat argument (i.e., ``**opts``). The Nipype
       ``Function`` interface does not support double-splat
@@ -1186,7 +1186,7 @@ def register(subject, session, scan, reference_index, *in_files, **opts):
     """
     Runs the registration workflow on the given session scan images.
 
-    :Note: There is always a mask and resource argument. The mask
+    .. Note:: There is always a mask and resource argument. The mask
       file and resource name are either specified as an input or
       built by the workflow. The mask and resource are options in
       the registration run function. Therefore, we check that these
@@ -1341,7 +1341,7 @@ def roi(subject, session, scan, time_series, in_rois, opts):
     """
     Runs the ROI workflow on the given session scan images.
 
-    :Note: see the :meth:`register` note.
+    .. Note:: see the :meth:`register` note.
 
     :param subject: the subject name
     :param session: the session name

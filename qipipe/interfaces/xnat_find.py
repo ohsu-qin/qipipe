@@ -39,7 +39,7 @@ class XNATFind(BaseInterface):
     The ``XNATFind`` Nipype interface wraps the ``qixnat.facade.XNAT``
     ``find_one`` and ``find_or_create`` methods.
     
-    :Note: concurrent XNAT operations can fail. See the
+    .. Note:: concurrent XNAT operations can fail. See the
         :class:`qipipe.pipeline.staging.StagingWorkflow` note.
     """
     

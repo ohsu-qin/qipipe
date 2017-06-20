@@ -43,7 +43,7 @@ class StickyIdentityInterface(IOBase):
         >> output_res.outputs.get()['a']  # bad!
         <undefined>
     
-    :Note: a better solution is to set a *preserve* flag on
+    .. Note:: a better solution is to set a *preserve* flag on
         IdentityInterface. If this solution is implemented by Nipype,
         then this :class:`StickyIdentityInterface` class will be
         deprecated.

@@ -133,12 +133,12 @@ SARCOMA_ROI_REGEX = re.compile("""
 """
 The Sarcoma ROI .bqf ROI file match pattern.
 
-:Note: The Sarcoma ROI directories are inconsistently named, with several
+.. Note:: The Sarcoma ROI directories are inconsistently named, with several
     alternatives and duplicates.
 
     TODO - clarify which of the Sarcoma ROI naming variations should be used.
 
-:Note: There are no apparent lesion number indicators in the Sarcoma ROI
+.. Note:: There are no apparent lesion number indicators in the Sarcoma ROI
     input.
 
     TODO - confirm that there is no Sarcoma lesion indicator.

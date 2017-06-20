@@ -2,7 +2,7 @@
 OHSU - This module wraps the proprietary OHSU AIRC ``fastfit``
 software. ``fastfit`` optimizes the input pharmacokinetic model.
 
-:Note: this interface is adapted from the OHSU AIRC cluster file
+.. Note:: this interface is adapted from the OHSU AIRC cluster file
     ``/usr/global/scripts/fastfit_iface.py``.
 """
 

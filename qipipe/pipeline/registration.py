@@ -111,7 +111,7 @@ class RegistrationWorkflow(WorkflowBase):
 
     - ``fsl.FNIRT``: the FSL `FNIRT interface`_ options
 
-    :Note: Since the XNAT *resource* name is unique, a
+    .. Note:: Since the XNAT *resource* name is unique, a
         :class:`qipipe.pipeline.registration.RegistrationWorkflow`
         instance can be used for only one registration workflow.
         Different registration inputs require different

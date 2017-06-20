@@ -19,38 +19,38 @@ RESULTS = os.path.join(ROOT, 'results', 'pipeline', 'staging')
 
 class TestStagingWorkflow(object):
     """Staging workflow unit tests."""
-    
+
     def setUp(self):
         shutil.rmtree(RESULTS, True)
-    
+
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
-    
+
     def test_breast(self):
         self._test_collection('Breast')
-    
+
     def test_sarcoma(self):
         self._test_collection('Sarcoma')
-    
+
     def _test_collection(self, collection):
         """
-        Run the staging workflow on the given collection and verify that
-        the sessions are created in XNAT.
-        
-        :Note: This test does not verify the CTP staging area nor the
-        uploaded image file content. These features should be verified
-        manually.
-        
+        Run the staging workflow on the given collection and verify
+        that the sessions are created in XNAT.
+
+        .. Note:: This test does not verify the CTP staging area nor
+            the uploaded image file content. These features should be
+            verified manually.
+
         :param collection: the image collection name
         """
         fixture = os.path.join(FIXTURES, collection.lower())
         logger(__name__).debug("Testing the staging workflow on %s..." %
                                fixture)
-        
+
         # The staging destination and work area.
         dest = os.path.join(RESULTS, 'staged')
         work = os.path.join(RESULTS, 'work')
-        
+
         # The test {subject: directory} dictionary.
         sbj_dir_dict = subject_sources(collection, fixture)
         # The test subjects.
@@ -60,7 +60,7 @@ class TestStagingWorkflow(object):
         # The test input session directories.
         sess_dir_lists = (glob(d + '/*') for d in sbj_dirs)
         inputs = concat(*sess_dir_lists)
-        
+
         with qixnat.connect() as xnat:
             # Delete any existing test subjects.
             for sbj in subjects:
@@ -101,7 +101,7 @@ class TestStagingWorkflow(object):
                                 "The %s %s scan %s file %s was not created in XNAT" %
                                 (scan_input.subject, scan_input.session,
                                  scan_input.scan, base_name))
-            
+
             # Delete the test subjects.
             for sbj in subjects:
                 xnat.delete(PROJECT, sbj)
@@ -109,5 +109,5 @@ class TestStagingWorkflow(object):
 
 if __name__ == "__main__":
     import nose
-    
+
     nose.main(defaultTest=__name__)

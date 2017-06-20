@@ -363,15 +363,17 @@ class VolumeStagingWorkflow(WorkflowBase):
 
     - *image*: the 3D volume stack NIfTI image file
 
-    :Note: Concurrent XNAT upload fails unpredictably due to one of
-        the causes described in the ``qixnat.facade.XNAT.find`` method
-        documentation.
+    .. Note:: Concurrent XNAT upload fails unpredictably due to one of
+    the causes described in the ``qixnat.facade.XNAT.find`` method
+    documentation.
 
         The errors are addressed by the following measures:
 
-        * setting an isolated pyxnat cache_dir for each execution node
+        * setting an isolated ``pyxnat`` *cache_dir* for each execution
+          node
 
-        * serializing the XNAT find-or-create access points with JoinNodes
+        * serializing the XNAT find-or-create access points with
+          ``JoinNode``s
 
         * increasing the SGE submission resource parameters as shown in
           the ``conf/staging.cfg [upload]`` section

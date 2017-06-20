@@ -1,7 +1,7 @@
 """
 The qiprofile update tests.
 
-:Note: most of the test cases require that the MongoDB and qiprofile REST
+.. Note:: most of the test cases require that the MongoDB and qiprofile REST
     servers are running on localhost.
 """
 

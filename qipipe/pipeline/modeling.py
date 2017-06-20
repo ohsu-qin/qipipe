@@ -145,7 +145,7 @@ class ModelingWorkflow(WorkflowBase):
 
     This workflow is adapted from the `AIRC DCE`_ implementation.
 
-    :Note: This workflow uses proprietary OHSU AIRC software, notably the
+    .. Note:: This workflow uses proprietary OHSU AIRC software, notably the
         OHSU implementation of the shutter speed model.
 
     .. reST substitutions:
@@ -443,7 +443,7 @@ class ModelingWorkflow(WorkflowBase):
         :class:`qipipe.pipeline.modeling.ModelingWorkflow` with the
         exception of XNAT upload.
 
-        :Note: This workflow is adapted from the AIRC workflow at
+        .. Note:: This workflow is adapted from the AIRC workflow at
         https://everett.ohsu.edu/hg/qin_dce. The AIRC workflow time
         series merge is removed and added as input to the workflow
         created by this method. The modeling optimization parameters

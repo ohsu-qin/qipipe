@@ -7,7 +7,7 @@ PROJECT = 'QIN_Test'
 """
 The test XNAT project name.
 
-:Note: this test project must be created in XNAT prior to running the
+.. Note:: this test project must be created in XNAT prior to running the
     tests.
 """
 

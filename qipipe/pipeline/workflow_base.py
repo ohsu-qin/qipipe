@@ -349,7 +349,7 @@ class WorkflowBase(object):
         each WorkflowBase subclass after the workflow is built and
         prior to execution.
 
-        :Note: nested workflow nodes are not configured, e.g. if the
+        .. Note:: nested workflow nodes are not configured, e.g. if the
             ``registration`` workflow connects a `realign`` workflow
             node ``fnirt``, then the nested ``realign.fnirt`` node in
             ``registration`` is not configured by the parent workflow.
