@@ -216,7 +216,7 @@ class RegistrationWorkflow(WorkflowBase):
                          (self.workflow.name, subject, session))
 
         # Return the output files.
-        return [os.path.join(dest, base_name(f)) for f in in_files]
+        return [os.path.join(dest, _base_name(f)) for f in in_files]
 
     def _create_execution_workflow(self, reference, dest, recursive=False):
         """
@@ -296,7 +296,7 @@ class RegistrationWorkflow(WorkflowBase):
         # reference is always the initial reference image.
         if recursive:
             exec_wf.connect_iterables(
-                iter_input, copy_output, recurse,
+                iter_input, copy_output, _recurse,
                 reference=reference
             )
         else:
@@ -319,7 +319,7 @@ class RegistrationWorkflow(WorkflowBase):
         cr_prf_fields = ['technique', 'configuration', 'sections', 'dest']
         cr_prf_xfc = Function(input_names=cr_prf_fields,
                               output_names=['out_file'],
-                              function=create_profile)
+                              function=_create_profile)
         cr_prf = pe.Node(cr_prf_xfc, name='create_profile')
         cr_prf.inputs.technique = self.technique
         cr_prf.inputs.configuration = self.configuration
@@ -358,7 +358,7 @@ class RegistrationWorkflow(WorkflowBase):
         # Copy run_without_submitting setting?
         copy_output_xfc = Function(input_names=['in_files', 'dest'],
                                    output_names=['out_files'],
-                                   function=copy_files)
+                                   function=_copy_files)
         copy_output = pe.Node(copy_output_xfc, name='copy_output')
         copy_output.inputs.dest = dest
         exec_wf.connect(concat_output, 'out', copy_output, 'in_files')
@@ -412,11 +412,11 @@ class RegistrationWorkflow(WorkflowBase):
         realign_wf.connect(input_spec, 'in_file', copy_meta, 'src_file')
 
         # The input file name without directory.
-        in_base_xfc = Function(input_names=['in_file'],
-                               output_names=['out_file'],
-                               function=base_name)
-        in_base = pe.Node(in_base_xfc, name='in_base')
-        realign_wf.connect(input_spec, 'in_file', in_base, 'in_file')
+        base_name_xfc = Function(input_names=['in_file'],
+                                 output_names=['out_file'],
+                                 function=_base_name)
+        base_name = pe.Node(base_name_xfc, name='base_name')
+        realign_wf.connect(input_spec, 'in_file', base_name, 'in_file')
 
         if self.technique == 'ants':
             self.profile_sections = ANTS_CONF_SECTIONS
@@ -487,20 +487,31 @@ class RegistrationWorkflow(WorkflowBase):
             realign_wf.connect(input_spec, 'reference',
                                apply_xfm, 'reference_image')
             realign_wf.connect(input_spec, 'in_file', apply_xfm, 'input_image')
-            realign_wf.connect(in_base, 'out_file', apply_xfm, 'output_image')
+            realign_wf.connect(base_name, 'out_file', apply_xfm, 'output_image')
             realign_wf.connect(register, 'forward_transforms',
                                apply_xfm, 'transforms')
 
             # Work-around for Nipype bug described in the TODO comment
             # above.
             # Downsize the data type to a signed short int.
+            #
+            # Note: Nipype fsl.maths.ChangeDataType appends a suffix to
+            # the output file and does not support an interface field
+            # that changes that. The work-around work-around is to
+            # make a symlink to the downsize result with the correct
+            # base name.
             downsize_xfc = fsl.maths.ChangeDataType(output_datatype='short')
             downsize = pe.Node(downsize_xfc, name='downsize')
             realign_wf.connect(apply_xfm, 'output_image', downsize, 'in_file')
+            symlink = Function(input_names=['in_file', 'link_name'],
+                               output_names=['out_file'],
+                               function=_symlink_in_place)
+            realign_wf.connect(downsize, 'out_file', symlink, 'in_file')
+            realign_wf.connect(base_name, 'out_file', symlink, 'link_name')
             # End of work-around.
 
             # Copy the meta-data.
-            realign_wf.connect(downsize, 'out_file', copy_meta, 'dest_file')
+            realign_wf.connect(symlink, 'out_file', copy_meta, 'dest_file')
 
         elif self.technique == 'fnirt':
             self.profile_sections = FNIRT_CONF_SECTIONS
@@ -523,7 +534,7 @@ class RegistrationWorkflow(WorkflowBase):
             realign_wf.connect(fnirt_copy_moving, 'out_file', fnirt, 'in_file')
             realign_wf.connect(input_spec, 'mask', fnirt, 'inmask_file')
             realign_wf.connect(input_spec, 'mask', fnirt, 'refmask_file')
-            realign_wf.connect(in_base, 'out_file', fnirt, 'warped_file')
+            realign_wf.connect(base_name, 'out_file', fnirt, 'warped_file')
 
             # Copy the meta-data.
             realign_wf.connect(fnirt, 'warped_file', copy_meta, 'dest_file')
@@ -556,7 +567,7 @@ class RegistrationWorkflow(WorkflowBase):
 
 ### Utility functions called by the workflow nodes. ###
 
-def create_profile(technique, configuration, sections, dest):
+def _create_profile(technique, configuration, sections, dest):
     """
     :meth:`qipipe.helpers.metadata.create_profile` wrapper.
 
@@ -578,7 +589,31 @@ def create_profile(technique, configuration, sections, dest):
                                    general=dict(technique=technique))
 
 
-def base_name(in_file):
+def _symlink_in_place(in_file, link_name):
+    """
+    Creates a symlink from *in_file* to the target *link_name*
+    within the same parent directory, e.g. for current directory
+    ``/a/b/``::
+
+        >>  _symlink_in_place('/a/b/c/d/src.txt', 'tgt.txt')
+        "/a/b/c/d/tgt.txt"
+
+    where the link source is ``src.txt``.
+
+    :param in_file: the input file path
+    :param link_name: the link base name
+    :return: the absolute link file path
+    """
+    import os
+
+    in_file = os.path.abspath(in_file)
+    in_dir, in_base_name = os.path.split(in_file)
+    dest_file = os.path.join(in_dir, link_name)
+    os.symlink(in_base_name, dest_file)
+
+    return dest_file
+
+def _base_name(in_file):
     """
     :param in_file: the input file path
     :return: the file name without a directory
@@ -588,7 +623,7 @@ def base_name(in_file):
     return os.path.split(in_file)[1]
 
 
-def copy_files(in_files, dest):
+def _copy_files(in_files, dest):
     """
     :param in_files: the input files
     :param dest: the destination directory
@@ -600,7 +635,7 @@ def copy_files(in_files, dest):
             for in_file in in_files]
 
 
-def recurse(workflow, input_nodes, output_nodes, reference):
+def _recurse(workflow, input_nodes, output_nodes, reference):
     """
     Sets the given workflow input *reference*. The reference
     for the first input node is the *reference* file.
