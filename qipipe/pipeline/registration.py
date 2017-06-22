@@ -600,7 +600,7 @@ def _create_profile(technique, configuration, sections, reference, dest):
         prf_cfg['registration'].update(reg_cfg)
     else:
         prf_cfg['registration'] = reg_cfg
-    
+
     return metadata.create_profile(prf_cfg, sections, dest=dest)
 
 
@@ -610,7 +610,7 @@ def _symlink_in_place(in_file, link_name):
     within the same parent directory, e.g. for current directory
     ``/a/b/``::
 
-        >>  _symlink_in_place('/a/b/c/d/src.txt', 'tgt.txt')
+        >>  _symlink_in_place('c/d/src.txt', 'tgt.txt')
         "/a/b/c/d/tgt.txt"
 
     where the link source is ``src.txt``.
@@ -627,6 +627,7 @@ def _symlink_in_place(in_file, link_name):
     os.symlink(in_base_name, dest_file)
 
     return dest_file
+
 
 def _base_name(in_file):
     """
