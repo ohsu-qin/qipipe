@@ -316,12 +316,14 @@ class RegistrationWorkflow(WorkflowBase):
                         collect_realigned, 'realigned_files')
 
         # Make the profile.
-        cr_prf_fields = ['technique', 'configuration', 'sections', 'dest']
+        cr_prf_fields = ['technique', 'configuration', 'sections',
+                         'reference', 'dest']
         cr_prf_xfc = Function(input_names=cr_prf_fields,
                               output_names=['out_file'],
                               function=_create_profile)
         cr_prf = pe.Node(cr_prf_xfc, name='create_profile')
         cr_prf.inputs.technique = self.technique
+        exec_wf.connect(input_spec, 'reference', cr_prf, 'reference')
         cr_prf.inputs.configuration = self.configuration
         cr_prf.inputs.sections = self.profile_sections
         cr_prf.inputs.dest = "%s.cfg" % self.resource
@@ -567,26 +569,39 @@ class RegistrationWorkflow(WorkflowBase):
 
 ### Utility functions called by the workflow nodes. ###
 
-def _create_profile(technique, configuration, sections, dest):
+def _create_profile(technique, configuration, sections, reference, dest):
     """
     :meth:`qipipe.helpers.metadata.create_profile` wrapper.
 
     :param technique: the modeling technique
     :param configuration: the modeling workflow interface settings
     :param sections: the profile sections
+    :param reference: the fixed reference image file path
     :param dest: the output profile file path
     :return: the output profile file path
     """
-
+    import os
     from qipipe.helpers import metadata
 
+    # The reference is the XNAT file name without a directory.
+    _, prf_reference = os.path.split(reference)
     # The correct technique names.
     TECHNIQUE_NAMES = dict(ants='ANTs', fnirt='FNIRT', mock='Mock')
-
-    technique = TECHNIQUE_NAMES.get(technique.lower(), technique)
-
-    return metadata.create_profile(configuration, sections, dest=dest,
-                                   general=dict(technique=technique))
+    prf_technique = TECHNIQUE_NAMES.get(technique.lower(), technique)
+    # Replace the technique in configuration keys for consistency.
+    tech_pat = "$%s\." % technique
+    tech_sub = "%s " % prf_technique
+    fix_key = lambda s: re.sub(tech_pat, tech_sub, s)
+    prf_cfg = {fix_key(k): v for k, v in configuration.iteritems()}
+    # The general [Registration] topic additional properties.
+    reg_cfg = dict(technique=prf_technique, reference=prf_reference)
+    # Update or create the [Registration] section.
+    if 'registration' in prf_cfg:
+        prf_cfg['registration'].update(reg_cfg)
+    else:
+        prf_cfg['registration'] = reg_cfg
+    
+    return metadata.create_profile(prf_cfg, sections, dest=dest)
 
 
 def _symlink_in_place(in_file, link_name):
