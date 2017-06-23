@@ -222,12 +222,12 @@ class ScanStagingWorkflow(WorkflowBase):
         stg_inputs = stg_fields + iter_fields + ['opts']
         stg_xfc = Function(input_names=stg_inputs, output_names=['out_file'],
                            function=stage_volume)
-        stg_node = pe.Node(stg_xfc, name='stage_volume')
-        stg_node.inputs.opts = self._child_options()
+        stage = pe.Node(stg_xfc, name='stage_volume')
+        stage.inputs.opts = self._child_options()
         for fld in stg_fields:
-            workflow.connect(input_spec, fld, stg_node, fld)
+            workflow.connect(input_spec, fld, stage, fld)
         for fld in iter_fields:
-            workflow.connect(iter_volume, fld, stg_node, fld)
+            workflow.connect(iter_volume, fld, stage, fld)
 
         # Collect the 3D volume files.
         collect_xfc = IdentityInterface(fields=['volume_files'])
@@ -235,7 +235,7 @@ class ScanStagingWorkflow(WorkflowBase):
             collect_xfc, joinsource='iter_volume',
             joinfield='volume_files', name='collect_volumes'
         )
-        workflow.connect(stg_node, 'out_file', collect_vols, 'volume_files')
+        workflow.connect(stage, 'out_file', collect_vols, 'volume_files')
 
         # Upload the processed DICOM and NIfTI files.
         # The upload out_files output is the volume files.
@@ -244,16 +244,15 @@ class ScanStagingWorkflow(WorkflowBase):
             ['project', 'dcm_dir', 'volume_files', 'time_series']
         )
         upload_xfc = Function(input_names=upload_fields,
-                              output_names=['out_files'],
+                              output_names=[],
                               function=upload)
-        upload_node = pe.Node(upload_xfc, name='upload')
-        upload_node.inputs.project = self.project
-        workflow.connect(input_spec, 'subject', upload_node, 'subject')
-        workflow.connect(input_spec, 'session', upload_node, 'session')
-        workflow.connect(input_spec, 'scan', upload_node, 'scan')
-        workflow.connect(input_spec, 'dest', upload_node, 'dcm_dir')
-        workflow.connect(collect_vols, 'volume_files',
-                         upload_node, 'volume_files')
+        upload = pe.Node(upload_xfc, name='_upload')
+        upload.inputs.project = self.project
+        workflow.connect(input_spec, 'subject', upload, 'subject')
+        workflow.connect(input_spec, 'session', upload, 'session')
+        workflow.connect(input_spec, 'scan', upload, 'scan')
+        workflow.connect(input_spec, 'dest', upload, 'dcm_dir')
+        workflow.connect(collect_vols, 'volume_files', upload, 'volume_files')
         if is_multi_volume:
             # Merge the volumes.
             merge_vols_xfc = MergeNifti(out_format=SCAN_TS_BASE)
@@ -263,10 +262,10 @@ class ScanStagingWorkflow(WorkflowBase):
             workflow.connect(collect_vols, 'volume_files',
                              merge_vols, 'in_files')
             workflow.connect(merge_vols, 'out_file',
-                             upload_node, 'time_series')
+                             upload, 'time_series')
             self.logger.debug('Connected staging to scan time series merge.')
         else:
-            upload_node.inputs.time_series = None
+            upload.inputs.time_series = None
         self.logger.debug('Connected scan time series merge to upload.')
 
         # The output is the 4D time series and 3D NIfTI volume image files.
@@ -561,8 +560,8 @@ def stage_volume(collection, subject, session, scan, volume, in_files,
     return out_file
 
 
-def upload(project, subject, session, scan, dcm_dir, volume_files,
-           time_series=None):
+def _upload(project, subject, session, scan, dcm_dir, volume_files,
+            time_series=None):
     """
     Uploads the staged files in *dcm_dir* as follows:
     * the processed DICOM ``.dcm.gz`` files are uploaded to the
@@ -578,7 +577,6 @@ def upload(project, subject, session, scan, dcm_dir, volume_files,
     :param volume_files: the 3D scan volume files
     :param time_series: the 4D scan time series file, if the scan is
         multi-volume
-    :return: the 3D volume image NIfTI files
     """
     import os
     import glob
@@ -635,8 +633,6 @@ def upload(project, subject, session, scan, dcm_dir, volume_files,
         xnat.upload(rsc, *nii_files)
     _logger.debug("Uploaded %d %s %s scan %d staged NIfTI files to"
                   " XNAT." % (nii_file_cnt, subject, session, scan))
-
-    return vol_files
 
 
 def volume_format(collection):
