@@ -892,7 +892,7 @@ def get_aif_shift(time_series, bolus_arrival_index):
 
 def get_fit_params(cfg_file, aif_shift):
     """
-    Obtains the following modeling fit parameters:
+    Makes the CSV file containing the following modeling fit parameters:
 
     - *aif_shift*: arterial input function parameter array
     - *aif_delta_t*: acquisition time deltas
