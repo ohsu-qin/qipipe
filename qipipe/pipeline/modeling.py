@@ -375,7 +375,7 @@ class ModelingWorkflow(WorkflowBase):
         cr_prf.inputs.technique = self.technique
         cr_prf.inputs.configuration = self.configuration
         cr_prf.inputs.sections = self.profile_sections
-        cr_prf.inputs.dest = MODELING_CONF_FILE
+        cr_prf.inputs.dest = "%s.cfg" % self.resource
         exec_wf.connect(input_spec, 'time_series', cr_prf, 'time_series')
 
         # Each output field contains a modeling result file.
