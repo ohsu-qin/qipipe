@@ -50,9 +50,10 @@ class Move(BaseInterface):
         :return: the moved file path
         """
         dest = os.path.abspath(dest)
-        dest_parent_dir, dest_base_name = os.path.split(dest)
+        _, in_base_name = os.path.split(in_file)
+        dest_parent_dir, _ = os.path.split(dest)
         if os.path.exists(dest):
-            out_file = os.path.join(dest, dest_base_name)
+            out_file = os.path.join(dest, in_base_name)
         else:
             if not os.path.exists(dest_parent_dir):
                 os.makedirs(dest_parent_dir)

@@ -20,24 +20,24 @@ TARGET = os.path.join(RESULTS, 'target')
 
 class TestMove(object):
     """Move interface unit tests."""
-    
+
     def setUp(self):
         """Sets up the source area."""
         shutil.rmtree(RESULTS, True)
         os.makedirs(SOURCE)
         shutil.copy(FIXTURE, SOURCE)
-    
+
     def tearDown(self):
         shutil.rmtree(RESULTS, True)
-    
+
     def test_move_file(self):
         # The source file.
         src_file = os.path.join(SOURCE, 'small.txt')
-        
+        # Make the target directory.
+        os.makedirs(TARGET)
         # Move the file.
         move = Move(in_file=src_file, dest=TARGET)
         result = move.run()
-        
         # Verify the result.
         tgt_file = os.path.join(TARGET, 'small.txt')
         assert_equal(result.outputs.out_file, tgt_file,
@@ -47,8 +47,10 @@ class TestMove(object):
                     "Move target file does not exist: %s" % tgt_file)
         assert_false(os.path.exists(src_file),
                      "Move source file still exists: %s" % tgt_file)
-    
+
     def test_move_directory(self):
+        # Make the target directory.
+        os.makedirs(TARGET)
         # Move the directory.
         move = Move(in_file=SOURCE, dest=TARGET)
         result = move.run()
@@ -67,5 +69,5 @@ class TestMove(object):
 
 if __name__ == "__main__":
     import nose
-    
+
     nose.main(defaultTest=__name__)
