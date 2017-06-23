@@ -245,8 +245,8 @@ class ScanStagingWorkflow(WorkflowBase):
         )
         upload_xfc = Function(input_names=upload_fields,
                               output_names=[],
-                              function=upload)
-        upload = pe.Node(upload_xfc, name='_upload')
+                              function=_upload)
+        upload = pe.Node(upload_xfc, name='upload')
         upload.inputs.project = self.project
         workflow.connect(input_spec, 'subject', upload, 'subject')
         workflow.connect(input_spec, 'session', upload, 'session')
