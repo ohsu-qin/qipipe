@@ -205,6 +205,12 @@ def _run_with_xnat_input(actions, *inputs, **opts):
         prj = hierarchy.pop('project', None)
         if not prj:
             raise PipelineError("The XNAT path is missing a project: %s" % path)
+        # There might be a --pipeline command option.
+        # If so, it is either extraneous or conflicting.
+        prj_opt = opts.pop('project', None)
+        if prj_opt and prj_opt != prj:
+            raise PipelineError("The --project option %s conflicts with the"
+                                " XNAT path project %s" % (prj_opt, prj))
         sbj = hierarchy.pop('subject', None)
         if not sbj:
             raise PipelineError("The XNAT path is missing a subject: %s" % path)
