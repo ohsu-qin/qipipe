@@ -9,7 +9,9 @@ The XNAT subject name format with argument collection and subject number.
 SESSION_FMT = 'Session%02d'
 """The XNAT session name format with argument session number."""
 
-CONF_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'conf'))
+CONF_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..', 'conf')
+)
 """The common configuration directory."""
 
 VOLUME_FILE_PAT = re.compile("volume(\d{3}).nii.gz$")

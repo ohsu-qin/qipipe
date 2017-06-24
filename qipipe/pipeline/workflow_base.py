@@ -521,11 +521,11 @@ class WorkflowBase(object):
 
     def _interface_configuration(self, klass):
         """
-        Returns the {parameter: value} dictionary defined for the given
-        interface class in this WorkflowBase's configuration. The
-        configuration section matches the module path of the interface class
-        name. The section can elide the ``interfaces`` or ``interface`` prefix,
-        e.g.:
+        Returns the {parameter: value} dictionary defined for the
+        given interface class in this WorkflowBase's configuration.
+        The configuration section matches the module path of the
+        interface class name. The section can elide the ``interfaces``
+        or ``interface`` prefix, e.g.:
 
             [nipype.interfaces.ants.AverageImages]
             [ants.AverageImages]
