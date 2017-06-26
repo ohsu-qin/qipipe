@@ -16,7 +16,8 @@ if not on_rtd:
 import qixnat
 from ..interfaces import (StickyIdentityInterface, FixDicom, Compress)
 from .workflow_base import WorkflowBase
-from ..helpers.constants import (SCAN_TS_BASE, SCAN_TS_FILE, VOLUME_FILE_PAT)
+from ..helpers.constants import (SCAN_TS_BASE, SCAN_TS_FILE, VOLUME_DIR_PAT,
+                                 VOLUME_FILE_PAT)
 from ..helpers.logging import logger
 from ..staging import (iterator, image_collection)
 from ..staging.ohsu import MULTI_VOLUME_SCAN_NUMBERS
@@ -590,7 +591,7 @@ def _upload(project, subject, session, scan, dcm_dir, volume_files,
     vol_dirs = glob.glob(vol_dir_pat)
     if not vol_dirs:
         raise PipelineError("The input directory does not contain any"
-                            " directories matching %s" % vol_dir_pat)
+                            " DICOM directories matching %s" % vol_dir_pat)
     _logger.debug("Uploading %d %s %s scan %d volumes to XNAT..." %
                   (len(vol_dirs), subject, session, scan))
     # Upload one volume directory at a time, since the DICOM
@@ -598,12 +599,22 @@ def _upload(project, subject, session, scan, dcm_dir, volume_files,
     dcm_file_cnt = 0
     for vol_dir in vol_dirs:
         # The DICOM files to upload.
-        dcm_file_pat = "%s/volume*/*.dcm.gz" % dcm_dir
+        dcm_file_pat = "%s/*.dcm.gz" % vol_dir
         dcm_files = glob.glob(dcm_file_pat)
         if not dcm_files:
-            raise PipelineError("The input directory does not contain scan"
-                                " DICOM files matching %s" % dcm_file_pat)
+            raise PipelineError(
+                "The input DICOM volume directory %s does not contain scan"
+                " DICOM files matching %s" % (vol_dir, dcm_file_pat)
+            )
         # Upload the compressed DICOM files.
+        _, vol_dir_base_name = os.path.split(vol_dir)
+        vol_nbr_match = VOLUME_DIR_PAT.match(vol_dir_base_name)
+        vol_nbr_grp = vol_nbr_match.group('volume_number')
+        vol_nbr = int(vol_nbr_grp)
+        _logger.debug(
+            "Uploading %d %s %s scan %d volume %s DICOM files to XNAT..." %
+            (len(dcm_files), subject, session, scan, vol_nbr)
+        )
         with qixnat.connect() as xnat:
             # The target XNAT scan DICOM resource object.
             # The modality option is required if it is necessary to
