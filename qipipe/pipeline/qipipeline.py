@@ -1320,10 +1320,11 @@ def _extract_volume_number(location):
     _, base_name = os.path.split(location)
     match = VOLUME_FILE_PAT.match(base_name)
     if not match:
-        raise PipelineError("The volume file base name does not match"
-                            " pattern %s: %s" %
-                            (VOLUME_FILE_PAT.pattern, base_name))
-    return int(match.group(1))
+        raise PipelineError(
+            "The volume file base name %s does not match the pattern %s" %
+            (base_name, VOLUME_FILE_PAT.pattern)
+        )
+    return int(match.group('volume_number'))
 
 
 def mask(subject, session, scan, time_series, opts):

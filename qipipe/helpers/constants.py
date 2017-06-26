@@ -14,12 +14,19 @@ CONF_DIR = os.path.abspath(
 )
 """The common configuration directory."""
 
-VOLUME_FILE_PAT = re.compile("volume(\d{3}).nii.gz$")
+VOLUME_DIR_PAT = re.compile("volume(?P<volume_number>\d{3})$")
 """
-The volume file name pattern. The image file name is
-volume<number>.nii.gz, where <number> is the zero-padded volume
-number, as determined by the
-:meth:`qipipe.pipeline.staging.volume_format` function.
+The volume directory name pattern. The directory name is
+``volume``*number*, where *number* is the zero-padded, one-based
+volume number matched as the ``volume_number`` group, as determined
+by the :meth:`qipipe.pipeline.staging.volume_format` function.
+"""
+
+VOLUME_FILE_PAT = re.compile("volume(?P<volume_number>\d{3}).nii.gz$")
+"""
+The volume file name pattern. The image file name is the
+:const:`VOLUME_DIR_PAT` pattern followed by the extension
+``.nii.gz``.
 """
 
 SCAN_TS_BASE = 'scan_ts'
