@@ -25,8 +25,8 @@ ANTS_CONF_SECTIONS = ['ants.Registration']
 ANTS_INITIALIZER_CONF_SECTION = 'ants.AffineInitializer'
 """The initializer ANTs registration configuration sections."""
 
-FNIRT_CONF_SECTIONS = ['fsl.FLIRT', 'fsl.FNIRT']
-"""The FNIRT registration configuration sections."""
+FSL_CONF_SECTIONS = ['fsl.FLIRT', 'fsl.FNIRT']
+"""The FSL registration configuration sections."""
 
 
 def run(subject, session, scan, reference, *in_files, **opts):
@@ -91,23 +91,24 @@ class RegistrationWorkflow(WorkflowBase):
 
     Three registration techniques are supported:
 
-    - ``ants``: ANTS_ SyN_ symmetric normalization diffeomorphic registration
-      (default)
+    - ``ants``: ANTS_ SyN_ symmetric normalization diffeomorphic
+      registration (default)
 
-    - ``fnirt``: FSL_ FNIRT_ non-linear registration
+    - ``fsl``: FSL_ FNIRT_ non-linear registration
 
-    - ``mock``: Test technique which copies each input scan image to the
-      output image file
+    - ``mock``: Test technique which copies each input scan image to
+      the output image file
 
-    The optional workflow configuration file can contain overrides for the
-    Nipype interface inputs in the following sections:
+    The optional workflow configuration file can contain overrides for
+    the Nipype interface inputs in the following sections:
 
-    - ``AffineInitializer``: the :class:`qipipe.interfaces.ants.utils.AffineInitializer`
-       options
+    - ``AffineInitializer``: the
+       :class:`qipipe.interfaces.ants.utils.AffineInitializer` options
 
     - ``ants.Registration``: the ANTs `Registration interface`_ options
 
-    - ``ants.ApplyTransforms``: the ANTs `ApplyTransform interface`_ options
+    - ``ants.ApplyTransforms``: the ANTs `ApplyTransform interface`_
+      options
 
     - ``fsl.FNIRT``: the FSL `FNIRT interface`_ options
 
@@ -515,8 +516,8 @@ class RegistrationWorkflow(WorkflowBase):
             # Copy the meta-data.
             realign_wf.connect(symlink, 'out_file', copy_meta, 'dest_file')
 
-        elif self.technique == 'fnirt':
-            self.profile_sections = FNIRT_CONF_SECTIONS
+        elif self.technique == 'fsl':
+            self.profile_sections = FSL_CONF_SECTIONS
 
             # Make the affine transformation.
             flirt = pe.Node(fsl.FLIRT(), name='flirt')
@@ -586,7 +587,7 @@ def _create_profile(technique, configuration, sections, reference, dest):
     # The reference is the XNAT file name without a directory.
     _, prf_reference = os.path.split(reference)
     # The correct technique names.
-    TECHNIQUE_NAMES = dict(ants='ANTs', fnirt='FNIRT', mock='Mock')
+    TECHNIQUE_NAMES = dict(ants='ANTs', fsl='FSL', mock='Mock')
     prf_technique = TECHNIQUE_NAMES.get(technique.lower(), technique)
     # Replace the technique in configuration keys for consistency.
     tech_pat = "$%s\." % technique
