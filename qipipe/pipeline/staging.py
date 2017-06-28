@@ -565,11 +565,7 @@ def stage_volume(collection, subject, session, scan, volume, in_files,
 def _upload(project, subject, session, scan, dcm_dir, volume_files,
             time_series=None):
     """
-    Uploads the staged files in *dcm_dir* as follows:
-    * the processed DICOM ``.dcm.gz`` files are uploaded to the
-      XNAT scan ``DICOM`` resource
-    * the time series and the 3D volume NIfTI ``.nii.gz`` files
-      are uploaded to the XNAT scan ``NIFTI`` resource
+    Uploads the staged files.
 
     :param project: the project name
     :param subject: the subject name
