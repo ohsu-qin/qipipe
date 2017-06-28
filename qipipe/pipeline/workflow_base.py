@@ -121,10 +121,7 @@ class WorkflowBase(object):
         self.config_dir = cfg_dir
         """The workflow node inputs configuration directory."""
 
-        # The configuration is identified by the last item
-        # in the module path, e.g. 'stage' for 'qipipe.pipeline.stage'.
-        cfg_name = name.split('.')[-1]
-        self.configuration = self._load_configuration(cfg_name)
+        self.configuration = self._load_configuration(name)
         """The workflow node inputs configuration."""
 
         config_s = pprint.pformat(self.configuration)
