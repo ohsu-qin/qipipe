@@ -16,8 +16,9 @@ if not on_rtd:
 import qixnat
 from ..interfaces import (StickyIdentityInterface, FixDicom, Compress)
 from .workflow_base import WorkflowBase
-from ..helpers.constants import (SCAN_TS_BASE, SCAN_TS_FILE, VOLUME_DIR_PAT,
-                                 VOLUME_FILE_PAT)
+from ..helpers.constants import (
+    SCAN_TS_BASE, SCAN_TS_FILE, VOLUME_DIR_PAT, VOLUME_FILE_PAT
+)
 from ..helpers.logging import logger
 from ..staging import (iterator, image_collection)
 from ..staging.ohsu import MULTI_VOLUME_SCAN_NUMBERS
@@ -579,12 +580,29 @@ def _upload(project, subject, session, scan, dcm_dir, volume_files,
     :param time_series: the 4D scan time series file, if the scan is
         multi-volume
     """
-    import os
-    import glob
-    import qixnat
-    from qipipe.helpers.logging import logger
-    from qipipe.pipeline.pipeline_error import PipelineError
+    from qipipe.pipeline.staging import (upload_dicom, upload_nifti)
 
+    # Delegate to the public functions.
+    upload_dicom(project, subject, session, scan, dcm_dir)
+    # The NIfTI files.
+    if time_series:
+        nii_files = volume_files + [time_series]
+    else:
+        nii_files = volume_files
+    upload_nifti(project, subject, session, scan, nii_files)
+
+
+def upload_dicom(project, subject, session, scan, dcm_dir):
+    """
+    Uploads the staged ``.dcm.gz`` files in *dcm_dir* to the
+    XNAT scan ``DICOM`` resource
+
+    :param project: the project name
+    :param subject: the subject name
+    :param session: the session name
+    :param scan: the scan number
+    :param dcm_dir: the input staged directory
+    """
     _logger = logger(__name__)
     # The volume directories.
     vol_dir_pat = "%s/volume*" % dcm_dir
@@ -594,8 +612,8 @@ def _upload(project, subject, session, scan, dcm_dir, volume_files,
                             " DICOM directories matching %s" % vol_dir_pat)
     _logger.debug("Uploading %d %s %s scan %d volumes to XNAT..." %
                   (len(vol_dirs), subject, session, scan))
-    # Upload one volume directory at a time, since the DICOM
-    # file paths will take up a big chunk of memory.
+    # Upload one volume directory at a time, since pyxnat upload
+    # takes up a big chunk of memory, perhaps due to a memory leak.
     dcm_file_cnt = 0
     for vol_dir in vol_dirs:
         # The DICOM files to upload.
@@ -628,22 +646,31 @@ def _upload(project, subject, session, scan, dcm_dir, volume_files,
     _logger.debug("Uploaded %d %s %s scan %d staged DICOM files to"
                   " XNAT." % (dcm_file_cnt, subject, session, scan))
 
+
+def upload_nifti(project, subject, session, scan, files):
+    """
+    Uploads the staged NIfTI files to the XNAT scan ``NIFTI``
+    resource.
+
+    :param project: the project name
+    :param subject: the subject name
+    :param session: the session name
+    :param scan: the scan number
+    :param files: the NIfTI files to upload
+    """
+    _logger = logger(__name__)
     # Upload the NIfTI files in one action.
-    nii_file_cnt = len(volume_files) + 1
+    file_cnt = len(files)
     _logger.debug("Uploading %d %s %s scan %d staged NIfTI files to"
-                  " XNAT..." % (nii_file_cnt, subject, session, scan))
+                  " XNAT..." % (file_cnt, subject, session, scan))
     with qixnat.connect() as xnat:
         # The target XNAT scan NIFTI resource object.
         rsc = xnat.find_or_create(
             project, subject, session, scan=scan, resource='NIFTI'
         )
-        if time_series:
-            nii_files = volume_files + [time_series]
-        else:
-            nii_files = volume_files
-        xnat.upload(rsc, *nii_files)
+        xnat.upload(rsc, *files)
     _logger.debug("Uploaded %d %s %s scan %d staged NIfTI files to"
-                  " XNAT." % (nii_file_cnt, subject, session, scan))
+                  " XNAT." % (file_cnt, subject, session, scan))
 
 
 def volume_format(collection):
