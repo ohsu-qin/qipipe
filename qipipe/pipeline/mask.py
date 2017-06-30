@@ -95,7 +95,7 @@ class MaskWorkflow(WorkflowBase):
         out_file = os.path.join(self.base_dir, 'mask.nii.gz')
         self.set_inputs(subject, session, scan, time_series, out_file)
         # Execute the workflow.
-        self._run_workflow(self.workflow)
+        self._run_workflow()
         self.logger.debug("Created the %s %s scan %s time series %s mask XNAT"
                            " resource %s in %s." %
                            (subject, session, scan, time_series, MASK_RESOURCE,
@@ -127,7 +127,7 @@ class MaskWorkflow(WorkflowBase):
             (default False)
         :return: the Workflow object
         """
-        self.logger.debug('Creating the mask reusable workflow...')
+        self.logger.debug('Building the mask workflow...')
         workflow = pe.Workflow(name='mask', base_dir=self.base_dir)
 
         # The workflow input.

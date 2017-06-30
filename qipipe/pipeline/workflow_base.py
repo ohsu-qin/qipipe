@@ -121,7 +121,8 @@ class WorkflowBase(object):
         self.config_dir = cfg_dir
         """The workflow node inputs configuration directory."""
 
-        self.configuration = self._load_configuration(name)
+        cfg_name = name.split('.')[-1]
+        self.configuration = self._load_configuration(cfg_name)
         """The workflow node inputs configuration."""
 
         config_s = pprint.pformat(self.configuration)
@@ -213,6 +214,8 @@ class WorkflowBase(object):
         def_cfg_files = self._configuration_files('default')
         # The workflow configuration files.
         wf_cfg_files = self._configuration_files(name)
+        self.logger.debug("Found %d %s workflow-specific configuration"
+                          " files." % (len(wf_cfg_files), name))
         # All path configuration files.
         cfg_files = def_cfg_files + wf_cfg_files
 
@@ -258,11 +261,10 @@ class WorkflowBase(object):
         """
         return xnat.download(self.project, subject, session, dest=dest)
 
-    def _run_workflow(self, workflow):
+    def _run_workflow(self):
         """
-        Executes the given workflow.
+        Executes the Nipype workflow.
 
-        :param workflow: the workflow to run
         :return: the workflow execution result graph
         """
         # If the workflow can be distributed, then get the plugin
@@ -270,38 +272,40 @@ class WorkflowBase(object):
         is_dist_clause = 'is' if self.is_distributable else 'is not'
         self.logger.debug("The %s workflow %s distributable in a"
                            " cluster environment." %
-                           (workflow.name, is_dist_clause))
+                           (self.workflow.name, is_dist_clause))
         if self.is_distributable:
-            opts = self._configure_plugin(workflow)
+            opts = self._configure_plugin()
         else:
             opts = {}
 
         # Set the base directory to an absolute path.
-        if workflow.base_dir:
-            workflow.base_dir = os.path.abspath(workflow.base_dir)
+        if self.workflow.base_dir:
+            self.workflow.base_dir = os.path.abspath(self.workflow.base_dir)
         else:
-            workflow.base_dir = self.base_dir
+            self.workflow.base_dir = self.base_dir
 
         if self.dry_run:
             self.logger.debug("Skipped workflow %s execution,"
                                " since the dry run flag is set." %
-                               workflow.name)
+                               self.workflow.name)
         else:
             # Run the workflow.
             self.logger.debug("Executing the %s workflow in %s..." %
-                              (workflow.name, workflow.base_dir))
-            with qixnat.connect(cachedir=workflow.base_dir):
-                return workflow.run(**opts)
+                              (self.workflow.name, self.workflow.base_dir))
+            with qixnat.connect(cachedir=self.workflow.base_dir):
+                return self.workflow.run(**opts)
 
-    def _inspect_workflow_inputs(self, workflow):
+    def _inspect_workflow_inputs(self):
         """
         Collects the given workflow nodes' inputs for debugging.
 
         :return: a {node name: parameters} dictionary, where *parameters*
             is a node parameter {name: value} dictionary
         """
-        return {node_name: self._inspect_node_inputs(workflow.get_node(node_name))
-                for node_name in workflow.list_node_names()}
+        node_names = self.workflow.list_node_names()
+        node = self.workflow.get_node
+        inspect = lambda name: self._inspect_node_inputs(node(name))
+        return {name: inspect(name) for name in node_names}
 
     def _inspect_node_inputs(self, node):
         """
@@ -318,26 +322,27 @@ class WorkflowBase(object):
 
         return param_dict
 
-    def _configure_plugin(self, workflow):
+    def _configure_plugin(self):
         """
         Sets the *execution* and plug-in parameters for the given workflow.
         See the ``conf`` directory files for examples.
 
-        :param workflow: the workflow to run
         :return: the workflow execution arguments
         """
         # The execution setting.
         if 'Execution' in self.configuration:
-            workflow.config['execution'] = self.configuration['Execution']
-            self.logger.debug("Workflow %s execution parameters: %s." %
-                             (workflow.name, workflow.config['execution']))
+            self.workflow.config['execution'] = self.configuration['Execution']
+            self.logger.debug(
+                "Workflow %s execution parameters: %s." %
+                (self.workflow.name, self.workflow.config['execution'])
+            )
 
         # The Nipype plug-in parameters.
         if self.plug_in and self.plug_in in self.configuration:
             plug_in_opts = self.configuration[self.plug_in]
             opts = dict(plugin=self.plug_in, **plug_in_opts)
             self.logger.debug("Workflow %s %s plug-in parameters: %s." %
-                             (workflow.name, self.plug_in, opts))
+                             (self.workflow.name, self.plug_in, opts))
         else:
             opts = {}
 

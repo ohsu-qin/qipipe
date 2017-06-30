@@ -105,7 +105,7 @@ class ROIWorkflow(WorkflowBase):
         # Execute the workflow.
         self.logger.info("Executing the %s workflow on %s %s scan %d..." %
                          (self.workflow.name, subject, session, scan))
-        self._run_workflow(self.workflow)
+        self._run_workflow()
         self.logger.info("Executed the %s workflow on %s %s scan %d." %
                          (self.workflow.name, subject, session, scan))
 
@@ -165,8 +165,7 @@ class ROIWorkflow(WorkflowBase):
         :param opts: the workflow creation options:
         :return: the execution workflow
         """
-        self.logger.debug("Creating the ROI execution workflow...")
-
+        self.logger.debug("Building the ROI workflow...")
         # The execution workflow.
         workflow = pe.Workflow(name='roi', base_dir=self.base_dir)
 

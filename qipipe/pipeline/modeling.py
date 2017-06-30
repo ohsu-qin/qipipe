@@ -270,8 +270,8 @@ class ModelingWorkflow(WorkflowBase):
             " time series %s..." %
             (self.workflow.name, subject, session, scan, time_series)
         )
-        wf_res = self._run_workflow(self.workflow)
-        # If dry-run is set, then there is no result.
+        wf_res = self._run_workflow()
+        # If dry_run is set, then there is no result.
         if not wf_res:
             return {}
         # The magic incantation to get the Nipype workflow result.
@@ -306,8 +306,6 @@ class ModelingWorkflow(WorkflowBase):
         :return: the Nipype workflow
         """
         self.logger.debug("Building the modeling workflow...")
-
-        # The supervisory workflow.
         exec_wf = pe.Workflow(name='modeling', base_dir=self.base_dir)
 
         # The default modeling technique is the OHSU proprietary modeling
@@ -455,6 +453,7 @@ class ModelingWorkflow(WorkflowBase):
         :param opts: the PK modeling parameters
         :return: the Nipype Workflow
         """
+        self.logger.debug('Building the AIRC modeling workflow...')
         workflow = pe.Workflow(name='airc', base_dir=self.base_dir)
 
         # The modeling profile configuration sections.
@@ -634,6 +633,7 @@ class ModelingWorkflow(WorkflowBase):
         :param opts: the PK modeling parameters
         :return: the Nipype Workflow
         """
+        self.logger.debug('Building the mock modeling workflow...')
         workflow = pe.Workflow(name='mock', base_dir=self.base_dir)
 
         # The modeling profile configuration sections.
