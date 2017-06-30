@@ -169,8 +169,8 @@ class ScanStagingWorkflow(WorkflowBase):
         iter_volume.synchronize = True
 
         # Execute the workflow.
-        wf_res = self._run_workflow(self.workflow)
-        # If dry-run, then _run_workflow is a no-op.
+        wf_res = self._run_workflow()
+        # If dry_run, then _run_workflow is a no-op.
         if not wf_res:
             return
 
@@ -198,8 +198,7 @@ class ScanStagingWorkflow(WorkflowBase):
             volume merge tasks
         :return: the new workflow
         """
-        self.logger.debug('Creating the scan staging workflow...')
-
+        self.logger.debug('Building the scan staging workflow...')
         # The Nipype workflow object.
         workflow = pe.Workflow(name='stage_scan', base_dir=self.base_dir)
 
@@ -257,13 +256,13 @@ class ScanStagingWorkflow(WorkflowBase):
         workflow.connect(collect_vols, 'volume_files', upload, 'volume_files')
         if is_multi_volume:
             # Merge the volumes.
-            merge_vols_xfc = MergeNifti(out_format=SCAN_TS_BASE)
-            merge_vols = pe.Node(merge_vols_xfc, name='merge_volumes')
+            merge_xfc = MergeNifti(out_format=SCAN_TS_BASE)
+            merge = pe.Node(merge_xfc, name='merge')
             workflow.connect(input_spec, 'volume_tag',
-                             merge_vols, 'sort_order')
+                             merge, 'sort_order')
             workflow.connect(collect_vols, 'volume_files',
-                             merge_vols, 'in_files')
-            workflow.connect(merge_vols, 'out_file',
+                             merge, 'in_files')
+            workflow.connect(merge, 'out_file',
                              upload, 'time_series')
             self.logger.debug('Connected staging to scan time series merge.')
         else:
@@ -277,7 +276,7 @@ class ScanStagingWorkflow(WorkflowBase):
         workflow.connect(collect_vols, 'volume_files',
                          output_spec, 'volume_files')
         if is_multi_volume:
-            workflow.connect(merge_vols, 'out_file', output_spec, 'time_series')
+            workflow.connect(merge, 'out_file', output_spec, 'time_series')
         else:
             output_spec.inputs.time_series = None
 
@@ -426,7 +425,10 @@ class VolumeStagingWorkflow(WorkflowBase):
         iter_dicom = self.workflow.get_node('iter_dicom')
         iter_dicom.iterables = ('dicom_file', in_files)
         # Execute the workflow.
-        wf_res = self._run_workflow(self.workflow)
+        wf_res = self._run_workflow()
+        # If dry_run is set, then there is no result.
+        if not wf_res:
+            return None
 
         # The magic incantation to get the Nipype workflow result.
         output_res = next(
@@ -449,9 +451,8 @@ class VolumeStagingWorkflow(WorkflowBase):
         :class:`qipipe.pipeline.staging.StagingWorkflow`.
         :return: the new workflow
         """
-        self.logger.debug('Creating the DICOM processing workflow...')
-
         # The Nipype workflow object.
+        self.logger.debug('Building the volume staging workflow...')
         workflow = pe.Workflow(name='stage_volume', base_dir=self.base_dir)
 
         # The workflow input.
