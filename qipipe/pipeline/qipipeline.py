@@ -1066,7 +1066,7 @@ def _roi(subject, session, scan, time_series, in_rois, opts):
     :param time_series: the scan 4D time series
     :param in_rois: the :meth:`qipipe.pipeline.roi.run` input ROI specs
     :param opts: the :meth:`qipipe.pipeline.roi.run` keyword options
-    :return: the zero-based ROI volume index
+    :return: the one-based ROI volume number
     """
     from qipipe.pipeline import roi
     from qipipe.helpers.logging import logger
@@ -1085,11 +1085,8 @@ def _roi(subject, session, scan, time_series, in_rois, opts):
         )
         return 0
 
-    # Get the ROI volume index from any input spec.
-    roi_volume_nbr = in_rois[0].volume
-
-    # Return the volume index.
-    return roi_volume_nbr - 1
+    # Get the ROI volume number from any input spec.
+    return in_rois[0].volume
 
 
 def _model(subject, session, scan, time_series, opts,
