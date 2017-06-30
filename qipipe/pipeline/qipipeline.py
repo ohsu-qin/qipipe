@@ -14,7 +14,6 @@ if not on_rtd:
         warnings.simplefilter(action='ignore', category=FutureWarning)
         from nipype.pipeline import engine as pe
         from nipype.interfaces.utility import (IdentityInterface, Function, Merge)
-        from nipype.interfaces.dcmstack import MergeNifti
 import qixnat
 from qixnat.helpers import path_hierarchy
 from ..helpers.logging import logger
@@ -221,17 +220,9 @@ def _run_with_xnat_input(actions, *inputs, **opts):
         if not scan_s:
             raise PipelineError("The XNAT path is missing a scan: %s" % path)
         scan = int(scan_s)
-        # The XNAT connection is open while the input scan is processed.
-        with qixnat.connect() as xnat:
-            # The XNAT scan object must exist.
-            scan_obj = xnat.find_one(prj, sbj, sess, scan=scan)
-            if not scan_obj:
-                raise PipelineError("The XNAT scan object does not exist: %s" %
-                                    path)
 
         # Make the workflow.
         workflow = QIPipelineWorkflow(prj, sbj, sess, scan, actions, **opts)
-
         # Run the workflow.
         workflow.run_with_scan_download(prj, sbj, sess, scan, actions)
 
@@ -314,17 +305,16 @@ class QIPipelineWorkflow(WorkflowBase):
 
     The workflow steps are determined by the input options as follows:
 
-    - If staging is performed, then the DICOM files are staged for the
+    - If staging is enabled, then the DICOM files are staged for the
       subject directory inputs. Otherwise, staging is not performed.
       In that case, if registration is enabled as described below, then
       the previously staged volume scan stack images are downloaded.
 
-    - If registration is performed and the ``registration`` resource
+    - If modeling is enabled and the ``registration`` resource
       option is set, then the previously realigned images with the
-      given resource name are downloaded. The remaining volumes are
-      registered.
+      given resource name are downloaded.
 
-    - If registration or modeling is performed and the XNAT ``mask``
+    - If registration or modeling is enabled and the XNAT ``mask``
       resource is found, then that resource file is downloaded.
       Otherwise, the mask is created from the staged images.
 
@@ -368,9 +358,6 @@ class QIPipelineWorkflow(WorkflowBase):
         :keyword registration_technique: the
             class:`qipipe.pipeline.registration.RegistrationWorkflow`
             technique
-        :keyword recursive_registration: the
-            class:`qipipe.pipeline.registration.RegistrationWorkflow`
-            recursive flag
         :keyword modeling_resource: the modeling resource name
         :keyword modeling_technique: the
             class:`qipipe.pipeline.modeling.ModelingWorkflow` technique
@@ -393,18 +380,7 @@ class QIPipelineWorkflow(WorkflowBase):
         # here rather than by the registration workflow, since
         # it the registration time series is built and uploaded
         # in the supervisory workflow.
-        reg_rsc_opt = opts.pop('registration_resource', None)
-        if reg_rsc_opt:
-            reg_rsc = reg_rsc_opt
-        elif 'register' in actions:
-            reg_rsc = registration.generate_resource_name()
-            self.logger.debug(
-                "Generated %s %s scan %d registration resource name %s." %
-                (subject, session, scan, reg_rsc)
-            )
-        else:
-            reg_rsc = None
-        self.registration_resource = reg_rsc
+        self.registration_resource = opts.pop('registration_resource', None)
         """The registration resource name."""
 
         reg_tech_opt = opts.pop('registration_technique', None)
@@ -449,7 +425,6 @@ class QIPipelineWorkflow(WorkflowBase):
         input_spec.inputs.session = scan_input.session
         input_spec.inputs.scan = scan_input.scan
         input_spec.inputs.in_dirs = scan_input.dicom
-        input_spec.inputs.registered = []
 
         # If roi is enabled and has input, then set the roi function inputs.
         if 'roi' in actions:
@@ -496,7 +471,7 @@ class QIPipelineWorkflow(WorkflowBase):
         self.logger.info("Running the pipeline on %s %s scan %d." %
                            (scan_input.subject, scan_input.session,
                             scan_input.scan))
-        self._run_workflow(self.workflow)
+        self._run_workflow()
         self.logger.info("Completed pipeline execution on %s %s scan %d." %
                            (scan_input.subject, scan_input.session,
                             scan_input.scan))
@@ -513,96 +488,22 @@ class QIPipelineWorkflow(WorkflowBase):
         """
         self.logger.debug("Processing the %s %s %s scan %d volumes..." %
                            (project, subject, session, scan))
-        with qixnat.connect() as xnat:
-            # The XNAT volume file names.
-            scan_volumes = _scan_files(xnat, project, subject, session, scan,
-                                       'NIFTI', VOLUME_FILE_PAT)
-            if not scan_volumes:
-                raise PipelineError("There are no pipeline %s %s %s"
-                                    " scan %d volumes" %
-                                    (project, subject, session, scan))
-
-            registered, unregistered = self._partition_registered(
-                xnat, project, subject, session, scan, scan_volumes
-            )
-
-        # Validate and log the partition.
-        if 'register' in actions:
-            if registered:
-                if unregistered:
-                    self.logger.debug(
-                        "Skipping registration of %d previously"
-                        " registered %s %s scan %d volumes:" %
-                        (len(registered), subject, session, scan)
-                    )
-                    self.logger.debug("%s" % registered)
-                else:
-                    self.logger.debug(
-                        "Skipping %s %s scan %d registration, since"
-                        " all volumes are already registered." %
-                        (subject, session, scan)
-                    )
-            if unregistered:
-                self.logger.debug(
-                    "Registering the following %d %s %s scan %d volumes:" %
-                    (len(unregistered), subject, session, scan)
-                )
-                self.logger.debug("%s" % unregistered)
-        elif unregistered and self.registration_resource:
-            raise PipelineError(
-                "The pipeline %s %s scan %d register action is not"
-                " specified but there are %d unregistered scan volumes"
-                " not in the %s registration resource" %
-                (subject, session, scan, len(unregistered),
-                 self.registration_resource)
-            )
-        elif registered:
-            self.logger.debug("Processing %d %s %s scan %d volumes:" %
-                              (len(registered), subject, session, scan))
-            self.logger.debug("%s" % registered)
-
         # Set the workflow input.
         input_spec = self.workflow.get_node('input_spec')
         input_spec.inputs.subject = subject
         input_spec.inputs.session = session
         input_spec.inputs.scan = scan
-        input_spec.inputs.registered = registered
 
         # Execute the workflow.
-        self._run_workflow(self.workflow)
+        self._run_workflow()
 
     def _set_roi_inputs(self, *inputs):
         """
         :param inputs: the :meth:`roi` inputs
         """
         # Set the roi function inputs.
-        roi_node = self.workflow.get_node('roi')
-        roi_node.inputs.in_rois = inputs
-
-    def _partition_registered(self, xnat, project, subject, session, scan,
-                              files):
-        """
-        Partitions the given volume file names into those which have a
-        corresponding registration resource file and those which don't.
-
-        :return: the (registered, unregistered) file names
-        """
-        # The XNAT registration object.
-        reg_obj = xnat.find_one(project, subject, session, scan=scan,
-                                resource=self.registration_resource)
-
-        # The realigned files.
-        reg_set = set(reg_obj.files().get()) if reg_obj else set()
-        # The unregistered files.
-        unreg_set = set(files) - reg_set
-        registered = sorted(reg_set)
-        unregistered = sorted(unreg_set)
-        self.logger.debug("The %s %s scan %d resource has %d registered volumes"
-                           " and %d unregistered volumes." %
-                           (subject, session, scan, len(registered),
-                            len(unregistered)))
-
-        return registered, unregistered
+        roi = self.workflow.get_node('roi')
+        roi.inputs.in_rois = inputs
 
     def _create_workflow(self, subject, session, scan, actions, **opts):
         """
@@ -641,64 +542,46 @@ class QIPipelineWorkflow(WorkflowBase):
         # The execution workflow.
         exec_wf = pe.Workflow(name='qipipeline', base_dir=self.base_dir)
 
-        # The technique options.
-        reg_tech_opt = opts.get('registration_technique')
-        recursive_reg_opt = opts.get('recursive_registration')
-        mdl_tech_opt = opts.get('modeling_technique')
-
         if 'model' in actions:
             mdl_flds = ['subject', 'session', 'scan', 'time_series',
-                        'mask', 'bolus_arrival_index', 'opts']
+                        'mask', 'bolus_arrival', 'opts']
             mdl_xfc = Function(input_names=mdl_flds,
                                output_names=['results'],
-                               function=model)
-            mdl_node = pe.Node(mdl_xfc, name='model')
+                               function=_model)
+            model = pe.Node(mdl_xfc, name='model')
             mdl_opts = self._child_options()
             mdl_opts['technique'] = self.modeling_technique
-            mdl_node.inputs.opts = mdl_opts
+            model.inputs.opts = mdl_opts
             self.logger.info("Enabled modeling with options %s." % mdl_opts)
         else:
-            mdl_node = None
+            model = None
 
         # The registration workflow node.
         if 'register' in actions:
-            reg_inputs = ['subject', 'session','scan', 'reference_index',
-                          'mask', 'in_files', 'opts']
-
-            # The registration technique option is required
-            # for the registration action.
-            if not self.registration_technique:
-                raise PipelineError('Missing the registration technique')
+            reg_inputs = ['subject', 'session','scan', 'reference', 'mask',
+                          'in_files', 'opts']
 
             # Spell out the registration workflow options rather
             # than delegating to this qipipeline workflow as the
             # parent, since Nipype Function arguments must be
             # primitive.
             reg_opts = self._child_options()
-            reg_opts['resource'] = self.registration_resource
             reg_opts['technique'] = self.registration_technique
-            if 'recursive_registration' in opts:
-                reg_opts['recursive'] = opts['recursive_registration']
-
             # The registration function.
             reg_xfc = Function(input_names=reg_inputs,
-                               output_names=['out_files'],
+                               output_names=['time_series'],
                                function=_register)
-            reg_node = pe.Node(reg_xfc, name='register')
-            reg_node.inputs.opts = reg_opts
-
-            # The fixed reference volume index option.
+            register = pe.Node(reg_xfc, name='register')
+            register.inputs.opts = reg_opts
+            # The fixed reference volume number option.
             reg_ref_opt = opts.pop('registration_reference', None)
             if reg_ref_opt:
-                reg_node.inputs.reference_index = int(reg_ref_opt) - 1
-                self.logger.debug("The registration reference is %d." %
-                                  reg_node.inputs.reference_index)
-
+                register.inputs.reference = int(reg_ref_opt)
             self.logger.info("Enabled registration with options %s." %
                              reg_opts)
         else:
             self.logger.info("Skipping registration.")
-            reg_node = None
+            register = None
 
         # The ROI workflow node.
         if 'roi' in actions:
@@ -706,14 +589,14 @@ class QIPipelineWorkflow(WorkflowBase):
                           'in_rois', 'opts']
             roi_xfc = Function(input_names=roi_flds,
                                output_names=['volume'],
-                               function=roi)
-            roi_node = pe.Node(roi_xfc, name='roi')
+                               function=_roi)
+            roi = pe.Node(roi_xfc, name='roi')
             roi_opts = self._child_options()
-            roi_node.inputs.opts = roi_opts
+            roi.inputs.opts = roi_opts
             self.logger.info("Enabled ROI conversion with options %s." %
                              roi_opts)
         else:
-            roi_node = None
+            roi = None
             self.logger.info("Skipping ROI conversion.")
 
         # The staging workflow.
@@ -721,8 +604,8 @@ class QIPipelineWorkflow(WorkflowBase):
             stg_inputs = ['subject', 'session', 'scan', 'in_dirs', 'opts']
             stg_xfc = Function(input_names=stg_inputs,
                                output_names=['time_series', 'volume_files'],
-                               function=stage)
-            stg_node = pe.Node(stg_xfc, name='stage')
+                               function=_stage)
+            stage = pe.Node(stg_xfc, name='stage')
             # It would be preferable to pass this QIPipelineWorkflow
             # in the *parent* option, but that induces the following
             # Nipype bug:
@@ -737,26 +620,26 @@ class QIPipelineWorkflow(WorkflowBase):
             if not self.collection:
                 raise PipelineError("Staging requires the collection option")
             stg_opts['collection'] = self.collection.name
-            stg_node.inputs.opts = stg_opts
+            stage.inputs.opts = stg_opts
             self.logger.info("Enabled staging with options %s" % stg_opts)
         else:
-            stg_node = None
+            stage = None
             self.logger.info("Skipping staging.")
 
         # Validate that there is at least one constituent workflow.
-        if not any([stg_node, roi_node, reg_node, mdl_node]):
+        if not any([stage, roi, register, model]):
             raise PipelineError("No workflow was enabled.")
 
         # Registration and modeling require a mask.
         is_mask_required = (
-            (reg_node and self.registration_technique != 'Mock') or
-            (mdl_node and self.modeling_technique != 'Mock')
+            (register and self.registration_technique != 'Mock') or
+            (model and self.modeling_technique != 'Mock')
         )
         if is_mask_required:
             has_mask = False
             # If volumes are already staged, then check for an
             # existing XNAT mask.
-            if not stg_node:
+            if not stage:
                 with qixnat.connect() as xnat:
                     has_mask = _scan_file_exists(
                         xnat, self.project, subject, session, scan,
@@ -766,7 +649,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 dl_mask_xfc = XNATDownload(project=self.project,
                                            resource=MASK_RESOURCE,
                                            file=MASK_FILE)
-                mask_node = pe.Node(dl_mask_xfc, name='download_mask')
+                mask = pe.Node(dl_mask_xfc, name='download_mask')
             else:
                 if not self.collection:
                     raise PipelineError("The mask workflow requires the"
@@ -778,23 +661,20 @@ class QIPipelineWorkflow(WorkflowBase):
                                'opts']
                 mask_xfc = Function(input_names=mask_inputs,
                                     output_names=['out_file'],
-                                    function=mask)
-                mask_node = pe.Node(mask_xfc, name='mask')
-                mask_node.inputs.opts = mask_opts
+                                    function=_mask)
+                mask = pe.Node(mask_xfc, name='mask')
+                mask.inputs.opts = mask_opts
                 self.logger.info("Enabled scan mask creation with options"
                                  " %s." % mask_opts)
         else:
-            mask_node = None
+            mask = None
             self.logger.info("Skipping scan mask creation.")
 
         # The workflow input fields.
         input_fields = ['subject', 'session', 'scan']
-        # The staging workflow has additional input fields.
-        # Partial registration requires the unregistered volumes input.
-        if stg_node:
+        # The staging workflow has the additional in_dir input field.
+        if stage:
             input_fields.extend(['in_dirs'])
-        elif reg_node:
-            input_fields.append('registered')
 
         # The workflow input node.
         input_spec_xfc = IdentityInterface(fields=input_fields)
@@ -804,49 +684,63 @@ class QIPipelineWorkflow(WorkflowBase):
         # modeling is performed on the scan and the scan time series
         # is not available.
 
-        # Stitch together the workflows:
+        ###
+        ### Stitch together the workflows:
+        ###
 
         # If staging is enabled, then stage the DICOM input.
-        if stg_node:
+        if stage:
             for field in input_spec.inputs.copyable_trait_names():
-                exec_wf.connect(input_spec, field, stg_node, field)
+                exec_wf.connect(input_spec, field, stage, field)
 
         # The mask, ROI and scan modeling downstream actions require
         # a scan time series. If there is a scan time series resource
         # option, then the scan time series will be downloaded.
         # Otherwise, it will be created from the staged input.
         is_scan_modeling = (
-            mdl_node and not reg_node and not self.registration_resource
+            model and not register and not self.registration_resource
         )
-        need_scan_ts = mask_node or roi_node or is_scan_modeling
+        need_scan_ts = mask or roi or is_scan_modeling
         if need_scan_ts:
-            if stg_node:
-                scan_ts = stg_node
+            if stage:
+                scan_ts = stage
             else:
-                dl_scan_ts_xfc = XNATDownload(project=self.project,
-                                              resource='NIFTI',
-                                              file=SCAN_TS_FILE)
+                # Validate that there is a XNAT scan time series.
+                with qixnat.connect() as xnat:
+                    has_scan_ts = _scan_file_exists(
+                        xnat, self.project, subject, session, scan,
+                        'NIFTI', SCAN_TS_FILE
+                    )
+                if not has_scan_ts:
+                    raise PipelineError(
+                        "The %s %s scan %d NIFTI resource does not include"
+                        " the time series file %s" %
+                        (subject, session. scan, SCAN_TS_FILE)
+                    )
+                dl_scan_ts_xfc = XNATDownload(
+                    project=self.project, resource='NIFTI', file=SCAN_TS_FILE
+                )
                 dl_scan_ts = pe.Node(dl_scan_ts_xfc,
-                                  name='download_scan_time_series')
+                                     name='download_scan_time_series')
                 exec_wf.connect(input_spec, 'subject', dl_scan_ts, 'subject')
                 exec_wf.connect(input_spec, 'session', dl_scan_ts, 'session')
                 exec_wf.connect(input_spec, 'scan', dl_scan_ts, 'scan')
-                # Rename the download out_file to time_series.
+                # Rename the download out_file field to time_series.
                 scan_ts_xfc = IdentityInterface(fields=['time_series'])
                 scan_ts = pe.Node(scan_ts_xfc, name='scan_time_series')
                 exec_wf.connect(dl_scan_ts, 'out_file', scan_ts, 'time_series')
 
         # Registration and the scan time series require a staged
         # node scan with output 'images'. If staging is enabled,
-        # then staged is the stg_node. Otherwise, the staged node
+        # then staged is the stage. Otherwise, the staged node
         # downloads the previously uploaded scan volumes.
         #
         # The scan time series is required by mask and scan
         # registration.
         scan_volumes = None
-        if reg_node:
-            if stg_node:
-                scan_volumes = stg_node
+        if register:
+            if stage:
+                scan_volumes = stage
             else:
                 dl_vols_xfc = XNATDownload(project=self.project,
                                            resource='NIFTI',
@@ -855,20 +749,20 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(input_spec, 'subject', dl_vols, 'subject')
                 exec_wf.connect(input_spec, 'session', dl_vols, 'session')
                 exec_wf.connect(input_spec, 'scan', dl_vols, 'scan')
-                # Rename the download out_file to volume_files.
+                # Rename the download out_files field to volume_files.
                 scan_volumes_xfc = IdentityInterface(fields=['volume_files'])
                 scan_volumes = pe.Node(scan_volumes_xfc, name='scan_volumes')
                 exec_wf.connect(dl_vols, 'out_files',
                                 scan_volumes, 'volume_files')
 
         # Registration and modeling require a mask and bolus arrival.
-        if mask_node:
-            exec_wf.connect(input_spec, 'subject', mask_node, 'subject')
-            exec_wf.connect(input_spec, 'session', mask_node, 'session')
-            exec_wf.connect(input_spec, 'scan', mask_node, 'scan')
-            if hasattr(mask_node.inputs, 'time_series'):
+        if mask:
+            exec_wf.connect(input_spec, 'subject', mask, 'subject')
+            exec_wf.connect(input_spec, 'session', mask, 'session')
+            exec_wf.connect(input_spec, 'scan', mask, 'scan')
+            if hasattr(mask.inputs, 'time_series'):
                 exec_wf.connect(scan_ts, 'time_series',
-                                mask_node, 'time_series')
+                                mask, 'time_series')
                 self.logger.debug('Connected the scan time series to mask.')
 
             # Registration requires a fixed reference volume index to
@@ -880,120 +774,76 @@ class QIPipelineWorkflow(WorkflowBase):
             # * Otherwise, the computed bolus arrival is the fixed
             #   volume.
             compute_reg_reference = (
-                reg_node and not roi_node
-                and not reg_node.inputs.reference_index
+                register and not roi
+                and not register.inputs.reference
             )
             is_bolus_arrival_required = (
                 compute_reg_reference or
-                (mdl_node and self.modeling_technique != 'Mock')
+                (model and self.modeling_technique != 'Mock')
             )
             # Modeling always requires the bolus arrival.
-            bolus_arv_node = None
+            bolus_arrival = None
             if is_bolus_arrival_required:
                 # Compute the bolus arrival from the scan time series.
                 bolus_arv_xfc = Function(input_names=['time_series'],
-                                         output_names=['bolus_arrival_index'],
-                                         function=bolus_arrival_index_or_zero)
-                bolus_arv_node = pe.Node(bolus_arv_xfc,
-                                         name='bolus_arrival_index')
+                                         output_names=['volume'],
+                                         function=_bolus_arrival)
+                bolus_arrival = pe.Node(bolus_arv_xfc, name='bolus_arrival')
                 exec_wf.connect(scan_ts, 'time_series',
-                                bolus_arv_node, 'time_series')
+                                bolus_arrival, 'time_series')
                 self.logger.debug('Connected the scan time series to the bolus'
                                   ' arrival calculation.')
 
         # If ROI is enabled, then convert the ROIs using the scan
         # time series.
-        if roi_node:
-            exec_wf.connect(input_spec, 'subject', roi_node, 'subject')
-            exec_wf.connect(input_spec, 'session', roi_node, 'session')
-            exec_wf.connect(input_spec, 'scan', roi_node, 'scan')
-            exec_wf.connect(scan_ts, 'time_series', roi_node, 'time_series')
+        if roi:
+            exec_wf.connect(input_spec, 'subject', roi, 'subject')
+            exec_wf.connect(input_spec, 'session', roi, 'session')
+            exec_wf.connect(input_spec, 'scan', roi, 'scan')
+            exec_wf.connect(scan_ts, 'time_series', roi, 'time_series')
             self.logger.debug('Connected the scan time series to ROI.')
 
-        # If registration is enabled, then register the unregistered
-        # staged images.
-        if reg_node:
-            # There must be staged files.
-            if not scan_volumes:
-                raise NotFoundError('Registration requires a scan input')
-            exec_wf.connect(input_spec, 'subject', reg_node, 'subject')
-            exec_wf.connect(input_spec, 'session', reg_node, 'session')
-            exec_wf.connect(input_spec, 'scan', reg_node, 'scan')
+        # If registration is enabled, then register the staged images.
+        if register:
+            exec_wf.connect(input_spec, 'subject', register, 'subject')
+            exec_wf.connect(input_spec, 'session', register, 'session')
+            exec_wf.connect(input_spec, 'scan', register, 'scan')
 
-            # If the registration input files were downloaded from
-            # XNAT, then select only the unregistered files.
-            if stg_node:
-                exec_wf.connect(scan_volumes, 'volume_files',
-                                reg_node, 'in_files')
-            else:
-                exc_regd_xfc = Function(input_names=['in_files', 'exclusions'],
-                                        output_names=['out_files'],
-                                        function=exclude_files)
-                exclude_registered = pe.Node(exc_regd_xfc,
-                                             name='exclude_registered')
-                exec_wf.connect(scan_volumes, 'volume_files',
-                                exclude_registered, 'in_files')
-                exec_wf.connect(input_spec, 'registered',
-                                exclude_registered, 'exclusions')
-                exec_wf.connect(exclude_registered, 'out_files',
-                                reg_node, 'in_files')
-            self.logger.debug('Connected staging to registration.')
-
+            # The registration input files are either staged or downloaded.
+            exec_wf.connect(scan_volumes, 'volume_files',
+                            register, 'in_files')
             # The mask input.
-            if mask_node:
-                exec_wf.connect(mask_node, 'out_file', reg_node, 'mask')
+            if mask:
+                exec_wf.connect(mask, 'out_file', register, 'mask')
                 self.logger.debug('Connected the mask to registration.')
 
             # If the ROI workflow is enabled, then register against
             # the ROI volume. Otherwise, use the bolus arrival volume.
-            if not reg_node.inputs.reference_index:
-                if roi_node:
-                    exec_wf.connect(roi_node, 'volume',
-                                    reg_node, 'reference_index')
+            if not register.inputs.reference:
+                if roi:
+                    exec_wf.connect(roi, 'volume', register, 'reference')
                     self.logger.debug('Connected ROI volume to the'
-                                      ' registration reference index.')
-                elif bolus_arv_node:
-                    exec_wf.connect(bolus_arv_node, 'bolus_arrival_index',
-                                    reg_node, 'reference_index')
+                                      ' registration reference.')
+                elif bolus_arrival:
+                    exec_wf.connect(bolus_arrival, 'volume',
+                                    register, 'reference')
                     self.logger.debug('Connected bolus arrival to the'
-                                      ' registration reference index.')
-
-            # Stack the registered images into a 4D time series.
-            reg_ts_name = self.registration_resource + '_ts'
-            merge_reg_xfc = MergeNifti(out_format=reg_ts_name)
-            merge_reg = pe.Node(merge_reg_xfc, name='merge_reg_volumes')
-            exec_wf.connect(reg_node, 'out_files', merge_reg, 'in_files')
-
-            # Upload the realigned time series to XNAT.
-            upload_reg_ts_xfc = XNATUpload(
-                project=self.project, resource=self.registration_resource,
-                modality='MR'
-            )
-            upload_reg_ts = pe.Node(upload_reg_ts_xfc,
-                                    name='upload_reg_time_series')
-            exec_wf.connect(input_spec, 'subject',
-                            upload_reg_ts, 'subject')
-            exec_wf.connect(input_spec, 'session',
-                            upload_reg_ts, 'session')
-            exec_wf.connect(input_spec, 'scan',
-                            upload_reg_ts, 'scan')
-            exec_wf.connect(merge_reg, 'out_file',
-                            upload_reg_ts, 'in_files')
+                                      ' registration reference.')
 
         # If the modeling workflow is enabled, then model the scan or
         # realigned images.
-        if mdl_node:
-            exec_wf.connect(input_spec, 'subject', mdl_node, 'subject')
-            exec_wf.connect(input_spec, 'session', mdl_node, 'session')
-            exec_wf.connect(input_spec, 'scan', mdl_node, 'scan')
+        if model:
+            exec_wf.connect(input_spec, 'subject', model, 'subject')
+            exec_wf.connect(input_spec, 'session', model, 'session')
+            exec_wf.connect(input_spec, 'scan', model, 'scan')
             # The mask input.
-            if mask_node:
-                exec_wf.connect(mask_node, 'out_file', mdl_node, 'mask')
+            if mask:
+                exec_wf.connect(mask, 'out_file', model, 'mask')
                 self.logger.debug('Connected the mask to modeling.')
             # The bolus arrival input.
-            if bolus_arv_node:
-                exec_wf.connect(bolus_arv_node, 'bolus_arrival_index',
-                                mdl_node, 'bolus_arrival_index')
+            if bolus_arrival:
+                exec_wf.connect(bolus_arrival, 'volume',
+                                model, 'bolus_arrival')
             self.logger.debug('Connected bolus arrival to modeling.')
 
             # Obtain the modeling input 4D time series.
@@ -1002,16 +852,14 @@ class QIPipelineWorkflow(WorkflowBase):
                 # resource option. In that case, model the scan
                 # input. scan_ts is always created previously if
                 # is_scan_modeling is true.
-                exec_wf.connect(scan_ts, 'time_series', mdl_node, 'time_series')
-            elif reg_node:
-                # merge_reg is created in the registration processing.
-                exec_wf.connect(merge_reg, 'out_file', mdl_node, 'time_series')
+                exec_wf.connect(scan_ts, 'time_series', model, 'time_series')
+            elif register:
+                exec_wf.connect(register, 'time_series', model, 'time_series')
                 self.logger.debug('Connected registration to modeling.')
             else:
-                # Check for a previously created registration time
-                # series. Note that self.registration_resource is
-                # set since is_scan_modeling is false and reg_node
-                # is None.
+                # Validate the XNAT registration time series. Note
+                # that self.registration_resource is set since
+                # is_scan_modeling is false and register is None.
                 reg_ts_name = self.registration_resource + '_ts.nii.gz'
                 with qixnat.connect() as xnat:
                     has_reg_ts = _scan_file_exists(
@@ -1023,7 +871,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 if not has_reg_ts:
                     raise PipelineError(
                         "The %s %s scan %d registration resource %s does"
-                        " not have the time series file %s" %
+                        " not include the time series file %s" %
                         (subject, session. scan, self.registration_resource,
                          reg_ts_name)
                     )
@@ -1039,7 +887,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(input_spec, 'session', dl_reg_ts, 'session')
                 exec_wf.connect(input_spec, 'scan', dl_reg_ts, 'scan')
                 # Pass the realigned time series to modeling.
-                exec_wf.connect(dl_reg_ts, 'out_file', mdl_node, 'time_series')
+                exec_wf.connect(dl_reg_ts, 'out_file', model, 'time_series')
 
         # Set the configured workflow node inputs and plug-in options.
         self._configure_nodes(exec_wf)
@@ -1051,14 +899,12 @@ class QIPipelineWorkflow(WorkflowBase):
 
         return exec_wf
 
-    def _run_workflow(self, workflow):
+    def _run_workflow(self):
         """
         Overrides the superclass method to build the child workflows
         if the *dry_run* instance variable flag is set.
-
-        :param workflow: the workflow to run
         """
-        super(QIPipelineWorkflow, self)._run_workflow(workflow)
+        super(QIPipelineWorkflow, self)._run_workflow()
         if self.dry_run:
             # Make a dummy temp directory and files for simulating
             # the called workflows. These workflows inherit the
@@ -1078,24 +924,21 @@ class QIPipelineWorkflow(WorkflowBase):
                     in_dirs = input_spec.inputs.in_dirs
                     stg_opts = dict(collection=self.collection.name,
                                     dest=dummy_dir, **opts)
-                    stage('Breast001', 'Session01', 1, in_dirs, stg_opts)
+                    _stage('Breast001', 'Session01', 1, in_dirs, stg_opts)
                 # If registration is enabled, then simulate it.
                 if self.workflow.get_node('register'):
-                    reg_opts = dict(technique=self.registration_technique,
-                                    **opts)
-                    registration.run('Breast001', 'Session01', 1,
-                                     dummy_volume, dummy_volume, **reg_opts)
+                    _register('Breast001', 'Session01', 1, [dummy_volume],
+                              opts)
                 # If ROI is enabled, then simulate it.
                 if self.workflow.get_node('roi'):
                     # A dummy (lesion, slice index, in_file) ROI input tuple.
                     inputs = [LesionROI(1, 1, 1, dummy_roi)]
-                    roi('Breast001', 'Session01', 1, dummy_ts, inputs, opts)
+                    _roi('Breast001', 'Session01', 1, dummy_ts, inputs, opts)
                 # If modeling is enabled, then simulate it.
                 if self.workflow.get_node('model'):
                     mdl_opts = dict(technique=self.modeling_technique,
-                                    bolus_arrival_index=0, **opts)
-                    modeling.run('Breast001', 'Session01', 1, dummy_ts,
-                                 **mdl_opts)
+                                    bolus_arrival=1, **opts)
+                    _model('Breast001', 'Session01', 1, dummy_ts, mdl_opts)
             finally:
                 shutil.rmtree(dummy_dir)
 
@@ -1116,25 +959,26 @@ def exclude_files(in_files, exclusions):
             if os.path.split(f)[1] not in exclusions]
 
 
-def bolus_arrival_index_or_zero(time_series):
+def _bolus_arrival(time_series):
     """
-    Determines the bolus uptake. If it could not be determined,
-    then the first time point is taken to be the uptake volume.
+    Determines the bolus uptake volume number. If it could not
+    be determined, then the first time point is taken to be the
+    uptake volume.
 
     :param time_series: the 4D time series image
-    :return: the bolus arrival index, or zero if the arrival
+    :return: the bolus arrival volume number, or 1 if the arrival
         cannot be calculated
     """
     from qipipe.helpers.bolus_arrival import (bolus_arrival_index,
                                               BolusArrivalError)
 
     try:
-        return bolus_arrival_index(time_series)
+        return bolus_arrival_index(time_series) + 1
     except BolusArrivalError:
-        return 0
+        return 1
 
 
-def stage(subject, session, scan, in_dirs, opts):
+def _stage(subject, session, scan, in_dirs, opts):
     """
     Runs the staging workflow on the given session scan images.
 
@@ -1150,25 +994,24 @@ def stage(subject, session, scan, in_dirs, opts):
     return staging.run(subject, session, scan, *in_dirs, **opts)
 
 
-def _register(subject, session, scan, in_files, opts,
-              reference_index=0, mask=None):
+def _register(subject, session, scan, in_files, opts, reference=1,
+              mask=None):
     """
     A facade for the :meth:`qipipe.pipeline.registration.register
     method.
 
-    .. Note:: The *mask* and *reference_index* parameters are
+    .. Note:: The *reference* and *mask* parameters are
       registration options, but can't be included in the *opts*
       parameter, since they are potential upstream workflow node
-      connection points. Since a mock registration technique
-      does not connect these inputs, they have default values
-      in the method signature as well.
+      connection points. Since a mock registration technique does
+      not connect these inputs, theyt have a default value in the
+      method signature as well.
 
     .. Note:: contrary to Python convention, the *opts* method
       parameter is a required dictionary rather than a keyword
       double-splat argument (i.e., ``**opts``). The Nipype
       ``Function`` interface does not support double-splat
-      arguments. Similarly, the *in_files* parameter is a list
-      rather than a splat argument (i.e., *in_files).
+      arguments.
 
     :param subject: the subject name
     :param session: the session name
@@ -1176,158 +1019,26 @@ def _register(subject, session, scan, in_files, opts,
     :param in_files: the input session scan 3D NIfTI images
     :param opts: the :meth:`qipipe.pipeline.registration.run`
         keyword options
-    :param reference_index: the zero-based index of the file to
-        register against (default first volume)
+    :param reference: the reference volume number
     :param mask: the mask file, required unless the model
         technique is ``Mock``
+    :return: the :meth:`qipipe.pipeline.registration.run`
+        output time series
     """
-    from qipipe.pipeline.qipipeline import register
+    from qipipe.pipeline import registration
+    from nipype.interfaces.traits_extension import isdefined
 
-    return register(subject, session, scan, reference_index,
-                    *in_files, mask=mask, **opts)
+    # Transform a Nipype undefined to the default value.
+    if not isdefined(mask):
+        mask = None
 
-
-def register(subject, session, scan, reference_index, *in_files, **opts):
-    """
-    Runs the registration workflow on the given session scan images.
-
-    .. Note:: There is always a mask and resource argument. The mask
-      file and resource name are either specified as an input or
-      built by the workflow. The mask and resource are options in
-      the registration run function. Therefore, we check that these
-      options are set here.
-
-    :param subject: the subject name
-    :param session: the session name
-    :param scan: the scan number
-    :param reference_index: the zero-based index of the file to
-        register against
-    :param in_files: the input session scan 3D NIfTI images
-    :param opts: the :meth:`qipipe.pipeline.registration.run` keyword
-        options
-    :return: the realigned image file path array
-    """
-    if not opts.get('mask'):
-        raise PipelineError("The register method is missing the mask")
-    if not opts.get('resource'):
-        raise PipelineError("The register method is missing the"
-                            " XNAT registration resource name")
-
-    # The input scan files sorted by volume number.
-    volumes = sorted(in_files, key=_extract_volume_number)
-    # The initial fixed image.
-    reference = volumes[reference_index]
-
-    _logger = logger(__name__)
-    _logger.debug(
-        "Registering %d volumes against the reference volume %s..." %
-         (len(in_files), reference)
+    return registration.run(
+        subject, session, scan, in_files, reference=reference,
+        mask=mask, **opts
     )
 
-    # Register the files after the reference point.
-    ref_successor = reference_index + 1
-    after = volumes[ref_successor:]
-    if after:
-        _logger.debug(
-            "Registering the %d volumes after the fixed reference"
-            " volume %s..." % (len(after), reference)
-        )
-        post = registration.run(subject, session, scan, reference,
-                                *after, **opts)
-        _logger.debug(
-            "Registered the %d volumes after the fixed reference"
-            " volume %s." % (len(after), reference)
-        )
-    else:
-        post = []
 
-    # Register the files before the reference point in
-    # reverse order in case the recursive flag is set.
-    before = volumes[:reference_index]
-    before.reverse()
-    if before:
-        _logger.debug(
-            "Registering the %d volumes before the fixed reference"
-            " volume %s..." % (len(before), reference)
-        )
-        pre = registration.run(subject, session, scan, reference,
-                               *before, **opts)
-        _logger.debug(
-            "Registered the %d volumes before the fixed reference"
-            " volume %s." % (len(before), reference)
-        )
-        # Restore the original sort order.
-        pre.reverse()
-    else:
-        pre = []
-
-    _logger.debug("Registered %d volumes." % len(in_files))
-
-    # The registration result in sort order.
-    output = pre + [reference] + post
-    # Infer the project from the options.
-    prj_opt = opts.get('project')
-    if prj_opt:
-        project = prj_opt
-    else:
-        parent_wf = opts.get('parent')
-        if parent_wf:
-            project = parent_wf.project
-        else:
-            raise PipelineError('The registration project could not be'
-                                ' determined from the options')
-    # Get the resource from the options.
-    resource = opts.get('resource')
-    if not resource:
-        raise PipelineError('The registration resource option was not found')
-
-    # Upload the registration profile and the unrealigned image into the
-    # XNAT registration resource. The profile is in the same directory as
-    # the realigned images.
-    reg_dir, _ = os.path.split(output[ref_successor])
-    prf_match = glob.glob("%s/*.cfg" % reg_dir)
-    if not prf_match:
-        raise PipelineError("The registration profile was not found in"
-                            " the registration destination directory %s" %
-                            reg_dir)
-    if len(prf_match) > 1:
-        raise PipelineError("More than one .cfg file was found in the"
-                            " registration destination directory %s" %
-                            reg_dir)
-    profile = prf_match[0]
-    _, prf_base = os.path.split(profile)
-    _, ref_base = os.path.split(reference)
-    in_files = [profile, reference]
-    _logger.debug(
-        "Uploading the registration profile %s and fixed reference image"
-        " %s to %s %s scan %d resource %s from %s..." %
-        (prf_base, ref_base, subject, session, scan, resource, reg_dir)
-    )
-    upload = XNATUpload(project=project, subject=subject, session=session,
-                        scan=scan, resource=resource, in_files=in_files,
-                        modality='MR')
-    upload.run()
-    _logger.info(
-        "Uploaded the %s %s scan %d registration result to resource"
-        " %s." % (subject, session, scan, resource)
-    )
-
-    # Return the registration result.
-    return output
-
-
-def _extract_volume_number(location):
-    _, base_name = os.path.split(location)
-    match = VOLUME_FILE_PAT.match(base_name)
-    if not match:
-        raise PipelineError(
-            "The volume file base name %s does not match the pattern %s" %
-            (base_name, VOLUME_FILE_PAT.pattern)
-        )
-    return int(match.group('volume_number'))
-
-
-def mask(subject, session, scan, time_series, opts):
+def _mask(subject, session, scan, time_series, opts):
     """
     Runs the mask workflow on the given session scan time series.
 
@@ -1343,7 +1054,7 @@ def mask(subject, session, scan, time_series, opts):
     return mask.run(subject, session, scan, time_series, **opts)
 
 
-def roi(subject, session, scan, time_series, in_rois, opts):
+def _roi(subject, session, scan, time_series, in_rois, opts):
     """
     Runs the ROI workflow on the given session scan images.
 
@@ -1381,8 +1092,8 @@ def roi(subject, session, scan, time_series, in_rois, opts):
     return roi_volume_nbr - 1
 
 
-def model(subject, session, scan, time_series, bolus_arrival_index,
-          opts, mask=None):
+def _model(subject, session, scan, time_series, opts,
+           bolus_arrival=1, mask=None):
     """
     Runs the modeling workflow on the given time series.
     *mask* and *bolus_arrival_index* are
@@ -1393,14 +1104,16 @@ def model(subject, session, scan, time_series, bolus_arrival_index,
     :param session: the session name
     :param scan: the scan number
     :param time_series: the scan or registration 4D time series
-    :param bolus_arrival_index: the required bolus arrival index
     :param opts: the :meth:`qipipe.pipeline.modeling.run` keyword options
+    :param bolus_arrival: the required bolus arrival volume number
     :param mask: the mask file, required unless the model technique
         is ``Mock``
     :return: the modeling result dictionary
     """
     from qipipe.pipeline import modeling
 
-    return modeling.run(subject, session, scan, time_series,
-                        mask=mask, bolus_arrival_index=bolus_arrival_index,
-                        **opts)
+    bolus_arrival_index = bolus_arrival - 1
+    return modeling.run(
+        subject, session, scan, time_series, mask=mask,
+        bolus_arrival_index=bolus_arrival_index, **opts
+    )
