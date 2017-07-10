@@ -176,8 +176,8 @@ class ScanStagingWorkflow(WorkflowBase):
 
         # The magic incantation to get the Nipype workflow result.
         output_res = next(n for n in wf_res.nodes() if n.name == 'output_spec')
-        time_series = output_res.inputs.get()['time_series'],
-        volume_files = output_res.inputs.get()['volume_files'],
+        time_series = output_res.inputs.get()['time_series']
+        volume_files = output_res.inputs.get()['volume_files']
 
         self.logger.debug(
             "Executed the %s workflow on the %s %s scan %d to create"
