@@ -10,7 +10,9 @@ from nipype.interfaces.dcmstack import MergeNifti
 from nipype.interfaces.utility import (IdentityInterface, Function)
 import qiutil
 from ..helpers.logging import logger
-from ..interfaces import (ConvertBoleroMask, ReorderBoleroMask, XNATUpload)
+from ..interfaces import (
+    StickyIdentityInterface, ConvertBoleroMask, ReorderBoleroMask, XNATUpload
+)
 from .workflow_base import WorkflowBase
 from .pipeline_error import PipelineError
 
@@ -109,8 +111,16 @@ class ROIWorkflow(WorkflowBase):
         self.logger.info("Executed the %s workflow on %s %s scan %d." %
                          (self.workflow.name, subject, session, scan))
 
-        # Return the ROI resource name.
-        return ROI_RESOURCE
+        # The magic incantation to get the Nipype workflow result.
+        output_res = next(n for n in wf_res.nodes() if n.name == 'output_spec')
+        out_file = output_res.inputs.get()['out_file']
+        self.logger.debug(
+            "Executed the %s workflow on the %s %s scan %d to create"
+            " the 3D ROI mask file %s." %
+            (self.workflow.name, subject, session, scan, out_file)
+        )
+
+        return out_file
 
     def _set_inputs(self, subject, session, scan, time_series, *inputs):
         """
@@ -213,6 +223,10 @@ class ROIWorkflow(WorkflowBase):
         workflow.connect(input_spec, 'session', upload_roi, 'session')
         workflow.connect(input_spec, 'scan', upload_roi, 'scan')
         workflow.connect(merge, 'out_file', upload_roi, 'in_files')
+
+        # The output is the 3D ROI overlay.
+        output_spec = pe.Node(StickyIdentityInterface(fields=['out_file']))
+        workflow.connect(merge, 'out_file', output_spec, 'out_file')
 
         self._configure_nodes(workflow)
 
