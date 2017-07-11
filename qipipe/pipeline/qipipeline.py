@@ -1018,7 +1018,7 @@ def _roi(subject, session, scan, time_series, in_rois, opts):
     from qipipe.pipeline import roi
     from qipipe.helpers.logging import logger
 
-    return roi.run(subject, session, scan, time_series, *in_rois, **opts):
+    return roi.run(subject, session, scan, time_series, *in_rois, **opts)
 
 
 def _register(subject, session, scan, in_files, opts, reference=1,
