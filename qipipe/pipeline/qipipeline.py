@@ -71,8 +71,8 @@ def run(*inputs, **opts):
     elif 'roi' in actions:
         # The non-staging ROI action must be performed alone.
         if len(actions) > 1:
-            raise ValueError("The ROI pipeline can only be run"
-                             " with staging or stand-alone")
+            raise ValueError('The ROI pipeline can only be run'
+                             ' with staging or stand-alone')
         _run_with_dicom_input(actions, *inputs, **opts)
     else:
         # Run downstream actions with XNAT session input.
@@ -129,8 +129,20 @@ def _run_with_dicom_input(actions, *inputs, **opts):
         iter_opts['scan'] = scan_opt
     if actions == ['roi']:
         iter_opts['skip_existing'] = False
+    actions = set(actions)
     for scan_input in iter_stage(project, collection, *inputs, **iter_opts):
-        wf_actions = _filter_actions(scan_input, actions)
+        # Pre-filter the ROI action.
+        if 'roi' in actions and scan_input.scan in MULTI_VOLUME_SCAN_NUMBERS:
+            roi_files = _collect_roi_files(collection, scan_input)
+            if roi_files:
+                wf_actions = actions
+                wf_opts = opts.copy()
+                wf_opts['roi_files'] = roi_files
+            else:
+                wf_actions = actions - {'roi'}
+                wf_opts = opts
+        # Further filter the actions.
+        wf_actions = _filter_actions(collection, scan_input, wf_actions)
         if not wf_actions:
             continue
         # Capture the subject.
@@ -141,9 +153,8 @@ def _run_with_dicom_input(actions, *inputs, **opts):
         scan_dest = "%s/scan/%d" % (dest, scan_input.scan)
         # Create a new workflow.
         workflow = QIPipelineWorkflow(
-            project, scan_input.subject, scan_input.session, scan_input.scan,
-            wf_actions, collection=collection, dest=scan_dest,
-            base_dir=scan_base_dir, **opts)
+            project, scan_input, wf_actions, collection=collection,
+            dest=scan_dest, base_dir=scan_base_dir, **wf_opts)
         # Run the workflow on the scan.
         workflow.run_with_dicom_input(wf_actions, scan_input)
 
@@ -152,7 +163,7 @@ def _run_with_dicom_input(actions, *inputs, **opts):
         map_ctp(collection, *subjects, dest=dest)
 
 
-def _filter_actions(scan_input, actions):
+def _filter_actions(collection, scan_input, actions):
     """
     Filters the specified actions for the given scan input.
     If the scan number is in the :const:`MULTI_VOLUME_SCAN_NUMBERS`,
@@ -160,6 +171,7 @@ def _filter_actions(scan_input, actions):
     this method returns the actions allowed as
     :const:`SINGLE_VOLUME_ACTIONS`.
 
+    :param actions: the specified actions
     :param scan_input: the :meth:`qipipe.staging.iterator.iter_stage`
         scan input
     :param actions: the specified actions
@@ -228,27 +240,24 @@ def _run_with_xnat_input(actions, *inputs, **opts):
 
 
 
-def _scan_file_exists(xnat, project, subject, session, scan, resource,
-                      file_pat=None):
+def _scan_file_exists(xnat, project, scan_input, resource, file_pat=None):
     """
     :param file_pat: the optional target XNAT label pattern to match
         (default any file)
     :return: whether the given XNAT scan file exists
     """
-    matches = _scan_files(xnat, project, subject, session, scan,
-                          resource, file_pat)
+    matches = _scan_files(xnat, project, scan_input, resource, file_pat)
 
     return not not matches
 
-def _scan_files(xnat, project, subject, session, scan, resource,
-                file_pat=None):
+def _scan_files(xnat, project, scan_input, resource, file_pat=None):
     """
     :param file_pat: the optional target XNAT file label pattern to match
         (default any file)
     :return: the XNAT scan file name list
     """
-    rsc_obj = xnat.find_one(project, subject, session, scan=scan,
-                            resource=resource)
+    rsc_obj = xnat.find_one(project, scan_input.subject, scan_input.session,
+                            scan=scan_input.scan, resource=resource)
     if not rsc_obj:
         return []
     # The resource files labels.
@@ -342,12 +351,11 @@ class QIPipelineWorkflow(WorkflowBase):
     instance variable.
     """
 
-    def __init__(self, project, subject, session, scan, actions, **opts):
+    def __init__(self, project, scan_input, actions, **opts):
         """
         :param project: the XNAT project name
-        :param subject: the subject name
-        :param session: the session name
-        :param scan: the scan number
+        :param scan_input: the :meth:`qipipe.staging.iterator.iter_stage`
+            scan input
         :param actions: the actions to perform
         :param opts: the :class:`qipipe.staging.WorkflowBase`
             initialization options as well as the following keyword arguments:
@@ -369,11 +377,13 @@ class QIPipelineWorkflow(WorkflowBase):
             __name__, project=project, **opts
         )
 
-        collOpt = opts.pop('collection', None)
-        if collOpt:
-            self.collection = image_collection.with_name(collOpt)
+        coll_opt = opts.pop('collection', None)
+        if coll_opt:
+            self.collection = image_collection.with_name(coll_opt)
         else:
             self.collection = None
+
+        self.roi_files = opts.pop('roi_files', None)
 
         # Capture the registration resource name, or generate if
         # necessary. The registration resource name is created
@@ -402,8 +412,7 @@ class QIPipelineWorkflow(WorkflowBase):
         if 'model' in actions and not self.modeling_technique:
             raise PipelineError('The modeling technique was not specified.')
 
-        self.workflow = self._create_workflow(subject, session, scan,
-                                              actions, **opts)
+        self.workflow = self._create_workflow(scan_input, actions, **opts)
         """
         The pipeline execution workflow. The execution workflow is executed
         by calling the :meth:`run_with_dicom_input` or
@@ -413,8 +422,8 @@ class QIPipelineWorkflow(WorkflowBase):
     def run_with_dicom_input(self, actions, scan_input):
         """
         :param actions: the workflow actions to perform
-        :param scan_input: the {subject, session, scan, dicom, roi}
-            object
+        :param scan_input: the :meth:`qipipe.staging.iterator.iter_stage`
+            scan input
         :param dest: the TCIA staging destination directory (default is
             the current working directory)
         """
@@ -425,47 +434,6 @@ class QIPipelineWorkflow(WorkflowBase):
         input_spec.inputs.session = scan_input.session
         input_spec.inputs.scan = scan_input.scan
         input_spec.inputs.in_dirs = scan_input.dicom
-
-        # If roi is enabled and has input, then set the roi function inputs.
-        if 'roi' in actions:
-            roi_dirs = scan_input.roi
-            if roi_dirs:
-                scan_pats = self.collection.patterns.scan[scan_input.scan]
-                if not scan_pats:
-                    raise PipelineError("Scan patterns were not found"
-                                        " for %s %s scan %d" % (
-                                        scan_input.subject, scan_input.session,
-                                        scan_input.scan))
-                glob = scan_pats.roi.glob
-                regex = scan_pats.roi.regex
-                self.logger.debug(
-                    "Discovering %s %s scan %d ROI files matching %s..." %
-                    (scan_input.subject, scan_input.session, scan_input.scan,
-                     glob)
-                )
-                roi_inputs = list(iter_roi(regex, *roi_dirs))
-                if roi_inputs:
-                    self.logger.info(
-                        "%d %s %s scan %d ROI files were discovered." %
-                        (len(roi_inputs), scan_input.subject,
-                         scan_input.session, scan_input.scan)
-                    )
-                else:
-                    self.logger.info("No ROI file was detected for"
-                                      " %s %s scan %d." %
-                                      (scan_input.subject, scan_input.session,
-                                       scan_input.scan))
-                # Set the inputs even if none are found. This permits
-                # workflow "execution" of the roi node as a no-op and
-                # avoids a TypeError from the roi() function call.
-                self._set_roi_inputs(*roi_inputs)
-            else:
-                self.logger.info("ROI directory was not detected for"
-                                  " %s %s scan %d." %
-                                  (scan_input.subject, scan_input.session,
-                                   scan_input.scan))
-                # Set the empty inputs for a no-op workflow.
-                self._set_roi_inputs()
 
         # Execute the workflow.
         self.logger.info("Running the pipeline on %s %s scan %d." %
@@ -497,22 +465,13 @@ class QIPipelineWorkflow(WorkflowBase):
         # Execute the workflow.
         self._run_workflow()
 
-    def _set_roi_inputs(self, *inputs):
-        """
-        :param inputs: the :meth:`roi` inputs
-        """
-        # Set the roi function inputs.
-        roi = self.workflow.get_node('roi')
-        roi.inputs.in_rois = inputs
-
-    def _create_workflow(self, subject, session, scan, actions, **opts):
+    def _create_workflow(self, scan_input, actions, **opts):
         """
         Builds the reusable pipeline workflow described in
         :class:`qipipe.pipeline.qipipeline.QIPipeline`.
 
-        :param subject: the subject name
-        :param session: the session name
-        :param scan: the scan number
+        :param scan_input: the :meth:`qipipe.staging.iterator.iter_stage`
+            scan input
         :param actions: the actions to perform
         :param opts: the constituent workflow initializer options
         :return: the Nipype workflow
@@ -591,6 +550,7 @@ class QIPipelineWorkflow(WorkflowBase):
                                output_names=['volume'],
                                function=_roi)
             roi = pe.Node(roi_xfc, name='roi')
+            roi.inputs.in_rois = self.roi_files
             roi_opts = self._child_options()
             roi.inputs.opts = roi_opts
             self.logger.info("Enabled ROI conversion with options %s." %
@@ -642,8 +602,8 @@ class QIPipelineWorkflow(WorkflowBase):
             if not stage:
                 with qixnat.connect() as xnat:
                     has_mask = _scan_file_exists(
-                        xnat, self.project, subject, session, scan,
-                        MASK_RESOURCE, MASK_FILE
+                        xnat, self.project, scan_input, MASK_RESOURCE,
+                        MASK_FILE
                     )
             if has_mask:
                 dl_mask_xfc = XNATDownload(project=self.project,
@@ -708,14 +668,14 @@ class QIPipelineWorkflow(WorkflowBase):
                 # Validate that there is a XNAT scan time series.
                 with qixnat.connect() as xnat:
                     has_scan_ts = _scan_file_exists(
-                        xnat, self.project, subject, session, scan,
-                        'NIFTI', SCAN_TS_FILE
+                        xnat, self.project, scan_input, 'NIFTI', SCAN_TS_FILE
                     )
                 if not has_scan_ts:
                     raise PipelineError(
                         "The %s %s scan %d NIFTI resource does not include"
                         " the time series file %s" %
-                        (subject, session. scan, SCAN_TS_FILE)
+                        (scan_input.subject, scan_input.session,
+                         scan_input.scan, SCAN_TS_FILE)
                     )
                 dl_scan_ts_xfc = XNATDownload(
                     project=self.project, resource='NIFTI', file=SCAN_TS_FILE
@@ -821,9 +781,13 @@ class QIPipelineWorkflow(WorkflowBase):
             # the ROI volume. Otherwise, use the bolus arrival volume.
             if not register.inputs.reference:
                 if roi:
-                    exec_wf.connect(roi, 'volume', register, 'reference')
-                    self.logger.debug('Connected ROI volume to the'
-                                      ' registration reference.')
+                    # Get the ROI volume number from any ROI file.
+                    roi_vol = self.roi_files[0].volume
+                    register.inputs.reference = roi_vol
+                    self.logger.debug(
+                        "Set the registration reference to the ROI"
+                        " volume %d." % roi_vol
+                    )
                 elif bolus_arrival:
                     exec_wf.connect(bolus_arrival, 'volume',
                                     register, 'reference')
@@ -863,7 +827,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 reg_ts_name = self.registration_resource + '_ts.nii.gz'
                 with qixnat.connect() as xnat:
                     has_reg_ts = _scan_file_exists(
-                        xnat, self.project, subject, session, scan,
+                        xnat, self.project, scan_input,
                         self.registration_resource, reg_ts_name
                     )
                 # The time series must have been created by the
@@ -872,7 +836,8 @@ class QIPipelineWorkflow(WorkflowBase):
                     raise PipelineError(
                         "The %s %s scan %d registration resource %s does"
                         " not include the time series file %s" %
-                        (subject, session. scan, self.registration_resource,
+                        (scan_input.subject, scan_input.session,
+                         scan_input.scan, self.registration_resource,
                          reg_ts_name)
                     )
                 # Download the registration time series.
@@ -943,6 +908,48 @@ class QIPipelineWorkflow(WorkflowBase):
                 shutil.rmtree(dummy_dir)
 
 
+def _collect_roi_files(collection, scan_input):
+    """
+    :return: the ROI files
+    """
+    _logger = logger(__name__)
+    roi_dirs = scan_input.roi
+    if roi_dirs:
+        scan_pats = collection.patterns.scan[scan_input.scan]
+        if not scan_pats:
+            raise PipelineError("Scan patterns were not found"
+                                " for %s %s scan %d" % (
+                                scan_input.subject, scan_input.session,
+                                scan_input.scan))
+        glob = scan_pats.roi.glob
+        regex = scan_pats.roi.regex
+        _logger.debug(
+            "Discovering %s %s scan %d ROI files matching %s..." %
+            (scan_input.subject, scan_input.session, scan_input.scan,
+             glob)
+        )
+        roi_inputs = list(iter_roi(regex, *roi_dirs))
+        if roi_inputs:
+            _logger.info(
+                "%d %s %s scan %d ROI files were discovered." %
+                (len(roi_inputs), scan_input.subject,
+                 scan_input.session, scan_input.scan)
+            )
+        else:
+            _logger.info(
+                "No ROI file was detected for %s %s scan %d." %
+                (scan_input.subject, scan_input.session, scan_input.scan)
+            )
+    else:
+        _logger.info(
+            "ROI directory was not detected for %s %s scan %d." %
+            (scan_input.subject, scan_input.session, scan_input.scan)
+        )
+        roi_inputs = []
+
+    return roi_inputs
+
+
 def exclude_files(in_files, exclusions):
     """
     :param in_files: the input file paths
@@ -992,6 +999,26 @@ def _stage(subject, session, scan, in_dirs, opts):
     from qipipe.pipeline import staging
 
     return staging.run(subject, session, scan, *in_dirs, **opts)
+
+
+def _roi(subject, session, scan, time_series, in_rois, opts):
+    """
+    Runs the ROI workflow on the given session scan images.
+
+    .. Note:: see the :meth:`register` note.
+
+    :param subject: the subject name
+    :param session: the session name
+    :param scan: the scan number
+    :param time_series: the scan 4D time series
+    :param in_rois: the :meth:`qipipe.pipeline.roi.run` input ROI specs
+    :param opts: the :meth:`qipipe.pipeline.roi.run` keyword options
+    :return: the ROI mask file
+    """
+    from qipipe.pipeline import roi
+    from qipipe.helpers.logging import logger
+
+    return roi.run(subject, session, scan, time_series, *in_rois, **opts):
 
 
 def _register(subject, session, scan, in_files, opts, reference=1,
@@ -1052,41 +1079,6 @@ def _mask(subject, session, scan, time_series, opts):
     from qipipe.pipeline import mask
 
     return mask.run(subject, session, scan, time_series, **opts)
-
-
-def _roi(subject, session, scan, time_series, in_rois, opts):
-    """
-    Runs the ROI workflow on the given session scan images.
-
-    .. Note:: see the :meth:`register` note.
-
-    :param subject: the subject name
-    :param session: the session name
-    :param scan: the scan number
-    :param time_series: the scan 4D time series
-    :param in_rois: the :meth:`qipipe.pipeline.roi.run` input ROI specs
-    :param opts: the :meth:`qipipe.pipeline.roi.run` keyword options
-    :return: the one-based ROI volume number
-    """
-    from qipipe.pipeline import roi
-    from qipipe.helpers.logging import logger
-
-    # If there are no ROI inputs, then call roi.run() anyway to
-    # create the workflow and print appropriate log messages.
-    # The roi.run() method will return None in that case, and
-    # we will bail out without determining the ROI volume
-    # number.
-    if not roi.run(subject, session, scan, time_series, *in_rois, **opts):
-        logger(__name__).debug(
-            "%s %s scan %d does not have ROI input files; using the"
-            " default registration reference volume index 0 to allow"
-            " Nipype to continue running any downstream actions." %
-            (subject, session, scan)
-        )
-        return 0
-
-    # Get the ROI volume number from any input spec.
-    return in_rois[0].volume
 
 
 def _model(subject, session, scan, time_series, opts,
