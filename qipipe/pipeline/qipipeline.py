@@ -915,7 +915,8 @@ def _collect_roi_files(collection, scan_input):
     _logger = logger(__name__)
     roi_dirs = scan_input.roi
     if roi_dirs:
-        scan_pats = collection.patterns.scan[scan_input.scan]
+        img_coll = image_collection.with_name(coll_opt)
+        scan_pats = img_coll.patterns.scan[scan_input.scan]
         if not scan_pats:
             raise PipelineError("Scan patterns were not found"
                                 " for %s %s scan %d" % (
