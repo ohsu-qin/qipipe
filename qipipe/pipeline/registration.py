@@ -273,22 +273,23 @@ class RegisterScanWorkflow(WorkflowBase):
                         'reference', 'resource']
         input_spec = pe.Node(IdentityInterface(fields=input_fields),
                              name='input_spec')
-        # The registration mask.
-        workflow.connect(input_spec, 'mask',
-                         reg_image_wf.workflow, 'input_spec.mask')
         # The initial fixed reference image.
         input_spec.inputs.reference = self.reference
         # The registration resource name.
         input_spec.inputs.resource = self.resource
+        # The registration mask.
+        workflow.connect(input_spec, 'mask',
+                         reg_image_wf.workflow, 'input_spec.mask')
+        # The fixed reference image.
+        workflow.connect(input_spec, 'reference',
+                         reg_image_wf.workflow, 'input_spec.reference')
 
         # The realignment child workflow iterator.
-        iter_reg_fields = ['in_file', 'reference']
+        iter_reg_fields = ['in_file']
         iter_input = pe.Node(IdentityInterface(fields=iter_reg_fields),
-                                 name='iter_input')
+                             name='iter_input')
         workflow.connect(iter_input, 'in_file',
                          reg_image_wf.workflow, 'input_spec.in_file')
-        workflow.connect(iter_input, 'reference',
-                         reg_image_wf.workflow, 'input_spec.reference')
 
         # Collect the realigned images.
         collect_realigned_xfc = IdentityInterface(fields=['realigned_files'])
