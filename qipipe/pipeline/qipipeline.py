@@ -269,14 +269,15 @@ def _scan_files(xnat, project, scan_input, resource, file_pat=None):
         matches = [f for f in files if file_pat.match(f)]
         logger(__name__).debug(
             "The %s %s %s scan %d resource %s contains %d files matching %s." %
-            (project, subject, session, scan, resource, len(matches),
-             file_pat.pattern)
+            (project, scan_input.subject, scan_input.session, scan_input.scan,
+             resource, len(matches), file_pat.pattern)
         )
         return matches
     else:
         logger(__name__).debug(
             "The %s %s %s scan %d resource %s contains %d files." %
-            (project, subject, session, scan, resource, len(files))
+            (project, scan_input.subject, scan_input.session, scan_input.scan,
+             resource, len(files))
         )
         return files
 
