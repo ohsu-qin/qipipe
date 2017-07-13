@@ -225,7 +225,8 @@ class ROIWorkflow(WorkflowBase):
         workflow.connect(merge, 'out_file', upload_roi, 'in_files')
 
         # The output is the 3D ROI overlay.
-        output_spec = pe.Node(StickyIdentityInterface(fields=['out_file']))
+        output_xfc = StickyIdentityInterface(fields=['out_file'])
+        output_spec = pe.Node(output_xfc, name='output_spec')
         workflow.connect(merge, 'out_file', output_spec, 'out_file')
 
         self._configure_nodes(workflow)
