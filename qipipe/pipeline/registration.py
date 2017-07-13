@@ -300,13 +300,6 @@ class RegisterScanWorkflow(WorkflowBase):
         workflow.connect(reg_image_wf.workflow, 'output_spec.out_file',
                          collect_realigned, 'realigned_files')
 
-        # Merge the registered images into a 4D time series.
-        reg_ts_name = self.resource + '_ts'
-        merge_xfc = MergeNifti(out_format=reg_ts_name)
-        merge = pe.Node(merge_xfc, name='merge_volumes')
-        workflow.connect(collect_realigned, 'realigned_files',
-                         merge, 'in_files')
-
         # Make the profile.
         cr_prf_fields = ['technique', 'configuration', 'sections',
                          'reference', 'resource']
@@ -337,6 +330,12 @@ class RegisterScanWorkflow(WorkflowBase):
         workflow.connect(input_spec, 'reference', collect_volumes, 'in1')
         workflow.connect(collect_realigned, 'realigned_files',
                          collect_volumes, 'in2')
+
+        # Merge the fixed and realigned images into a 4D time series.
+        reg_ts_name = self.resource + '_ts'
+        merge_xfc = MergeNifti(out_format=reg_ts_name)
+        merge = pe.Node(merge_xfc, name='merge_volumes')
+        workflow.connect(collect_volumes, 'out', merge, 'in_files')
 
         # Collect the profile, volumes and time series into one list.
         collect_uploads = pe.Node(Merge(3), name='collect_uploads')
