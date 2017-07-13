@@ -671,7 +671,7 @@ def _create_profile(technique, configuration, sections, reference, resource):
     from qipipe.helpers import metadata
 
     # The reference is the XNAT file name without a directory.
-    _, prf_reference = os.path.split(reference)
+    _, ref_base_name = os.path.split(reference)
     # The correct technique names.
     TECHNIQUE_NAMES = dict(ants='ANTs', fsl='FSL', mock='Mock')
     prf_technique = TECHNIQUE_NAMES.get(technique.lower(), technique)
@@ -681,16 +681,16 @@ def _create_profile(technique, configuration, sections, reference, resource):
     fix_key = lambda s: re.sub(tech_pat, tech_sub, s)
     prf_cfg = {fix_key(k): v for k, v in configuration.iteritems()}
     # The general [Registration] topic additional properties.
-    reg_cfg = dict(technique=prf_technique, reference=prf_reference)
+    reg_cfg = dict(technique=prf_technique, reference=ref_base_name)
     # Update or create the [Registration] section.
     if 'registration' in prf_cfg:
         prf_cfg['registration'].update(reg_cfg)
     else:
         prf_cfg['registration'] = reg_cfg
     # The profile file name.
-    base_name = "%s.cfg" % resource
+    cfg_base_name = "%s.cfg" % resource
 
-    return metadata.create_profile(prf_cfg, sections, dest=base_name)
+    return metadata.create_profile(prf_cfg, sections, dest=cfg_base_name)
 
 
 def _symlink_in_place(in_file, link_name):
