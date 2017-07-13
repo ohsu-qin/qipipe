@@ -309,11 +309,12 @@ class RegisterScanWorkflow(WorkflowBase):
 
         # Make the profile.
         cr_prf_fields = ['technique', 'configuration', 'sections',
-                         'reference']
+                         'reference', 'resource']
         cr_prf_xfc = Function(input_names=cr_prf_fields,
                               output_names=['out_file'],
                               function=_create_profile)
         cr_prf = pe.Node(cr_prf_xfc, name='create_profile')
+        cr_prf.inputs.resource = self.resource
         cr_prf.inputs.technique = self.technique
         workflow.connect(input_spec, 'reference', cr_prf, 'reference')
         cr_prf.inputs.configuration = self.configuration
@@ -655,15 +656,16 @@ class RegisterImageWorkflow(WorkflowBase):
 
 ### Utility functions called by the workflow nodes. ###
 
-def _create_profile(technique, configuration, sections, reference, dest):
+def _create_profile(technique, configuration, sections, reference, resource):
     """
-    :meth:`qipipe.helpers.metadata.create_profile` wrapper.
+    :meth:`qipipe.helpers.metadata.create_profile` wrapper. The
+    output file base name is _resource_``.cfg``.
 
     :param technique: the registration technique
     :param configuration: the registration workflow interface settings
     :param sections: the profile sections
     :param reference: the fixed reference image file path
-    :param dest: the output profile file path
+    :param resource: the registration resource name
     :return: the output profile file path
     """
     import os
@@ -686,8 +688,10 @@ def _create_profile(technique, configuration, sections, reference, dest):
         prf_cfg['registration'].update(reg_cfg)
     else:
         prf_cfg['registration'] = reg_cfg
+    # The profile file name.
+    base_name = "%s.cfg" % resource
 
-    return metadata.create_profile(prf_cfg, sections, dest=dest)
+    return metadata.create_profile(prf_cfg, sections, dest=base_name)
 
 
 def _symlink_in_place(in_file, link_name):
