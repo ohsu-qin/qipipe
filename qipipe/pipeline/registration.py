@@ -668,6 +668,7 @@ def _create_profile(technique, configuration, sections, reference, resource):
     :return: the output profile file path
     """
     import os
+    import re
     from qipipe.helpers import metadata
 
     # The reference is the XNAT file name without a directory.
