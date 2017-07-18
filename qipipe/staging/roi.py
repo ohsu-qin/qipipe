@@ -8,7 +8,7 @@ import os
 import re
 import glob
 import qiutil
-from .staging_error import StagingError
+from ..helpers.logging import logger
 
 PARAM_REGEX = re.compile('(?P<key>\w+)\s*\:\s*(?P<value>\w+)')
 """
@@ -61,21 +61,25 @@ def iter_roi(regex, *in_dirs):
     :param in_dirs: the ROI directories to search
     :yield: the :class:`LesionROI` objects
     """
+    _logger = logger(__name__)
     for in_dir in in_dirs:
         # Find the .bqf ROI mask file.
         bqfs = glob.glob("%s/*.bqf" % in_dir)
         if not bqfs:
-            raise StagingError("The ROI directory %s does not contain a"
-                               " .bqf ROI file" % in_dir)
+            _logger.debug("The ROI directory %s does not contain a"
+                        " .bqf ROI file" % in_dir)
+            continue
         if len(bqfs) > 1:
-            raise StagingError("The ROI directory %s contains more than"
-                               " one .bqf ROI file" % in_dir)
+            _logger.debug("The ROI directory %s contains more than"
+                          " one .bqf ROI file" % in_dir)
+            continue
         bqf = bqfs[0]
 
         match = regex.match(bqf)
         if not match:
-            raise StagingError("The ROI file %s does not match the following"
-                               " pattern:\n%s" % (bqf, regex.pattern))
+            _logger.debug("The ROI file %s does not match the following"
+                          " pattern:\n%s" % (bqf, regex.pattern))
+            continue
         # If there is no lesion qualifier, then there is only one lesion.
         try:
             lesion_s = match.group('lesion')
@@ -86,26 +90,30 @@ def iter_roi(regex, *in_dirs):
         # Find the .par parameter file.
         pars = glob.glob("%s/*.par" % in_dir)
         if not pars:
-            raise StagingError("The ROI directory %s does not contain a"
-                               " .par parameter file" % in_dir)
+            _logger.debug("The ROI directory %s does not contain a"
+                          " .par parameter file" % in_dir)
+            continue
         if len(pars) > 1:
-            raise StagingError("The ROI directory %s contains more than"
-                               " one .par parameter file" % in_dir)
+            _logger.debug("The ROI directory %s contains more than"
+                          " one .par parameter file" % in_dir)
+            continue
         par = pars[0]
         params = _collect_parameters(par)
 
         # If there is no slice number, then complain.
         slice_seq_nbr_s = params.get('CurrentSlice')
         if not slice_seq_nbr_s:
-            raise StagingError("The ROI slice could not be determined from"
-                               " the parameter file: %s" % param_file_name)
+            _logger.debug("The ROI slice could not be determined from"
+                          " the parameter file: %s" % param_file_name)
+            continue
         slice_seq_nbr = int(slice_seq_nbr_s)
 
         # If there is no volume number, then complain.
         volume_nbr_s = params.get('CurrentTimePt')
         if not volume_nbr_s:
-            raise StagingError("The ROI volume could not be determined from"
-                               " the parameter file: %s" % param_file_name)
+            _logger.debug("The ROI volume could not be determined from"
+                          " the parameter file: %s" % param_file_name)
+            continue
         volume_nbr = int(volume_nbr_s)
 
         yield LesionROI(lesion, volume_nbr, slice_seq_nbr, bqf)
