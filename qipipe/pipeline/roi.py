@@ -107,7 +107,7 @@ class ROIWorkflow(WorkflowBase):
         # Execute the workflow.
         self.logger.info("Executing the %s workflow on %s %s scan %d..." %
                          (self.workflow.name, subject, session, scan))
-        self._run_workflow()
+        wf_res = self._run_workflow()
         self.logger.info("Executed the %s workflow on %s %s scan %d." %
                          (self.workflow.name, subject, session, scan))
 
