@@ -162,6 +162,6 @@ class MockLogWriter(object):
             self._write(name, 'ERROR', message)
 
     def _write(self, name, level, message):
-        dt = datetime.now().strftime("%M/%D/%Y %H:%M:%S")
+        dt = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
         print "%s %s %s %s" % (dt, name, level, message)
         sys.stdout.flush()
