@@ -457,7 +457,8 @@ class QIPipelineWorkflow(WorkflowBase):
         :param actions: the workflow actions
         """
         self.logger.debug("Processing the %s %s %s scan %d volumes..." %
-                           (project, subject, session, scan))
+                           (scan_input.project, scan_input.subject,
+                            scan_input.session, scan))
         # Set the workflow input.
         input_spec = self.workflow.get_node('input_spec')
         input_spec.inputs.subject = scan_input.subject
