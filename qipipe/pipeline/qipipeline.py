@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import logging
 import six
+from bunch import Bunch
 # The ReadTheDocs build does not include nipype.
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if not on_rtd:
@@ -233,10 +234,12 @@ def _run_with_xnat_input(actions, *inputs, **opts):
             raise PipelineError("The XNAT path is missing a scan: %s" % path)
         scan = int(scan_s)
 
+        # Fashion a scan_input from the hierarchy.
+        scan_input = Bunch(subject=sbj, session=sess, scan=scan)
         # Make the workflow.
-        workflow = QIPipelineWorkflow(prj, sbj, sess, scan, actions, **opts)
+        workflow = QIPipelineWorkflow(prj, scan_input, actions, **opts)
         # Run the workflow.
-        workflow.run_with_scan_download(prj, sbj, sess, scan, actions)
+        workflow.run_with_scan_download(prj, scan_input, actions)
 
 
 
@@ -445,23 +448,21 @@ class QIPipelineWorkflow(WorkflowBase):
                            (scan_input.subject, scan_input.session,
                             scan_input.scan))
 
-    def run_with_scan_download(self, project, subject, session, scan, actions):
+    def run_with_scan_download(self, project, scan_input, actions):
         """
         Runs the execution workflow on downloaded scan image files.
 
         :param project: the project name
-        :param subject: the subject name
-        :param session: the session name
-        :param scan: the scan number
+        :param scan_input: the {project, subject, session} object
         :param actions: the workflow actions
         """
         self.logger.debug("Processing the %s %s %s scan %d volumes..." %
                            (project, subject, session, scan))
         # Set the workflow input.
         input_spec = self.workflow.get_node('input_spec')
-        input_spec.inputs.subject = subject
-        input_spec.inputs.session = session
-        input_spec.inputs.scan = scan
+        input_spec.inputs.subject = scan_input.subject
+        input_spec.inputs.session = scan_input.session
+        input_spec.inputs.scan = scan_input.scan
 
         # Execute the workflow.
         self._run_workflow()
