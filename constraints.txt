@@ -1,5 +1,5 @@
 nibabel~=2.0
-qiutil~=2.2
+qiutil~=2.3
 qidicom~=2.3
 qixnat~=4.2
 qirest-client~=6.1

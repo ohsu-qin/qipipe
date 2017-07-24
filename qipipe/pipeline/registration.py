@@ -178,7 +178,7 @@ class RegisterScanWorkflow(WorkflowBase):
         """
         The registration technique (default :const:`DEF_TECHNIQUE`).
         """
-        self.resource = REG_PREFIX + qiutil.file.generate_file_name()
+        self.resource = _generate_resource_name()
 
         """
         The unique XNAT registration resource name. Uniqueness permits
@@ -654,6 +654,16 @@ class RegisterImageWorkflow(WorkflowBase):
 
 
 ### Utility functions called by the workflow nodes. ###
+
+def _generate_resource_name():
+    """
+    Makes a resource name unique within the scope of the session
+    up to one registration per session per hour.
+
+    :return: the resource name
+    """
+    REG_PREFIX + qiutil.uid.generate_string_uid(modulo='h')
+
 
 def _create_profile(technique, configuration, sections, reference, resource):
     """
