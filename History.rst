@@ -1,6 +1,10 @@
 This history lists major release themes. See the GitHub log
 for change details.
 
+5.8.1 / 2017-07-24
+------------------
+Clean the pipeline run.
+
 5.7.3 / 2017-05-09
 ------------------
 Run mask in its own function.
