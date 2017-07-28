@@ -662,7 +662,7 @@ def _generate_resource_name():
 
     :return: the resource name
     """
-    REG_PREFIX + qiutil.uid.generate_string_uid(modulo='h')
+    return REG_PREFIX + qiutil.uid.generate_string_uid(modulo='h')
 
 
 def _create_profile(technique, configuration, sections, reference, resource):
