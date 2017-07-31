@@ -718,7 +718,7 @@ class QIPipelineWorkflow(WorkflowBase):
                 exec_wf.connect(dl_vols, 'out_files',
                                 scan_volumes, 'volume_files')
 
-        # Registration and modeling require a mask and bolus arrival.
+        # If mask is enabled, then set the mask inputs.
         if mask:
             exec_wf.connect(input_spec, 'subject', mask, 'subject')
             exec_wf.connect(input_spec, 'session', mask, 'session')
@@ -728,34 +728,35 @@ class QIPipelineWorkflow(WorkflowBase):
                                 mask, 'time_series')
                 self.logger.debug('Connected the scan time series to mask.')
 
-            # Registration requires a fixed reference volume index to
-            # register against, determined as follows:
-            # * If the registration reference option is set, then that
-            #   is used.
-            # * Otherwise, if there is a ROI workflow, then the ROI
-            #   volume serves as the fixed volume.
-            # * Otherwise, the computed bolus arrival is the fixed
-            #   volume.
-            compute_reg_reference = (
-                register and not roi
-                and not register.inputs.reference
-            )
-            is_bolus_arrival_required = (
-                compute_reg_reference or
-                (model and self.modeling_technique != 'Mock')
-            )
-            # Modeling always requires the bolus arrival.
-            bolus_arrival = None
-            if is_bolus_arrival_required:
-                # Compute the bolus arrival from the scan time series.
-                bolus_arv_xfc = Function(input_names=['time_series'],
-                                         output_names=['volume'],
-                                         function=_bolus_arrival)
-                bolus_arrival = pe.Node(bolus_arv_xfc, name='bolus_arrival')
-                exec_wf.connect(scan_ts, 'time_series',
-                                bolus_arrival, 'time_series')
-                self.logger.debug('Connected the scan time series to the bolus'
-                                  ' arrival calculation.')
+        # Registration requires a fixed reference volume index to
+        # register against, determined as follows:
+        # * If the registration reference option is set, then that
+        #   is used.
+        # * Otherwise, if there is a ROI workflow, then the ROI
+        #   volume serves as the fixed volume.
+        # * Otherwise, the computed bolus arrival is the fixed
+        #   volume.
+        compute_reg_reference = (
+            register and not roi
+            and not register.inputs.reference
+        )
+        # If the registration reference must be computed or a non-mock
+        # modeling is enabled, then get the bolus arrival.
+        is_bolus_arrival_required = (
+            compute_reg_reference or
+            (model and self.modeling_technique != 'Mock')
+        )
+        bolus_arrival = None
+        if is_bolus_arrival_required:
+            # Compute the bolus arrival from the scan time series.
+            bolus_arv_xfc = Function(input_names=['time_series'],
+                                     output_names=['volume'],
+                                     function=_bolus_arrival)
+            bolus_arrival = pe.Node(bolus_arv_xfc, name='bolus_arrival')
+            exec_wf.connect(scan_ts, 'time_series',
+                            bolus_arrival, 'time_series')
+            self.logger.debug('Connected the scan time series to the bolus'
+                              ' arrival calculation.')
 
         # If ROI is enabled, then convert the ROIs using the scan
         # time series.
@@ -813,7 +814,8 @@ class QIPipelineWorkflow(WorkflowBase):
                                 model, 'bolus_arrival')
             self.logger.debug('Connected bolus arrival to modeling.')
 
-            # Obtain the modeling input 4D time series.
+            # Connect modeling to the  scan or registration 4D time
+            # series, depending on what is being modeled.
             if is_scan_modeling:
                 # There is no register action and no registration
                 # resource option. In that case, model the scan
